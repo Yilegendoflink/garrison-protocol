@@ -18,7 +18,9 @@
     "data:fetch-mode": "node scripts/fetch-alliance-data.mjs && node scripts/fetch-alliance-levels.mjs",
     "test:deployment": "node scripts/deployment-browser.cjs",
     "test:season": "node scripts/season-browser.cjs",
-    "release:check": "node scripts/check-release.mjs"
+    "release:check": "node scripts/check-release.mjs",
+    "data:assets": "node scripts/sync-mode-assets.mjs",
+    "test:benchmark": "node scripts/benchmark-browser.cjs"
   },
   "engines": {
     "node": ">=22"

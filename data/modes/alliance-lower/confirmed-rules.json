@@ -15,5 +15,21 @@
       "date": "2026-09-12",
       "statement": "不考虑道具和英雄效果干涉时，初始4，后续每轮+1，难度无影响"
     }
+  },
+  "finalStage": {
+    "kind": "training-dummy",
+    "health": "infinite",
+    "defense": 0,
+    "resistance": 0,
+    "moving": false,
+    "attacking": false,
+    "durationSource": "common.turnInfoDataDict[modeId][bossRound].bossTurnHpReduceTime",
+    "manualFinish": true,
+    "report": "damage incurred during this stage only",
+    "source": {
+      "kind": "user-requested-exception",
+      "date": "2026-09-12",
+      "statement": "最终 BOSS 暂留空，以无限血量木桩替代；沿用原版倒计时，可手动结束，结束后播报总伤害"
+    }
   }
 }

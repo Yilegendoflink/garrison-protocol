@@ -2,6 +2,7 @@ import {LEGACY_CONTENT} from './content.js';
 import {Game} from './engine.js';
 const INTEGER=v=>Number.isInteger(v)&&v>=0;
 const ACTIONS={
+ benchmark:{phase:'prep',method:'startBenchmark',check:a=>!a.length},endBenchmark:{phase:'battle',method:'endBenchmark',check:a=>!a.length},
  preferences:{phase:'briefing',method:'setPreferences',check:(a,p)=>a.length===1&&a[0]&&Object.keys(a[0]).every(k=>['difficulty','map','strategy'].includes(k))&&(!('difficulty'in a[0])||!!p.DIFFICULTIES[a[0].difficulty])&&(!('map'in a[0])||INTEGER(a[0].map)&&!!p.MAPS[a[0].map])&&(!('strategy'in a[0])||p.STRATEGIES.some(s=>s.id===a[0].strategy))},
  begin:{phase:'briefing',method:'start',check:a=>a.length===0},
  buy:{phase:'prep',method:'buy',check:a=>a.length===1&&INTEGER(a[0])},

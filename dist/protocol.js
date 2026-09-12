@@ -26,7 +26,25 @@ export function shouldAutoSkill({policy,ready,deployed,now,lastOperation=0,initi
 export function buildPhasePlan(data,modeId){const turns=data.common.turnInfoDataDict[modeId],battles=data.season.battleDataDict[modeId];if(!turns||!battles)throw Error('Unknown mode');return Object.values(turns).sort((a,b)=>a.round-b.round).map(t=>({...t,battles:battles[t.round]||[],isConditional:t.round===15&&data.season.modeDataDict[modeId].modeDifficulty!=='TRAINING'}));}
 export function shopTerms(data,modeId,level,discount=0){const s=data.season.shopLevelDataDict[modeId]?.[level];if(!s)throw Error('Unknown shop level');return {operatorSlots:s.charChessCount,itemSlots:s.itemCount,upgradeCost:level>=6?null:Math.max(0,s.initialUpgradePrice-discount),refreshCost:data.season.constData.shopRefreshPrice};}
 export function purchasePrice(data,chessId){const shop=data.season.charShopChessDatas[chessId];if(shop)return data.season.shopCharChessInfoData[shop.chessLevel][0].purchasePrice;const item=data.season.trapChessDataDict[chessId];if(item)return item.purchasePrice;throw Error('Unknown offer '+chessId);}
-export function activeBonds(data,units,modeId=null){const allowed=modeId?new Set(data.season.modeDataDict[modeId].activeBondIdList):null;return Object.fromEntries(Object.entries(data.season.bondInfoDict).map(([id,b])=>{const members=new Set(units.filter(u=>u.position!==null||b.isActiveInDeck).filter(u=>data.season.charChessDataDict[u.chessId]?.bondIds.includes(id)).map(u=>u.charId));return [id,{count:members.size,active:(!allowed||allowed.has(id))&&members.size>=b.activeCount}];}));}
+export function activeBonds(data,units,modeId=null){
+ const allowed=modeId?new Set(data.season.modeDataDict[modeId].activeBondIdList):null,rows={};
+ for(const[id,b]of Object.entries(data.season.bondInfoDict)){
+  const eligible=units.filter(u=>u.position!=null||b.activeCondition==='BOARD_AND_DECK');
+  const golden=b.activeConditionTemplate==='count_threshold_upward_golden';
+  const members=golden?eligible.filter(u=>data.season.charChessDataDict[u.chessId]?.isGolden):eligible.filter(u=>(u.bondIds||data.season.charChessDataDict[u.chessId]?.bondIds||[]).includes(id));
+  const count=golden?members.length:new Set(members.map(u=>u.charId)).size;
+  const threshold=Number(b.activeParamList[0]),active=b.activeConditionTemplate==='count_threshold_downward'?count>=threshold&&count<Number(b.activeParamList[1]):count>=threshold;
+  rows[id]={count,rawCount:count,active:(!allowed||allowed.has(id))&&active};
+ }
+ if(rows.maniShip?.active)for(const[id,row]of Object.entries(rows))if(data.common.bondInfoDict[id]?.isPower&&row.rawCount>0){row.count++;row.active=(!allowed||allowed.has(id))&&row.count>=Number(data.season.bondInfoDict[id].activeParamList[0]);}
+ return rows;
+}
+export function applyEnemyOverrides(base,override){
+ if(override&&typeof override==='object'&&!Array.isArray(override)&&Object.hasOwn(override,'m_defined'))return override.m_defined?structuredClone(override.m_value):structuredClone(base??null);
+ if(override===null||override===undefined)return structuredClone(base??null);
+ if(Array.isArray(override)||typeof override!=='object')return structuredClone(override);
+ const out={...structuredClone(base||{})};for(const[k,v]of Object.entries(override))out[k]=applyEnemyOverrides(base?.[k],v);return out;
+}
 export function suspendState(state,now=Date.now()){return {schemaVersion:1,savedAt:now,expiresAt:now+86400000,state:JSON.parse(JSON.stringify(state))};}
 export function resumeState(save,now=Date.now()){if(save.schemaVersion!==1||now>=save.expiresAt||!save.state)return {ok:false,reason:'expired-or-invalid'};return {ok:true,state:JSON.parse(JSON.stringify(save.state))};}
 export class PreparationState {

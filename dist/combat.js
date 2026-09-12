@@ -1,3 +1,4 @@
+import {recordDummyDamage} from './benchmark.js';
 // Shared numerical rules. Ratios are fractions, time is seconds, ASPD defaults to 100.
 export const FPS = 30;
 export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -22,7 +23,8 @@ export function damage({amount, type = 'physical', attackScale = 1, attackAdd = 
   else throw new Error(`Unsupported damage type: ${type}`);
   return Math.max(0, mitigated * multiplier * (1 - clamp(reduction, 0, 1)));
 }
-export function applyDamage(target, amount, {immortal = false, type = 'physical'} = {}) {
+export function applyDamage(target, amount, {immortal = false, type = 'physical', sourceId = null, sourceUid = null} = {}) {
+  if(target.infiniteHealth)return recordDummyDamage(target,amount,{type,sourceId,sourceUid});
   if (target.hp <= 0) return {hp: 0, shield: 0, total: 0};
   const barrier = (target.barriers || []).find(b => b.charges > 0 && (!b.types || b.types.includes(type)));
   if(barrier && amount > 0){barrier.charges--;return {hp:0,shield:0,total:0,blocked:true};}

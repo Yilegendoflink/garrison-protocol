@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-09-12",
+  "mainPage": "https://prts.wiki/w/卫戍协议：盟约_下半",
+  "mainPageRevision": 421528,
+  "sources": [
+    "https://prts.wiki/w/卫戍协议：盟约_下半/PRTS盟约记录",
+    "https://prts.wiki/w/卫戍协议/帮助"
+  ],
+  "rules": {
+    "reserveBondCounting": ["visiShip", "miraShip", "investShip"],
+    "solo": {"countDistinctCharIds": true, "minimum": 1, "maximumExclusive": 2},
+    "sunt": {"goldenOnly": true, "duplicateCharactersCount": true, "countThresholds": [2,5], "spCostScale": 0.7, "spCostRounding": "floor; zero allowed"},
+    "deputPower": {"countDistinctCharacterAndEliteStatePairs": true, "required": 3},
+    "miracleRefresh": {"baseProbability": 0.18, "probabilityPerLayer": 0.003, "onlyWhenFreeRefreshRemainingIsZero": true, "grantFreeRefreshes": 1},
+    "promotion": {"thirdNormalOperatorIsGranted": false, "eliteGainEventIsTriggered": true}
+  },
+  "status": "wiki-confirmed; each implementation still requires its own runtime coverage"
+}

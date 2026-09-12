@@ -2,6 +2,7 @@
   "passed": true,
   "views": [
     "operators",
+    "enemies",
     "bonds",
     "bands",
     "items",

@@ -1,5 +1,5 @@
 import {VERSION,OP,OPERATORS,EQ,EQUIPMENT,SP,SPELLS,STRATEGIES,DECISIONS,MAPS,ALLIANCES,ENEMIES,WAVES,DIFFICULTIES} from './data.js';
-export const LEGACY_CONTENT={id:'legacy:garrison-v2',version:4,deploymentDelay:3,purchasePrices:{1:2,2:3,3:3,4:3,5:4,6:4},startingShop:['fang','melantha','beagle'],VERSION,OP,OPERATORS,EQ,EQUIPMENT,SP,SPELLS,STRATEGIES,DECISIONS,MAPS,ALLIANCES,ENEMIES,WAVES,DIFFICULTIES};
+export const LEGACY_CONTENT={id:'legacy:garrison-v2',version:5,finalPhase:{kind:'training-dummy',duration:150},deploymentDelay:3,purchasePrices:{1:2,2:3,3:3,4:3,5:4,6:4},startingShop:['fang','melantha','beagle'],VERSION,OP,OPERATORS,EQ,EQUIPMENT,SP,SPELLS,STRATEGIES,DECISIONS,MAPS,ALLIANCES,ENEMIES,WAVES,DIFFICULTIES};
 export function validateContent(content){
  const errors=[];if(!content||typeof content.id!=='string'||!content.id||!Number.isInteger(content.version))return ['内容包ID或版本无效'];
  for(const key of ['OP','EQ','SP','ALLIANCES','ENEMIES','DIFFICULTIES'])if(!content[key]||typeof content[key]!=='object')errors.push('缺少数据表 '+key);

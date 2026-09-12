@@ -4,6 +4,12 @@
 
 本文件是当前对话的项目摘要，不是完整聊天记录；用于让新的 Codex 会话接续现有代码。
 
+## 2026-09-12 原作范围与最终木桩
+
+优先读取 [NATIVE_RULES_PROGRESS.md](NATIVE_RULES_PROGRESS.md)。用户要求可用干员、敌人、盟约、策略与 PRTS 下半期完全一致；仅最终 Boss 阶段豁免，改为无限生命木桩，150 秒且可手动结束并播报总伤害。木桩已接入演示战斗和终局，支持独立统计、保存回放、真实浏览器验收。当前 legacy 内容版本 5。
+
+新增 215 条敌人引用和 376 份 PRTS 头像、28 类运营特质解释器及策略准备事件。新 NativeEconomy 仍未接管主对局，不能宣称 S06 已完成。75 项测试通过，release:check 根据 acceptedScopeComplete=false 继续阻止发布。没有创建远程仓库或推送。
+
 ## 2026-09-12 发布时点约定
 
 用户明确要求等 S06 全部验收通过后再创建 GitHub 仓库、发布 GitHub Pages。当前没有远程仓库或线上部署，不提前发布试玩版。已准备 Pages 工作流与 release:check，当前未完成报告会阻止发布。完成后的执行顺序见 [PUBLISHING.md](PUBLISHING.md)。

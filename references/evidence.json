@@ -60,6 +60,29 @@
       ],
       "status": "wiki-confirmed",
       "implementation": "partial; per-unit policy integration pending"
+    },
+    {
+      "id": "R06",
+      "url": "https://prts.wiki/w/卫戍协议：盟约_下半/PRTS盟约记录",
+      "status": "wiki-confirmed",
+      "facts": [
+        "独行按不同身份计数",
+        "绝技计入同名精锐副本",
+        "助力强化区分初始和精锐状态",
+        "奇迹概率(18+0.3*层数)%，仅免费次数为0时判定"
+      ],
+      "path": "data/modes/alliance-lower/wiki-clarifications.json"
+    },
+    {
+      "id": "R07",
+      "date": "2026-09-12",
+      "status": "user-requested-exception",
+      "facts": [
+        "仅最终Boss阶段暂用无限生命木桩",
+        "沿用原版倒计时且允许手动结束",
+        "结束后播报本阶段总伤害"
+      ],
+      "implementation": "implemented-browser-tested"
     }
   ],
   "data": [

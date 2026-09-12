@@ -1,3 +1,4 @@
+import {createTrainingDummy,dummySummary} from './benchmark.js';
 import {shouldAutoSkill,baseFunding} from './protocol.js';
 import {applyStatus,tickStatuses,permissions,statusAttributeChanges,wakeOnHit} from './status.js';
 import {LEGACY_CONTENT,validateContent} from './content.js';
@@ -108,7 +109,8 @@ export class Game {
  rangeExtra(u){const active=this.s.battle?.units.find(v=>v.uid===u.uid)?.active>0,skill=this.skill(u);return active?(skill.range||(['heal','sanctuary'].includes(skill.type)?1:0)):0;}
  rangeCells(u,extra=0){const o=this.content.OP[u.id],skill=this.skill(u);if(extra&&skill.rangeCells)return rotateCells(skill.rangeCells,u);if(!extra)return rotateCells(o.rangeCells,u);const cells=[];for(const [x,y] of o.rangeCells)for(let i=0;i<=extra;i++)cells.push([x+i,y]);return rotateCells([...new Map(cells.map(p=>[p.join(','),p])).values()],u);}
  inRange(u,target,extra=0){return containsTarget(this.rangeCells(u,extra),target);}
- startBattle(){if(!this.canManage())return false;if(!this.onField.length)return this.notify('请先从整备区选择干员，部署到战场。');
+ startBenchmark(){return this.startBattle(true);}
+ startBattle(forceBenchmark=false){if(!this.canManage())return false;if(!this.onField.length)return this.notify('请先从整备区选择干员，部署到战场。');
   for(const u of this.onField)this.trait(u,'end');if(this.has('union'))for(const a of Object.values(this.allies()))if(a.active)this.addStacks(a.id,3*this.has('union'));
   const overflow=this.hand.slice(10);for(const item of overflow){if(item.kind==='op'){this.s.units=this.s.units.filter(u=>u.uid!==item.uid);}else this.s.items=this.s.items.filter(e=>e.uid!==item.uid);}if(overflow.length)this.log(`临时整备区的 ${overflow.length} 件物资已清空`);
   this.s.money=0;if(!this.s.locked)this.s.shop=[];this.s.phase='battle';let [,type,count]=this.wave;const queue=[];const gap=this.s.round<=2?4.2:Math.max(.85,2.2-this.s.round*.05);
@@ -117,6 +119,7 @@ export class Game {
   if(this.has('bounty'))for(let i=0;i<2;i++)queue.push({type:'breaker',lane:i,at:7+i*5,bounty:true});
   const units=this.onField.slice().sort((a,b)=>a.y-b.y||a.x-b.x).map((u,i)=>{const stats=this.attributes(u);return {uid:u.uid,id:u.id,x:u.x,y:u.y,dir:u.dir,elite:u.elite,skillIndex:u.skill,stats,hp:stats.hp,maxHp:stats.hp,sp:Math.min(spCapacity(this.skill(u)),stats.initialSP+(this.skill(u).initialSP||0)),spLock:0,action:null,attackCooldown:0,cd:0,active:0,down:0,deployAt:(this.content.deploymentDelay??1)+i*(this.content.deploymentStagger??.18),deployed:false,skillCount:0,damage:0,healing:0,shield:0,statuses:[],immunities:this.content.OP[u.id].immunities||{},armorBuff:0,resBuff:0,traitTriggers:0};});
   this.s.battle={rulesVersion:2,tickRemainder:0,projectiles:[],time:0,units,enemies:[],queue:queue.sort((a,b)=>a.at-b.at),spawned:0,total:queue.length,kills:0,leaks:0,bountyKills:0,dp:20,limit:this.s.round>=16?140:90,escalation:1,pulse:0,bossPulse:0,wallUsed:false,drone:null,startingHp:this.s.hp};
+  if(forceBenchmark||(this.s.round>=16&&this.content.finalPhase?.kind==='training-dummy')){const b=this.s.battle;b.queue=[];b.total=1;b.spawned=1;b.enemies=[createTrainingDummy(this.uid(),5,1)];b.limit=this.content.finalPhase?.duration??150;b.benchmark={duration:b.limit,elapsedFrames:0};this.s.benchmarkResult=null;this.log('木桩测试开始 · '+b.limit+' 秒 · 可手动结束');this.changed();return true;}
   this.log(`第 ${this.s.round} 轮作战开始 · ${this.wave[0]}`);this.changed();return true;
  }
  spawnEnemy(q){const base=this.content.ENEMIES[q.type],round=this.s.round,scale=this.content.DIFFICULTIES[this.s.difficulty].scale*(1+Math.max(0,round-3)*.055),path=this.map.paths[q.lane%this.map.paths.length];let hp=base.hp*scale;const enemy={...base,uid:this.uid(),type:q.type,x:path[0][0],y:path[0][1],path:q.lane%this.map.paths.length,segment:0,hp,maxHp:hp,atk:base.atk*scale,def:base.def*(1+Math.max(0,round-5)*.025),shield:base.shield?base.shield*scale:0,maxShield:base.shield?base.shield*scale:0,action:null,attackCooldown:0,spLock:0,cd:.7,stun:0,slowUntil:0,slow:1,block:null,bounty:!!q.bounty,armorBreak:0,debuff:0,vulnerable:1,bossClock:0,spawnedAt:this.s.battle.time};this.s.battle.enemies.push(enemy);this.s.battle.spawned++;return enemy;}
@@ -127,7 +130,7 @@ export class Game {
   const nearby=this.s.battle.enemies.filter(e=>e.hp>0&&Math.hypot(e.x-bu.x,e.y-bu.y)<3);
   if(skill.type==='dp')this.s.battle.dp=Math.min(99,this.s.battle.dp+skill.power);
   if(skill.type==='stun')for(const e of nearby){applyStatus(e,'stun',3,{source:bu.uid});for(let i=0;i<(skill.hits||1);i++)this.hit(bu,source,e,bu.stats.atk*skill.power,'arts');}
-  if(skill.type==='pull')for(const e of targets.slice(0,3)){applyStatus(e,'stun',2,{source:bu.uid});this.hit(bu,source,e,bu.stats.atk*skill.power,'true');if(!e.boss&&!['armor','golem'].includes(e.type)){const p=this.map.paths[e.path];e.segment=Math.min(p.length-2,e.segment+1);e.x=p[e.segment][0];e.y=p[e.segment][1];}}
+  if(skill.type==='pull')for(const e of targets.slice(0,3)){applyStatus(e,'stun',2,{source:bu.uid});this.hit(bu,source,e,bu.stats.atk*skill.power,'true');if(!e.trainingDummy&&!e.boss&&!['armor','golem'].includes(e.type)){const p=this.map.paths[e.path];e.segment=Math.min(p.length-2,e.segment+1);e.x=p[e.segment][0];e.y=p[e.segment][1];}}
   if(skill.type==='burst'){let all=targets.length?targets:nearby;if(skill.hits&&source.id==='chen'){for(let i=0;i<skill.hits;i++){let valid=all.filter(e=>e.hp>0);if(!valid.length)break;let e=valid[i%valid.length];this.hit(bu,source,e,bu.stats.atk*skill.power,'physical');e.stun=3;}}else{let main=all[0];if(main){const victims=skill.aoe?this.s.battle.enemies.filter(e=>Math.hypot(e.x-main.x,e.y-main.y)<=skill.aoe):[main];for(const e of victims){for(let i=0;i<(skill.hits||1);i++)this.hit(bu,source,e,bu.stats.atk*skill.power,'physical');if(source.id==='meteorite')e.armorBreak=120;}}}}
   if(skill.type==='selfheal'||skill.type==='groupheal'){let allies=this.s.battle.units.filter(u=>u.hp>0&&u.deployed&&Math.hypot(u.x-bu.x,u.y-bu.y)<=2.5).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp);if(skill.type==='selfheal')allies=allies.slice(0,1);for(const a of allies)this.heal(bu,a,bu.stats.atk*skill.power);}
   if(skill.type==='drone'){let allies=this.s.battle.units.filter(u=>u.hp>0&&u.deployed).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp);if(allies.length)this.s.battle.drone={x:allies[0].x,y:allies[0].y,time:skill.duration,power:bu.stats.atk*skill.power,owner:bu.uid};}return true;
@@ -139,7 +142,7 @@ export class Game {
   if(type==='physical'&&o.alliances.includes('victoria')&&this.active('victoria'))dealt*=1+this.stack('victoria')*.008;
   if(o.alliances.includes('siracusa')&&this.active('siracusa')&&this.random()<Math.min(.8,this.stack('siracusa')*.006))dealt*=1.75;
   if(o.alliances.includes('kjerag')&&this.active('kjerag')){e.slowUntil=this.s.battle.time+2;e.slow=.55;dealt*=1+this.stack('kjerag')*.01;}
-  dealt*=e.vulnerable;const applied=applyDamage(e,dealt*(1-(e.damageReduction||0)),{type});wakeOnHit(e);const shieldDamage=applied.shield,real=applied.hp;bu.damage+=real+shieldDamage;this.s.stats.damage[source.id]=(this.s.stats.damage[source.id]||0)+real+shieldDamage;
+  dealt*=e.vulnerable;const applied=applyDamage(e,dealt*(1-(e.damageReduction||0)),{type,sourceId:source.id,sourceUid:source.uid});wakeOnHit(e);const shieldDamage=applied.shield,real=applied.hp;bu.damage+=real+shieldDamage;this.s.stats.damage[source.id]=(this.s.stats.damage[source.id]||0)+real+shieldDamage;
   this.onEffect({type:'hit',x:e.x,y:e.y,value:Math.round(real+shieldDamage),damageType:type,from:[bu.x,bu.y]});
   if(e.hp<=0){this.s.battle.kills++;this.s.stats.kills++;if(e.bounty)this.s.battle.bountyKills++;if(o.killDP)this.s.battle.dp=Math.min(99,this.s.battle.dp+o.killDP);this.trait(source,'kill');this.onEffect({type:'death',x:e.x,y:e.y});}
  }
@@ -169,7 +172,7 @@ export class Game {
  update(dt){if(!Number.isFinite(dt)||dt<0)throw new Error('dt must be a finite nonnegative number');if(this.s.phase!=='battle'||!this.s.battle)return;const b=this.s.battle;b.tickRemainder=(b.tickRemainder||0)+dt;while(b.tickRemainder+1e-10>=1/FPS&&this.s.phase==='battle'){b.tickRemainder=Math.max(0,b.tickRemainder-1/FPS);if(b.tickRemainder<1e-10)b.tickRemainder=0;this.step(1/FPS);}}
 
  step(dt){
-  if(this.s.phase!=='battle'||!this.s.battle)return;const b=this.s.battle;for(const actor of [...b.units,...b.enemies])tickStatuses(actor,dt);b.time+=dt;this.s.stats.time+=dt;b.dp=Math.min(99,b.dp+dt);b.escalation=1+Math.max(0,b.time-b.limit)*.025;
+  if(this.s.phase!=='battle'||!this.s.battle)return;const b=this.s.battle;for(const actor of [...b.units,...b.enemies])tickStatuses(actor,dt);b.time+=dt;if(b.benchmark)b.benchmark.elapsedFrames++;this.s.stats.time+=dt;b.dp=Math.min(99,b.dp+dt);b.escalation=1+Math.max(0,b.time-b.limit)*.025;
   while(b.queue.length&&b.queue[0].at<=b.time)this.spawnEnemy(b.queue.shift());
   for(const u of b.units){u.armorBuff=Math.max(0,u.armorBuff-dt);u.resBuff=Math.max(0,u.resBuff-dt);if(u.hp===0){u.down=Math.max(0,u.down-dt);if(u.down===0&&b.dp>=u.stats.dp){b.dp-=u.stats.dp;u.hp=u.maxHp;u.deployed=true;u.sp=Math.min(spCapacity(this.skill(u)),u.stats.initialSP+(this.skill(u).initialSP||0));u.spLock=0;cancelAttack(u);u.deployAt=b.time;u.cd=.2;this.onEffect({type:'redeploy',x:u.x,y:u.y});}}else if(!u.deployed&&b.time>=u.deployAt){u.deployed=true;this.onEffect({type:'redeploy',x:u.x,y:u.y});}}
   const alive=b.units.filter(u=>u.deployed&&u.hp>0);for(const e of b.enemies)if(e.block!==null&&(!permissions(e).beBlocked||!alive.some(u=>u.uid===e.block&&permissions(u).block)))e.block=null;
@@ -206,7 +209,7 @@ export class Game {
 
   if(b.drone){b.drone.time-=dt;const owner=b.units.find(u=>u.uid===b.drone.owner);if(owner)for(const u of alive)if(Math.hypot(u.x-b.drone.x,u.y-b.drone.y)<=1.6)this.heal(owner,u,b.drone.power*dt);if(b.drone.time<=0)b.drone=null;}
   for(const e of b.enemies){
-   if(e.hp<=0)continue;const path=this.map.paths[e.path];e.cd-=dt;
+   if(e.hp<=0||e.trainingDummy)continue;const path=this.map.paths[e.path];e.cd-=dt;
    if(e.boss){e.bossClock+=dt;if(e.bossClock>=18){e.bossClock=0;e.shield=e.maxShield;for(const u of alive)if(e.type==='core'||Math.hypot(u.x-e.x,u.y-e.y)<=2.4)this.damageUnit(u,e,e.atk*1.3,e.type==='core');this.onEffect({type:'boss',x:e.x,y:e.y});if(e.type==='mudrock'&&b.time<110){b.total++;b.queue.push({type:'golem',lane:Math.floor(this.random()*2),at:b.time+1,bounty:false});}}}
    if(e.stun>0||!permissions(e).attack)cancelAttack(e);const released=advanceAttack(e);if(released)this.releaseAttack(e,released);
    let blocked=e.block?alive.find(u=>u.uid===e.block&&u.hp>0&&permissions(u).block):null;if(!blocked)e.block=null;
@@ -219,16 +222,18 @@ export class Game {
   }
   this.advanceProjectiles(dt);
   b.enemies=b.enemies.filter(e=>e.hp>0);
+  if(b.benchmark){if(b.benchmark.elapsedFrames>=b.benchmark.duration*FPS){b.time=b.benchmark.duration;this.endBenchmark('timeout');}return;}
   if(this.s.hp<=0){this.finish(false);return;}
   if(this.s.round>=16&&b.time>b.limit){b.pulse+=dt;while(b.pulse>=1){b.pulse--;this.s.hp--;b.leaks++;this.s.stats.leaks++;}if(this.s.hp<=0){this.s.hp=0;this.finish(false);return;}}
   if(!b.queue.length&&!b.enemies.length){this.endRound();return;}
   if(b.time>300){for(const e of b.enemies){this.s.hp=Math.max(0,this.s.hp-e.leak);b.leaks+=e.leak;this.s.stats.leaks+=e.leak;}b.enemies=[];b.queue=[];if(this.s.hp<=0)this.finish(false);else this.endRound();}
  }
+ endBenchmark(reason='manual'){if(this.s.phase!=='battle'||!this.s.battle?.benchmark)return false;const b=this.s.battle,target=b.enemies.find(e=>e.trainingDummy);if(!target)return false;this.s.benchmarkResult=dummySummary(target,b.benchmark.elapsedFrames/FPS,reason);b.projectiles=[];this.log('木桩测试结束 · 总伤害 '+Math.round(this.s.benchmarkResult.totalDamage).toLocaleString());this.finish(true);return true;}
  endRound(){const b=this.s.battle;this.s.stats.rounds=this.s.round;this.s.lastResult={round:this.s.round,kills:b.kills,leaks:b.leaks,time:b.time,units:b.units.map(u=>({id:u.id,damage:u.damage,healing:u.healing}))};if(this.has('bounty')&&b.bountyKills>=2){this.s.bonusFunds+=3;this.log('悬赏完成，下回合额外获得 3 资金');}this.log(`第 ${this.s.round} 轮${b.leaks?'作战结束':'完美防卫'} · 击倒 ${b.kills} 名敌人`);
   if(this.s.round>=16){if(this.s.round===16&&this.s.difficulty!=='standard'&&this.s.stats.leaks===0){this.s.hidden=true;this.s.phase='intermission';this.log('无损防卫达成，隐秘核心已显现');}else{this.finish(true);return;}}else this.s.phase='intermission';this.changed();}
  nextRound(){if(this.s.phase!=='intermission')return false;const prev=this.s.round;this.s.round++;this.enterPrep();if([4,8,12].includes(prev)){let pool=this.content.DECISIONS.filter(d=>this.has(d.id)<2),offers=[];while(offers.length<3&&pool.length){const d=this.pick(pool);offers.push(d.id);pool=pool.filter(x=>x.id!==d.id);}this.s.decisionOffers=offers;}this.changed();return true;}
  chooseDecision(id){if(!this.s.decisionOffers?.includes(id))return false;this.s.decisionOffers=null;this.s.decisions.push(id);if(id==='funding')this.s.money+=2;if(id==='expand'){this.s.cap+=2;this.gainEquipment(this.pick(this.content.EQUIPMENT.filter(e=>e.tier<=this.s.level)).id);}if(id==='medical')this.s.hp=Math.min(this.s.maxHp,this.s.hp+8);if(id==='training')this.gainSpell('elite');if(id==='union')for(const a of Object.values(this.allies()))if(a.active)this.addStacks(a.id,15);if(id==='reinforce')for(let i=0;i<2;i++)this.gainOp(this.pick(this.content.OPERATORS.filter(o=>o.tier===Math.min(6,this.s.level+1))).id);this.log(`采纳策略：${this.content.DECISIONS.find(d=>d.id===id).name}`);this.changed();return true;}
- finish(won){this.s.phase='finished';this.s.won=won;if(won)this.s.stats.rounds=this.s.round;this.log(won?'模拟成功，卫戍协议已完成':'防卫失败，模拟中止');this.changed();}
+ finish(won){this.s.phase='finished';this.s.won=won;if(won)this.s.stats.rounds=this.s.round;this.log(this.s.benchmarkResult?'木桩测试已结算':won?'模拟成功，卫戍协议已完成':'防卫失败，模拟中止');this.changed();}
  serialize(){return JSON.stringify(this.s);}
  static restore(raw,content=LEGACY_CONTENT){try{const s=JSON.parse(raw);if((s.contentId&&s.contentId!==content.id)||(s.contentVersion&&s.contentVersion!==content.version))return null;if(s.version!==content.VERSION||!['briefing','prep','battle','intermission','finished'].includes(s.phase)||!Number.isInteger(s.round)||s.round<1||s.round>17||!content.MAPS[s.map]||!content.DIFFICULTIES[s.difficulty]||!content.STRATEGIES.some(x=>x.id===s.strategy)||!Array.isArray(s.units)||s.units.some(u=>!content.OP[u.id])||!Array.isArray(s.items)||s.items.some(e=>!content.EQ[e.id]&&!content.SP[e.id]))return null;const g=new Game(1,content);s.contentId??=content.id;s.contentVersion??=content.version;g.s=s;if(s.battle){s.battle.rulesVersion=2;s.battle.projectiles??=[];s.battle.tickRemainder??=0;for(const u of [...s.battle.units,...s.battle.enemies]){u.action??=null;u.attackCooldown??=Math.max(0,Math.round((u.cd||0)*FPS));u.spLock??=0;}}return g;}catch{return null;}}
 }

@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "manual": {
+    "kind": "training-dummy",
+    "reason": "manual",
+    "elapsed": 3.966666666666667,
+    "totalDamage": 342,
+    "dps": 86.21848739495798,
+    "hits": 1,
+    "byType": {
+      "physical": 342
+    },
+    "units": [
+      {
+        "uid": 1,
+        "id": "fang",
+        "damage": 342,
+        "hits": 1
+      }
+    ]
+  },
+  "timed": {
+    "kind": "training-dummy",
+    "reason": "timeout",
+    "elapsed": 150,
+    "totalDamage": 47538,
+    "dps": 316.92,
+    "hits": 139,
+    "byType": {
+      "physical": 47538
+    },
+    "units": [
+      {
+        "uid": 1,
+        "id": "fang",
+        "damage": 47538,
+        "hits": 139
+      }
+    ]
+  },
+  "errors": []
+}

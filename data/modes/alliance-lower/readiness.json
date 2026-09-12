@@ -1,4 +1,378 @@
 {
+  "preparationRuntime": {
+    "serverGarrisonHandlers": [
+      "SERVER_CHESS_PRICE",
+      "SERVER_ONCE_GOLD",
+      "SERVER_GAIN_FREE_REFRESH_COUNT",
+      "SERVER_ADD_BOND_CHESS_ALL",
+      "SERVER_ADD_BOND",
+      "SERVER_ADD_MULTIPLE_BOND",
+      "SERVER_ADD_BOND_METHOD",
+      "SERVER_ADD_BOND_ACTIVATED_MOST_LAYER",
+      "SERVER_ADD_BOND_ACTIVATED_RANDOM",
+      "SERVER_ADD_BOND_POSITION",
+      "SERVER_ADD_BOND_IN_HAND",
+      "SERVER_ADD_BOND_FRONT_ALL_LAYER",
+      "SERVER_ADD_ACT_BOND_DIFF_LV_MOST_LAYER",
+      "SERVER_ADD_BOND_ROUND_COIN_COST",
+      "SERVER_ADD_REFRESH_CNT_MULTIPLIER_BOND_LAYER",
+      "SERVER_GAIN_BOND_LAYER_BY_REFRESH_CNT",
+      "SERVER_ONCE_GOLD_WITH_BOND_CONDITION",
+      "SERVER_GAIN_EQUIP",
+      "SERVER_GAIN_CHAR",
+      "SERVER_POOL_CHAR",
+      "SERVER_POOL_EQUIP",
+      "SERVER_GAIN_RANDOM_EQUIP_CHESS_IN_POOL",
+      "SERVER_MOST_BOND",
+      "SERVER_TRIGGER_ANOTHER",
+      "SERVER_TRIGGER_FRONT_COUNT",
+      "SERVER_FRONT_SAME_EFFECT_PREP_START",
+      "SERVER_FRONT_SAME_EFFECT_PREP_FIN",
+      "SERVER_SELL_CHESS_GAIN_SPECIAL_GOODS"
+    ],
+    "strategies": [
+      {
+        "id": "band_bldsk",
+        "serverHooks": [
+          "prep_finish_char_bond_add_layer"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_amiya",
+        "serverHooks": [],
+        "pendingKeys": [
+          "env_gbuff_new_with_verify"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_duyaoy",
+        "serverHooks": [
+          "band_first_self_refresh_present_char"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_sarkazb",
+        "serverHooks": [],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_orchid",
+        "serverHooks": [
+          "band_shop_refresh_copy_max_lv_char",
+          "preparation_start_gain_chess_from_round"
+        ],
+        "pendingKeys": [
+          "band_shop_refresh_copy_max_lv_char"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_justin",
+        "serverHooks": [
+          "preparation_start_gain_chess_from_round",
+          "preparation_start_gain_chess_from_round",
+          "preparation_start_gain_chess_from_round",
+          "preparation_start_gain_chess_from_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_ermengard",
+        "serverHooks": [],
+        "pendingKeys": [
+          "env_gbuff_new_with_verify"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_lmlee",
+        "serverHooks": [
+          "give_coin_in_round",
+          "give_coin_in_round",
+          "give_coin_in_round",
+          "prep_start_gain_chess_from_pool_in_round",
+          "prep_start_gain_chess_from_pool_in_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_kirara",
+        "serverHooks": [
+          "band_coin_cost_gain_random_char_by_shop_level"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_pepe",
+        "serverHooks": [
+          "up_shop_next_refresh_must_present_bond_char"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_harold",
+        "serverHooks": [
+          "gain_bond_char_per_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_sciurus",
+        "serverHooks": [
+          "first_buy_in_round_char_price_change"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_paganini",
+        "serverHooks": [
+          "band_cost_coin_reach_cnt_gain_chess_from_pool"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_clementia",
+        "serverHooks": [],
+        "pendingKeys": [
+          "env_gbuff_new_with_verify"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_emperor",
+        "serverHooks": [],
+        "pendingKeys": [
+          "env_gbuff_new_with_verify"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_mberry",
+        "serverHooks": [],
+        "pendingKeys": [
+          "env_gbuff_new_with_verify"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_humus",
+        "serverHooks": [],
+        "pendingKeys": [
+          "env_gbuff_new_with_verify"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_quintus",
+        "serverHooks": [
+          "preparation_start_gain_chess_from_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_yu",
+        "serverHooks": [
+          "round_start_bond_check_gain_layer"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_doberm",
+        "serverHooks": [
+          "preparation_start_gain_chess_every_n_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_cathy",
+        "serverHooks": [
+          "up_shop_add_special_goods"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_malkie",
+        "serverHooks": [
+          "preparation_start_gain_chess_from_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_qalaisa",
+        "serverHooks": [],
+        "pendingKeys": [
+          "env_gbuff_new_with_verify"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_chen",
+        "serverHooks": [],
+        "pendingKeys": [
+          "env_gbuff_new_with_verify"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_damaztic",
+        "serverHooks": [
+          "preparation_start_gain_chess_from_round",
+          "preparation_start_gain_chess_from_round",
+          "preparation_start_gain_chess_from_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_pith",
+        "serverHooks": [
+          "preparation_start_gain_chess_from_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_dusk",
+        "serverHooks": [
+          "preparation_start_gain_chess_from_round"
+        ],
+        "pendingKeys": [
+          "env_gbuff_new_with_verify"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_cannot",
+        "serverHooks": [
+          "coin_carry_over"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_ducklord",
+        "serverHooks": [],
+        "pendingKeys": [
+          "round_start_all_player_change_enemy_2"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_lisa",
+        "serverHooks": [
+          "round_start_activate_char_chess_effect_in_board"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_vodfox",
+        "serverHooks": [],
+        "pendingKeys": [
+          "first_sell_char_chess_exchange_char_chess_in_shop"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_ioleta",
+        "serverHooks": [],
+        "pendingKeys": [
+          "env_gbuff_new_with_verify"
+        ],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_jesica",
+        "serverHooks": [
+          "preparation_start_gain_chess_from_round",
+          "preparation_start_gain_chess_from_round",
+          "preparation_start_gain_chess_from_round",
+          "preparation_start_gain_chess_from_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_mlyss",
+        "serverHooks": [
+          "preparation_start_gain_chess_from_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_makiri",
+        "serverHooks": [
+          "round_start_gain_char_chess_in_shop_every_n_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_fang",
+        "serverHooks": [
+          "preparation_start_gain_chess_from_round",
+          "preparation_start_gain_chess_from_round",
+          "preparation_start_gain_chess_from_round",
+          "preparation_start_gain_chess_from_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_mlynar",
+        "serverHooks": [
+          "round_start_gain_coin_by_bond_char_chess_buy"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_chiave",
+        "serverHooks": [
+          "refresh_shop_count_gain_coin_bond_char_chess"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_narant",
+        "serverHooks": [
+          "preparation_start_add_special_goods_every_n_round"
+        ],
+        "pendingKeys": [],
+        "mainBattleIntegrated": false
+      },
+      {
+        "id": "band_amedic",
+        "serverHooks": [],
+        "pendingKeys": [
+          "auto_chess_change_map",
+          "auto_chess_change_map"
+        ],
+        "mainBattleIntegrated": false
+      }
+    ],
+    "integration": "native controller tested; primary battle still legacy; pool distributions and some phase transitions unresolved"
+  },
   "sourceCommit": "86da4cfa3a4b958c3615fccf5afbc10b5c7f1bfb",
   "counts": {
     "shopOperatorRecords": 133,
@@ -12,7 +386,9 @@
     "levelTemplates": 50,
     "modeVariants": 9,
     "requiredSkills": 269,
-    "effectTemplates": 70
+    "effectTemplates": 70,
+    "enemies": 215,
+    "artAssets": 376
   },
   "dataReferences": [],
   "s4": {
@@ -39,7 +415,10 @@
       "distinct bond activation",
       "promotion placement/equipment semantics",
       "native round schedules",
-      "24-hour suspension contract"
+      "24-hour suspension contract",
+      "native garrison event interpreter",
+      "verified strategy preparation events",
+      "special bond counting and miracle refresh formula"
     ],
     "pending": [
       "server shop selection weights",
@@ -47,9 +426,16 @@
       "dual-client sync check"
     ]
   },
+  "finalStageException": {
+    "kind": "training-dummy",
+    "health": "infinite",
+    "manualFinish": true,
+    "clock": "bossTurnHpReduceTime"
+  },
   "s6": {
     "dataCatalogComplete": true,
     "playableParityComplete": false,
+    "acceptedScopeComplete": false,
     "dependencyScope": "visible fixed presets only; DIY/support selections require local profile resolution",
     "requiredSkillIds": [
       "skchr_inside_1",

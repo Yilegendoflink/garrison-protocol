@@ -10,13 +10,15 @@
 
 按用户要求，S06 全部验收通过后才建仓并发布 GitHub Pages，当前不发布试玩版。部署配置与条件见 [PUBLISHING.md](PUBLISHING.md)。
 
+最终阶段已按用户要求增加无限生命木桩，支持 150 秒自动结束、手动结束及总伤害播报。原作数据、资源和实际接入边界见 [NATIVE_RULES_PROGRESS.md](NATIVE_RULES_PROGRESS.md)。
+
 ## 原作参考数据库
 
 已建立基于PRTS的全目录干员／敌人参考数据库，包含SQLite、JSON、来源修订、采集器与查询校验工具。精确当前／历史原作表和内部ID映射见 [规范化数据库](data/normalized/README.md)。范围及完成度见 [data/prts/README.md](data/prts/README.md)。该数据库尚未替换游戏内的改编数据。
 
 ## 战斗基础系统
 
-战斗规则与实现边界见 [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md)。数值公式、范围索敌和攻击动作已独立分层，并接入现有游戏。当前共57项自动化测试，另有真实浏览器、触控与离线启动检查；原作单位数据与特殊机制仍需继续校准。
+战斗规则与实现边界见 [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md)。数值公式、范围索敌和攻击动作已独立分层，并接入现有游戏。当前共75项自动化测试，另有真实浏览器、触控与离线启动检查；原作单位数据与特殊机制仍需继续校准。
 
 ## 启动游戏
 

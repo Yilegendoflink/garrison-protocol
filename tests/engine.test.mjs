@@ -33,7 +33,7 @@ test('defeated operators redeploy with cooldown and DP, and medics produce actua
  const g=started();const unit=g.gainOp('beagle'),medic=g.gainOp('ansel');g.deploy(unit.uid,3,3);g.deploy(medic.uid,2,2);g.turn(medic.uid,1);g.startBattle();const bu=g.s.battle.units.find(u=>u.uid===unit.uid);bu.deployed=true;g.damageUnit(bu,{type:'test'},999999,false);assert.equal(bu.hp,0);assert.ok(bu.down>0);g.s.battle.queue=[{type:'soldier',lane:0,at:150,bounty:false}];for(let i=0;i<1300;i++)g.update(1/30);assert.ok(bu.hp>0);assert.equal(bu.deployed,true);bu.hp=bu.maxHp*.3;for(let i=0;i<150;i++)g.update(1/30);assert.ok(g.s.stats.healing.ansel>0);
 });
 
-test('full sixteen-wave scenario completes, including strategy events and boss summons',()=>{
+test('full sixteen-wave demo completes with strategy events and a timed dummy finale',()=>{
  const g=started();for(const [id,x,y,dir] of [['saria',3,1,0],['hoshiguma',3,5,0],['mountain',3,3,0],['nightingale',2,2,1],['exusiai',4,2,2],['eyjafjalla',4,4,2],['thorns',5,3,0],['blaze',4,3,0]]){const u=g.gainOp(id,true);g.deploy(u.uid,x,y);g.turn(u.uid,dir);}
  for(let round=1;round<=16;round++){assert.equal(g.s.round,round);if(g.s.decisionOffers)g.chooseDecision(g.s.decisionOffers[0]);promotions(g);g.startBattle();runBattle(g);assert.ok(g.s.hp>0,`survive round ${round}`);if(round<16)g.nextRound();}
  assert.equal(g.s.phase,'finished');assert.equal(g.s.won,true);assert.equal(g.s.stats.rounds,16);assert.ok(g.s.stats.kills>140);assert.ok(g.s.stats.damage.eyjafjalla>0);assert.ok(g.s.stats.healing.nightingale>0);
