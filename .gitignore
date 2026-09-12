@@ -1,0 +1,7 @@
+.vscode/
+light3d-test-ca.crt
+node_modules/
+*.tmp
+data/**/database.sqlite
+data/**/database.sqlite.metadata.json
+artifacts/browser-profile/

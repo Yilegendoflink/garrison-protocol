@@ -1,0 +1,5137 @@
+[
+  {
+    "id": "0-1",
+    "source": {
+      "pageId": 10573,
+      "revisionId": 373694,
+      "revisionAt": "2025-11-02T14:20:35Z",
+      "url": "https://prts.wiki/index.php?oldid=373694"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "1-1",
+    "source": {
+      "pageId": 10574,
+      "revisionId": 373695,
+      "revisionAt": "2025-11-02T14:20:35Z",
+      "url": "https://prts.wiki/index.php?oldid=373695"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "1-2",
+    "source": {
+      "pageId": 10575,
+      "revisionId": 373696,
+      "revisionAt": "2025-11-02T14:20:36Z",
+      "url": "https://prts.wiki/index.php?oldid=373696"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "1-3",
+    "source": {
+      "pageId": 10576,
+      "revisionId": 373697,
+      "revisionAt": "2025-11-02T14:20:36Z",
+      "url": "https://prts.wiki/index.php?oldid=373697"
+    },
+    "displayCells": [
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "2-1",
+    "source": {
+      "pageId": 10577,
+      "revisionId": 373621,
+      "revisionAt": "2025-11-02T14:09:54Z",
+      "url": "https://prts.wiki/index.php?oldid=373621"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "2-2",
+    "source": {
+      "pageId": 10578,
+      "revisionId": 373622,
+      "revisionAt": "2025-11-02T14:09:54Z",
+      "url": "https://prts.wiki/index.php?oldid=373622"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "2-3",
+    "source": {
+      "pageId": 10579,
+      "revisionId": 373623,
+      "revisionAt": "2025-11-02T14:09:55Z",
+      "url": "https://prts.wiki/index.php?oldid=373623"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "2-4",
+    "source": {
+      "pageId": 10580,
+      "revisionId": 373624,
+      "revisionAt": "2025-11-02T14:09:55Z",
+      "url": "https://prts.wiki/index.php?oldid=373624"
+    },
+    "displayCells": [
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "2-5",
+    "source": {
+      "pageId": 10581,
+      "revisionId": 373625,
+      "revisionAt": "2025-11-02T14:10:41Z",
+      "url": "https://prts.wiki/index.php?oldid=373625"
+    },
+    "displayCells": [
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-1",
+    "source": {
+      "pageId": 10582,
+      "revisionId": 373628,
+      "revisionAt": "2025-11-02T14:10:43Z",
+      "url": "https://prts.wiki/index.php?oldid=373628"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-10",
+    "source": {
+      "pageId": 10590,
+      "revisionId": 373637,
+      "revisionAt": "2025-11-02T14:10:47Z",
+      "url": "https://prts.wiki/index.php?oldid=373637"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-11",
+    "source": {
+      "pageId": 10591,
+      "revisionId": 373638,
+      "revisionAt": "2025-11-02T14:10:47Z",
+      "url": "https://prts.wiki/index.php?oldid=373638"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-12",
+    "source": {
+      "pageId": 10592,
+      "revisionId": 373639,
+      "revisionAt": "2025-11-02T14:10:48Z",
+      "url": "https://prts.wiki/index.php?oldid=373639"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-13",
+    "source": {
+      "pageId": 10593,
+      "revisionId": 373640,
+      "revisionAt": "2025-11-02T14:10:49Z",
+      "url": "https://prts.wiki/index.php?oldid=373640"
+    },
+    "displayCells": [
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-14",
+    "source": {
+      "pageId": 10594,
+      "revisionId": 373641,
+      "revisionAt": "2025-11-02T14:10:49Z",
+      "url": "https://prts.wiki/index.php?oldid=373641"
+    },
+    "displayCells": [
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-15",
+    "source": {
+      "pageId": 10612,
+      "revisionId": 373642,
+      "revisionAt": "2025-11-02T14:10:50Z",
+      "url": "https://prts.wiki/index.php?oldid=373642"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-16",
+    "source": {
+      "pageId": 24568,
+      "revisionId": 388901,
+      "revisionAt": "2026-04-08T05:12:53Z",
+      "url": "https://prts.wiki/index.php?oldid=388901"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "2-6",
+    "source": {
+      "pageId": 31553,
+      "revisionId": 373626,
+      "revisionAt": "2025-11-02T14:10:42Z",
+      "url": "https://prts.wiki/index.php?oldid=373626"
+    },
+    "displayCells": [
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-17",
+    "source": {
+      "pageId": 32400,
+      "revisionId": 373644,
+      "revisionAt": "2025-11-02T14:10:51Z",
+      "url": "https://prts.wiki/index.php?oldid=373644"
+    },
+    "displayCells": [
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-18",
+    "source": {
+      "pageId": 38274,
+      "revisionId": 373645,
+      "revisionAt": "2025-11-02T14:10:51Z",
+      "url": "https://prts.wiki/index.php?oldid=373645"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "1-4",
+    "source": {
+      "pageId": 49754,
+      "revisionId": 373620,
+      "revisionAt": "2025-11-02T14:09:53Z",
+      "url": "https://prts.wiki/index.php?oldid=373620"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "2-7",
+    "source": {
+      "pageId": 49755,
+      "revisionId": 388898,
+      "revisionAt": "2026-04-08T05:10:12Z",
+      "url": "https://prts.wiki/index.php?oldid=388898"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-19",
+    "source": {
+      "pageId": 80550,
+      "revisionId": 373646,
+      "revisionAt": "2025-11-02T14:10:52Z",
+      "url": "https://prts.wiki/index.php?oldid=373646"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -3,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 3,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "1-5",
+    "source": {
+      "pageId": 89359,
+      "revisionId": 388801,
+      "revisionAt": "2026-04-07T16:10:49Z",
+      "url": "https://prts.wiki/index.php?oldid=388801"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "2-5dx",
+    "source": {
+      "pageId": 93515,
+      "revisionId": 406199,
+      "revisionAt": "2026-06-28T08:57:49Z",
+      "url": "https://prts.wiki/index.php?oldid=406199"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-7",
+    "source": {
+      "pageId": 10572,
+      "revisionId": 373634,
+      "revisionAt": "2025-11-02T14:10:45Z",
+      "url": "https://prts.wiki/index.php?oldid=373634"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -3,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 3,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-2",
+    "source": {
+      "pageId": 10583,
+      "revisionId": 373629,
+      "revisionAt": "2025-11-02T14:10:43Z",
+      "url": "https://prts.wiki/index.php?oldid=373629"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-3",
+    "source": {
+      "pageId": 10584,
+      "revisionId": 373630,
+      "revisionAt": "2025-11-02T14:10:43Z",
+      "url": "https://prts.wiki/index.php?oldid=373630"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-4",
+    "source": {
+      "pageId": 10585,
+      "revisionId": 373631,
+      "revisionAt": "2025-11-02T14:10:44Z",
+      "url": "https://prts.wiki/index.php?oldid=373631"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-5",
+    "source": {
+      "pageId": 10586,
+      "revisionId": 373632,
+      "revisionAt": "2025-11-02T14:10:44Z",
+      "url": "https://prts.wiki/index.php?oldid=373632"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-6",
+    "source": {
+      "pageId": 10587,
+      "revisionId": 373633,
+      "revisionAt": "2025-11-02T14:10:45Z",
+      "url": "https://prts.wiki/index.php?oldid=373633"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-8",
+    "source": {
+      "pageId": 10588,
+      "revisionId": 373635,
+      "revisionAt": "2025-11-02T14:10:46Z",
+      "url": "https://prts.wiki/index.php?oldid=373635"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-9",
+    "source": {
+      "pageId": 10589,
+      "revisionId": 373636,
+      "revisionAt": "2025-11-02T14:10:46Z",
+      "url": "https://prts.wiki/index.php?oldid=373636"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-1",
+    "source": {
+      "pageId": 10595,
+      "revisionId": 373647,
+      "revisionAt": "2025-11-02T14:10:53Z",
+      "url": "https://prts.wiki/index.php?oldid=373647"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-2",
+    "source": {
+      "pageId": 10596,
+      "revisionId": 373648,
+      "revisionAt": "2025-11-02T14:10:54Z",
+      "url": "https://prts.wiki/index.php?oldid=373648"
+    },
+    "displayCells": [
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "5-1",
+    "source": {
+      "pageId": 10597,
+      "revisionId": 373658,
+      "revisionAt": "2025-11-02T14:10:58Z",
+      "url": "https://prts.wiki/index.php?oldid=373658"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": 0,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-3",
+    "source": {
+      "pageId": 16685,
+      "revisionId": 388891,
+      "revisionAt": "2026-04-08T04:59:19Z",
+      "url": "https://prts.wiki/index.php?oldid=388891"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-4",
+    "source": {
+      "pageId": 16686,
+      "revisionId": 388883,
+      "revisionAt": "2026-04-08T04:35:30Z",
+      "url": "https://prts.wiki/index.php?oldid=388883"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-5",
+    "source": {
+      "pageId": 32401,
+      "revisionId": 389139,
+      "revisionAt": "2026-04-11T11:24:15Z",
+      "url": "https://prts.wiki/index.php?oldid=389139"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-6",
+    "source": {
+      "pageId": 32402,
+      "revisionId": 389140,
+      "revisionAt": "2026-04-11T11:27:19Z",
+      "url": "https://prts.wiki/index.php?oldid=389140"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-7",
+    "source": {
+      "pageId": 32403,
+      "revisionId": 389141,
+      "revisionAt": "2026-04-11T11:30:31Z",
+      "url": "https://prts.wiki/index.php?oldid=389141"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-8",
+    "source": {
+      "pageId": 49756,
+      "revisionId": 373654,
+      "revisionAt": "2025-11-02T14:10:57Z",
+      "url": "https://prts.wiki/index.php?oldid=373654"
+    },
+    "displayCells": [
+      {
+        "x": 3,
+        "y": -3,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 6,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 3,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-9",
+    "source": {
+      "pageId": 58756,
+      "revisionId": 373655,
+      "revisionAt": "2025-11-02T14:10:57Z",
+      "url": "https://prts.wiki/index.php?oldid=373655"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-10",
+    "source": {
+      "pageId": 62810,
+      "revisionId": 373656,
+      "revisionAt": "2025-11-02T14:10:58Z",
+      "url": "https://prts.wiki/index.php?oldid=373656"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-11",
+    "source": {
+      "pageId": 75274,
+      "revisionId": 373657,
+      "revisionAt": "2025-11-02T14:10:58Z",
+      "url": "https://prts.wiki/index.php?oldid=373657"
+    },
+    "displayCells": [
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-21",
+    "source": {
+      "pageId": 82920,
+      "revisionId": 373616,
+      "revisionAt": "2025-11-02T13:57:45Z",
+      "url": "https://prts.wiki/index.php?oldid=373616"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-20",
+    "source": {
+      "pageId": 85744,
+      "revisionId": 373615,
+      "revisionAt": "2025-11-02T13:57:31Z",
+      "url": "https://prts.wiki/index.php?oldid=373615"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-12",
+    "source": {
+      "pageId": 88586,
+      "revisionId": 383978,
+      "revisionAt": "2026-02-19T00:43:36Z",
+      "url": "https://prts.wiki/index.php?oldid=383978"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "4-13",
+    "source": {
+      "pageId": 89361,
+      "revisionId": 388877,
+      "revisionAt": "2026-04-08T03:39:30Z",
+      "url": "https://prts.wiki/index.php?oldid=388877"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "3-6x",
+    "source": {
+      "pageId": 93514,
+      "revisionId": 406187,
+      "revisionAt": "2026-06-28T04:15:13Z",
+      "url": "https://prts.wiki/index.php?oldid=406187"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "5-2",
+    "source": {
+      "pageId": 10598,
+      "revisionId": 373659,
+      "revisionAt": "2025-11-02T14:10:59Z",
+      "url": "https://prts.wiki/index.php?oldid=373659"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "x-1",
+    "source": {
+      "pageId": 10599,
+      "revisionId": 373661,
+      "revisionAt": "2025-11-02T14:11:00Z",
+      "url": "https://prts.wiki/index.php?oldid=373661"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "x-2",
+    "source": {
+      "pageId": 10600,
+      "revisionId": 373662,
+      "revisionAt": "2025-11-02T14:11:01Z",
+      "url": "https://prts.wiki/index.php?oldid=373662"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "x-3",
+    "source": {
+      "pageId": 10601,
+      "revisionId": 373663,
+      "revisionAt": "2025-11-02T14:11:01Z",
+      "url": "https://prts.wiki/index.php?oldid=373663"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -3,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 3,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "x-4",
+    "source": {
+      "pageId": 10602,
+      "revisionId": 373664,
+      "revisionAt": "2025-11-02T14:11:02Z",
+      "url": "https://prts.wiki/index.php?oldid=373664"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "x-5",
+    "source": {
+      "pageId": 10603,
+      "revisionId": 373665,
+      "revisionAt": "2025-11-02T14:11:02Z",
+      "url": "https://prts.wiki/index.php?oldid=373665"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "y-1",
+    "source": {
+      "pageId": 10604,
+      "revisionId": 373668,
+      "revisionAt": "2025-11-02T14:11:04Z",
+      "url": "https://prts.wiki/index.php?oldid=373668"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "y-2",
+    "source": {
+      "pageId": 10605,
+      "revisionId": 373669,
+      "revisionAt": "2025-11-02T14:11:04Z",
+      "url": "https://prts.wiki/index.php?oldid=373669"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "y-3",
+    "source": {
+      "pageId": 10606,
+      "revisionId": 373670,
+      "revisionAt": "2025-11-02T14:11:05Z",
+      "url": "https://prts.wiki/index.php?oldid=373670"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "y-4",
+    "source": {
+      "pageId": 10607,
+      "revisionId": 373671,
+      "revisionAt": "2025-11-02T14:11:05Z",
+      "url": "https://prts.wiki/index.php?oldid=373671"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "y-5",
+    "source": {
+      "pageId": 10608,
+      "revisionId": 373672,
+      "revisionAt": "2025-11-02T14:11:06Z",
+      "url": "https://prts.wiki/index.php?oldid=373672"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "y-6",
+    "source": {
+      "pageId": 10609,
+      "revisionId": 373673,
+      "revisionAt": "2025-11-02T14:11:06Z",
+      "url": "https://prts.wiki/index.php?oldid=373673"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "y-7",
+    "source": {
+      "pageId": 10610,
+      "revisionId": 373674,
+      "revisionAt": "2025-11-02T14:11:07Z",
+      "url": "https://prts.wiki/index.php?oldid=373674"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "b-1",
+    "source": {
+      "pageId": 10611,
+      "revisionId": 373678,
+      "revisionAt": "2025-11-02T14:11:09Z",
+      "url": "https://prts.wiki/index.php?oldid=373678"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "x-7",
+    "source": {
+      "pageId": 10743,
+      "revisionId": 373667,
+      "revisionAt": "2025-11-02T14:11:03Z",
+      "url": "https://prts.wiki/index.php?oldid=373667"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -3,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 3,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "x-6",
+    "source": {
+      "pageId": 25793,
+      "revisionId": 373666,
+      "revisionAt": "2025-11-02T14:11:03Z",
+      "url": "https://prts.wiki/index.php?oldid=373666"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "t-1",
+    "source": {
+      "pageId": 52287,
+      "revisionId": 255173,
+      "revisionAt": "2023-03-31T15:07:08Z",
+      "url": "https://prts.wiki/index.php?oldid=255173"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": -3,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -3,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -3,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": -3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 3,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 3,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 3,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "y-10",
+    "source": {
+      "pageId": 65649,
+      "revisionId": 373677,
+      "revisionAt": "2025-11-02T14:11:08Z",
+      "url": "https://prts.wiki/index.php?oldid=373677"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "6-1",
+    "source": {
+      "pageId": 68394,
+      "revisionId": 373660,
+      "revisionAt": "2025-11-02T14:11:00Z",
+      "url": "https://prts.wiki/index.php?oldid=373660"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 6,
+        "y": 0,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "act38side",
+    "source": {
+      "pageId": 73020,
+      "revisionId": 324831,
+      "revisionAt": "2024-11-02T13:36:41Z",
+      "url": "https://prts.wiki/index.php?oldid=324831"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "b-2",
+    "source": {
+      "pageId": 85742,
+      "revisionId": 373613,
+      "revisionAt": "2025-11-02T13:54:59Z",
+      "url": "https://prts.wiki/index.php?oldid=373613"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "5-3",
+    "source": {
+      "pageId": 85743,
+      "revisionId": 373614,
+      "revisionAt": "2025-11-02T13:56:45Z",
+      "url": "https://prts.wiki/index.php?oldid=373614"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 6,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": 1,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "x-8",
+    "source": {
+      "pageId": 89360,
+      "revisionId": 387737,
+      "revisionAt": "2026-04-06T22:46:20Z",
+      "url": "https://prts.wiki/index.php?oldid=387737"
+    },
+    "displayCells": [
+      {
+        "x": -2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -2,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "Empty",
+    "source": {
+      "pageId": 89362,
+      "revisionId": 388879,
+      "revisionAt": "2026-04-08T03:43:55Z",
+      "url": "https://prts.wiki/index.php?oldid=388879"
+    },
+    "displayCells": null,
+    "status": "needs-review",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "y-11",
+    "source": {
+      "pageId": 90300,
+      "revisionId": 390633,
+      "revisionAt": "2026-04-30T23:05:15Z",
+      "url": "https://prts.wiki/index.php?oldid=390633"
+    },
+    "displayCells": [
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "y-8",
+    "source": {
+      "pageId": 18542,
+      "revisionId": 373675,
+      "revisionAt": "2025-11-02T14:11:08Z",
+      "url": "https://prts.wiki/index.php?oldid=373675"
+    },
+    "displayCells": [
+      {
+        "x": -1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  },
+  {
+    "id": "y-9",
+    "source": {
+      "pageId": 49757,
+      "revisionId": 373676,
+      "revisionAt": "2025-11-02T14:11:08Z",
+      "url": "https://prts.wiki/index.php?oldid=373676"
+    },
+    "displayCells": [
+      {
+        "x": 2,
+        "y": -3,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -2,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": -1,
+        "kind": "outline"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "kind": "origin"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 5,
+        "y": 0,
+        "kind": "outline"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 4,
+        "y": 1,
+        "kind": "outline"
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 3,
+        "y": 2,
+        "kind": "outline"
+      },
+      {
+        "x": 2,
+        "y": 3,
+        "kind": "outline"
+      }
+    ],
+    "status": "display-grid-extracted",
+    "simulationReady": false,
+    "note": "展示网格不等于攻击碰撞体；中心格与实际攻击触发规则另行校准"
+  }
+]

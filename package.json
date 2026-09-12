@@ -1,0 +1,17 @@
+{
+  "name": "garrison-protocol-fan-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-browser.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "data:sync": "node scripts/sync-prts.mjs",
+    "data:check": "node scripts/prts-db.mjs validate",
+    "data:stats": "node scripts/prts-db.mjs stats",
+    "data:sqlite": "node scripts/prts-db.mjs sqlite",
+    "data:query": "node scripts/prts-db.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

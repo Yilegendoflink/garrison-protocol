@@ -1,0 +1,144 @@
+{
+  "scope": "PRTS所选分类在本次采集时的页面集合；不等于全部已实装干员数量或可运行内容",
+  "expected": {
+    "干员": 460,
+    "专属干员": 29,
+    "敌人": 1804,
+    "召唤物": 71
+  },
+  "collected": {
+    "operators": 460,
+    "enemies": 1804,
+    "summons": 71,
+    "skills": 1005,
+    "modules": 499,
+    "moduleBadges": 386,
+    "enemyLevels": 2082,
+    "ranges": 77
+  },
+  "issues": {
+    "operators": [],
+    "enemies": [
+      {
+        "id": "prts:enemy:53316",
+        "name": "同构碎片",
+        "missing": [
+          "levels"
+        ]
+      }
+    ],
+    "operatorsWithoutDeclaredSkills": [
+      {
+        "id": "prts:operator:1697",
+        "name": "Lancet-2"
+      },
+      {
+        "id": "prts:operator:1698",
+        "name": "Castle-3"
+      },
+      {
+        "id": "prts:operator:1699",
+        "name": "夜刀"
+      },
+      {
+        "id": "prts:operator:1700",
+        "name": "黑角"
+      },
+      {
+        "id": "prts:operator:1701",
+        "name": "巡林者"
+      },
+      {
+        "id": "prts:operator:1702",
+        "name": "杜林"
+      },
+      {
+        "id": "prts:operator:1703",
+        "name": "12F"
+      },
+      {
+        "id": "prts:operator:15227",
+        "name": "THRM-EX"
+      },
+      {
+        "id": "prts:operator:20270",
+        "name": "预备干员-近战"
+      },
+      {
+        "id": "prts:operator:20272",
+        "name": "预备干员-狙击"
+      },
+      {
+        "id": "prts:operator:20274",
+        "name": "预备干员-后勤"
+      },
+      {
+        "id": "prts:operator:20276",
+        "name": "预备干员-术师"
+      },
+      {
+        "id": "prts:operator:34422",
+        "name": "正义骑士号"
+      },
+      {
+        "id": "prts:operator:45465",
+        "name": "预备干员-重装"
+      },
+      {
+        "id": "prts:operator:51404",
+        "name": "泰拉大陆调查团"
+      },
+      {
+        "id": "prts:operator:52364",
+        "name": "U-Official"
+      },
+      {
+        "id": "prts:operator:54983",
+        "name": "Friston-3"
+      },
+      {
+        "id": "prts:operator:66429",
+        "name": "PhonoR-0"
+      },
+      {
+        "id": "prts:operator:78316",
+        "name": "CONFESS-47"
+      },
+      {
+        "id": "prts:operator:90808",
+        "name": "GALLUS²"
+      },
+      {
+        "id": "prts:operator:92386",
+        "name": "罗德岛隐秘队"
+      },
+      {
+        "id": "prts:operator:95900",
+        "name": "虎狼丸"
+      }
+    ],
+    "unresolved": {
+      "operatorLevelOneAnchors": 0,
+      "enemyGameIds": 1804,
+      "enemyStatValues": 6920,
+      "executableSkillEffects": 1005,
+      "rangeDisplayGeometry": [
+        "3-16",
+        "2-7",
+        "1-5",
+        "2-5dx",
+        "4-3",
+        "4-4",
+        "4-5",
+        "4-6",
+        "4-7",
+        "4-13",
+        "3-6x",
+        "act38side",
+        "Empty"
+      ],
+      "operatorRangeReferences": []
+    }
+  },
+  "simulationReady": false
+}

@@ -1,0 +1,27 @@
+{
+  "pageid": 53316,
+  "title": "同构碎片",
+  "categories": [
+    "敌人"
+  ],
+  "revisionId": 379124,
+  "revisionAt": "2026-01-04T16:11:50Z",
+  "retrievedAt": "2026-09-12T06:05:29.628Z",
+  "contentHash": "6d31e19e0f125730efea8c0bd71d4f78a9ef83693f5f08ea7eda5383e70751ad",
+  "templateNames": [
+    "敌人信息/common2",
+    "敌人导航"
+  ],
+  "unbalanced": false,
+  "templates": [
+    {
+      "name": "敌人信息/common2",
+      "fields": {
+        "名称": "同构碎片",
+        "非常规敌人": "yes",
+        "无头像": "yes",
+        "地位级别": "领袖"
+      }
+    }
+  ]
+}

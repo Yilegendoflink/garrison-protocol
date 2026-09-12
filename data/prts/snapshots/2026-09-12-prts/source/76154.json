@@ -1,0 +1,41 @@
+{
+  "pageid": 76154,
+  "title": "异客(敌方)",
+  "categories": [
+    "敌人"
+  ],
+  "revisionId": 417639,
+  "revisionAt": "2026-08-13T18:54:49Z",
+  "retrievedAt": "2026-09-12T06:05:44.850Z",
+  "contentHash": "c5c5c7483ddf8cae18113c6b2c79c951acdaa7207cef4072ae17a4eb34506dfa",
+  "templateNames": [
+    "DISPLAYTITLE:异客",
+    "敌人信息/common2",
+    "敌人信息/levelcontent",
+    "spine",
+    "敌人导航"
+  ],
+  "unbalanced": false,
+  "templates": [
+    {
+      "name": "敌人信息/common2",
+      "fields": {
+        "名称": "异客",
+        "无头像": "true",
+        "非常规敌人": "true",
+        "index": "",
+        "行动方式": "地面"
+      }
+    },
+    {
+      "name": "敌人信息/levelcontent",
+      "fields": {
+        "index": "0",
+        "名称": "异客",
+        "地位": "普通",
+        "最大生命值": "100",
+        "天赋": "演出用敌人"
+      }
+    }
+  ]
+}
