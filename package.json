@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-catalog.mjs && node scripts/build-browser.mjs",
+    "build": "node scripts/build-protocol.mjs && node scripts/build-catalog.mjs && node scripts/build-browser.mjs",
     "test": "node --test tests/*.test.mjs",
     "data:sync": "node scripts/sync-prts.mjs",
     "data:check": "node scripts/prts-db.mjs validate",
@@ -14,7 +14,10 @@
     "data:fetch-game": "node scripts/fetch-game-data.mjs",
     "data:normalize": "node scripts/normalize-game-data.mjs",
     "data:normalized-sqlite": "node scripts/build-normalized-db.mjs",
-    "test:browser": "node scripts/browser-smoke.cjs"
+    "test:browser": "node scripts/browser-smoke.cjs",
+    "data:fetch-mode": "node scripts/fetch-alliance-data.mjs && node scripts/fetch-alliance-levels.mjs",
+    "test:deployment": "node scripts/deployment-browser.cjs",
+    "test:season": "node scripts/season-browser.cjs"
   },
   "engines": {
     "node": ">=22"

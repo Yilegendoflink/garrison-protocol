@@ -22,7 +22,7 @@ function createHost({restrictedStorage=false,resizeObserver=true}={}){
  },set(target,key,value){target[key]=value;return true;}});
  function registerIds(markup){for(const m of markup.matchAll(/\bid="([\w-]+)"/g))if(!elements.has(m[1]))elements.set(m[1],new Element(m[1]));}
  class Element {
-  constructor(id){this.id=id;this.html='';this.textContent='';this.hidden=false;this.open=false;this.isConnected=true;this.listeners=new Map();this.classList={add(){},remove(){}};this.attrs={};}
+  constructor(id){this.id=id;this.html='';this.textContent='';this.hidden=false;this.open=false;this.isConnected=true;this.listeners=new Map();this.classList={add(){},remove(){}};this.style={setProperty(k,v){this[k]=v;}};this.attrs={};}
   set innerHTML(markup){this.html=markup;registerIds(markup);}
   get innerHTML(){return this.html;}
   setAttribute(k,v){this.attrs[k]=v;}
@@ -65,7 +65,7 @@ test('downloaded classic-script entry compiles and initializes the real interfac
  await host.dispatch('buy',{index:'0'});assert.match(host.elements.get('bench').innerHTML,/芬/);
  await host.dispatch('select',{uid:'1'});
  const event={button:0,clientX:280,clientY:166,pointerId:1};
- host.pointer('pointerdown',event);host.pointer('pointerup',event);
+ host.pointer('pointerdown',event);host.pointer('pointerup',event);assert.equal(host.elements.get('deployment-layer').hidden,false);await host.dispatch('deploy-direction',{value:'0'});await host.dispatch('deploy-confirm');
  assert.match(host.elements.get('deployment-count').textContent,/1 \/ 8/);
  await host.dispatch('start');
  assert.match(host.elements.get('phase').textContent,/作战中/);

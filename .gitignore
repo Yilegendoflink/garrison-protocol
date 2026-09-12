@@ -5,3 +5,8 @@ node_modules/
 data/**/database.sqlite
 data/**/database.sqlite.metadata.json
 artifacts/browser-profile/
+
+artifacts/research/
+references/alliance-lower/page-*.json
+references/alliance-lower/prts-query-app.js
+scripts/*.tmp.*

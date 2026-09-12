@@ -11,18 +11,21 @@ export function attackTiming(interval, attackSpeed = 100, windup = interval * .3
   const frames = Math.max(1, Math.round(Math.max(0, interval + intervalAdd) / speed * FPS));
   return {frames, windupFrames: clamp(Math.round(windup / speed * FPS), 1, frames), seconds: frames / FPS};
 }
-export function damage({amount, type = 'physical', attackScale = 1, attackAdd = 0, defense = 0, resistance = 0, penetration = 0, penetrationRatio = 0, multiplier = 1, reduction = 0}) {
+export function damage({amount, type = 'physical', attackScale = 1, attackAdd = 0, defense = 0, resistance = 0, elementResistance = 0, penetration = 0, penetrationRatio = 0, multiplier = 1, reduction = 0}) {
   const base = Math.max(0, amount * attackScale + attackAdd);
   const effective = value => Math.max(0, value - penetration) * (1 - clamp(penetrationRatio, 0, 1));
   let mitigated;
   if (type === 'physical') mitigated = Math.max(base * .05, base - effective(defense));
   else if (type === 'arts') mitigated = Math.max(base * .05, base * Math.max(0, 1 - effective(resistance) / 100));
+  else if (type === 'elemental') mitigated = Math.max(base * .05, base * Math.max(0, 1 - elementResistance / 100));
   else if (type === 'true' || type === 'healing') mitigated = base;
   else throw new Error(`Unsupported damage type: ${type}`);
   return Math.max(0, mitigated * multiplier * (1 - clamp(reduction, 0, 1)));
 }
-export function applyDamage(target, amount, {immortal = false} = {}) {
+export function applyDamage(target, amount, {immortal = false, type = 'physical'} = {}) {
   if (target.hp <= 0) return {hp: 0, shield: 0, total: 0};
+  const barrier = (target.barriers || []).find(b => b.charges > 0 && (!b.types || b.types.includes(type)));
+  if(barrier && amount > 0){barrier.charges--;return {hp:0,shield:0,total:0,blocked:true};}
   const shield = Math.min(Math.max(0, target.shield || 0), Math.max(0, amount));
   target.shield = Math.max(0, (target.shield || 0) - shield);
   const hp = Math.min(Math.max(0, target.hp - (immortal ? 1 : 0)), Math.max(0, amount - shield));

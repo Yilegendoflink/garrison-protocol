@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "scenarios": [
+    "drag hand to tile does not deploy",
+    "direction gesture commits once",
+    "invalid tile does not mutate",
+    "center release cancels",
+    "pointer cancellation cancels",
+    "moving field unit retains orientation"
+  ],
+  "errors": []
+}

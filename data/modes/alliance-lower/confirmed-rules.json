@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "funding": {
+    "initial": 4,
+    "perRoundIncrement": 1,
+    "cap": null,
+    "difficultyIndependent": true,
+    "excludes": [
+      "items",
+      "strategy",
+      "operator-traits"
+    ],
+    "source": {
+      "kind": "user-confirmed",
+      "date": "2026-09-12",
+      "statement": "不考虑道具和英雄效果干涉时，初始4，后续每轮+1，难度无影响"
+    }
+  }
+}

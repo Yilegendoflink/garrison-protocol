@@ -27,6 +27,39 @@
         "部分干员、盟约、策略与装备调整"
       ],
       "status": "official-confirmed"
+    },
+    {
+      "id": "R03",
+      "date": "2026-09-12",
+      "facts": [
+        "新部署先落点再选择朝向，拖动朝向后确认放置"
+      ],
+      "status": "user-confirmed",
+      "implementation": "implemented-browser-tested"
+    },
+    {
+      "id": "R04",
+      "date": "2026-09-12",
+      "facts": [
+        "基础资金=round+3",
+        "不封顶",
+        "各难度相同",
+        "额外效果收益另算"
+      ],
+      "status": "user-confirmed",
+      "path": "data/modes/alliance-lower/confirmed-rules.json",
+      "implementation": "implemented-tested"
+    },
+    {
+      "id": "R05",
+      "url": "https://prts.wiki/w/卫戍协议/帮助?oldid=390515",
+      "facts": [
+        "移动交换保留朝向",
+        "首名自动部署前等待3秒",
+        "自动技能操作政策"
+      ],
+      "status": "wiki-confirmed",
+      "implementation": "partial; per-unit policy integration pending"
     }
   ],
   "data": [
@@ -45,6 +78,12 @@
       "data": "26-04-13-12-31-42_e9b560",
       "selection": "latest zh_CN data_version commit before activity closing date",
       "limitation": "public mirror snapshot; not a guarantee that every server hotfix is represented"
+    },
+    {
+      "id": "D03",
+      "path": "data/modes/alliance-lower/source.json",
+      "commit": "86da4cfa3a4b958c3615fccf5afbc10b5c7f1bfb",
+      "levelManifest": "data/modes/alliance-lower/levels/manifest.json"
     }
   ],
   "visuals": [

@@ -14,8 +14,8 @@ export function pathRemaining(enemy, paths) {
   for (let i = enemy.segment + 1; i < path.length - 1; i++) distance += Math.hypot(path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1]);
   return distance;
 }
-export function selectEnemies(unit, enemies, {cells, paths, antiAir = false, priority = 'exit', limit = Infinity} = {}) {
-  return enemies.filter(e => e.hp > 0 && !e.untargetable && (!e.invisible || e.block != null) && (!e.flying || antiAir) && (e.block === unit.uid || containsTarget(cells, e)))
+export function selectEnemies(unit, enemies, {cells, paths, antiAir = false, priority = 'exit', limit = Infinity, canTargetSleeping = false} = {}) {
+  return enemies.filter(e => e.hp > 0 && (canTargetSleeping || !e.statuses?.some(s=>s.kind==='sleep')) && !e.untargetable && (!e.invisible || e.block != null) && (!e.flying || antiAir) && (e.block === unit.uid || containsTarget(cells, e)))
     .sort((a, b) => Number(b.block === unit.uid) - Number(a.block === unit.uid)
       || (priority === 'air' ? Number(!!b.flying) - Number(!!a.flying) : 0)
       || (b.taunt || 0) - (a.taunt || 0)
@@ -27,7 +27,7 @@ export function selectAllies(enemies, cells, limit = Infinity) {
     .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.uid - b.uid).slice(0, limit);
 }
 export function selectDefender(enemy, units) {
-  const candidates = units.filter(u => u.hp > 0 && u.deployed && !u.untargetable && !u.invisible);
+  const candidates = units.filter(u => u.hp > 0 && u.deployed && !u.statuses?.some(s=>s.kind==='sleep') && !u.untargetable && !u.invisible);
   const blocker = candidates.find(u => u.uid === enemy.block);
   if (blocker) return blocker;
   if (!enemy.ranged) return null;

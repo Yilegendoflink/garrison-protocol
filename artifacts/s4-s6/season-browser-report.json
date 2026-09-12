@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "views": [
+    "operators",
+    "bonds",
+    "bands",
+    "items",
+    "modes",
+    "maps"
+  ],
+  "responsive": [
+    320,
+    414,
+    844
+  ],
+  "suspension": [
+    "reload keeps original deadline",
+    "expired save retained as backup and not resumed"
+  ],
+  "errors": []
+}

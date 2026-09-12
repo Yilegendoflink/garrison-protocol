@@ -8,7 +8,7 @@ const runBattle=g=>{let ticks=0;while(g.s.phase==='battle'&&ticks++<10000)g.upda
 const promotions=g=>{let n=0;while(g.s.rewardOffers&&n++<100)g.takePromotion(0);assert.ok(n<100);};
 
 test('round-trip play: recruit, deploy, fight, frozen supply, and next-round funding',()=>{
- const g=started();assert.equal(g.s.money,3);const frozen=g.s.shop[1];assert.equal(g.buy(0),true);const u=g.s.units[0];assert.equal(g.deploy(u.uid,4,2),false,'melee cannot use a high tile');assert.equal(g.deploy(u.uid,3,1),true);g.lock();assert.equal(g.startBattle(),true);assert.equal(g.s.money,0);assert.equal(g.buy(1),false);runBattle(g);assert.equal(g.s.phase,'intermission');assert.equal(g.s.hp,30);assert.equal(g.s.lastResult.kills,3);g.nextRound();assert.equal(g.s.money,4);assert.equal(g.s.shop[1].id,frozen.id);assert.equal(g.upgradeCost,4);assert.equal(g.upgrade(),true);assert.equal(g.s.level,2);assert.equal(g.s.money,0);assert.equal(g.upgradeCost,7);
+ const g=started();assert.equal(g.s.money,4);const frozen=g.s.shop[1];assert.equal(g.buy(0),true);const u=g.s.units[0];assert.equal(g.deploy(u.uid,4,2),false,'melee cannot use a high tile');assert.equal(g.deploy(u.uid,3,1),true);g.lock();assert.equal(g.startBattle(),true);assert.equal(g.s.money,0);assert.equal(g.buy(1),false);runBattle(g);assert.equal(g.s.phase,'intermission');assert.equal(g.s.hp,30);assert.equal(g.s.lastResult.kills,3);g.nextRound();assert.equal(g.s.money,5);assert.equal(g.s.shop[1].id,frozen.id);assert.equal(g.upgradeCost,4);assert.equal(g.upgrade(),true);assert.equal(g.s.level,2);assert.equal(g.s.money,1);assert.equal(g.upgradeCost,7);
 });
 
 test('promotion keeps deployed position, returns equipment, grants a free higher-tier choice',()=>{
