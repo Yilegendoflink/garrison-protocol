@@ -4,6 +4,10 @@
 
 本文件是当前对话的项目摘要，不是完整聊天记录；用于让新的 Codex 会话接续现有代码。
 
+## 2026-09-12 发布时点约定
+
+用户明确要求等 S06 全部验收通过后再创建 GitHub 仓库、发布 GitHub Pages。当前没有远程仓库或线上部署，不提前发布试玩版。已准备 Pages 工作流与 release:check，当前未完成报告会阻止发布。完成后的执行顺序见 [PUBLISHING.md](PUBLISHING.md)。
+
 ## 2026-09-12 部署修正、资金确认与 S04–S06 推进
 
 当前优先读取 [S4_S6_PROGRESS.md](S4_S6_PROGRESS.md)。两段式部署与真实连续触控已修正；用户确认基础资金为第 n 轮 n+3，无封顶、各难度相同，额外收益另算，勿再次要求确认。规则来源在 data/modes/alliance-lower/confirmed-rules.json。

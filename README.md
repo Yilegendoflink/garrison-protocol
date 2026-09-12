@@ -6,6 +6,10 @@
 
 整体路线见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)，原作界面与操作的专项要求见 [UI_RESTORATION_PLAN.md](UI_RESTORATION_PLAN.md)。S0–S3工程交付候选已落地，详见 [S0_S3_DELIVERY.md](S0_S3_DELIVERY.md)。大厅与主要操作原型可用；部署已改为落点后拖动朝向确认。本轮进展及 S04–S06 未完成项见 [S4_S6_PROGRESS.md](S4_S6_PROGRESS.md)，演示战斗仍为改编内容。
 
+## 发布安排
+
+按用户要求，S06 全部验收通过后才建仓并发布 GitHub Pages，当前不发布试玩版。部署配置与条件见 [PUBLISHING.md](PUBLISHING.md)。
+
 ## 原作参考数据库
 
 已建立基于PRTS的全目录干员／敌人参考数据库，包含SQLite、JSON、来源修订、采集器与查询校验工具。精确当前／历史原作表和内部ID映射见 [规范化数据库](data/normalized/README.md)。范围及完成度见 [data/prts/README.md](data/prts/README.md)。该数据库尚未替换游戏内的改编数据。
