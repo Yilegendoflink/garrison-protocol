@@ -58,7 +58,9 @@ test('downloaded classic-script entry compiles and initializes the real interfac
  assert.equal(host.elements.get('boot-screen').isConnected,false);
  assert.match(host.elements.get('board-overlay').innerHTML,/开始独立模拟/);
  assert.ok(host.drawCalls>100,'the battlefield issues drawing operations');
- await host.dispatch('setup');assert.equal(host.elements.get('dialog').open,true);
+ assert.match(host.elements.get('screen-root').innerHTML,/开始模拟/);
+ await host.dispatch('setup');assert.match(host.elements.get('screen-root').innerHTML,/选择模拟协议/);
+ await host.dispatch('briefing');assert.match(host.elements.get('screen-root').innerHTML,/模拟简报/);
  await host.dispatch('begin');assert.match(host.elements.get('shop').innerHTML,/芬/);
  await host.dispatch('buy',{index:'0'});assert.match(host.elements.get('bench').innerHTML,/芬/);
  await host.dispatch('select',{uid:'1'});

@@ -1,0 +1,1216 @@
+{
+  "id": "arknights:allianceLower",
+  "commit": "86da4cfa3a4b958c3615fccf5afbc10b5c7f1bfb",
+  "entities": 1161,
+  "operators": 441,
+  "enemies": 1859,
+  "enemyLevels": 2086,
+  "skills": 1638,
+  "modules": 866,
+  "ranges": 72,
+  "prtsOperatorsMatched": 441,
+  "prtsEnemyPagesMatched": 1655,
+  "unresolvedEnemyPages": [
+    {
+      "prtsId": "prts:enemy:90922",
+      "name": "实验样本F-009",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415049
+    },
+    {
+      "prtsId": "prts:enemy:90924",
+      "name": "失控的F-009",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415050
+    },
+    {
+      "prtsId": "prts:enemy:90926",
+      "name": "实验样本R-044",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 423044
+    },
+    {
+      "prtsId": "prts:enemy:90928",
+      "name": "失控的R-044",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 423043
+    },
+    {
+      "prtsId": "prts:enemy:90930",
+      "name": "异种菌",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415053
+    },
+    {
+      "prtsId": "prts:enemy:90932",
+      "name": "血色异种菌",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415054
+    },
+    {
+      "prtsId": "prts:enemy:90934",
+      "name": "破石草",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415055
+    },
+    {
+      "prtsId": "prts:enemy:90936",
+      "name": "血色破石草",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415056
+    },
+    {
+      "prtsId": "prts:enemy:90938",
+      "name": "实验样本A-000",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415057
+    },
+    {
+      "prtsId": "prts:enemy:90940",
+      "name": "失控的A-000",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415058
+    },
+    {
+      "prtsId": "prts:enemy:90942",
+      "name": "三生花",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415059
+    },
+    {
+      "prtsId": "prts:enemy:90944",
+      "name": "血色三生花",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415060
+    },
+    {
+      "prtsId": "prts:enemy:90946",
+      "name": "“希希加”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 423045
+    },
+    {
+      "prtsId": "prts:enemy:90948",
+      "name": "愤怒的“希希加”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 423046
+    },
+    {
+      "prtsId": "prts:enemy:90950",
+      "name": "“里霍”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415070
+    },
+    {
+      "prtsId": "prts:enemy:90952",
+      "name": "游荡的“里霍”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415075
+    },
+    {
+      "prtsId": "prts:enemy:90954",
+      "name": "“鲁塞尔卡”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422041
+    },
+    {
+      "prtsId": "prts:enemy:90956",
+      "name": "起舞的“鲁塞尔卡”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422042
+    },
+    {
+      "prtsId": "prts:enemy:90958",
+      "name": "乌萨斯战争术师",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422271
+    },
+    {
+      "prtsId": "prts:enemy:90960",
+      "name": "泄漏源",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422017
+    },
+    {
+      "prtsId": "prts:enemy:90962",
+      "name": "AMa-10",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422989
+    },
+    {
+      "prtsId": "prts:enemy:90964",
+      "name": "AMa-10异构体",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422990
+    },
+    {
+      "prtsId": "prts:enemy:90966",
+      "name": "“终始”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 424763
+    },
+    {
+      "prtsId": "prts:enemy:91313",
+      "name": "绒绒兽",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422085
+    },
+    {
+      "prtsId": "prts:enemy:91315",
+      "name": "啄奔羽兽",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415541
+    },
+    {
+      "prtsId": "prts:enemy:91317",
+      "name": "拟树虫",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415542
+    },
+    {
+      "prtsId": "prts:enemy:91319",
+      "name": "噪鳞",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421537
+    },
+    {
+      "prtsId": "prts:enemy:91321",
+      "name": "遗落的岩石像",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415544
+    },
+    {
+      "prtsId": "prts:enemy:91323",
+      "name": "宝箱寄居磐蟹",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422067
+    },
+    {
+      "prtsId": "prts:enemy:91325",
+      "name": "巨型拟树虫",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422057
+    },
+    {
+      "prtsId": "prts:enemy:91327",
+      "name": "遗落的巨型岩石像",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422084
+    },
+    {
+      "prtsId": "prts:enemy:91329",
+      "name": "灵绒兽",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422086
+    },
+    {
+      "prtsId": "prts:enemy:91331",
+      "name": "狂噪鳞",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421539
+    },
+    {
+      "prtsId": "prts:enemy:91333",
+      "name": "震风虫",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 420553
+    },
+    {
+      "prtsId": "prts:enemy:91335",
+      "name": "流浪驯兽师",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421606
+    },
+    {
+      "prtsId": "prts:enemy:91337",
+      "name": "被通缉的研究员",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 423995
+    },
+    {
+      "prtsId": "prts:enemy:91339",
+      "name": "怪异引雷装置",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415553
+    },
+    {
+      "prtsId": "prts:enemy:91341",
+      "name": "冰翼兽",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421529
+    },
+    {
+      "prtsId": "prts:enemy:92051",
+      "name": "噪鳞的泡泡",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 396346
+    },
+    {
+      "prtsId": "prts:enemy:92052",
+      "name": "狂噪鳞的泡泡",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 396348
+    },
+    {
+      "prtsId": "prts:enemy:92202",
+      "name": "此页面收录登场于重启锚点的演出用敌人",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421482
+    },
+    {
+      "prtsId": "prts:enemy:92431",
+      "name": "冠鸣龙",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415101
+    },
+    {
+      "prtsId": "prts:enemy:92433",
+      "name": "冠鸣龙王",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415102
+    },
+    {
+      "prtsId": "prts:enemy:92435",
+      "name": "碎壳螈",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415103
+    },
+    {
+      "prtsId": "prts:enemy:92437",
+      "name": "大名碎壳螈",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415104
+    },
+    {
+      "prtsId": "prts:enemy:92439",
+      "name": "盗壳虫",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 424015
+    },
+    {
+      "prtsId": "prts:enemy:92441",
+      "name": "横纲盗壳虫",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 424014
+    },
+    {
+      "prtsId": "prts:enemy:92443",
+      "name": "大喰怪",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415107
+    },
+    {
+      "prtsId": "prts:enemy:92445",
+      "name": "荒神大喰怪",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415108
+    },
+    {
+      "prtsId": "prts:enemy:92447",
+      "name": "反壳龟",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415109
+    },
+    {
+      "prtsId": "prts:enemy:92449",
+      "name": "反壳龟·缚",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415110
+    },
+    {
+      "prtsId": "prts:enemy:92451",
+      "name": "影丝蛛",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415111
+    },
+    {
+      "prtsId": "prts:enemy:92453",
+      "name": "影丝蛛·怨",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415112
+    },
+    {
+      "prtsId": "prts:enemy:92455",
+      "name": "咒鬼",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415113
+    },
+    {
+      "prtsId": "prts:enemy:92457",
+      "name": "咒鬼·真",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415114
+    },
+    {
+      "prtsId": "prts:enemy:92459",
+      "name": "岩甲兽",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415115
+    },
+    {
+      "prtsId": "prts:enemy:92461",
+      "name": "岩甲兽·咒",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415116
+    },
+    {
+      "prtsId": "prts:enemy:92463",
+      "name": "“异兽”熔火蜗",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422055
+    },
+    {
+      "prtsId": "prts:enemy:92465",
+      "name": "“雷之主”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415364
+    },
+    {
+      "prtsId": "prts:enemy:93035",
+      "name": "直球队击球手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415265
+    },
+    {
+      "prtsId": "prts:enemy:93037",
+      "name": "直球队坚定击球手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415266
+    },
+    {
+      "prtsId": "prts:enemy:93039",
+      "name": "直球队守门员",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415267
+    },
+    {
+      "prtsId": "prts:enemy:93041",
+      "name": "直球队坚定守门员",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415268
+    },
+    {
+      "prtsId": "prts:enemy:93043",
+      "name": "直球队击人手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415269
+    },
+    {
+      "prtsId": "prts:enemy:93045",
+      "name": "直球队坚定击人手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415270
+    },
+    {
+      "prtsId": "prts:enemy:93047",
+      "name": "充能飘浮球",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415271
+    },
+    {
+      "prtsId": "prts:enemy:93049",
+      "name": "决胜时刻球",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415272
+    },
+    {
+      "prtsId": "prts:enemy:93254",
+      "name": "魔球帮击球手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415253
+    },
+    {
+      "prtsId": "prts:enemy:93256",
+      "name": "魔球帮诡秘击球手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415254
+    },
+    {
+      "prtsId": "prts:enemy:93258",
+      "name": "魔球帮守门员",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415255
+    },
+    {
+      "prtsId": "prts:enemy:93260",
+      "name": "魔球帮诡秘守门员",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415256
+    },
+    {
+      "prtsId": "prts:enemy:93262",
+      "name": "魔球帮击人手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415257
+    },
+    {
+      "prtsId": "prts:enemy:93264",
+      "name": "魔球帮诡秘击人手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415258
+    },
+    {
+      "prtsId": "prts:enemy:93266",
+      "name": "门神会击球手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415259
+    },
+    {
+      "prtsId": "prts:enemy:93268",
+      "name": "门神会忠诚击球手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415260
+    },
+    {
+      "prtsId": "prts:enemy:93270",
+      "name": "门神会守门员",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415261
+    },
+    {
+      "prtsId": "prts:enemy:93272",
+      "name": "门神会全能守门员",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415262
+    },
+    {
+      "prtsId": "prts:enemy:93274",
+      "name": "门神会击人手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415263
+    },
+    {
+      "prtsId": "prts:enemy:93276",
+      "name": "门神会忠诚击人手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415264
+    },
+    {
+      "prtsId": "prts:enemy:93301",
+      "name": "龙卷风",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421634
+    },
+    {
+      "prtsId": "prts:enemy:94003",
+      "name": "烟雾弹",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421600
+    },
+    {
+      "prtsId": "prts:enemy:94042",
+      "name": "空值体",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415165
+    },
+    {
+      "prtsId": "prts:enemy:94044",
+      "name": "颂水贤者",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415166
+    },
+    {
+      "prtsId": "prts:enemy:94046",
+      "name": "聆风猎手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 418192
+    },
+    {
+      "prtsId": "prts:enemy:94048",
+      "name": "撼地遗众",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422073
+    },
+    {
+      "prtsId": "prts:enemy:94050",
+      "name": "猎犬proto",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421864
+    },
+    {
+      "prtsId": "prts:enemy:94052",
+      "name": "赤金条",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422330
+    },
+    {
+      "prtsId": "prts:enemy:94054",
+      "name": "源阶粒素",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422411
+    },
+    {
+      "prtsId": "prts:enemy:94056",
+      "name": "恶笼草",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415688
+    },
+    {
+      "prtsId": "prts:enemy:94058",
+      "name": "汉科",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422258
+    },
+    {
+      "prtsId": "prts:enemy:94060",
+      "name": "“大总统”汉科",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422264
+    },
+    {
+      "prtsId": "prts:enemy:94062",
+      "name": "德莱昂",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 424000
+    },
+    {
+      "prtsId": "prts:enemy:94064",
+      "name": "“征服者”德莱昂",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 424001
+    },
+    {
+      "prtsId": "prts:enemy:94066",
+      "name": "埃尔伯特",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421860
+    },
+    {
+      "prtsId": "prts:enemy:94068",
+      "name": "“异端”埃尔伯特",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421861
+    },
+    {
+      "prtsId": "prts:enemy:94070",
+      "name": "卡德霍，黑流之源",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 418055
+    },
+    {
+      "prtsId": "prts:enemy:94072",
+      "name": "痛楚化身",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 423452
+    },
+    {
+      "prtsId": "prts:enemy:94074",
+      "name": "洛伦茨，扰动之谬",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415446
+    },
+    {
+      "prtsId": "prts:enemy:94076",
+      "name": "源阶方",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422095
+    },
+    {
+      "prtsId": "prts:enemy:94078",
+      "name": "玻利瓦尔，症结之核",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 423442
+    },
+    {
+      "prtsId": "prts:enemy:94080",
+      "name": "未名的荒原",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 416191
+    },
+    {
+      "prtsId": "prts:enemy:94724",
+      "name": "戴面具的孩童",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421255
+    },
+    {
+      "prtsId": "prts:enemy:94726",
+      "name": "入戏太深的孩童",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421254
+    },
+    {
+      "prtsId": "prts:enemy:94728",
+      "name": "凑热闹的矿工",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415082
+    },
+    {
+      "prtsId": "prts:enemy:94730",
+      "name": "勇争第一的矿工",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415083
+    },
+    {
+      "prtsId": "prts:enemy:94732",
+      "name": "手推小矿车",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415084
+    },
+    {
+      "prtsId": "prts:enemy:94734",
+      "name": "传奇矿车",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415085
+    },
+    {
+      "prtsId": "prts:enemy:94736",
+      "name": "“小帽子”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415807
+    },
+    {
+      "prtsId": "prts:enemy:94738",
+      "name": "“大披风”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415808
+    },
+    {
+      "prtsId": "prts:enemy:94740",
+      "name": "欢乐校车",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415088
+    },
+    {
+      "prtsId": "prts:enemy:94742",
+      "name": "庆典校车",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415089
+    },
+    {
+      "prtsId": "prts:enemy:94744",
+      "name": "好外号热衷者",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415090
+    },
+    {
+      "prtsId": "prts:enemy:94746",
+      "name": "惊艳事热衷者",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415091
+    },
+    {
+      "prtsId": "prts:enemy:94748",
+      "name": "“惊喜信件”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 424818
+    },
+    {
+      "prtsId": "prts:enemy:94750",
+      "name": "“美食的诱惑”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421597
+    },
+    {
+      "prtsId": "prts:enemy:94752",
+      "name": "“美食的奴隶”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421598
+    },
+    {
+      "prtsId": "prts:enemy:94754",
+      "name": "优雅刀技厨师",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415095
+    },
+    {
+      "prtsId": "prts:enemy:94756",
+      "name": "炫目刀技厨师",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 415096
+    },
+    {
+      "prtsId": "prts:enemy:94758",
+      "name": "好心肠老板",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 420796
+    },
+    {
+      "prtsId": "prts:enemy:94760",
+      "name": "热心肠老板",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 420795
+    },
+    {
+      "prtsId": "prts:enemy:94762",
+      "name": "浮空信件",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 424816
+    },
+    {
+      "prtsId": "prts:enemy:94764",
+      "name": "信使安洁莉娜",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 422634
+    },
+    {
+      "prtsId": "prts:enemy:94766",
+      "name": "“酣睡飞行员”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427636
+    },
+    {
+      "prtsId": "prts:enemy:94768",
+      "name": "“超惊喜信件”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 424819
+    },
+    {
+      "prtsId": "prts:enemy:95281",
+      "name": "“酣酣睡飞行员”",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 420798
+    },
+    {
+      "prtsId": "prts:enemy:95411",
+      "name": "“枯槁者”维奇科",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421659
+    },
+    {
+      "prtsId": "prts:enemy:95508",
+      "name": "爬行鬼伞",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 417157
+    },
+    {
+      "prtsId": "prts:enemy:95510",
+      "name": "红宝石投石虫",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 417156
+    },
+    {
+      "prtsId": "prts:enemy:95512",
+      "name": "大嘴捕食草",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 417160
+    },
+    {
+      "prtsId": "prts:enemy:95514",
+      "name": "困困荪茸",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 421241
+    },
+    {
+      "prtsId": "prts:enemy:95517",
+      "name": "石榴弩手",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 417169
+    },
+    {
+      "prtsId": "prts:enemy:95535",
+      "name": "椰壳蟹",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 417192
+    },
+    {
+      "prtsId": "prts:enemy:95537",
+      "name": "灼热跳跳蜥",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 417197
+    },
+    {
+      "prtsId": "prts:enemy:95539",
+      "name": "蓝冠羽镖客",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 420555
+    },
+    {
+      "prtsId": "prts:enemy:95542",
+      "name": "橙冠羽镖客",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 420556
+    },
+    {
+      "prtsId": "prts:enemy:95543",
+      "name": "密林锋脊裂兽",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 420570
+    },
+    {
+      "prtsId": "prts:enemy:95545",
+      "name": "枯焦锋脊裂兽",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 420571
+    },
+    {
+      "prtsId": "prts:enemy:95945",
+      "name": "刺溜冰淇淋",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427841
+    },
+    {
+      "prtsId": "prts:enemy:95949",
+      "name": "沉默收音机",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427843
+    },
+    {
+      "prtsId": "prts:enemy:95953",
+      "name": "蹒跚羽兽",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427845
+    },
+    {
+      "prtsId": "prts:enemy:95957",
+      "name": "离婚花束",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427847
+    },
+    {
+      "prtsId": "prts:enemy:95961",
+      "name": "咆哮铳",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427849
+    },
+    {
+      "prtsId": "prts:enemy:95965",
+      "name": "吓人路灯",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427851
+    },
+    {
+      "prtsId": "prts:enemy:95969",
+      "name": "不知道钟",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427853
+    },
+    {
+      "prtsId": "prts:enemy:95971",
+      "name": "没办法车",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427865
+    },
+    {
+      "prtsId": "prts:enemy:95973",
+      "name": "生气车",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427864
+    },
+    {
+      "prtsId": "prts:enemy:95975",
+      "name": "困惑车",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427863
+    },
+    {
+      "prtsId": "prts:enemy:95977",
+      "name": "难过车",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427861
+    },
+    {
+      "prtsId": "prts:enemy:95979",
+      "name": "无聊车",
+      "gameIds": [],
+      "match": null,
+      "status": "not-in-snapshot",
+      "sourceRevision": 427862
+    }
+  ],
+  "aggregateMappings": [],
+  "missingReferences": [
+    {
+      "entity": "trap_755_cdsoul",
+      "kind": "skill",
+      "id": "sktok_cdsoul"
+    }
+  ],
+  "executionStatus": "data-ready; skill prefab behavior requires S4 implementation"
+}

@@ -1,3 +1,6 @@
+import {GameSession,InteractionState} from './session.js';
+import {screenMarkup,catalogCards} from './screens.js';
+import {CONTENT} from './catalog.js';
 import {Game} from './engine.js';
 import {Battlefield} from './renderer.js';
 import {OP,OPERATORS,CLASSES,ALLIANCES,STRATEGIES,DECISIONS,MAPS,DIFFICULTIES,EQ,SP,ROMAN,ENEMIES,traitText} from './data.js';
@@ -5,16 +8,18 @@ import {OP,OPERATORS,CLASSES,ALLIANCES,STRATEGIES,DECISIONS,MAPS,DIFFICULTIES,EQ
 const STORAGE='garrison-protocol-v1';
 const $=id=>document.getElementById(id);
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let incompatibleSave=false;
 let game=new Game(),selected=null,speed=1,paused=false,sound=false,modal=null,toastTimer,storageOK=true,audioContext=null,lastSound=0,modalFocus=null,finishedShown=false;
-try{const raw=localStorage.getItem(STORAGE);if(raw){const restored=Game.restore(raw);if(restored){game=restored;paused=game.s.phase==='battle';}}sound=localStorage.getItem('garrison-sound')==='1';}catch{storageOK=false;}
+try{const raw=localStorage.getItem(STORAGE);if(raw){const restored=Game.restore(raw);if(restored){game=restored;paused=game.s.phase==='battle';}else{localStorage.setItem('garrison-incompatible-save-backup',raw);incompatibleSave=true;}}sound=localStorage.getItem('garrison-sound')==='1';}catch{storageOK=false;}
+let session=new GameSession(game,CONTENT);const interaction=new InteractionState();let screen='home',catalogQuery='',catalogProfession='all',screenOptions={};
 const icons={
  shield:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2 21 6v7l-9 9-9-9V6z"/><path d="m7 10 5-5 5 5-5 9z"/></svg>',
  full:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5"/></svg>',
  sound:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m11 4-6 5H2v6h3l6 5zM15 8c4 3 4 5 0 8M18 4c7 5 7 11 0 16"/></svg>',
  mute:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m11 4-6 5H2v6h3l6 5zM16 9l6 6M22 9l-6 6"/></svg>'
 };
-$('app').innerHTML=`<main class="shell">
- <header class="topbar"><div class="emblem" aria-hidden="true">${icons.shield}</div><div class="wordmark"><strong>罗德岛</strong><div class="eyebrow">RHODES ISLAND</div></div><div class="top-divider"></div><div class="mode-label">作战终端 <b>/ 联合防卫</b></div><span class="project-tag">FAN-MADE EDITION</span><nav class="top-actions" aria-label="终端菜单"><button class="text-btn" data-act="roster">物资调配</button><button class="text-btn" data-act="help">作战手册</button><button class="icon-button" id="sound-button" data-act="sound" aria-label="开启音效">${icons.mute}</button><button class="icon-button" data-act="fullscreen" aria-label="全屏">${icons.full}</button></nav></header>
+$('app').innerHTML=`<section id="screen-root" class="screen-root"></section><main id="battle-screen" class="shell">
+ <header class="topbar"><button class="home-button" data-act="home" aria-label="返回大厅">‹</button><div class="emblem" aria-hidden="true">${icons.shield}</div><div class="wordmark"><strong>罗德岛</strong><div class="eyebrow">RHODES ISLAND</div></div><div class="top-divider"></div><div class="mode-label">作战终端 <b>/ 联合防卫</b></div><span class="project-tag">FAN-MADE EDITION</span><nav class="top-actions" aria-label="终端菜单"><button class="text-btn" data-act="roster">物资调配</button><button class="text-btn" data-act="help">作战手册</button><button class="icon-button" id="sound-button" data-act="sound" aria-label="开启音效">${icons.mute}</button><button class="icon-button" data-act="fullscreen" aria-label="全屏">${icons.full}</button></nav></header>
  <section class="titlebar"><div><h1>卫戍协议<span class="orange">.</span></h1><div class="subtitle"><span class="orange">盟约</span><span class="slash">/</span><span class="en-title">GARRISON PROTOCOL</span><span id="difficulty-label">独立模拟</span></div></div><div class="stats" id="stats"></div></section>
  <section class="workspace" aria-label="作战区域">
   <aside class="alliances-panel"><div class="side-title">盟约联结 <span class="num" id="alliance-count">00</span></div><div class="alliance-list" id="alliances"></div><div class="strategy-note" id="strategy"></div></aside>
@@ -25,6 +30,9 @@ $('app').innerHTML=`<main class="shell">
  <footer class="footer"><span>同人独立模拟 · 角色及图像版权归鹰角网络所有 <button class="text-btn small" data-act="about">版本说明</button></span><span>PRTS // DEFENSE SYSTEM <span class="orange">01.00</span></span></footer>
 </main>`;
 const field=new Battlefield($('battlefield'),game);
+function showScreen(view,options={}){screen=view;screenOptions=options;interaction.cancel();if(view!=='battle'&&game.s.phase==='battle')paused=true;$('screen-root').hidden=view==='battle';$('battle-screen').hidden=view!=='battle';$('app').setAttribute('data-view',view);if(view!=='battle')$('screen-root').innerHTML=screenMarkup(view,game,{query:catalogQuery,profession:catalogProfession,...options});else{field.resize();render();} }
+function send(type,...args){return session.send(type,...args);}
+function commitDeployment(uid,x,y){interaction.select(uid,game.s.phase);const preview=interaction.preview(session,x,y);if(!preview.ok){toast(preview.message||'无法部署至此位置。');return false;}return interaction.commit(session).ok;}
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),3200);}
 function save(){try{localStorage.setItem(STORAGE,game.serialize());}catch{if(storageOK){storageOK=false;toast('浏览器无法保存进度，请保持当前页面开启。');}}}
 function beep(kind){if(!sound)return;const now=performance.now();if(kind==='hit'&&now-lastSound<180)return;lastSound=now;try{audioContext??=new (window.AudioContext||window.webkitAudioContext)();if(audioContext.state==='suspended')audioContext.resume();const osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.connect(gain);gain.connect(audioContext.destination);osc.type=kind==='skill'?'sine':'triangle';const freq=kind==='skill'?640:kind==='leak'?130:kind==='merge'?850:kind==='enemyHit'?170:380;osc.frequency.setValueAtTime(freq,audioContext.currentTime);osc.frequency.exponentialRampToValueAtTime(freq*.55,audioContext.currentTime+.07);gain.gain.setValueAtTime(kind==='hit'?.008:.025,audioContext.currentTime);gain.gain.exponentialRampToValueAtTime(.0001,audioContext.currentTime+.12);osc.start();osc.stop(audioContext.currentTime+.13);}catch{sound=false;}}
@@ -77,39 +85,47 @@ function renderModal(){if(!modal)return;let html='';const s=game.s;
  if(modal.type==='reset')html=header('重新建立协议？','RESTART SIMULATION','当前对局进度会被新的模拟替换。')+`<div class="dialog-bottom"><button data-act="close">继续当前模拟</button><button class="primary" data-act="new-game">重新开始</button></div>`;
  $('dialog-content').innerHTML=`<div class="dialog-inner">${html}</div>`;
 }
-function setSelected(uid){const item=game.s.items.find(e=>e.uid===selected);if(item&&game.s.units.some(u=>u.uid===uid)){const out=item.kind==='equipment'?game.equip(item.uid,uid):game.useSpell(item.uid,uid);if(out==='replace'){openModal('replace',{item:item.uid,target:uid});return;}if(out===true)selected=uid;render();return;}
+function setSelected(uid){const item=game.s.items.find(e=>e.uid===selected);if(item&&game.s.units.some(u=>u.uid===uid)){const out=item.kind==='equipment'?send('equip',item.uid,uid):send('spell',item.uid,uid);if(out.code==='REPLACE_REQUIRED'){openModal('replace',{item:item.uid,target:uid});return;}if(out.ok)selected=uid;render();return;}
  selected=uid;renderSelected();renderBench();renderBoardUI();}
-function newGame(){closeModal(true);const prefs={...game.s.skillPrefs};game=new Game();game.s.skillPrefs=prefs;selected=null;paused=false;finishedShown=false;bindGame();field.clear();render();save();openModal('setup');}
+function newGame(){closeModal(true);const prefs={...game.s.skillPrefs};game=new Game();game.s.skillPrefs=prefs;session=new GameSession(game,CONTENT);selected=null;paused=false;finishedShown=false;bindGame();field.clear();render();save();showScreen('setup');}
 async function action(button){const act=button.dataset.act,id=button.dataset.id,value=Number(button.dataset.value),uid=Number(button.dataset.uid),index=Number(button.dataset.index);
  switch(act){
- case 'setup':openModal('setup');break;
- case 'difficulty':game.setPreferences({difficulty:id});renderModal();break;
- case 'map':game.setPreferences({map:value});field.clear();renderModal();break;
- case 'strategy':game.setPreferences({strategy:id});renderModal();break;
- case 'begin':closeModal(true);game.start();toast('先招募一名近战干员，点击整备区，再部署到北侧通道。');break;
- case 'buy':game.buy(index);break;
+ case 'setup':showScreen('setup');break;
+ case 'home':closeModal(true);showScreen('home');break;
+ case 'return-battle':showScreen('battle');break;
+ case 'database':showScreen('database');break;
+ case 'catalog-detail':showScreen('catalog-detail',{id});break;
+ case 'catalog-filter':catalogProfession=id;showScreen('database');break;
+ case 'room':showScreen('room');break;
+ case 'briefing':showScreen('briefing');break;
+ case 'roster':showScreen('roster');break;
+ case 'difficulty':send('preferences',{difficulty:id});showScreen(screen);break;
+ case 'map':send('preferences',{map:value});field.clear();showScreen(screen);break;
+ case 'strategy':send('preferences',{strategy:id});showScreen(screen);break;
+ case 'begin':closeModal(true);send('begin');showScreen('battle');toast('先招募一名近战干员，点击整备区，再部署到北侧通道。');break;
+ case 'buy':send('buy',index);break;
  case 'select':setSelected(uid);break;
  case 'deselect':selected=null;render();break;
- case 'upgrade':game.upgrade();break;
- case 'refresh':game.refresh();break;
- case 'lock':game.lock();break;
- case 'start':if(game.s.money>=3&&!modal)openSpendReminder();else {paused=false;game.startBattle();}break;
- case 'confirm-start':closeModal(true);paused=false;game.startBattle();break;
+ case 'upgrade':send('upgrade');break;
+ case 'refresh':send('refresh');break;
+ case 'lock':send('lock');break;
+ case 'start':if(game.s.money>=3&&!modal)openSpendReminder();else {paused=false;send('start');}break;
+ case 'confirm-start':closeModal(true);paused=false;send('start');break;
  case 'pause':if(game.s.phase==='battle'){paused=!paused;renderBoardUI();renderIntel();}break;
  case 'speed':speed=value;renderBoardUI();break;
- case 'next':selected=null;field.clear();game.nextRound();break;
- case 'promotion':game.takePromotion(index);break;
- case 'decision':game.chooseDecision(id);break;
- case 'direction':game.turn(selected,value);break;
- case 'withdraw':game.withdraw(selected);break;
- case 'sell':game.sell(selected);selected=null;render();break;
- case 'use-spell':game.useSpell(selected);selected=null;render();break;
- case 'replace':{const {item,target}=modal;closeModal(true);game.equip(item,target,index);selected=target;render();break;}
+ case 'next':selected=null;field.clear();send('next');break;
+ case 'promotion':send('promotion',index);break;
+ case 'decision':send('decision',id);break;
+ case 'direction':send('turn',selected,value);break;
+ case 'withdraw':send('withdraw',selected);break;
+ case 'sell':send('sell',selected);selected=null;render();break;
+ case 'use-spell':send('spell',selected);selected=null;render();break;
+ case 'replace':{const {item,target}=modal;closeModal(true);send('equip',item,target,index);selected=target;render();break;}
  case 'cancel-replace':closeModal(true);break;
- case 'help':case 'about':case 'roster':case 'result':case 'reset':openModal(act);break;
+ case 'help':case 'about':case 'result':case 'reset':openModal(act);break;
  case 'operator':openModal('operator',{id});break;
  case 'alliance':openModal('alliance',{id});break;
- case 'skill-pref':if(game.s.phase==='briefing'&&OP[id]?.skills[value]){game.s.skillPrefs[id]=value;save();renderModal();}break;
+ case 'skill-pref':if(game.s.phase==='briefing'&&OP[id]?.skills[value]){send('skillPreference',id,value);save();renderModal();if(screen==='roster')showScreen('roster');}break;
  case 'new-game':newGame();break;
  case 'close':closeModal();break;
  case 'sound':sound=!sound;try{localStorage.setItem('garrison-sound',sound?'1':'0');}catch{}beep('skill');renderShop();break;
@@ -125,33 +141,36 @@ $('dialog').addEventListener('click',e=>{if(e.target===$('dialog')){const r=$('d
 
 let pointerStart=null,dragUid=null,keyboardCell={x:4,y:1};
 const canvas=$('battlefield');
-canvas.addEventListener('pointermove',e=>{field.hover=field.cell(e.clientX,e.clientY);});canvas.addEventListener('pointerleave',()=>{field.hover=null;});
+canvas.addEventListener('pointermove',e=>{field.hover=field.cell(e.clientX,e.clientY);if(selected&&game.s.units.some(u=>u.uid===selected)){interaction.select(selected,game.s.phase);interaction.preview(session,field.hover.x,field.hover.y);}});canvas.addEventListener('pointerleave',()=>{field.hover=null;});
 canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;const cell=field.cell(e.clientX,e.clientY),unit=game.s.units.find(u=>u.x===cell.x&&u.y===cell.y);pointerStart={cell,unit:unit?.uid,px:e.clientX,py:e.clientY};canvas.setPointerCapture(e.pointerId);});
 canvas.addEventListener('pointerup',e=>{const cell=field.cell(e.clientX,e.clientY);if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);const start=pointerStart;pointerStart=null;if(!start)return;const moved=Math.hypot(start.px-e.clientX,start.py-e.clientY)>9,unit=game.s.units.find(u=>u.x===cell.x&&u.y===cell.y);
- if(moved&&start.unit&&game.canManage()){selected=start.unit;game.deploy(start.unit,cell.x,cell.y);return;}
+ if(moved&&start.unit&&game.canManage()){selected=start.unit;commitDeployment(start.unit,cell.x,cell.y);return;}
  const item=game.s.items.find(i=>i.uid===selected);if(item&&unit){setSelected(unit.uid);return;}
- if(selected&&game.canManage()&&game.s.units.some(u=>u.uid===selected)){if(unit?.uid===selected){renderSelected();return;}if(game.deploy(selected,cell.x,cell.y)){selected=null;render();}return;}
+ if(selected&&game.canManage()&&game.s.units.some(u=>u.uid===selected)){if(unit?.uid===selected){renderSelected();return;}if(commitDeployment(selected,cell.x,cell.y)){selected=null;render();}return;}
  if(unit)setSelected(unit.uid);else{selected=null;render();}
 });
-canvas.addEventListener('pointercancel',()=>{pointerStart=null;});
+canvas.addEventListener('pointercancel',()=>{pointerStart=null;interaction.cancel();});
 document.addEventListener('dragstart',e=>{const btn=e.target.closest('[data-act="select"]');if(!btn)return;dragUid=Number(btn.dataset.uid);selected=dragUid;e.dataTransfer.setData('text/plain',String(dragUid));e.dataTransfer.effectAllowed='move';field.selection=selected;});
 canvas.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';field.hover=field.cell(e.clientX,e.clientY);});
-canvas.addEventListener('drop',e=>{e.preventDefault();const uid=Number(e.dataTransfer.getData('text/plain')),cell=field.cell(e.clientX,e.clientY);if(game.deploy(uid,cell.x,cell.y)){selected=null;render();}dragUid=null;});
+canvas.addEventListener('drop',e=>{e.preventDefault();const uid=Number(e.dataTransfer.getData('text/plain')),cell=field.cell(e.clientX,e.clientY);if(commitDeployment(uid,cell.x,cell.y)){selected=null;render();}dragUid=null;});
 document.addEventListener('dragend',()=>{dragUid=null;});
-document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select')||e.ctrlKey||e.metaKey||e.altKey)return;if(e.key==='Escape'){if($('dialog').open)return;selected=null;render();return;}if($('dialog').open)return;
- if(e.target===canvas&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter'].includes(e.key)){e.preventDefault();if(e.key==='Enter'){if(selected)game.deploy(selected,keyboardCell.x,keyboardCell.y);else{const u=game.s.units.find(u=>u.x===keyboardCell.x&&u.y===keyboardCell.y);if(u)setSelected(u.uid);}}else{keyboardCell.x=Math.max(0,Math.min(10,keyboardCell.x+(e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0)));keyboardCell.y=Math.max(0,Math.min(6,keyboardCell.y+(e.key==='ArrowDown'?1:e.key==='ArrowUp'?-1:0)));field.hover={...keyboardCell};}return;}
- if(e.code==='Space'&&e.target.tagName!=='BUTTON'){e.preventDefault();if(game.s.phase==='battle'){paused=!paused;renderBoardUI();renderIntel();}else if(game.s.phase==='prep')action({dataset:{act:'start'}});else if(game.s.phase==='intermission')game.nextRound();}
- if(e.key.toLowerCase()==='r')game.refresh();if(e.key.toLowerCase()==='e')game.upgrade();if(e.key.toLowerCase()==='q')game.turn(selected);if(e.key==='Delete'&&selected)game.sell(selected);
+document.addEventListener('input',e=>{if(e.target.id==='catalog-search'){catalogQuery=e.target.value;$('catalog-results').innerHTML=catalogCards(catalogQuery,catalogProfession);}});
+document.addEventListener('keydown',e=>{if(e.repeat)return;if(e.target.matches('input,textarea,select')||e.ctrlKey||e.metaKey||e.altKey)return;if(e.key==='Escape'){if($('dialog').open)return;interaction.cancel();selected=null;if(screen!=='battle'&&screen!=='home')showScreen('home');else render();return;}if($('dialog').open||screen!=='battle')return;
+ if(e.target===canvas&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter'].includes(e.key)){e.preventDefault();if(e.key==='Enter'){if(selected)commitDeployment(selected,keyboardCell.x,keyboardCell.y);else{const u=game.s.units.find(u=>u.x===keyboardCell.x&&u.y===keyboardCell.y);if(u)setSelected(u.uid);}}else{keyboardCell.x=Math.max(0,Math.min(10,keyboardCell.x+(e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0)));keyboardCell.y=Math.max(0,Math.min(6,keyboardCell.y+(e.key==='ArrowDown'?1:e.key==='ArrowUp'?-1:0)));field.hover={...keyboardCell};}return;}
+ if(e.code==='Space'&&e.target.tagName!=='BUTTON'){e.preventDefault();if(game.s.phase==='battle'){paused=!paused;renderBoardUI();renderIntel();}else if(game.s.phase==='prep')action({dataset:{act:'start'}});else if(game.s.phase==='intermission')send('next');}
+ if(e.key.toLowerCase()==='r')send('refresh');if(e.key.toLowerCase()==='e')send('upgrade');if(e.key.toLowerCase()==='q')send('turn',selected,((game.s.units.find(u=>u.uid===selected)?.dir||0)+1)%4);if(e.key==='Delete'&&selected)send('sell',selected);
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden){save();if(game.s.phase==='battle'){paused=true;renderBoardUI();renderIntel();}}});
 window.addEventListener('beforeunload',save);
 let last=performance.now(),accum=0,uiTime=0,saveTime=0;
-function frame(now){let realDt=Math.min(.15,(now-last)/1000);last=now;const running=game.s.phase==='battle'&&!paused&&!$('dialog').open&&!document.hidden;
- if(running){accum+=realDt*speed;while(accum>=1/30&&game.s.phase==='battle'){game.update(1/30);accum-=1/30;}uiTime+=realDt;saveTime+=realDt;if(uiTime>.25){renderStats();renderSelected();renderAlliances();uiTime=0;}if(saveTime>2){save();saveTime=0;}}
+function frame(now){let realDt=Math.min(.15,(now-last)/1000);last=now;const running=game.s.phase==='battle'&&!paused&&screen==='battle'&&!document.hidden;
+ if(running){accum+=realDt*speed;while(accum>=1/30&&game.s.phase==='battle'){session.advance(1/30);accum-=1/30;}uiTime+=realDt;saveTime+=realDt;if(uiTime>.25){renderStats();renderSelected();renderAlliances();uiTime=0;}if(saveTime>2){save();saveTime=0;}}
  else accum=0;field.draw(running?realDt*speed:realDt*.5);requestAnimationFrame(frame);
 }
-render();requestAnimationFrame(frame);
+render();showScreen('home');requestAnimationFrame(frame);
+window.__garrisonApp={get session(){return session;},get screen(){return screen;},boardPoint(x,y){const r=canvas.getBoundingClientRect(),p=field.point(x,y);return {x:r.left+p.x,y:r.top+p.y};},showScreen};
 window.__garrisonReady=true;
 clearTimeout(window.__garrisonBootTimer);
 $('boot-screen')?.remove();
+if(incompatibleSave)toast('此版本无法恢复旧存档，原始数据已另行保留。');
 if(game.s.phase==='battle')toast('已恢复上次对局。点击「继续作战」接着游玩。');

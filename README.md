@@ -4,15 +4,15 @@
 
 ## 开发路线
 
-整体路线见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)，原作界面与操作的专项要求见 [UI_RESTORATION_PLAN.md](UI_RESTORATION_PLAN.md)。当前游戏仍为改编版，计划中的还原界面尚未实施。
+整体路线见 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)，原作界面与操作的专项要求见 [UI_RESTORATION_PLAN.md](UI_RESTORATION_PLAN.md)。S0–S3工程交付候选已落地，详见 [S0_S3_DELIVERY.md](S0_S3_DELIVERY.md)。大厅与主要操作原型可用；演示战斗仍为改编规则，原作对照缺口保持公开。
 
 ## 原作参考数据库
 
-已建立基于PRTS的全目录干员／敌人参考数据库，包含SQLite、JSON、来源修订、采集器与查询校验工具。范围及完成度见 [data/prts/README.md](data/prts/README.md)。该数据库尚未替换游戏内的改编数据。
+已建立基于PRTS的全目录干员／敌人参考数据库，包含SQLite、JSON、来源修订、采集器与查询校验工具。精确当前／历史原作表和内部ID映射见 [规范化数据库](data/normalized/README.md)。范围及完成度见 [data/prts/README.md](data/prts/README.md)。该数据库尚未替换游戏内的改编数据。
 
 ## 战斗基础系统
 
-战斗规则与实现边界见 [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md)。数值公式、范围索敌和攻击动作已独立分层，并接入现有游戏。当前共29项自动化测试（含6项数据解析测试）；原作单位数据与特殊机制仍需继续校准。
+战斗规则与实现边界见 [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md)。数值公式、范围索敌和攻击动作已独立分层，并接入现有游戏。当前共40项自动化测试，另有真实浏览器、触控与离线启动检查；原作单位数据与特殊机制仍需继续校准。
 
 ## 启动游戏
 
@@ -71,3 +71,7 @@ VS Code Live Server 同样支持：以项目文件夹为工作区打开根目录
 - 干员和敌人图像来源：https://github.com/ArknightsAssets/ArknightsAssets2。
 - 图像来源清单见 `dist/assets/asset-manifest.json`。
 - 角色、名称和原始图像等权利属于鹰角网络及其关联公司。本作非官方作品；素材镜像的公开可访问性不构成开放图像许可。
+
+## 开发预览与验收
+
+运行 `npm run dev` 后访问 http://127.0.0.1:5502 。另开终端运行 `npm run test:browser` 进行隔离浏览器验收；该命令需要Playwright和Edge，可通过PLAYWRIGHT_MODULE与BROWSER_EXECUTABLE指定路径。正常游玩不需要这些测试依赖。

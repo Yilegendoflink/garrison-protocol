@@ -1,35 +1,36 @@
+import {LEGACY_CONTENT,validateContent} from './content.js';
 import {FPS,attribute,attackTiming,damage,applyDamage,recoverHP,gainSP,spendSP,spCapacity} from './combat.js';
 import {rotateCells,containsTarget,selectEnemies,selectAllies,selectDefender} from './targeting.js';
 import {startAttack,advanceAttack,cancelAttack} from './actions.js';
-import {VERSION,OP,OPERATORS,EQ,EQUIPMENT,SP,SPELLS,STRATEGIES,DECISIONS,MAPS,ALLIANCES,ENEMIES,WAVES,DIFFICULTIES} from './data.js';
 
 export class Game {
- constructor(seed=Date.now()){
+ constructor(seed=Date.now(),content=LEGACY_CONTENT){
+  const errors=validateContent(content);if(errors.length)throw Error(errors.join('; '));this.content=content;
   this.onChange=()=>{};this.onEffect=()=>{};this.onNotice=()=>{};
-  this.s={version:VERSION,seed:seed>>>0,seq:0,phase:'briefing',round:1,level:1,discount:0,money:3,hp:30,maxHp:30,cap:8,strategy:'perfect',difficulty:'standard',map:0,units:[],items:[],shop:[],locked:false,stacks:{},decisions:[],promotionQueue:[],rewardOffers:null,decisionOffers:null,logs:[],battle:null,stats:{kills:0,leaks:0,merges:0,bought:0,spent:0,rounds:0,time:0,damage:{},healing:{}},skillPrefs:{},won:false,hidden:false,bonusFunds:0,freeRefresh:0,refreshCount:0,lastResult:null};
+  this.s={contentId:content.id,contentVersion:content.version,version:this.content.VERSION,seed:seed>>>0,seq:0,phase:'briefing',round:1,level:1,discount:0,money:3,hp:30,maxHp:30,cap:8,strategy:content.STRATEGIES[0].id,difficulty:Object.keys(content.DIFFICULTIES)[0],map:0,units:[],items:[],shop:[],locked:false,stacks:{},decisions:[],promotionQueue:[],rewardOffers:null,decisionOffers:null,logs:[],battle:null,stats:{kills:0,leaks:0,merges:0,bought:0,spent:0,rounds:0,time:0,damage:{},healing:{}},skillPrefs:{},won:false,hidden:false,bonusFunds:0,freeRefresh:0,refreshCount:0,lastResult:null};
  }
- random(){let x=this.s.seed;x^=x<<13;x^=x>>>17;x^=x<<5;this.s.seed=x>>>0;return this.s.seed/4294967296;}
- pick(a){return a[Math.floor(this.random()*a.length)];}
+ random(channel='battle'){this.s.randomSeeds??={battle:(this.s.seed||1),economy:((this.s.seed^0x9e3779b9)>>>0)||1};let x=this.s.randomSeeds[channel]||1;x^=x<<13;x^=x>>>17;x^=x<<5;this.s.randomSeeds[channel]=x>>>0;return this.s.randomSeeds[channel]/4294967296;}
+ pick(a,channel='economy'){return a[Math.floor(this.random(channel)*a.length)];}
  uid(){return ++this.s.seq;}
  notify(msg){this.onNotice(msg);return false;}
  log(msg){this.s.logs.unshift({round:this.s.round,text:msg});this.s.logs=this.s.logs.slice(0,60);}
  changed(){this.onChange();}
- get map(){return MAPS[this.s.map];}
+ get map(){return this.content.MAPS[this.s.map];}
  get onField(){return this.s.units.filter(u=>u.x!==null);}
  get hand(){return [...this.s.units.filter(u=>u.x===null),...this.s.items];}
- get strategy(){return STRATEGIES.find(x=>x.id===this.s.strategy);}
- get wave(){return WAVES[this.s.round-1];}
+ get strategy(){return this.content.STRATEGIES.find(x=>x.id===this.s.strategy);}
+ get wave(){return this.content.WAVES[this.s.round-1];}
  get upgradeCost(){return this.s.level>=6?0:Math.max(0,[0,5,7,8,10,12][this.s.level]-this.s.discount);}
  get shopSlots(){return Math.min(6,3+Math.floor(this.s.level/2));}
  get recruitCost(){return this.active('insight')&&this.stack('insight')>=100?2:3;}
  stack(id){return this.s.stacks[id]||0;}
  has(id){return this.s.decisions.filter(x=>x===id).length;}
- allies(){const counts={};for(const u of this.onField){for(const a of OP[u.id].alliances){(counts[a]??=new Set()).add(u.id);}}return Object.fromEntries(Object.entries(ALLIANCES).map(([id,a])=>[id,{...a,id,count:counts[id]?.size||0,active:(counts[id]?.size||0)>=a.need,stacks:this.stack(id)}]));}
- active(id){let ids=new Set(this.onField.filter(u=>OP[u.id].alliances.includes(id)).map(u=>u.id));return ids.size>=(ALLIANCES[id]?.need??99);}
+ allies(){const counts={};for(const u of this.onField){for(const a of this.content.OP[u.id].alliances){(counts[a]??=new Set()).add(u.id);}}return Object.fromEntries(Object.entries(this.content.ALLIANCES).map(([id,a])=>[id,{...a,id,count:counts[id]?.size||0,active:(counts[id]?.size||0)>=a.need,stacks:this.stack(id)}]));}
+ active(id){let ids=new Set(this.onField.filter(u=>this.content.OP[u.id].alliances.includes(id)).map(u=>u.id));return ids.size>=(this.content.ALLIANCES[id]?.need??99);}
  addStacks(id,n){this.s.stacks[id]=Math.min(9999,this.stack(id)+n);}
- trait(u,event){const o=OP[u.id];if(o.trait!==event)return;if((event==='skill'||event==='kill'||event==='refresh')&&u.traitTriggers>=10)return;let hit=false;for(const a of o.alliances){if(event==='acquire'||this.active(a)){this.addStacks(a,o.traitValue*(u.elite?2:1));hit=true;}}if(hit)u.traitTriggers=(u.traitTriggers||0)+1;}
- setPreferences({difficulty,map,strategy}){if(this.s.phase!=='briefing')return false;if(DIFFICULTIES[difficulty])this.s.difficulty=difficulty;if(MAPS[map])this.s.map=map;if(STRATEGIES.some(s=>s.id===strategy))this.s.strategy=strategy;this.changed();return true;}
- start(){if(this.s.phase!=='briefing')return false;this.s.hp=this.s.maxHp=this.strategy.hp;this.s.phase='prep';this.enterPrep(true);this.s.shop=[{kind:'op',id:'fang'},{kind:'op',id:'melantha'},{kind:'op',id:'beagle'}];this.log('调度中心已接入。招募干员，建立第一道防线。');this.changed();return true;}
+ trait(u,event){const o=this.content.OP[u.id];if(o.trait!==event)return;if((event==='skill'||event==='kill'||event==='refresh')&&u.traitTriggers>=10)return;let hit=false;for(const a of o.alliances){if(event==='acquire'||this.active(a)){this.addStacks(a,o.traitValue*(u.elite?2:1));hit=true;}}if(hit)u.traitTriggers=(u.traitTriggers||0)+1;}
+ setPreferences({difficulty,map,strategy}){if(this.s.phase!=='briefing')return false;if(this.content.DIFFICULTIES[difficulty])this.s.difficulty=difficulty;if(this.content.MAPS[map])this.s.map=map;if(this.content.STRATEGIES.some(s=>s.id===strategy))this.s.strategy=strategy;this.changed();return true;}
+ start(){if(this.s.phase!=='briefing')return false;this.s.hp=this.s.maxHp=this.strategy.hp;this.s.phase='prep';this.enterPrep(true);this.s.shop=(this.content.startingShop||this.content.OPERATORS.filter(o=>o.tier===1).slice(0,3).map(o=>o.id)).map(id=>({kind:'op',id}));this.log('调度中心已接入。招募干员，建立第一道防线。');this.changed();return true;}
  enterPrep(first=false){
   this.s.phase='prep';this.s.money=Math.min(10,this.s.round+2)+this.strategy.money+this.has('funding')*2+this.s.bonusFunds;
   if(this.active('victoria'))this.s.money+=Math.floor(this.stack('victoria')/15);this.s.bonusFunds=0;
@@ -39,16 +40,16 @@ export class Game {
   this.fillShop(!this.s.locked);this.s.locked=false;
  }
  rollOffer(tier=this.s.level,onlyOps=false){
-  if(!onlyOps&&this.random()<.16){const pool=EQUIPMENT.filter(e=>e.tier<=tier);return {kind:'equipment',id:this.pick(pool).id};}
-  const pool=OPERATORS.filter(o=>o.tier<=tier);
+  if(!onlyOps&&this.random('economy')<.16){const pool=this.content.EQUIPMENT.filter(e=>e.tier<=tier);return {kind:'equipment',id:this.pick(pool).id};}
+  const pool=this.content.OPERATORS.filter(o=>o.tier<=tier);
   // Higher tiers remain mixed with earlier tiers, so pairs remain available after upgrading.
-  const weights=pool.map(o=>Math.pow(.72,tier-o.tier));let r=this.random()*weights.reduce((a,b)=>a+b,0);
+  const weights=pool.map(o=>Math.pow(.72,tier-o.tier));let r=this.random('economy')*weights.reduce((a,b)=>a+b,0);
   let o=pool.at(-1);for(let i=0;i<pool.length;i++){r-=weights[i];if(r<=0){o=pool[i];break;}}
   return {kind:'op',id:o.id};
  }
  fillShop(reset=true){const old=this.s.shop;this.s.shop=Array.from({length:this.shopSlots},(_,i)=>!reset&&old[i]?old[i]:this.rollOffer());}
  canManage(){return this.s.phase==='prep'&&!this.s.rewardOffers&&!this.s.decisionOffers;}
- cost(offer){return offer.kind==='op'?this.recruitCost:EQ[offer.id]?.cost||3;}
+ cost(offer){return offer.kind==='op'?this.recruitCost:this.content.EQ[offer.id]?.cost||3;}
  canGainOp(id){return this.hand.length<10||this.s.units.filter(u=>u.id===id&&!u.elite).length>=2;}
  buy(index){
   if(!this.canManage())return this.notify('请先完成当前决策。');const offer=this.s.shop[index];if(!offer)return false;const cost=this.cost(offer);
@@ -59,51 +60,51 @@ export class Game {
   this.changed();return true;
  }
  gainOp(id,elite=false){
-  if(!OP[id])return null;const u={uid:this.uid(),id,kind:'op',elite,x:null,y:null,dir:0,equipment:[],skill:this.s.skillPrefs[id]||0,traitTriggers:0};this.s.units.push(u);this.trait(u,'acquire');
-  this.log(`${OP[id].name}加入整备${elite?' · 精锐':''}`);this.mergeOps(id);return u;
+  if(!this.content.OP[id])return null;const u={uid:this.uid(),id,kind:'op',elite,x:null,y:null,dir:0,equipment:[],skill:this.s.skillPrefs[id]||0,traitTriggers:0};this.s.units.push(u);this.trait(u,'acquire');
+  this.log(`${this.content.OP[id].name}加入整备${elite?' · 精锐':''}`);this.mergeOps(id);return u;
  }
  mergeOps(id){let copies=this.s.units.filter(u=>u.id===id&&!u.elite);while(copies.length>=3){
   const group=copies.slice(0,3),field=group.find(u=>u.x!==null),anchor=field||group[0];
   for(const u of group){for(const e of u.equipment)this.s.items.push({...e,kind:'equipment'});}
   const ids=new Set(group.map(x=>x.uid));this.s.units=this.s.units.filter(u=>!ids.has(u.uid));
-  const merged={...anchor,uid:this.uid(),elite:true,equipment:[],traitTriggers:0};this.s.units.push(merged);this.s.stats.merges++;this.log(`${OP[id].name}晋升精锐，获得晋升调配特许`);this.queuePromotion(Math.min(6,this.s.level+1));this.onEffect({type:'merge',x:merged.x,y:merged.y});copies=this.s.units.filter(u=>u.id===id&&!u.elite);
+  const merged={...anchor,uid:this.uid(),elite:true,equipment:[],traitTriggers:0};this.s.units.push(merged);this.s.stats.merges++;this.log(`${this.content.OP[id].name}晋升精锐，获得晋升调配特许`);this.queuePromotion(Math.min(6,this.s.level+1));this.onEffect({type:'merge',x:merged.x,y:merged.y});copies=this.s.units.filter(u=>u.id===id&&!u.elite);
  }}
  queuePromotion(tier){this.s.promotionQueue.push(tier);this.refreshReward();}
- refreshReward(){if(this.s.rewardOffers||!this.s.promotionQueue.length)return;let tier=this.s.promotionQueue[0];let pool=OPERATORS.filter(o=>o.tier===tier);const choices=[];while(choices.length<Math.min(3,pool.length)){let chosen=this.pick(pool);choices.push({kind:'op',id:chosen.id});pool=pool.filter(o=>o.id!==chosen.id);}this.s.rewardOffers=choices;}
+ refreshReward(){if(this.s.rewardOffers||!this.s.promotionQueue.length)return;let tier=this.s.promotionQueue[0];let pool=this.content.OPERATORS.filter(o=>o.tier===tier);const choices=[];while(choices.length<Math.min(3,pool.length)){let chosen=this.pick(pool);choices.push({kind:'op',id:chosen.id});pool=pool.filter(o=>o.id!==chosen.id);}this.s.rewardOffers=choices;}
  takePromotion(index){const offer=this.s.rewardOffers?.[index];if(!offer||this.s.phase!=='prep')return false;this.s.rewardOffers=null;this.s.promotionQueue.shift();this.gainOp(offer.id);this.refreshReward();this.changed();return true;}
  hasBaseEquipment(id){return this.s.items.some(e=>e.kind==='equipment'&&e.id===id&&!e.elite)||this.s.units.some(u=>u.equipment.some(e=>e.id===id&&!e.elite));}
- gainEquipment(id,elite=false){const e={uid:this.uid(),kind:'equipment',id,elite};this.s.items.push(e);this.mergeEquipment(id);this.log(`获得装备：${EQ[id].name}`);return e;}
+ gainEquipment(id,elite=false){const e={uid:this.uid(),kind:'equipment',id,elite};this.s.items.push(e);this.mergeEquipment(id);this.log(`获得装备：${this.content.EQ[id].name}`);return e;}
  mergeEquipment(id){const list=[];for(const e of this.s.items){if(e.kind==='equipment'&&e.id===id&&!e.elite)list.push({e,owner:null});}for(const u of this.s.units)for(const e of u.equipment)if(e.id===id&&!e.elite)list.push({e,owner:u});
-  if(list.length<2)return;for(const {e,owner} of list.slice(0,2)){if(owner)owner.equipment=owner.equipment.filter(x=>x.uid!==e.uid);else this.s.items=this.s.items.filter(x=>x.uid!==e.uid);}this.s.items.push({uid:this.uid(),kind:'equipment',id,elite:true});this.log(`${EQ[id].name}合成为进阶装备`);this.mergeEquipment(id);
+  if(list.length<2)return;for(const {e,owner} of list.slice(0,2)){if(owner)owner.equipment=owner.equipment.filter(x=>x.uid!==e.uid);else this.s.items=this.s.items.filter(x=>x.uid!==e.uid);}this.s.items.push({uid:this.uid(),kind:'equipment',id,elite:true});this.log(`${this.content.EQ[id].name}合成为进阶装备`);this.mergeEquipment(id);
  }
  gainSpell(id){this.s.items.push({uid:this.uid(),kind:'spell',id});}
- equip(itemUid,unitUid,replaceIndex=null){if(!this.canManage())return false;const item=this.s.items.find(e=>e.uid===itemUid&&e.kind==='equipment'),u=this.s.units.find(u=>u.uid===unitUid);if(!item||!u)return false;if(u.equipment.length>=2){if(replaceIndex===null)return 'replace';if(!u.equipment[replaceIndex])return false;u.equipment.splice(replaceIndex,1);}this.s.items=this.s.items.filter(e=>e.uid!==itemUid);u.equipment.push(item);this.log(`${OP[u.id].name}装备${EQ[item.id].name}`);this.changed();return true;}
- useSpell(uid,target=null){if(!this.canManage())return false;const item=this.s.items.find(e=>e.uid===uid&&e.kind==='spell');if(!item)return false;const spell=SP[item.id];if(spell.effect==='elite'){const u=this.s.units.find(u=>u.uid===target);if(!u)return 'target';if(u.elite)return this.notify('该干员已经是精锐。');u.elite=true;for(const e of u.equipment)this.s.items.push(e);u.equipment=[];this.s.stats.merges++;this.queuePromotion(Math.min(6,this.s.level+1));}
+ equip(itemUid,unitUid,replaceIndex=null){if(!this.canManage())return false;const item=this.s.items.find(e=>e.uid===itemUid&&e.kind==='equipment'),u=this.s.units.find(u=>u.uid===unitUid);if(!item||!u)return false;if(u.equipment.length>=2){if(replaceIndex===null)return 'replace';if(!u.equipment[replaceIndex])return false;u.equipment.splice(replaceIndex,1);}this.s.items=this.s.items.filter(e=>e.uid!==itemUid);u.equipment.push(item);this.log(`${this.content.OP[u.id].name}装备${this.content.EQ[item.id].name}`);this.changed();return true;}
+ useSpell(uid,target=null){if(!this.canManage())return false;const item=this.s.items.find(e=>e.uid===uid&&e.kind==='spell');if(!item)return false;const spell=this.content.SP[item.id];if(spell.effect==='elite'){const u=this.s.units.find(u=>u.uid===target);if(!u)return 'target';if(u.elite)return this.notify('该干员已经是精锐。');u.elite=true;for(const e of u.equipment)this.s.items.push(e);u.equipment=[];this.s.stats.merges++;this.queuePromotion(Math.min(6,this.s.level+1));}
   else if(spell.effect==='hp')this.s.hp=Math.min(this.s.maxHp,this.s.hp+spell.value);else if(spell.effect==='money')this.s.money+=spell.value;this.s.items=this.s.items.filter(e=>e.uid!==uid);this.log(`使用${spell.name}`);this.changed();return true;
  }
  refresh(){if(!this.canManage())return false;if(this.s.freeRefresh>0)this.s.freeRefresh--;else{if(this.s.money<1)return this.notify('刷新需要 1 资金。');this.s.money--;this.s.stats.spent++;}this.s.locked=false;this.fillShop(true);this.s.refreshCount++;for(const u of this.s.units)this.trait(u,'refresh');this.changed();return true;}
  upgrade(){if(!this.canManage()||this.s.level>=6)return false;const price=this.upgradeCost;if(this.s.money<price)return this.notify(`升级需要 ${price} 资金。`);this.s.money-=price;this.s.stats.spent+=price;this.s.level++;this.s.discount=0;while(this.s.shop.length<this.shopSlots)this.s.shop.push(this.rollOffer());this.log(`调度中心升至 ${this.s.level} 级，解锁更高等阶`);this.changed();return true;}
  lock(){if(!this.canManage())return false;this.s.locked=!this.s.locked;this.changed();return true;}
  tile(x,y){if(x<0||x>=this.map.cols||y<0||y>=this.map.rows)return 'outside';if(this.map.blocked.some(p=>p[0]===x&&p[1]===y))return 'blocked';if(this.map.paths.some(p=>(p[0][0]===x&&p[0][1]===y)||(p.at(-1)[0]===x&&p.at(-1)[1]===y)))return 'portal';return this.map.high.some(p=>p[0]===x&&p[1]===y)?'high':'ground';}
- canPlace(u,x,y){const t=this.tile(x,y);return t!=='blocked'&&t!=='outside'&&t!=='portal'&&(t!=='high'||OP[u.id].placement!=='melee');}
+ canPlace(u,x,y){const t=this.tile(x,y);return t!=='blocked'&&t!=='outside'&&t!=='portal'&&(t!=='high'||this.content.OP[u.id].placement!=='melee');}
  deploy(uid,x,y){if(!this.canManage())return false;const u=this.s.units.find(u=>u.uid===uid);if(!u)return false;if(!this.canPlace(u,x,y))return this.notify('该位置无法部署此干员。近战干员不能部署至高台。');const other=this.s.units.find(v=>v.x===x&&v.y===y&&v.uid!==uid);
   if(u.x===null&&!other&&this.onField.length>=this.s.cap)return this.notify(`已达到 ${this.s.cap} 个部署位上限。`);
-  if(other){if(u.x===null){if(this.hand.length>=10)return this.notify('整备区已满，无法交换。');other.x=null;other.y=null;}else {if(!this.canPlace(other,u.x,u.y))return this.notify('交换后干员无法部署至原地块。');other.x=u.x;other.y=u.y;}}
+  if(other){if(u.x===null){other.x=null;other.y=null;}else {if(!this.canPlace(other,u.x,u.y))return this.notify('交换后干员无法部署至原地块。');other.x=u.x;other.y=u.y;}}
   u.x=x;u.y=y;this.changed();return true;
  }
  withdraw(uid){if(!this.canManage())return false;const u=this.s.units.find(u=>u.uid===uid);if(!u||u.x===null)return false;if(this.hand.length>=10)return this.notify('整备区已满。');u.x=null;u.y=null;this.changed();return true;}
  turn(uid,dir=null){if(!this.canManage())return false;const u=this.s.units.find(u=>u.uid===uid);if(!u)return false;u.dir=dir??((u.dir+1)%4);this.changed();return true;}
- sell(uid){if(!this.canManage())return false;const u=this.s.units.find(u=>u.uid===uid);if(u){this.s.units=this.s.units.filter(x=>x.uid!==uid);this.s.items.push(...u.equipment);this.s.money++;this.log(`出售${OP[u.id].name} · +1 资金`);}else{const e=this.s.items.find(x=>x.uid===uid);if(!e)return false;this.s.items=this.s.items.filter(x=>x.uid!==uid);this.log(`销毁${(EQ[e.id]||SP[e.id]).name}`);}this.changed();return true;}
- attributes(u,combat=null){const o=OP[u.id],m=u.elite?1.8:1,a=this.allies(),gear={atk:0,hp:0,def:0,res:0,speed:0,sp:0,regen:0,redeploy:0,initialSP:0};for(const item of u.equipment){let e=EQ[item.id],q=(item.elite?2:1)*(a.columbia.active?1.25:1);for(const k in gear)gear[k]+=(e[k]||0)*q;}
+ sell(uid){if(!this.canManage())return false;const u=this.s.units.find(u=>u.uid===uid);if(u){this.s.units=this.s.units.filter(x=>x.uid!==uid);this.s.items.push(...u.equipment);this.s.money++;this.log(`出售${this.content.OP[u.id].name} · +1 资金`);}else{const e=this.s.items.find(x=>x.uid===uid);if(!e)return false;this.s.items=this.s.items.filter(x=>x.uid!==uid);this.log(`销毁${(this.content.EQ[e.id]||this.content.SP[e.id]).name}`);}this.changed();return true;}
+ attributes(u,combat=null){const o=this.content.OP[u.id],m=u.elite?1.8:1,a=this.allies(),gear={atk:0,hp:0,def:0,res:0,speed:0,sp:0,regen:0,redeploy:0,initialSP:0};for(const item of u.equipment){let e=this.content.EQ[item.id],q=(item.elite?2:1)*(a.columbia.active?1.25:1);for(const k in gear)gear[k]+=(e[k]||0)*q;}
   const universal=(this.s.strategy==='perfect'?.2:0)+this.has('flawless')*.1,rh=a.rhodes.active?a.rhodes.stacks:0,yan=a.yan.active?a.yan.stacks:0,firm=a.firm.active?a.firm.stacks:0;
   const skill=this.skill(u),active=combat?.active>0;let hp=attribute(o.hp*m,{ratio:gear.hp+universal+rh*.005+(o.alliances.includes('aegir')&&a.aegir.active?a.aegir.stacks*.01:0),min:1});
   let atk=attribute(o.atk*m,{ratio:gear.atk+universal+rh*.0025+(a.assault.active?.08:0)+(active&&['buff','heal'].includes(skill.type)&&!skill.attackScale?(skill.power-1):0)});
   let def=attribute(o.def*m,{ratio:gear.def+universal+yan*.007+(a.firm.active?.1+firm*.006:0)+(active?(skill.type==='defense'?skill.power-1:Math.max(0,(skill.def||1)-1)):0)+(combat?.armorBuff>0?.8:0),scales:active&&skill.def<1?[skill.def]:[]});
   return {hp,atk,def,res:Math.min(100,Math.max(0,o.res+gear.res+Math.floor(yan/20)*5+(combat?.resBuff>0?40:0))),speed:Math.max(.2,1+(active?(skill.speed||1)-1:0)+gear.speed+this.has('flawless')*.1+(a.swift.active?.1+a.swift.stacks*.006:0)+(o.placement==='ranged'&&a.laterano.active?a.laterano.stacks*.008:0)),sp:1+gear.sp+this.has('research')*.25+(a.miracle.active?a.miracle.stacks*.008:0),regen:gear.regen+(o.regen||0)+(o.alliances.includes('aegir')&&a.aegir.active?.003:0),redeploy:Math.max(3,o.redeploy*(1-Math.min(.85,gear.redeploy+this.has('research')*.2+(a.assault.active?Math.min(.6,a.assault.stacks*.008):0)))),dp:Math.max(1,Math.round(o.dp*(1-Math.min(.7,gear.redeploy)))),block:o.block+(o.cls==='defender'&&a.firm.active&&firm>=30?1:0),initialSP:gear.initialSP};
  }
- skill(u){return OP[u.id].skills[u.skill??u.skillIndex??0]||OP[u.id].skills[0];}
+ skill(u){return this.content.OP[u.id].skills[u.skill??u.skillIndex??0]||this.content.OP[u.id].skills[0];}
  rangeExtra(u){const active=this.s.battle?.units.find(v=>v.uid===u.uid)?.active>0,skill=this.skill(u);return active?(skill.range||(['heal','sanctuary'].includes(skill.type)?1:0)):0;}
- rangeCells(u,extra=0){const o=OP[u.id],skill=this.skill(u);if(extra&&skill.rangeCells)return rotateCells(skill.rangeCells,u);if(!extra)return rotateCells(o.rangeCells,u);const cells=[];for(const [x,y] of o.rangeCells)for(let i=0;i<=extra;i++)cells.push([x+i,y]);return rotateCells([...new Map(cells.map(p=>[p.join(','),p])).values()],u);}
+ rangeCells(u,extra=0){const o=this.content.OP[u.id],skill=this.skill(u);if(extra&&skill.rangeCells)return rotateCells(skill.rangeCells,u);if(!extra)return rotateCells(o.rangeCells,u);const cells=[];for(const [x,y] of o.rangeCells)for(let i=0;i<=extra;i++)cells.push([x+i,y]);return rotateCells([...new Map(cells.map(p=>[p.join(','),p])).values()],u);}
  inRange(u,target,extra=0){return containsTarget(this.rangeCells(u,extra),target);}
  startBattle(){if(!this.canManage())return false;if(!this.onField.length)return this.notify('请先从整备区选择干员，部署到战场。');
   for(const u of this.onField)this.trait(u,'end');if(this.has('union'))for(const a of Object.values(this.allies()))if(a.active)this.addStacks(a.id,3*this.has('union'));
@@ -116,8 +117,8 @@ export class Game {
   this.s.battle={rulesVersion:2,tickRemainder:0,projectiles:[],time:0,units,enemies:[],queue:queue.sort((a,b)=>a.at-b.at),spawned:0,total:queue.length,kills:0,leaks:0,bountyKills:0,dp:20,limit:this.s.round>=16?140:90,escalation:1,pulse:0,bossPulse:0,wallUsed:false,drone:null,startingHp:this.s.hp};
   this.log(`第 ${this.s.round} 轮作战开始 · ${this.wave[0]}`);this.changed();return true;
  }
- spawnEnemy(q){const base=ENEMIES[q.type],round=this.s.round,scale=DIFFICULTIES[this.s.difficulty].scale*(1+Math.max(0,round-3)*.055),path=this.map.paths[q.lane%this.map.paths.length];let hp=base.hp*scale;const enemy={...base,uid:this.uid(),type:q.type,x:path[0][0],y:path[0][1],path:q.lane%this.map.paths.length,segment:0,hp,maxHp:hp,atk:base.atk*scale,def:base.def*(1+Math.max(0,round-5)*.025),shield:base.shield?base.shield*scale:0,maxShield:base.shield?base.shield*scale:0,action:null,attackCooldown:0,spLock:0,cd:.7,stun:0,slowUntil:0,slow:1,block:null,bounty:!!q.bounty,armorBreak:0,debuff:0,vulnerable:1,bossClock:0,spawnedAt:this.s.battle.time};this.s.battle.enemies.push(enemy);this.s.battle.spawned++;return enemy;}
- castSkill(uid){if(this.s.phase!=='battle')return false;const source=this.s.units.find(u=>u.uid===uid),bu=this.s.battle.units.find(u=>u.uid===uid);if(!source||!bu||this.skill(source).activation!=='manual')return false;const o=OP[source.id],targets=selectEnemies(bu,this.s.battle.enemies,{cells:this.rangeCells(source,this.rangeExtra(source)),paths:this.map.paths,antiAir:o.placement!=='melee'||o.antiAir,priority:o.targetPriority});return this.triggerSkill(bu,source,targets);}
+ spawnEnemy(q){const base=this.content.ENEMIES[q.type],round=this.s.round,scale=this.content.DIFFICULTIES[this.s.difficulty].scale*(1+Math.max(0,round-3)*.055),path=this.map.paths[q.lane%this.map.paths.length];let hp=base.hp*scale;const enemy={...base,uid:this.uid(),type:q.type,x:path[0][0],y:path[0][1],path:q.lane%this.map.paths.length,segment:0,hp,maxHp:hp,atk:base.atk*scale,def:base.def*(1+Math.max(0,round-5)*.025),shield:base.shield?base.shield*scale:0,maxShield:base.shield?base.shield*scale:0,action:null,attackCooldown:0,spLock:0,cd:.7,stun:0,slowUntil:0,slow:1,block:null,bounty:!!q.bounty,armorBreak:0,debuff:0,vulnerable:1,bossClock:0,spawnedAt:this.s.battle.time};this.s.battle.enemies.push(enemy);this.s.battle.spawned++;return enemy;}
+ castSkill(uid){if(this.s.phase!=='battle')return false;const source=this.s.units.find(u=>u.uid===uid),bu=this.s.battle.units.find(u=>u.uid===uid);if(!source||!bu||this.skill(source).activation!=='manual')return false;const o=this.content.OP[source.id],targets=selectEnemies(bu,this.s.battle.enemies,{cells:this.rangeCells(source,this.rangeExtra(source)),paths:this.map.paths,antiAir:o.placement!=='melee'||o.antiAir,priority:o.targetPriority});return this.triggerSkill(bu,source,targets);}
  triggerSkill(bu,source,targets){const skill=this.skill(source);if(!spendSP(bu,skill))return false;cancelAttack(bu);bu.skillCount++;bu.active=skill.permanentSecond&&bu.skillCount>=2?999:skill.duration;this.trait(source,'skill');
   if(skill.dp)this.s.battle.dp=Math.min(99,this.s.battle.dp+skill.dp);
   this.onEffect({type:'skill',x:bu.x,y:bu.y,text:skill.name,color:'#eac873'});
@@ -130,7 +131,7 @@ export class Game {
   if(skill.type==='drone'){let allies=this.s.battle.units.filter(u=>u.hp>0&&u.deployed).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp);if(allies.length)this.s.battle.drone={x:allies[0].x,y:allies[0].y,time:skill.duration,power:bu.stats.atk*skill.power,owner:bu.uid};}return true;
  }
  heal(source,target,amount){if(!target.deployed||target.unhealable)return;const mult=this.active('columbia')?1+this.stack('columbia')*.007:1;const real=recoverHP(target,damage({amount,type:'healing',multiplier:mult*(target.healingReceived??1)}));source.healing+=real;this.s.stats.healing[source.id]=(this.s.stats.healing[source.id]||0)+real;if(real>15)this.onEffect({type:'heal',x:target.x,y:target.y,value:Math.round(real),from:[source.x,source.y]});}
- hit(bu,source,e,amount,type){if(e.hp<=0||e.invulnerable)return;const o=OP[source.id];const def=attribute(e.def,{ratio:-(e.debuff||0),finalAdd:-(e.armorBreak||0)}),res=Math.max(0,e.res-(e.debuff?15:0));const physical=damage({amount,defense:def,penetration:(o.physicalPenetration||0)+(o.cls==='sniper'&&this.active('precise')?30+this.stack('precise')*3:0),penetrationRatio:o.physicalPenetrationRatio||0}),arts=damage({amount,type:'arts',resistance:res,penetration:(o.artsPenetration||0)+(this.active('arcane')?this.stack('arcane')*.2:0),penetrationRatio:o.artsPenetrationRatio||0});if(this.s.strategy==='adaptive'&&o.placement==='ranged')type=physical>arts?'physical':'arts';
+ hit(bu,source,e,amount,type){if(e.hp<=0||e.invulnerable)return;const o=this.content.OP[source.id];const def=attribute(e.def,{ratio:-(e.debuff||0),finalAdd:-(e.armorBreak||0)}),res=Math.max(0,e.res-(e.debuff?15:0));const physical=damage({amount,defense:def,penetration:(o.physicalPenetration||0)+(o.cls==='sniper'&&this.active('precise')?30+this.stack('precise')*3:0),penetrationRatio:o.physicalPenetrationRatio||0}),arts=damage({amount,type:'arts',resistance:res,penetration:(o.artsPenetration||0)+(this.active('arcane')?this.stack('arcane')*.2:0),penetrationRatio:o.artsPenetrationRatio||0});if(this.s.strategy==='adaptive'&&o.placement==='ranged')type=physical>arts?'physical':'arts';
   let dealt=type==='true'?amount:type==='arts'?arts:physical;
   if(type==='arts'&&this.active('arcane'))dealt*=1+this.stack('arcane')*.008;
   if(type==='physical'&&o.alliances.includes('victoria')&&this.active('victoria'))dealt*=1+this.stack('victoria')*.008;
@@ -140,7 +141,7 @@ export class Game {
   this.onEffect({type:'hit',x:e.x,y:e.y,value:Math.round(real+shieldDamage),damageType:type,from:[bu.x,bu.y]});
   if(e.hp<=0){this.s.battle.kills++;this.s.stats.kills++;if(e.bounty)this.s.battle.bountyKills++;if(o.killDP)this.s.battle.dp=Math.min(99,this.s.battle.dp+o.killDP);this.trait(source,'kill');this.onEffect({type:'death',x:e.x,y:e.y});}
  }
- damageUnit(bu,enemy,amount,arts=false){if(bu.hp<=0||!bu.deployed||bu.invulnerable)return;const source=this.s.units.find(u=>u.uid===bu.uid),o=OP[bu.id],skill=this.skill(source),active=bu.active>0;const dodge=1-(1-(o.dodge||0))*(1-(active?(skill.dodge||0):0));if(arts!=='true'&&this.random()<dodge)return;
+ damageUnit(bu,enemy,amount,arts=false){if(bu.hp<=0||!bu.deployed||bu.invulnerable)return;const source=this.s.units.find(u=>u.uid===bu.uid),o=this.content.OP[bu.id],skill=this.skill(source),active=bu.active>0;const dodge=1-(1-(o.dodge||0))*(1-(active?(skill.dodge||0):0));if(arts!=='true'&&this.random()<dodge)return;
   const stats=this.attributes(source,bu),type=typeof arts==='string'?arts:arts?'arts':'physical';
   const applied=applyDamage(bu,damage({amount,type,defense:stats.def,resistance:stats.res,penetration:type==='arts'?(enemy.artsPenetration||0):(enemy.physicalPenetration||0),penetrationRatio:type==='arts'?(enemy.artsPenetrationRatio||0):(enemy.physicalPenetrationRatio||0),reduction:bu.damageReduction||0}),{immortal:active&&skill.immortal});
   if(enemy.spOnHit!==false)gainSP(bu,skill,'defensive',1);
@@ -176,7 +177,7 @@ export class Game {
     if(skill.type==='sanctuary')for(const a of alive)if(Math.hypot(a.x-u.x,a.y-u.y)<4)this.heal(u,a,u.stats.atk*.12*dt);
   }}
   for(const u of alive){
-   const source=this.s.units.find(s=>s.uid===u.uid),o=OP[u.id],skill=this.skill(source);if(!source)continue;
+   const source=this.s.units.find(s=>s.uid===u.uid),o=this.content.OP[u.id],skill=this.skill(source);if(!source)continue;
    const active=u.active>0;u.active=Math.max(0,u.active-dt);u.spLock=Math.max(0,(u.spLock||0)-dt);
    u.stats=this.attributes(source,u);if(u.maxHp!==u.stats.hp){u.hp=u.hp/u.maxHp*u.stats.hp;u.maxHp=u.stats.hp;}
    if(!active)gainSP(u,skill,'auto',dt*u.stats.sp);
@@ -222,9 +223,9 @@ export class Game {
  }
  endRound(){const b=this.s.battle;this.s.stats.rounds=this.s.round;this.s.lastResult={round:this.s.round,kills:b.kills,leaks:b.leaks,time:b.time,units:b.units.map(u=>({id:u.id,damage:u.damage,healing:u.healing}))};if(this.has('bounty')&&b.bountyKills>=2){this.s.bonusFunds+=3;this.log('悬赏完成，下回合额外获得 3 资金');}this.log(`第 ${this.s.round} 轮${b.leaks?'作战结束':'完美防卫'} · 击倒 ${b.kills} 名敌人`);
   if(this.s.round>=16){if(this.s.round===16&&this.s.difficulty!=='standard'&&this.s.stats.leaks===0){this.s.hidden=true;this.s.phase='intermission';this.log('无损防卫达成，隐秘核心已显现');}else{this.finish(true);return;}}else this.s.phase='intermission';this.changed();}
- nextRound(){if(this.s.phase!=='intermission')return false;const prev=this.s.round;this.s.round++;this.enterPrep();if([4,8,12].includes(prev)){let pool=DECISIONS.filter(d=>this.has(d.id)<2),offers=[];while(offers.length<3&&pool.length){const d=this.pick(pool);offers.push(d.id);pool=pool.filter(x=>x.id!==d.id);}this.s.decisionOffers=offers;}this.changed();return true;}
- chooseDecision(id){if(!this.s.decisionOffers?.includes(id))return false;this.s.decisionOffers=null;this.s.decisions.push(id);if(id==='funding')this.s.money+=2;if(id==='expand'){this.s.cap+=2;this.gainEquipment(this.pick(EQUIPMENT.filter(e=>e.tier<=this.s.level)).id);}if(id==='medical')this.s.hp=Math.min(this.s.maxHp,this.s.hp+8);if(id==='training')this.gainSpell('elite');if(id==='union')for(const a of Object.values(this.allies()))if(a.active)this.addStacks(a.id,15);if(id==='reinforce')for(let i=0;i<2;i++)this.gainOp(this.pick(OPERATORS.filter(o=>o.tier===Math.min(6,this.s.level+1))).id);this.log(`采纳策略：${DECISIONS.find(d=>d.id===id).name}`);this.changed();return true;}
+ nextRound(){if(this.s.phase!=='intermission')return false;const prev=this.s.round;this.s.round++;this.enterPrep();if([4,8,12].includes(prev)){let pool=this.content.DECISIONS.filter(d=>this.has(d.id)<2),offers=[];while(offers.length<3&&pool.length){const d=this.pick(pool);offers.push(d.id);pool=pool.filter(x=>x.id!==d.id);}this.s.decisionOffers=offers;}this.changed();return true;}
+ chooseDecision(id){if(!this.s.decisionOffers?.includes(id))return false;this.s.decisionOffers=null;this.s.decisions.push(id);if(id==='funding')this.s.money+=2;if(id==='expand'){this.s.cap+=2;this.gainEquipment(this.pick(this.content.EQUIPMENT.filter(e=>e.tier<=this.s.level)).id);}if(id==='medical')this.s.hp=Math.min(this.s.maxHp,this.s.hp+8);if(id==='training')this.gainSpell('elite');if(id==='union')for(const a of Object.values(this.allies()))if(a.active)this.addStacks(a.id,15);if(id==='reinforce')for(let i=0;i<2;i++)this.gainOp(this.pick(this.content.OPERATORS.filter(o=>o.tier===Math.min(6,this.s.level+1))).id);this.log(`采纳策略：${this.content.DECISIONS.find(d=>d.id===id).name}`);this.changed();return true;}
  finish(won){this.s.phase='finished';this.s.won=won;if(won)this.s.stats.rounds=this.s.round;this.log(won?'模拟成功，卫戍协议已完成':'防卫失败，模拟中止');this.changed();}
  serialize(){return JSON.stringify(this.s);}
- static restore(raw){try{const s=JSON.parse(raw);if(s.version!==VERSION||!['briefing','prep','battle','intermission','finished'].includes(s.phase)||!Number.isInteger(s.round)||s.round<1||s.round>17||!MAPS[s.map]||!DIFFICULTIES[s.difficulty]||!STRATEGIES.some(x=>x.id===s.strategy)||!Array.isArray(s.units)||s.units.some(u=>!OP[u.id])||!Array.isArray(s.items)||s.items.some(e=>!EQ[e.id]&&!SP[e.id]))return null;const g=new Game();g.s=s;if(s.battle){s.battle.rulesVersion=2;s.battle.projectiles??=[];s.battle.tickRemainder??=0;for(const u of [...s.battle.units,...s.battle.enemies]){u.action??=null;u.attackCooldown??=Math.max(0,Math.round((u.cd||0)*FPS));u.spLock??=0;}}return g;}catch{return null;}}
+ static restore(raw,content=LEGACY_CONTENT){try{const s=JSON.parse(raw);if((s.contentId&&s.contentId!==content.id)||(s.contentVersion&&s.contentVersion!==content.version))return null;if(s.version!==content.VERSION||!['briefing','prep','battle','intermission','finished'].includes(s.phase)||!Number.isInteger(s.round)||s.round<1||s.round>17||!content.MAPS[s.map]||!content.DIFFICULTIES[s.difficulty]||!content.STRATEGIES.some(x=>x.id===s.strategy)||!Array.isArray(s.units)||s.units.some(u=>!content.OP[u.id])||!Array.isArray(s.items)||s.items.some(e=>!content.EQ[e.id]&&!content.SP[e.id]))return null;const g=new Game(1,content);s.contentId??=content.id;s.contentVersion??=content.version;g.s=s;if(s.battle){s.battle.rulesVersion=2;s.battle.projectiles??=[];s.battle.tickRemainder??=0;for(const u of [...s.battle.units,...s.battle.enemies]){u.action??=null;u.attackCooldown??=Math.max(0,Math.round((u.cd||0)*FPS));u.spLock??=0;}}return g;}catch{return null;}}
 }

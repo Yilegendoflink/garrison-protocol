@@ -1,0 +1,28 @@
+{
+  "id": "arknights:current",
+  "commit": "0ef7f952dfd018392200157a5c79a6511ba69122",
+  "entities": 1375,
+  "operators": 460,
+  "enemies": 2151,
+  "enemyLevels": 2411,
+  "skills": 1810,
+  "modules": 905,
+  "ranges": 73,
+  "prtsOperatorsMatched": 460,
+  "prtsEnemyPagesMatched": 1804,
+  "unresolvedEnemyPages": [],
+  "aggregateMappings": [
+    {
+      "prtsId": "prts:enemy:92202",
+      "count": 36
+    }
+  ],
+  "missingReferences": [
+    {
+      "entity": "trap_755_cdsoul",
+      "kind": "skill",
+      "id": "sktok_cdsoul"
+    }
+  ],
+  "executionStatus": "data-ready; skill prefab behavior requires S4 implementation"
+}

@@ -1,0 +1,58 @@
+{
+  "version": "current",
+  "commit": "0ef7f952dfd018392200157a5c79a6511ba69122",
+  "source": "Kengxxiao/ArknightsGameData (public extracted game data mirror; not an official API)",
+  "sourceUrl": "https://github.com/Kengxxiao/ArknightsGameData/tree/0ef7f952dfd018392200157a5c79a6511ba69122/zh_CN/gamedata",
+  "retrievedAt": "2026-09-12T06:35:00.097Z",
+  "files": {
+    "data_version.txt": {
+      "url": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/0ef7f952dfd018392200157a5c79a6511ba69122/zh_CN/gamedata/excel/data_version.txt",
+      "sha256": "ddd2d38d37edd9cb38d69a38e12c3bd08c4c9539ab6ac8f49b1028792ef7d587",
+      "bytes": 85
+    },
+    "character_table.json": {
+      "url": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/0ef7f952dfd018392200157a5c79a6511ba69122/zh_CN/gamedata/excel/character_table.json",
+      "sha256": "9beff2cf188a768bf309fd78cd4f06a22dd4ecf0ccd696d3c229e313feb224bb",
+      "bytes": 14718157,
+      "sourceSha256": "42708ca01b1938df4e2c3ed9e9efeadbf0e35533411907dadb37b80315e69ae8",
+      "transform": "Removed non-combat item descriptions and module story text; all numerical/ability fields retained"
+    },
+    "char_patch_table.json": {
+      "url": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/0ef7f952dfd018392200157a5c79a6511ba69122/zh_CN/gamedata/excel/char_patch_table.json",
+      "sha256": "d1850d5aeec1a9246a0531e88c167e66745644957662c8272fc764f54904c57e",
+      "bytes": 48761
+    },
+    "skill_table.json": {
+      "url": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/0ef7f952dfd018392200157a5c79a6511ba69122/zh_CN/gamedata/excel/skill_table.json",
+      "sha256": "161a61c7d1e7e662e7410c241019605b3ce1075079b27042f53d1e08aa2292d1",
+      "bytes": 11447137
+    },
+    "range_table.json": {
+      "url": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/0ef7f952dfd018392200157a5c79a6511ba69122/zh_CN/gamedata/excel/range_table.json",
+      "sha256": "4d974598394630a1ad465b954321254397f514c7fb26cba944d320ac18b874d0",
+      "bytes": 53368
+    },
+    "enemy_handbook_table.json": {
+      "url": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/0ef7f952dfd018392200157a5c79a6511ba69122/zh_CN/gamedata/excel/enemy_handbook_table.json",
+      "sha256": "1c03a4b10e294ba92390fc0a538aa94fbe4f2aea91e7938f7887ef498b61e8d6",
+      "bytes": 1811529
+    },
+    "uniequip_table.json": {
+      "url": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/0ef7f952dfd018392200157a5c79a6511ba69122/zh_CN/gamedata/excel/uniequip_table.json",
+      "sha256": "63f7f329021f1e3e54d3aced836fa13a5056b85d3f6a66a2478dde49e1b050aa",
+      "bytes": 2092359,
+      "sourceSha256": "b508483cc87c03d8313f4dd8dfc1b9195bc50385a8dfec51d17e657cb26ffad9",
+      "transform": "Removed non-combat item descriptions and module story text; all numerical/ability fields retained"
+    },
+    "battle_equip_table.json": {
+      "url": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/0ef7f952dfd018392200157a5c79a6511ba69122/zh_CN/gamedata/excel/battle_equip_table.json",
+      "sha256": "006687f201a823abf31c6a1c57b2269099bd3ea375c2ec3ae5595cc98a1ec460",
+      "bytes": 5710707
+    },
+    "enemy_database.json": {
+      "url": "https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/0ef7f952dfd018392200157a5c79a6511ba69122/zh_CN/gamedata/levels/enemydata/enemy_database.json",
+      "sha256": "7175461f03c2b29d0dc336d34d7b717dc0e33403b649b745ff852af7aef731bd",
+      "bytes": 14903029
+    }
+  }
+}

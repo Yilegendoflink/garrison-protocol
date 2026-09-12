@@ -5,10 +5,10 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const names = ['data.js', 'combat.js', 'targeting.js', 'actions.js', 'engine.js', 'renderer.js', 'app.js'];
+const names = ['data.js', 'combat.js', 'targeting.js', 'actions.js', 'content.js', 'engine.js', 'renderer.js', 'session.js', 'catalog.js', 'screens.js', 'app.js'];
 const factories = [];
 for (const name of names) {
-  let source = await readFile(path.join(root, 'dist', name), 'utf8');
+  let source = (await readFile(path.join(root, 'dist', name), 'utf8')).replace(/\r\n/g,'\n');
   const exports = [];
   source = source.replace(/^import\s*\{([^}]+)\}\s*from\s*['"]\.\/([^'"]+)['"];?\s*$/gm, (_, bindings, dependency) => {
     if (!names.includes(dependency)) throw new Error(`Unknown dependency: ${dependency}`);

@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "desktop": [
+    "lobby",
+    "catalog-search",
+    "operator-detail",
+    "loadout",
+    "setup",
+    "briefing",
+    "buy",
+    "deploy",
+    "cancel",
+    "start",
+    "resume-after-reload"
+  ],
+  "responsive": [
+    {
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "overflow": false
+    },
+    {
+      "width": 414,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "overflow": false
+    }
+  ],
+  "touch": "setup through purchase and deployment",
+  "offlineFileLaunch": true,
+  "errors": []
+}
