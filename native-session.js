@@ -24,7 +24,7 @@ export class NativeSession extends NativeEconomy {
   try{
    if(type==='refresh'){result=this.refresh(this.rollOffers());if(result)this.fillItems();}
    else if(type==='lock'){if(this.s.phase!=='prep')return false;this.s.locked=!this.s.locked;result=true;}
-   else if(type==='withdraw'){const u=this.s.units.find(u=>u.uid===args[0]);if(this.s.phase!=='prep'||!u||this.hand().length>=10)return false;u.position=null;result=true;}
+   else if(type==='withdraw'){const u=this.s.units.find(u=>u.uid===args[0]);if(this.s.phase!=='prep'||!u?.position||this.hand().length>=10)return false;u.position=null;this.settleBondRewards();result=true;}
    else if(type==='skill'){const u=this.s.units.find(u=>u.uid===args[0]),p=this.data.profiles[u?.chessId];if(this.s.phase!=='prep'||!u||!p.skillChoices[args[1]])return false;u.skillIndex=args[1];result=true;}
    else if(type==='buyItem')result=this.buyItem(args[0]);
    else if(type==='equip')result=this.equip(args[0],args[1],args[2]);
@@ -44,10 +44,18 @@ export class NativeSession extends NativeEconomy {
   if(!consumed){if(u.equipment.length>=2){if(replaceIndex===null)return false;const old=u.equipment.splice(replaceIndex,1)[0];if(old)this.s.items.push(old);}u.equipment.push(item);if(def.canGiveBond&&def.giveBondId)u.bondIds=[...new Set([...this.ownBonds(u),def.giveBondId])];}
   this.s.items=this.s.items.filter(i=>i.uid!==itemUid);this.settleBondRewards();return true;
  }
+ canDeploy(uid,x,y){
+  if(!Number.isInteger(x)||!Number.isInteger(y))return false;
+  const u=this.s.units.find(u=>u.uid===uid),cell=this.map.grid[y]?.[x];if(!u||!cell||this.s.phase!=='prep'||cell.buildableType==='NONE')return false;
+  const valid=(unit,tile)=>this.data.profiles[unit.chessId].position!=='MELEE'||tile.heightType!=='HIGHLAND';if(!valid(u,cell))return false;
+  const other=this.s.units.find(v=>v.uid!==uid&&v.position?.x===x&&v.position?.y===y),old=u.position;
+  if(!old&&!other&&this.s.units.filter(v=>v.position).length>=this.s.capacity)return false;
+  return !other||!old||valid(other,this.map.grid[old.y][old.x]);
+ }
  deploy(uid,x,y,dir){
-  const u=this.s.units.find(u=>u.uid===uid),cell=this.map.grid[y]?.[x];if(!u||!cell||this.s.phase!=='prep'||!Number.isInteger(dir)||dir<0||dir>3||cell.buildableType==='NONE')return false;
-  const valid=(u,t)=>this.data.profiles[u.chessId].position!=='MELEE'||t.heightType!=='HIGHLAND';if(!valid(u,cell))return false;
-  const other=this.s.units.find(v=>v.uid!==uid&&v.position?.x===x&&v.position?.y===y),old=u.position;if(!old&&!other&&this.s.units.filter(v=>v.position).length>=this.s.capacity)return false;if(other&&old&&!valid(other,this.map.grid[old.y][old.x]))return false;if(other)other.position=old;u.position={x,y};if(!old)u.dir=dir;this.settleBondRewards();return true;
+  if(!Number.isInteger(dir)||dir<0||dir>3||!this.canDeploy(uid,x,y))return false;
+  const u=this.s.units.find(u=>u.uid===uid),other=this.s.units.find(v=>v.uid!==uid&&v.position?.x===x&&v.position?.y===y),old=u.position;
+  if(other)other.position=old;u.position={x,y};u.dir=dir;this.settleBondRewards();return true;
  }
  startBattle(){if(this.s.phase!=='prep'||this.s.rewardPending||!this.s.units.some(u=>u.position))return false;const ok=this.beginBattle();if(!ok)return false;if(this.s.phase==='prep')return true;const turn=buildPhasePlan(this.data,this.s.modeId).find(t=>t.round===this.s.round);this.battle=new NativeBattle(this.data,this,this.map,turn);return true;}
  finishCurrentBattle(){if(!this.battle?.s.finished||this.s.phase!=='battle')return;const r=this.battle.s.result;this.s.history.push(r);if(r.kind==='training-dummy'){this.s.runResult=r;this.s.phase='finished';}else{this.s.hp=Math.max(0,this.s.hp-r.leaks);this.finishBattle({success:this.s.hp>0,leaks:r.leaks});if(!this.s.hp)this.s.runResult=r;}}
