@@ -1,5 +1,7 @@
 # 卫戍协议：盟约下半 · 手动验收版
 
+2026-09-13 反馈修正：增强高台／地面视觉区分；使用实际波次队列预览本轮及下一轮出怪数；支持场上干员拖回手牌、换位后重新定向。根据PRTS记录71个历史职业分支（本期涉及56个），接入咒愈师伤害转治疗及多种分支基础行为，游戏内可查看规则与未完成项。详见 [BRANCH_RULES.md](BRANCH_RULES.md)。本批只构建发布，未运行功能测试。
+
 非官方同人项目。主入口现已连接历史下半期数据、新运营控制器与战斗循环，旧版35人演示保留在 `dist/legacy.html`。
 
 源码仓库：[Yilegendoflink/garrison-protocol](https://github.com/Yilegendoflink/garrison-protocol)

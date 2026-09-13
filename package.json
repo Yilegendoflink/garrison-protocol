@@ -20,7 +20,8 @@
     "test:season": "node scripts/season-browser.cjs",
     "release:check": "node scripts/check-release.mjs",
     "data:assets": "node scripts/sync-mode-assets.mjs",
-    "test:benchmark": "node scripts/benchmark-browser.cjs"
+    "test:benchmark": "node scripts/benchmark-browser.cjs",
+    "data:branches": "node scripts/fetch-branch-sources.mjs && node scripts/build-branch-records.mjs"
   },
   "engines": {
     "node": ">=22"

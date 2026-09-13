@@ -1,0 +1,4130 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-13T11:08:11.913Z",
+  "scope": "Historical branch definitions plus current PRTS clarifications. Base branch behavior is separate from operator skills, talents and module exceptions.",
+  "sources": [
+    {
+      "title": "分支一览",
+      "revision": 326449,
+      "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88"
+    },
+    {
+      "title": "分支特性信息/data",
+      "revision": 427899,
+      "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata"
+    }
+  ],
+  "records": [
+    {
+      "id": "physician",
+      "name": "医师",
+      "profession": "MEDIC",
+      "inCurrentMode": true,
+      "baseTrait": "恢复友方单位生命",
+      "representative": "char_108_silent",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%8C%BB%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%8C%BB%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "heal",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": true,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_108_silent",
+          "trait": null
+        },
+        {
+          "charId": "char_171_bldsk",
+          "trait": null
+        },
+        {
+          "charId": "char_4196_reckpr",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "fearless",
+      "name": "无畏者",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "能够阻挡一个敌人",
+      "representative": "char_1014_nearl2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%97%A0%E7%95%8F%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%97%A0%E7%95%8F%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_1014_nearl2",
+          "trait": null
+        },
+        {
+          "charId": "char_263_skadi",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "executor",
+      "name": "处决者",
+      "profession": "SPECIAL",
+      "inCurrentMode": true,
+      "baseTrait": "再部署时间大幅度减少",
+      "representative": "char_1028_texas2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%A4%84%E5%86%B3%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%A4%84%E5%86%B3%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_1028_texas2",
+          "trait": null
+        },
+        {
+          "charId": "char_237_gravel",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "fastshot",
+      "name": "速射手",
+      "profession": "SNIPER",
+      "inCurrentMode": true,
+      "baseTrait": "优先攻击空中单位",
+      "representative": "char_103_angel",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%80%9F%E5%B0%84%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%80%9F%E5%B0%84%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "priority": "air",
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_103_angel",
+          "trait": null
+        },
+        {
+          "charId": "char_332_archet",
+          "trait": null
+        },
+        {
+          "charId": "char_1021_kroos2",
+          "trait": null
+        },
+        {
+          "charId": "char_498_inside",
+          "trait": null
+        },
+        {
+          "charId": "char_126_shotst",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "bombarder",
+      "name": "投掷手",
+      "profession": "SNIPER",
+      "inCurrentMode": true,
+      "baseTrait": "攻击对小范围的地面敌人造成两次物理伤害（第二次为余震，伤害降低至攻击力的一半）",
+      "representative": "char_391_rosmon",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%8A%95%E6%8E%B7%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%8A%95%E6%8E%B7%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": false,
+        "style": "aftershock",
+        "radius": 0.9,
+        "pending": [
+          "余震时序"
+        ],
+        "kind": "damage",
+        "damageType": "physical",
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "余震时序"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_391_rosmon",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "attack@append_atk_scale",
+                    "value": 0.5,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "attack@times",
+                    "value": 2,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": "-1",
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "bard",
+      "name": "吟游者",
+      "profession": "SUPPORT",
+      "inCurrentMode": true,
+      "baseTrait": "不攻击，持续恢复范围内所有友军生命（每秒恢复相当于自身攻击力10%的生命），自身不受鼓舞影响",
+      "representative": "char_1012_skadi2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%90%9F%E6%B8%B8%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%90%9F%E6%B8%B8%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "regeneration",
+        "attack": false,
+        "pending": [
+          "技能替换特性与鼓舞的专属效果"
+        ],
+        "style": "single",
+        "damageType": "arts",
+        "antiAir": true,
+        "status": "partial"
+      },
+      "pending": [
+        "技能替换特性与鼓舞的专属效果"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_1012_skadi2",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "attack@atk_to_hp_recovery_ratio",
+                    "value": 0.1,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "不攻击，持续恢复范围内所有友军<@ba.kw>生命</>（每秒相当于自身攻击力<@ba.kw>{attack@atk_to_hp_recovery_ratio:0%}</>的生命），自身不受<$ba.inspire>鼓舞</>影响",
+                "prefabKey": "-1",
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_4134_cetsyr",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "attack@atk_to_hp_recovery_ratio",
+                    "value": 0.1,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "不攻击，持续恢复范围内所有友军<@ba.kw>生命</>（每秒相当于自身攻击力<@ba.kw>{attack@atk_to_hp_recovery_ratio:0%}</>的生命），自身不受<$ba.inspire>鼓舞</>影响",
+                "prefabKey": "-1",
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "protector",
+      "name": "铁卫",
+      "profession": "TANK",
+      "inCurrentMode": true,
+      "baseTrait": "能够阻挡三个敌人",
+      "representative": "char_136_hsguma",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%93%81%E5%8D%AB"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%93%81%E5%8D%AB"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_136_hsguma",
+          "trait": null
+        },
+        {
+          "charId": "char_199_yak",
+          "trait": null
+        },
+        {
+          "charId": "char_150_snakek",
+          "trait": null
+        },
+        {
+          "charId": "char_381_bubble",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "ritualist",
+      "name": "巫役",
+      "profession": "SUPPORT",
+      "inCurrentMode": true,
+      "baseTrait": "攻击造成法术伤害，可以造成元素损伤",
+      "representative": "char_245_cello",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%B7%AB%E5%BD%B9"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%B7%AB%E5%BD%B9"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "pending": [
+          "元素损伤"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "元素损伤"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_245_cello",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "pioneer",
+      "name": "尖兵",
+      "profession": "PIONEER",
+      "inCurrentMode": true,
+      "baseTrait": "能够阻挡两个敌人",
+      "representative": "char_4026_vulpis",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%B0%96%E5%85%B5"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%B0%96%E5%85%B5"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_4026_vulpis",
+          "trait": null
+        },
+        {
+          "charId": "char_420_flamtl",
+          "trait": null
+        },
+        {
+          "charId": "char_102_texas",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "corecaster",
+      "name": "中坚术师",
+      "profession": "CASTER",
+      "inCurrentMode": false,
+      "baseTrait": "攻击造成法术伤害",
+      "representative": "char_180_amgoat",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E4%B8%AD%E5%9D%9A%E6%9C%AF%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E4%B8%AD%E5%9D%9A%E6%9C%AF%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "kind": "damage",
+        "style": "single",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": []
+    },
+    {
+      "id": "splashcaster",
+      "name": "扩散术师",
+      "profession": "CASTER",
+      "inCurrentMode": true,
+      "baseTrait": "攻击造成群体法术伤害",
+      "representative": "char_213_mostma",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%89%A9%E6%95%A3%E6%9C%AF%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%89%A9%E6%95%A3%E6%9C%AF%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "style": "splash",
+        "radius": 1.1,
+        "kind": "damage",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_213_mostma",
+          "trait": null
+        },
+        {
+          "charId": "char_2015_dusk",
+          "trait": null
+        },
+        {
+          "charId": "char_373_lionhd",
+          "trait": null
+        },
+        {
+          "charId": "char_341_sntlla",
+          "trait": null
+        },
+        {
+          "charId": "char_253_greyy",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "charger",
+      "name": "冲锋手",
+      "profession": "PIONEER",
+      "inCurrentMode": true,
+      "baseTrait": "击杀敌人后获得1点部署费用，撤退时返还初始部署费用",
+      "representative": "char_222_bpipe",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%86%B2%E9%94%8B%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%86%B2%E9%94%8B%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "pending": [
+          "击杀回费与撤退费用返还"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "击杀回费与撤退费用返还"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_222_bpipe",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "cost",
+                    "value": 1,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_496_wildmn",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "cost",
+                    "value": 1,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "centurion",
+      "name": "强攻手",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "同时攻击阻挡的所有敌人",
+      "representative": "char_1026_gvial2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%BC%BA%E6%94%BB%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%BC%BA%E6%94%BB%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "style": "block-count",
+        "kind": "damage",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_1026_gvial2",
+          "trait": null
+        },
+        {
+          "charId": "char_143_ghost",
+          "trait": null
+        },
+        {
+          "charId": "char_127_estell",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "guardian",
+      "name": "守护者",
+      "profession": "TANK",
+      "inCurrentMode": true,
+      "baseTrait": "技能可以治疗友方单位",
+      "representative": "char_202_demkni",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%AE%88%E6%8A%A4%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%AE%88%E6%8A%A4%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_202_demkni",
+          "trait": null
+        },
+        {
+          "charId": "char_423_blemsh",
+          "trait": null
+        },
+        {
+          "charId": "char_196_sunbr",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "slower",
+      "name": "凝滞师",
+      "profession": "SUPPORT",
+      "inCurrentMode": true,
+      "baseTrait": "攻击造成法术伤害，并对敌人造成短暂的停顿",
+      "representative": "char_291_aglina",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%87%9D%E6%BB%9E%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%87%9D%E6%BB%9E%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "sluggish": 0.8,
+        "kind": "damage",
+        "style": "single",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_291_aglina",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "sluggish",
+                    "value": 0.8,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_358_lisa",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "sluggish",
+                    "value": 0.8,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_1047_halo2",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "sluggish",
+                    "value": 0.8,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_4122_grabds",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "sluggish",
+                    "value": 0.8,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_258_podego",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "sluggish",
+                    "value": 0.8,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "blastcaster",
+      "name": "轰击术师",
+      "profession": "CASTER",
+      "inCurrentMode": true,
+      "baseTrait": "攻击造成超远距离的群体法术伤害",
+      "representative": "char_446_aroma",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E8%BD%B0%E5%87%BB%E6%9C%AF%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E8%BD%B0%E5%87%BB%E6%9C%AF%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "style": "all",
+        "kind": "damage",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_446_aroma",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "funnel",
+      "name": "驭械术师",
+      "profession": "CASTER",
+      "inCurrentMode": true,
+      "baseTrait": "操作浮游单元对敌人造成法术伤害\n浮游单元连续攻击同一敌人时伤害提升（最高造成干员110%攻击力的伤害）",
+      "representative": "char_1038_whitw2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%A9%AD%E6%A2%B0%E6%9C%AF%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%A9%AD%E6%A2%B0%E6%9C%AF%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "drone": true,
+        "pending": [
+          "技能释放浮游单元"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "技能释放浮游单元"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_1038_whitw2",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "init_atk_scale",
+                    "value": 0.2,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "delta_atk_scale",
+                    "value": 0.15,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "max_atk_scale",
+                    "value": 1.1,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "max_stack_cnt",
+                    "value": 6,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "操作<@ba.kw>浮游单元</>造成<@ba.kw>法术伤害</>\\n单元攻击同一敌人伤害提升（最高造成干员110%攻击力的伤害）",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_4013_kjera",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "init_atk_scale",
+                    "value": 0.2,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "delta_atk_scale",
+                    "value": 0.15,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "max_atk_scale",
+                    "value": 1.1,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "max_stack_cnt",
+                    "value": 6,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "操作<@ba.kw>浮游单元</>造成<@ba.kw>法术伤害</>\\n单元攻击同一敌人伤害提升（最高造成干员110%攻击力的伤害）",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_4040_rockr",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "init_atk_scale",
+                    "value": 0.2,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "delta_atk_scale",
+                    "value": 0.15,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "max_atk_scale",
+                    "value": 1.1,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "max_stack_cnt",
+                    "value": 6,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "操作<@ba.kw>浮游单元</>造成<@ba.kw>法术伤害</>\\n单元攻击同一敌人伤害提升（最高造成干员110%攻击力的伤害）",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_4054_malist",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "init_atk_scale",
+                    "value": 0.2,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "delta_atk_scale",
+                    "value": 0.15,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "max_atk_scale",
+                    "value": 1.1,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "max_stack_cnt",
+                    "value": 6,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "操作<@ba.kw>浮游单元</>造成<@ba.kw>法术伤害</>\\n单元攻击同一敌人伤害提升（最高造成干员110%攻击力的伤害）",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "mystic",
+      "name": "秘术师",
+      "profession": "CASTER",
+      "inCurrentMode": true,
+      "baseTrait": "攻击造成法术伤害，在找不到攻击目标时可以将攻击能量储存起来之后一齐发射（最多3个）",
+      "representative": "char_469_indigo",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E7%A7%98%E6%9C%AF%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E7%A7%98%E6%9C%AF%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "storage": true,
+        "kind": "damage",
+        "style": "single",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_469_indigo",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "times",
+                    "value": 3,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "chain",
+      "name": "链术师",
+      "profession": "CASTER",
+      "inCurrentMode": true,
+      "baseTrait": "攻击造成法术伤害，且会在3个敌人间跳跃，每次跳跃伤害降低15%并造成短暂停顿",
+      "representative": "char_472_pasngr",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%93%BE%E6%9C%AF%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%93%BE%E6%9C%AF%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "style": "chain",
+        "jumpRadius": 1.7,
+        "jumpScale": 0.85,
+        "kind": "damage",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_472_pasngr",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "attack@max_target",
+                    "value": 3,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "attack@sluggish",
+                    "value": 0.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "攻击造成<@ba.kw>法术伤害</>，且会在<@ba.kw>{attack@max_target}</>个敌人间跳跃，每次跳跃伤害降低15%并造成短暂<$ba.sluggish>停顿</>（精英2后更新）",
+                "prefabKey": "-1",
+                "rangeId": null
+              },
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_2",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "attack@max_target",
+                    "value": 4,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "attack@sluggish",
+                    "value": 0.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "攻击造成<@ba.kw>法术伤害</>，且会在<@ba.kw>{attack@max_target}</>个敌人间跳跃，每次跳跃伤害降低15%并造成短暂<$ba.sluggish>停顿</>",
+                "prefabKey": "-1",
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_306_leizi",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "attack@max_target",
+                    "value": 3,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "attack@sluggish",
+                    "value": 0.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "攻击造成<@ba.kw>法术伤害</>，且会在<@ba.kw>{attack@max_target}</>个敌人间跳跃，每次跳跃伤害降低15%并造成短暂<$ba.sluggish>停顿</>（精英2后更新）",
+                "prefabKey": "-1",
+                "rangeId": null
+              },
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_2",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "attack@max_target",
+                    "value": 4,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "attack@sluggish",
+                    "value": 0.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "攻击造成<@ba.kw>法术伤害</>，且会在<@ba.kw>{attack@max_target}</>个敌人间跳跃，每次跳跃伤害降低15%并造成短暂<$ba.sluggish>停顿</>",
+                "prefabKey": "-1",
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "aoesniper",
+      "name": "炮手",
+      "profession": "SNIPER",
+      "inCurrentMode": false,
+      "baseTrait": "攻击造成群体物理伤害",
+      "representative": "char_113_cqbw",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E7%82%AE%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E7%82%AE%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "style": "splash",
+        "radius": 1,
+        "kind": "damage",
+        "damageType": "physical",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": []
+    },
+    {
+      "id": "reaperrange",
+      "name": "散射手",
+      "profession": "SNIPER",
+      "inCurrentMode": true,
+      "baseTrait": "攻击范围内的所有敌人，对自己前方一横排的敌人攻击力提升至150%",
+      "representative": "char_279_excu",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%95%A3%E5%B0%84%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%95%A3%E5%B0%84%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "style": "all",
+        "frontScale": true,
+        "kind": "damage",
+        "damageType": "physical",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_279_excu",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "atk_scale",
+                    "value": 1.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": "-1",
+                "rangeId": "1-3"
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_440_pinecn",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "atk_scale",
+                    "value": 1.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": "-1",
+                "rangeId": "1-3"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "longrange",
+      "name": "神射手",
+      "profession": "SNIPER",
+      "inCurrentMode": true,
+      "baseTrait": "优先攻击攻击范围内防御力最低的敌方单位",
+      "representative": "char_430_fartth",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E7%A5%9E%E5%B0%84%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E7%A5%9E%E5%B0%84%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "priority": "defense",
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_430_fartth",
+          "trait": null
+        },
+        {
+          "charId": "char_4193_lemuen",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "closerange",
+      "name": "重射手",
+      "profession": "SNIPER",
+      "inCurrentMode": true,
+      "baseTrait": "高精度的近距离射击",
+      "representative": "char_145_prove",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%87%8D%E5%B0%84%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%87%8D%E5%B0%84%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_145_prove",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "siegesniper",
+      "name": "攻城手",
+      "profession": "SNIPER",
+      "inCurrentMode": false,
+      "baseTrait": "优先攻击重量最重的敌人",
+      "representative": "char_197_poca",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%94%BB%E5%9F%8E%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%94%BB%E5%9F%8E%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "priority": "weight",
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": []
+    },
+    {
+      "id": "loopshooter",
+      "name": "回环射手",
+      "profession": "SNIPER",
+      "inCurrentMode": true,
+      "baseTrait": "持有回旋投射物时才能够攻击（投射物需要时间回收）",
+      "representative": "char_4100_caper",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%9B%9E%E7%8E%AF%E5%B0%84%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%9B%9E%E7%8E%AF%E5%B0%84%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "returnProjectile": true,
+        "pending": [
+          "回旋轨迹与速度校准"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": true,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "回旋轨迹与速度校准"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_4100_caper",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "bearer",
+      "name": "执旗手",
+      "profession": "PIONEER",
+      "inCurrentMode": false,
+      "baseTrait": "技能发动期间阻挡数变为0",
+      "representative": "char_479_sleach",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%89%A7%E6%97%97%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%89%A7%E6%97%97%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "blockZeroDuringSkill": true,
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": []
+    },
+    {
+      "id": "tactician",
+      "name": "战术家",
+      "profession": "PIONEER",
+      "inCurrentMode": true,
+      "baseTrait": "可以在攻击范围内选择一次战术点来召唤援军，自身攻击援军阻挡的敌人时攻击力提升至150%",
+      "representative": "char_427_vigil",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%88%98%E6%9C%AF%E5%AE%B6"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%88%98%E6%9C%AF%E5%AE%B6"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "pending": [
+          "战术点与援军"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "战术点与援军"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_427_vigil",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "atk_scale",
+                    "value": 1.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_249_mlyss",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "atk_scale",
+                    "value": 1.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "agent",
+      "name": "情报官",
+      "profession": "PIONEER",
+      "inCurrentMode": true,
+      "baseTrait": "再部署时间减少，可使用远程攻击",
+      "representative": "char_4087_ines",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%83%85%E6%8A%A5%E5%AE%98"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%83%85%E6%8A%A5%E5%AE%98"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_4087_ines",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_2",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "runtime_cost",
+                    "value": -9999,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": "-1",
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "instructor",
+      "name": "教官",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "可以攻击到较远敌人，攻击自身未阻挡的敌人时攻击力提升至120%",
+      "representative": "char_308_swire",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%95%99%E5%AE%98"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%95%99%E5%AE%98"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "unblockedBonus": true,
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_308_swire",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "atk_scale",
+                    "value": 1.2,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "lord",
+      "name": "领主",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "可以进行远程攻击，但此时攻击力降低至80%",
+      "representative": "char_172_svrash",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%A2%86%E4%B8%BB"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%A2%86%E4%B8%BB"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "rangedPenalty": true,
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_172_svrash",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "atk_scale",
+                    "value": 0.8,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_4082_qiubai",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "atk_scale",
+                    "value": 0.8,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_140_whitew",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "atk_scale",
+                    "value": 0.8,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_294_ayer",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "atk_scale",
+                    "value": 0.8,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "artsfghter",
+      "name": "术战者",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "攻击造成法术伤害",
+      "representative": "char_350_surtr",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%9C%AF%E6%88%98%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%9C%AF%E6%88%98%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "kind": "damage",
+        "style": "single",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_350_surtr",
+          "trait": null
+        },
+        {
+          "charId": "char_1019_siege2",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "sword",
+      "name": "剑豪",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "普通攻击连续造成两次伤害",
+      "representative": "char_4116_blkkgt",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%89%91%E8%B1%AA"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%89%91%E8%B1%AA"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "hits": 2,
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_4116_blkkgt",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "musha",
+      "name": "武者",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "不成为其他角色的治疗目标，每次攻击到敌人后回复自身{value}生命",
+      "representative": "char_337_utage",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%AD%A6%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%AD%A6%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "noExternalHealing": true,
+        "selfHealing": "musha",
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_337_utage",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "value",
+                    "value": 30,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "不成为其他角色的治疗目标，每次攻击到敌人后回复自身<@ba.kw>{value}</>生命（精英1后更新）",
+                "prefabKey": null,
+                "rangeId": null
+              },
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_1",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "value",
+                    "value": 50,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "不成为其他角色的治疗目标，每次攻击到敌人后回复自身<@ba.kw>{value}</>生命（精英2后更新）",
+                "prefabKey": null,
+                "rangeId": null
+              },
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_2",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "value",
+                    "value": 70,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "不成为其他角色的治疗目标，每次攻击到敌人后回复自身<@ba.kw>{value}</>生命",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "crusher",
+      "name": "重剑手",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "同时攻击阻挡的所有敌人",
+      "representative": "char_4145_ulpia",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%87%8D%E5%89%91%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%87%8D%E5%89%91%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "style": "block-count",
+        "kind": "damage",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_4145_ulpia",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "reaper",
+      "name": "收割者",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "无法被友方角色治疗，攻击造成群体伤害，每攻击到一个敌人回复自身50生命，最大生效数等于阻挡数",
+      "representative": "char_1032_excu2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%94%B6%E5%89%B2%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%94%B6%E5%89%B2%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "style": "all",
+        "noExternalHealing": true,
+        "selfHealing": "reaper",
+        "kind": "damage",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_1032_excu2",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "value",
+                    "value": 50,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "无法被友方角色治疗，攻击造成<@ba.kw>群体伤害</>，每攻击到一个敌人回复自身<@ba.kw>{value}</>生命，最大生效数等于阻挡数",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_4010_etlchi",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "value",
+                    "value": 50,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "无法被友方角色治疗，攻击造成<@ba.kw>群体伤害</>，每攻击到一个敌人回复自身<@ba.kw>{value}</>生命，最大生效数等于阻挡数",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_491_humus",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "value",
+                    "value": 50,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "无法被友方角色治疗，攻击造成<@ba.kw>群体伤害</>，每攻击到一个敌人回复自身<@ba.kw>{value}</>生命，最大生效数等于阻挡数",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "librator",
+      "name": "解放者",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "通常不攻击且阻挡数为0，技能未开启时{max_stack_cnt}秒内攻击力逐渐提升至+{atk:0%}，技能结束时重置攻击力",
+      "representative": "char_4064_mlynar",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E8%A7%A3%E6%94%BE%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E8%A7%A3%E6%94%BE%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "attackWhen": "skill",
+        "style": "single",
+        "charge": true,
+        "kind": "damage",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": false,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_4064_mlynar",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "atk",
+                    "value": 2,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "mid_stack_cnt",
+                    "value": 20,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "max_stack_cnt",
+                    "value": 40,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "通常不攻击且阻挡数为0，技能未开启时<@ba.kw>{max_stack_cnt}</>秒内攻击力逐渐提升至最高<@ba.kw>+{atk:0%}</>且技能结束时重置攻击力",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "merchant",
+      "name": "行商",
+      "profession": "SPECIAL",
+      "inCurrentMode": true,
+      "baseTrait": "再部署时间减少，撤退时不返还部署费用，在场时每3秒消耗3点部署费用（不足时自动撤退）",
+      "representative": "char_1033_swire2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E8%A1%8C%E5%95%86"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E8%A1%8C%E5%95%86"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "pending": [
+          "部署费用持续消耗与自动撤退"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "部署费用持续消耗与自动撤退"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_1033_swire2",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "interval",
+                    "value": 3,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "cost",
+                    "value": -3,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "hookmaster",
+      "name": "钩索师",
+      "profession": "SPECIAL",
+      "inCurrentMode": true,
+      "baseTrait": "技能可以使敌人产生位移\n可以放置于远程位",
+      "representative": "char_474_glady",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%92%A9%E7%B4%A2%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%92%A9%E7%B4%A2%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "pending": [
+          "位移力度与碰撞"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "位移力度与碰撞"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_474_glady",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "ringhealer",
+      "name": "群愈师",
+      "profession": "MEDIC",
+      "inCurrentMode": true,
+      "baseTrait": "同时恢复三个友方单位的生命",
+      "representative": "char_128_plosis",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E7%BE%A4%E6%84%88%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E7%BE%A4%E6%84%88%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "heal",
+        "targets": 3,
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": true,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_128_plosis",
+          "trait": null
+        },
+        {
+          "charId": "char_181_flower",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "healer",
+      "name": "疗养师",
+      "profession": "MEDIC",
+      "inCurrentMode": true,
+      "baseTrait": "拥有较大治疗范围，但在治疗较远目标时治疗量变为{heal_scale:0%}",
+      "representative": "char_4042_lumen",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E7%96%97%E5%85%BB%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E7%96%97%E5%85%BB%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "heal",
+        "farHealRange": "2-3",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": true,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_4042_lumen",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "heal_scale",
+                    "value": 0.8,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "拥有较大治疗范围，但在治疗较远目标时治疗量变为<@ba.kw>{heal_scale:0%}</>",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "wandermedic",
+      "name": "行医",
+      "profession": "MEDIC",
+      "inCurrentMode": true,
+      "baseTrait": "恢复友方单位生命，并回复相当于攻击力50%的元素损伤（可以回复未受伤友方单位的元素损伤）",
+      "representative": "char_1016_agoat2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E8%A1%8C%E5%8C%BB"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E8%A1%8C%E5%8C%BB"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "heal",
+        "elementHealing": true,
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": true,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_1016_agoat2",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "ep_heal_ratio",
+                    "value": 0.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "恢复友方单位生命，并回复相当于攻击力<@ba.kw>{ep_heal_ratio:0%}</>的<$ba.dt.element>元素损伤</>（可以回复未受伤友方单位的<$ba.dt.element>元素损伤</>）",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_4114_harold",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "ep_heal_ratio",
+                    "value": 0.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "恢复友方单位生命，并回复相当于攻击力<@ba.kw>{ep_heal_ratio:0%}</>的<$ba.dt.element>元素损伤</>（可以回复未受伤友方单位的<$ba.dt.element>元素损伤</>）",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "unyield",
+      "name": "不屈者",
+      "profession": "TANK",
+      "inCurrentMode": true,
+      "baseTrait": "无法被友方角色治疗",
+      "representative": "char_311_mudrok",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E4%B8%8D%E5%B1%88%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E4%B8%8D%E5%B1%88%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "noExternalHealing": true,
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_311_mudrok",
+          "trait": null
+        },
+        {
+          "charId": "char_4207_branch",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "artsprotector",
+      "name": "驭法铁卫",
+      "profession": "TANK",
+      "inCurrentMode": false,
+      "baseTrait": "技能开启时普通攻击会造成法术伤害",
+      "representative": "char_1044_hsgma2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%A9%AD%E6%B3%95%E9%93%81%E5%8D%AB"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%A9%AD%E6%B3%95%E9%93%81%E5%8D%AB"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "artsDuringSkill": true,
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": []
+    },
+    {
+      "id": "summoner",
+      "name": "召唤师",
+      "profession": "SUPPORT",
+      "inCurrentMode": false,
+      "baseTrait": "攻击造成法术伤害\n可以使用召唤物协助作战",
+      "representative": "char_248_mgllan",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%8F%AC%E5%94%A4%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%8F%AC%E5%94%A4%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "pending": [
+          "召唤物生命周期"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "召唤物生命周期"
+      ],
+      "traitVariants": []
+    },
+    {
+      "id": "craftsman",
+      "name": "工匠",
+      "profession": "SUPPORT",
+      "inCurrentMode": true,
+      "baseTrait": "能够阻挡两个敌人，使用协助作战",
+      "representative": "char_4162_cathy",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%B7%A5%E5%8C%A0"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%B7%A5%E5%8C%A0"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "physical",
+        "pending": [
+          "支援装置"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "antiAir": false,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "支援装置"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_4162_cathy",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "stalker",
+      "name": "伏击客",
+      "profession": "SPECIAL",
+      "inCurrentMode": true,
+      "baseTrait": "对攻击范围内所有敌人造成伤害\n拥有50%的物理和法术闪避且不容易成为敌人的攻击目标",
+      "representative": "char_437_mizuki",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E4%BC%8F%E5%87%BB%E5%AE%A2"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E4%BC%8F%E5%87%BB%E5%AE%A2"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "style": "all",
+        "evasion": 0.5,
+        "taunt": -1,
+        "kind": "damage",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_437_mizuki",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "prob",
+                    "value": 0.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "pusher",
+      "name": "推击手",
+      "profession": "SPECIAL",
+      "inCurrentMode": false,
+      "baseTrait": "同时攻击阻挡的所有敌人\n可以放置于远程位",
+      "representative": "char_400_weedy",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%8E%A8%E5%87%BB%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%8E%A8%E5%87%BB%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "style": "block-count",
+        "kind": "damage",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": []
+    },
+    {
+      "id": "dollkeeper",
+      "name": "傀儡师",
+      "profession": "SPECIAL",
+      "inCurrentMode": true,
+      "baseTrait": "受到致命伤时不撤退，切换成作战（替身阻挡数为0），持续20秒后自身再次替换",
+      "representative": "char_1023_ghost2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%82%80%E5%84%A1%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%82%80%E5%84%A1%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "pending": [
+          "替身切换与Buff清理"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "替身切换与Buff清理"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_1023_ghost2",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "duration",
+                    "value": 20,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "atk",
+                    "value": 0,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "max_hp",
+                    "value": 0,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "受到致命伤时不撤退，切换成<替身>作战（替身阻挡数为0），持续20秒后自身再次替换<替身>",
+                "prefabKey": "-1",
+                "rangeId": "x-4"
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_4016_kazema",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "duration",
+                    "value": 20,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "atk",
+                    "value": 0,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "max_hp",
+                    "value": 0,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "talent_override_rangeid_flag",
+                    "value": 1,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "受到致命伤时不撤退，切换成<替身>作战（替身阻挡数为0），持续20秒后自身再次替换<替身>",
+                "prefabKey": "-1",
+                "rangeId": "x-4"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "skywalker",
+      "name": "巡空者",
+      "profession": "SPECIAL",
+      "inCurrentMode": true,
+      "baseTrait": "起飞后能够阻挡2个飞行敌人",
+      "representative": "char_4191_tippi",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%B7%A1%E7%A9%BA%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%B7%A1%E7%A9%BA%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "pending": [
+          "起飞与空中阻挡"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "起飞与空中阻挡"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_4191_tippi",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "counsellor",
+      "name": "策士",
+      "profession": "PIONEER",
+      "inCurrentMode": true,
+      "baseTrait": "能够阻挡两个敌人，可以支援待部署区的我方单位",
+      "representative": "char_1045_svash2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E7%AD%96%E5%A3%AB"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E7%AD%96%E5%A3%AB"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "pending": [
+          "待部署区支援"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "待部署区支援"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_1045_svash2",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "fighter",
+      "name": "斗士",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "能够阻挡一个敌人",
+      "representative": "char_264_f12yin",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%96%97%E5%A3%AB"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%96%97%E5%A3%AB"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_264_f12yin",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "hammer",
+      "name": "撼地者",
+      "profession": "WARRIOR",
+      "inCurrentMode": true,
+      "baseTrait": "攻击使目标周围的其他敌人受到相当于攻击力50%的群体物理伤害",
+      "representative": "char_4058_pepe",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%92%BC%E5%9C%B0%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%92%BC%E5%9C%B0%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "style": "hammer",
+        "radius": 1,
+        "kind": "damage",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_4058_pepe",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "attack@ability_range_radius",
+                    "value": 1,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "attack@atk_scale_2",
+                    "value": 0.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "攻击使目标周围的其他敌人受到相当于攻击力<@ba.kw>{attack@atk_scale_2:0%}</>的<@ba.kw>群体</>物理伤害",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "primguard",
+      "name": "本源近卫",
+      "profession": "WARRIOR",
+      "inCurrentMode": false,
+      "baseTrait": "能够阻挡两个敌人，可以造成元素伤害",
+      "representative": "char_4187_graceb",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%9C%AC%E6%BA%90%E8%BF%91%E5%8D%AB"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%9C%AC%E6%BA%90%E8%BF%91%E5%8D%AB"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "pending": [
+          "元素伤害机制"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "元素伤害机制"
+      ],
+      "traitVariants": []
+    },
+    {
+      "id": "mercenary",
+      "name": "佣兵",
+      "profession": "WARRIOR",
+      "inCurrentMode": false,
+      "baseTrait": "可消耗部署费用来强化作战能力",
+      "representative": "char_394_hadiya",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E4%BD%A3%E5%85%B5"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E4%BD%A3%E5%85%B5"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "pending": [
+          "部署费用强化"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "部署费用强化"
+      ],
+      "traitVariants": []
+    },
+    {
+      "id": "skybreaker",
+      "name": "裂空炮手",
+      "profession": "SNIPER",
+      "inCurrentMode": false,
+      "baseTrait": "部署后起飞，起飞后只攻击空中敌人；技能开启时降落且攻击造成群体物理伤害",
+      "representative": "char_4213_skybx",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E8%A3%82%E7%A9%BA%E7%82%AE%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E8%A3%82%E7%A9%BA%E7%82%AE%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "airOnlyIdle": true,
+        "pending": [
+          "起飞／降落"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "起飞／降落"
+      ],
+      "traitVariants": []
+    },
+    {
+      "id": "phalanx",
+      "name": "阵法术师",
+      "profession": "CASTER",
+      "inCurrentMode": true,
+      "baseTrait": "通常时不攻击且防御力和法术抗性大幅度提升，技能开启时攻击造成群体法术伤害",
+      "representative": "char_426_billro",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%98%B5%E6%B3%95%E6%9C%AF%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%98%B5%E6%B3%95%E6%9C%AF%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "attackWhen": "skill",
+        "style": "all",
+        "kind": "damage",
+        "attack": false,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_426_billro",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "def",
+                    "value": 2,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "magic_resistance",
+                    "value": 20,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_1046_sbell2",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "def",
+                    "value": 2,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "magic_resistance",
+                    "value": 20,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_388_mint",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "def",
+                    "value": 2,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "magic_resistance",
+                    "value": 20,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "primcaster",
+      "name": "本源术师",
+      "profession": "CASTER",
+      "inCurrentMode": true,
+      "baseTrait": "攻击造成法术伤害，可以造成元素伤害",
+      "representative": "char_4146_nymph",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%9C%AC%E6%BA%90%E6%9C%AF%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%9C%AC%E6%BA%90%E6%9C%AF%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "pending": [
+          "元素伤害机制"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "元素伤害机制"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_4146_nymph",
+          "trait": null
+        },
+        {
+          "charId": "char_1040_blaze2",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "soulcaster",
+      "name": "塑灵术师",
+      "profession": "CASTER",
+      "inCurrentMode": false,
+      "baseTrait": "攻击造成法术伤害，可以通过击倒敌人生成召唤物，可攻击到自身召唤物阻挡的敌人",
+      "representative": "char_450_necras",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%A1%91%E7%81%B5%E6%9C%AF%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%A1%91%E7%81%B5%E6%9C%AF%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "pending": [
+          "击杀召唤与召唤物索敌"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "击杀召唤与召唤物索敌"
+      ],
+      "traitVariants": []
+    },
+    {
+      "id": "incantationmedic",
+      "name": "咒愈师",
+      "profession": "MEDIC",
+      "inCurrentMode": true,
+      "baseTrait": "攻击造成法术伤害，攻击敌人时为攻击范围内一名友方干员治疗相当于50%伤害的生命值",
+      "representative": "char_1020_reed2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%92%92%E6%84%88%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%92%92%E6%84%88%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "damage-heal",
+        "damageType": "arts",
+        "antiAir": true,
+        "style": "single",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_1020_reed2",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "scale",
+                    "value": 0.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "攻击造成<@ba.kw>法术伤害</>，攻击敌人时为攻击范围内一名友方干员治疗相当于<@ba.kw>{scale:0%}</>伤害的生命值",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_4056_titi",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "scale",
+                    "value": 0.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "攻击造成<@ba.kw>法术伤害</>，攻击敌人时为攻击范围内一名友方干员治疗相当于<@ba.kw>{scale:0%}</>伤害的生命值",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        },
+        {
+          "charId": "char_494_vendla",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "scale",
+                    "value": 0.5,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "攻击造成<@ba.kw>法术伤害</>，攻击敌人时为攻击范围内一名友方干员治疗相当于<@ba.kw>{scale:0%}</>伤害的生命值",
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "chainhealer",
+      "name": "链愈师",
+      "profession": "MEDIC",
+      "inCurrentMode": true,
+      "baseTrait": "恢复友方单位生命，且会在3个友方单位间跳跃，每次跳跃治疗量降低25%",
+      "representative": "char_4139_papyrs",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%93%BE%E6%84%88%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%93%BE%E6%84%88%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "heal",
+        "style": "heal-chain",
+        "jumpRange": "x-4",
+        "damageType": "physical",
+        "antiAir": true,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_4139_papyrs",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "attack@chain.max_target",
+                    "value": 3,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "attack@chain.atk_scale",
+                    "value": 0.75,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "恢复友方单位生命，且会在<@ba.kw>3</>个友方单位间跳跃，每次跳跃治疗量降低25%",
+                "prefabKey": "-1",
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "watchman",
+      "name": "守望者",
+      "profession": "MEDIC",
+      "inCurrentMode": false,
+      "baseTrait": "恢复友方单位生命，并且可以起飞",
+      "representative": "char_4222_taraxa",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%AE%88%E6%9C%9B%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%AE%88%E6%9C%9B%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "kind": "heal",
+        "pending": [
+          "起飞与干员专属机制"
+        ],
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": true,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "起飞与干员专属机制"
+      ],
+      "traitVariants": []
+    },
+    {
+      "id": "shotprotector",
+      "name": "哨戒铁卫",
+      "profession": "TANK",
+      "inCurrentMode": true,
+      "baseTrait": "能够阻挡三个敌人，可以进行远程攻击",
+      "representative": "char_4194_rmixer",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%93%A8%E6%88%92%E9%93%81%E5%8D%AB"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%93%A8%E6%88%92%E9%93%81%E5%8D%AB"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_4194_rmixer",
+          "trait": null
+        },
+        {
+          "charId": "char_107_liskam",
+          "trait": null
+        },
+        {
+          "charId": "char_4137_udflow",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "fortress",
+      "name": "要塞",
+      "profession": "TANK",
+      "inCurrentMode": true,
+      "baseTrait": "不阻挡敌人时优先远程群体物理攻击",
+      "representative": "char_4039_horn",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E8%A6%81%E5%A1%9E"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E8%A6%81%E5%A1%9E"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "style": "fortress",
+        "radius": 1,
+        "kind": "damage",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_4039_horn",
+          "trait": null
+        },
+        {
+          "charId": "char_431_ashlok",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "duelist",
+      "name": "决战者",
+      "profession": "TANK",
+      "inCurrentMode": false,
+      "baseTrait": "只有阻挡敌人时才能够回复技力",
+      "representative": "char_416_zumama",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%86%B3%E6%88%98%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%86%B3%E6%88%98%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "spRequiresBlock": true,
+        "pending": [
+          "模组解除阻回的例外"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "模组解除阻回的例外"
+      ],
+      "traitVariants": []
+    },
+    {
+      "id": "primprotector",
+      "name": "本源铁卫",
+      "profession": "TANK",
+      "inCurrentMode": true,
+      "baseTrait": "能够阻挡三个敌人，可以造成元素损伤",
+      "representative": "char_2026_yu",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%9C%AC%E6%BA%90%E9%93%81%E5%8D%AB"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%9C%AC%E6%BA%90%E9%93%81%E5%8D%AB"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "pending": [
+          "元素损伤机制"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": false,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "元素损伤机制"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_2026_yu",
+          "trait": null
+        },
+        {
+          "charId": "char_4148_philae",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "hunter",
+      "name": "猎手",
+      "profession": "SNIPER",
+      "inCurrentMode": true,
+      "baseTrait": "攻击时需要消耗子弹且攻击力提升至120%，不攻击时会缓慢地装填子弹（最多8发）",
+      "representative": "char_4211_snhunt",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E7%8C%8E%E6%89%8B"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E7%8C%8E%E6%89%8B"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "magazine": true,
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_4211_snhunt",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "value",
+                    "value": 4,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "atk_scale",
+                    "value": 1.2,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "攻击时需要消耗子弹且攻击力提升至<@ba.kw>{atk_scale:0%}</>，不攻击时会缓慢地装填子弹（最多{value}发，精英1后更新）",
+                "prefabKey": "-1",
+                "rangeId": null
+              },
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_1",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "value",
+                    "value": 6,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "atk_scale",
+                    "value": 1.2,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "攻击时需要消耗子弹且攻击力提升至<@ba.kw>{atk_scale:0%}</>，不攻击时会缓慢地装填子弹（最多{value}发，精英2后更新）",
+                "prefabKey": "-1",
+                "rangeId": null
+              },
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_2",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "value",
+                    "value": 8,
+                    "valueStr": null
+                  },
+                  {
+                    "key": "atk_scale",
+                    "value": 1.2,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": "攻击时需要消耗子弹且攻击力提升至<@ba.kw>{atk_scale:0%}</>，不攻击时会缓慢地装填子弹（最多{value}发）",
+                "prefabKey": "-1",
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "geek",
+      "name": "怪杰",
+      "profession": "SPECIAL",
+      "inCurrentMode": true,
+      "baseTrait": "自身生命会不断流失",
+      "representative": "char_1041_angel2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%80%AA%E6%9D%B0"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%80%AA%E6%9D%B0"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "hpDrain": 0.01,
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_1041_angel2",
+          "trait": {
+            "candidates": [
+              {
+                "unlockCondition": {
+                  "phase": "PHASE_0",
+                  "level": 1
+                },
+                "requiredPotentialRank": 0,
+                "blackboard": [
+                  {
+                    "key": "hp_ratio",
+                    "value": 0.01,
+                    "valueStr": null
+                  }
+                ],
+                "overrideDescripton": null,
+                "prefabKey": null,
+                "rangeId": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "underminer",
+      "name": "削弱者",
+      "profession": "SUPPORT",
+      "inCurrentMode": true,
+      "baseTrait": "攻击造成法术伤害",
+      "representative": "char_206_gnosis",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E5%89%8A%E5%BC%B1%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E5%89%8A%E5%BC%B1%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "kind": "damage",
+        "style": "single",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": [
+        {
+          "charId": "char_206_gnosis",
+          "trait": null
+        },
+        {
+          "charId": "char_174_slbell",
+          "trait": null
+        },
+        {
+          "charId": "char_4079_haini",
+          "trait": null
+        }
+      ]
+    },
+    {
+      "id": "blessing",
+      "name": "护佑者",
+      "profession": "SUPPORT",
+      "inCurrentMode": false,
+      "baseTrait": "攻击造成法术伤害，技能开启后改为治疗友方单位（治疗量相当于75%攻击力）",
+      "representative": "char_1031_slent2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E6%8A%A4%E4%BD%91%E8%80%85"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E6%8A%A4%E4%BD%91%E8%80%85"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "damageType": "arts",
+        "antiAir": true,
+        "healsDuringSkill": true,
+        "kind": "damage",
+        "style": "single",
+        "attack": true,
+        "status": "base-implemented"
+      },
+      "pending": [],
+      "traitVariants": []
+    },
+    {
+      "id": "traper",
+      "name": "陷阱师",
+      "profession": "SPECIAL",
+      "inCurrentMode": false,
+      "baseTrait": "可以使用陷阱来协助作战，但陷阱无法放置于敌人已在的格子中",
+      "representative": "char_4048_doroth",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E9%99%B7%E9%98%B1%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E9%99%B7%E9%98%B1%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "antiAir": true,
+        "pending": [
+          "陷阱单位与部署条件"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "陷阱单位与部署条件"
+      ],
+      "traitVariants": []
+    },
+    {
+      "id": "alchemist",
+      "name": "炼金师",
+      "profession": "SPECIAL",
+      "inCurrentMode": true,
+      "baseTrait": "可以投掷炼金单元协助作战",
+      "representative": "char_1039_thorn2",
+      "sources": [
+        {
+          "title": "分支一览",
+          "revision": 326449,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E4%B8%80%E8%A7%88?oldid=326449#%E7%82%BC%E9%87%91%E5%B8%88"
+        },
+        {
+          "title": "分支特性信息/data",
+          "revision": 427899,
+          "url": "https://prts.wiki/w/%E5%88%86%E6%94%AF%E7%89%B9%E6%80%A7%E4%BF%A1%E6%81%AF%2Fdata?oldid=427899#%E7%82%BC%E9%87%91%E5%B8%88"
+        }
+      ],
+      "wikiDetailSectionFound": true,
+      "runtime": {
+        "pending": [
+          "炼金单元"
+        ],
+        "kind": "damage",
+        "style": "single",
+        "damageType": "physical",
+        "antiAir": true,
+        "attack": true,
+        "status": "partial"
+      },
+      "pending": [
+        "炼金单元"
+      ],
+      "traitVariants": [
+        {
+          "charId": "char_1039_thorn2",
+          "trait": null
+        },
+        {
+          "charId": "char_4151_tinman",
+          "trait": null
+        }
+      ]
+    }
+  ]
+}
