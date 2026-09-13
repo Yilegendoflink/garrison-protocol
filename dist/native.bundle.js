@@ -1475,7 +1475,7 @@ function load(name) {
   if (!(name in cache)) cache[name] = factories[name](load);
   return cache[name];
 }
-try { load('app.js'); } catch (error) {
+try { load('native-play.js'); } catch (error) {
   if (window.__garrisonBootFailure) window.__garrisonBootFailure(error.message || error);
   throw error;
 }

@@ -1,4 +1,4 @@
-name: 发布 GitHub Pages
+name: 发布手动验收版到 GitHub Pages
 
 on:
   push:
@@ -20,12 +20,8 @@ jobs:
       - uses: actions/setup-node@v7.0.0
         with:
           node-version: '24'
-      - name: 构建离线客户端
+      - name: 构建客户端（按要求不运行测试）
         run: npm run build
-      - name: 验证规则与内容
-        run: npm test
-      - name: 检查 S06 发布条件
-        run: npm run release:check
       - name: 上传站点文件
         uses: actions/upload-pages-artifact@v5.0.0
         with:

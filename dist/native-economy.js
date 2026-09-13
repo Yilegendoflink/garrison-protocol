@@ -6,12 +6,12 @@ import {runGarrison} from './garrison.js';
 // controller input until their selection rules are verified; absent draws fail atomically.
 export class NativeEconomy extends PreparationState {
  constructor(data,modeId,options={}){
-  super(data,modeId,options);if(options.bandId&&!data.season.bandDataListDict[options.bandId])throw Error('Unknown strategy');this.poolDraw=options.draw||null;this.triggerChain=[];
+  super(data,modeId,options);if(options.bandId&&!data.season.bandDataListDict[options.bandId])throw Error('Unknown strategy');this.manualPreview=!!options.manualPreview;this.poolDraw=options.draw||null;this.triggerChain=[];
   Object.assign(this.s,{bondLayers:{},claimedBondRewards:{},strategyClaims:{},roundBoughtBonds:{},carryFunds:0,forcedRefresh:null,permanentDiscount:0,nextRoundBonus:0,freeRefresh:0,roundGainCount:0,roundSpent:0,roundRefreshCount:0,totalSpent:0,rewardQueue:[],randomState:(options.seed??1)>>>0,bandId:options.bandId??null,lastPrepRound:null});if(this.s.bandId)this.s.hp=this.s.maxHp=data.season.bandDataListDict[this.s.bandId].totalHp;
  }
  command(type,...args){
   if(!['buy','deploy','upgrade','refresh','sell','takePromotion','beginBattle','finishBattle','nextRound','startPreparation'].includes(type))return {ok:false,code:'UNKNOWN_COMMAND'};
-  const pending=strategyCoverage(this.data).find(b=>b.id===this.s.bandId)?.pendingKeys||[];if(pending.length)return {ok:false,code:'EFFECT_UNRESOLVED',message:'Strategy effects await execution support: '+pending.join(',')};
+  const pending=strategyCoverage(this.data).find(b=>b.id===this.s.bandId)?.pendingKeys||[];if(pending.length&&!this.manualPreview)return {ok:false,code:'EFFECT_UNRESOLVED',message:'Strategy effects await execution support: '+pending.join(',')};
   const previous=structuredClone(this.s);
   try{const result=this[type](...args);if(result===false||result?.ok===false){this.s=previous;return result?.ok===false?result:{ok:false,code:'RULE_REJECTED'};}return {ok:true};}
   catch(error){this.s=previous;this.triggerChain=[];return {ok:false,code:'EFFECT_UNRESOLVED',message:error.message};}
@@ -43,7 +43,7 @@ export class NativeEconomy extends PreparationState {
  }
  hasGarrison(u,event){return this.data.season.charChessDataDict[u.chessId].garrisonIds.some(id=>this.data.season.garrisonDataDict[id].eventType===event);}
  triggerGarrisons(event,unit,{effectOwner=unit}={}){
-  const key=unit.uid+':'+event;if(this.triggerChain.includes(key))throw Error('Cyclic garrison trigger '+key);this.triggerChain.push(key);
+  const key=unit.uid+':'+event;if(this.triggerChain.includes(key)){if(this.manualPreview)return;throw Error('Cyclic garrison trigger '+key);}this.triggerChain.push(key);
   try{
    const repeat=event==='SERVER_GAIN'&&this.bonds().investShip?.active?((this.s.bondLayers.investShip||0)>=100?3:2):1;
    for(let i=0;i<repeat;i++)for(const id of this.data.season.charChessDataDict[unit.chessId].garrisonIds){const rule=this.data.season.garrisonDataDict[id];if(rule.eventType===event){runGarrison(this,effectOwner,rule,event);this.s.events.push({type:'garrison',id,uid:effectOwner.uid,event});}}
@@ -71,7 +71,7 @@ export class NativeEconomy extends PreparationState {
  upgrade(){const price=this.terms().upgradeCost,result=super.upgrade();if(result){this.s.roundSpent+=price;this.s.totalSpent+=price;runStrategyEvent(this,'spent');runStrategyEvent(this,'upgrade');}return result;}
  refresh(offers){
   if(this.s.phase!=='prep'||this.s.rewardPending||!Array.isArray(offers)||offers.some(id=>!this.data.season.charShopChessDatas[id]||this.data.season.charShopChessDatas[id].chessLevel>this.s.level))return false;
-  const requirements=runStrategyEvent(this,'refreshRequirements');if(this.s.forcedRefresh)requirements.push({bond:this.s.forcedRefresh.bond,minCount:offers.length});for(const r of requirements){if(r.bond&&offers.filter(id=>this.data.season.charChessDataDict[id].bondIds.includes(r.bond)).length<r.minCount)return false;if(r.duplicateCount&&!offers.some(id=>offers.filter(x=>x===id).length>=r.duplicateCount))return false;if(r.freezeOne)throw Error('Per-slot freeze still requires the shop controller');}if(this.s.forcedRefresh){if(!this.spend(this.s.forcedRefresh.price))return false;this.s.forcedRefresh=null;}else if(this.s.freeRefresh>0)this.s.freeRefresh--;else if(!this.spend(this.terms().refreshCost))return false;
+  const requirements=runStrategyEvent(this,'refreshRequirements');if(this.s.forcedRefresh)requirements.push({bond:this.s.forcedRefresh.bond,minCount:offers.length});for(const r of requirements){if(r.bond&&offers.filter(id=>this.data.season.charChessDataDict[id].bondIds.includes(r.bond)).length<r.minCount)return false;if(r.duplicateCount&&!offers.some(id=>offers.filter(x=>x===id).length>=r.duplicateCount))return false;if(r.freezeOne){if(!this.manualPreview)throw Error('Per-slot freeze still requires the shop controller');this.s.frozenSlots=[0];}}if(this.s.forcedRefresh){if(!this.spend(this.s.forcedRefresh.price))return false;this.s.forcedRefresh=null;}else if(this.s.freeRefresh>0)this.s.freeRefresh--;else if(!this.spend(this.terms().refreshCost))return false;
   this.s.offers=offers.slice();this.s.locked=false;this.s.roundRefreshCount++;for(const u of this.s.units.slice())this.triggerGarrisons('SERVER_REFRESH_SHOP',u);runStrategyEvent(this,'refreshed');if(this.bonds().miraShip.active&&this.s.freeRefresh===0){const effect=this.data.season.effectBuffInfoDataDict[this.data.season.bondInfoDict.miraShip.effectId].find(e=>e.key==='bond_refresh_shop_next_free'),p=blackboard(effect.blackboard);if(this.random()<Math.min(1,p.baseprob+p.prob*(this.s.bondLayers.miraShip||0)))this.s.freeRefresh++;}return true;
  }
  sell(uid){const unit=this.s.units.find(u=>u.uid===uid);if(!unit||!super.sell(uid))return false;this.settleBondRewards();this.triggerGarrisons('SERVER_CHESS_SOLD',unit);return true;}
@@ -85,9 +85,9 @@ export class NativeEconomy extends PreparationState {
   for(const u of this.s.units.slice().sort((a,b)=>(a.position?.y??999)-(b.position?.y??999)||(a.position?.x??999)-(b.position?.x??999)))this.triggerGarrisons('SERVER_PREP_START',u);this.settleBondRewards();return true;
  }
  beginBattle(){
-  if(this.s.phase!=='prep'||this.s.rewardPending)return false;for(const u of this.s.units.slice())this.triggerGarrisons('SERVER_PREP_FIN',u);
+  if(this.s.phase!=='prep'||this.s.rewardPending)return false;if(this.s.prepApplied)return super.beginBattle();for(const u of this.s.units.slice())this.triggerGarrisons('SERVER_PREP_FIN',u);
   const rows=this.bonds();if(rows.deputShip.active){const variants=new Set(this.s.units.filter(u=>u.position&&this.ownBonds(u).includes('deputShip')).map(u=>u.charId+':'+this.data.season.charChessDataDict[u.chessId].isGolden));const amount=variants.size>=3?4:2;for(const[id,b]of Object.entries(rows))if(b.active)this.addLayers(id,amount);}
-  runStrategyEvent(this,'prepEnd');return super.beginBattle();
+  runStrategyEvent(this,'prepEnd');this.s.prepApplied=true;if(this.s.rewardPending)return true;return super.beginBattle();
  }
  nextRound(...args){const result=super.nextRound(...args);if(result&&['prep','decision'].includes(this.s.phase)){this.s.roundGainCount=0;this.s.roundSpent=0;this.s.roundRefreshCount=0;this.s.roundBoughtBonds={};if(this.s.phase==='prep')this.startPreparation();}return result;}
 }

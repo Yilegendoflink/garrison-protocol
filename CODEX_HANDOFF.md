@@ -4,6 +4,14 @@
 
 本文件是当前对话的项目摘要，不是完整聊天记录；用于让新的 Codex 会话接续现有代码。
 
+## 2026-09-13 主对局迁移与手动发布
+
+用户最新要求不运行测试，上传GitHub并部署Pages供手动验收。主入口现为 native-play.js/native.bundle.js，旧演示在 legacy.html。新 NativeSession/NativeBattle 已连接原作数据、运营、战斗和阶段；本轮仅构建，未运行测试。
+
+复杂技能／敌人能力／盟约策略／特殊池等仍存在差异，不得宣布完整还原。先读 README.md、MANUAL_RELEASE.md，不能引用上一版75项测试作为本轮验证。工作流不再运行测试和 release:check。
+
+首次创建 Yilegendoflink/garrison-protocol 公开仓库的命令被自动审批拒绝，原因是具体公开目的地、上传范围及敏感内容需确认。目前未创建仓库、未上传，不可绕过审批。
+
 ## 2026-09-12 原作范围与最终木桩
 
 优先读取 [NATIVE_RULES_PROGRESS.md](NATIVE_RULES_PROGRESS.md)。用户要求可用干员、敌人、盟约、策略与 PRTS 下半期完全一致；仅最终 Boss 阶段豁免，改为无限生命木桩，150 秒且可手动结束并播报总伤害。木桩已接入演示战斗和终局，支持独立统计、保存回放、真实浏览器验收。当前 legacy 内容版本 5。

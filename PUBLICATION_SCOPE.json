@@ -1,0 +1,60 @@
+{
+  "destination": "https://github.com/Yilegendoflink/garrison-protocol",
+  "visibility": "public",
+  "pagesDirectory": "dist",
+  "files": 2993,
+  "groups": {
+    "root-documents": {
+      "files": 17,
+      "bytes": 434057
+    },
+    "dist": {
+      "files": 483,
+      "bytes": 48726727
+    },
+    "scripts": {
+      "files": 23,
+      "bytes": 81075
+    },
+    ".github": {
+      "files": 1,
+      "bytes": 958
+    },
+    ".openai": {
+      "files": 1,
+      "bytes": 46
+    },
+    "artifacts": {
+      "files": 24,
+      "bytes": 7911306
+    },
+    "data": {
+      "files": 2427,
+      "bytes": 251626021
+    },
+    "references": {
+      "files": 6,
+      "bytes": 1296847
+    },
+    "tests": {
+      "files": 11,
+      "bytes": 52525
+    }
+  },
+  "largeFiles": [
+    {
+      "path": "data/normalized/current.json",
+      "bytes": 56734144
+    }
+  ],
+  "credentialPatternMatches": [],
+  "excluded": [
+    ".git private metadata",
+    "ignored .vscode settings",
+    "ignored certificate light3d-test-ca.crt",
+    "ignored research caches",
+    "node_modules",
+    "derived SQLite files"
+  ],
+  "limitation": "Pattern scan cannot prove absence of every possible secret. No external upload performed."
+}

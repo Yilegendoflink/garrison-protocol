@@ -371,7 +371,7 @@
         "mainBattleIntegrated": false
       }
     ],
-    "integration": "native controller tested; primary battle still legacy; pool distributions and some phase transitions unresolved"
+    "integration": "native controller connected to manual-review main client; advanced effects and pool distributions remain incomplete"
   },
   "sourceCommit": "86da4cfa3a4b958c3615fccf5afbc10b5c7f1bfb",
   "counts": {
@@ -422,7 +422,7 @@
     ],
     "pending": [
       "server shop selection weights",
-      "mode effects and complete native combat integration",
+      "remaining special mode and combat effects",
       "dual-client sync check"
     ]
   },
