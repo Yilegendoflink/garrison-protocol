@@ -1,8 +1,6 @@
-name: 发布手动验收版到 GitHub Pages
+name: 备用Actions发布（当前使用gh-pages静态源）
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

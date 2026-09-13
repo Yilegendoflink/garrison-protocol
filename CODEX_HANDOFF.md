@@ -4,6 +4,10 @@
 
 本文件是当前对话的项目摘要，不是完整聊天记录；用于让新的 Codex 会话接续现有代码。
 
+## 2026-09-13 GitHub上传与静态Pages部署
+
+仓库已创建并推送：Yilegendoflink/garrison-protocol。用户已明确批准公开整个已说明的范围，不要再次索要同一授权。源码在main，Pages使用gh-pages根目录。自定义Actions的dispatch返回500，已改用静态分支发布；配置源后推送会触发pages build and deployment。备用workflow仅手动触发，当前不要把main推送当作页面同步。详见PUBLISHING.md。
+
 ## 2026-09-13 主对局迁移与手动发布
 
 用户最新要求不运行测试，上传GitHub并部署Pages供手动验收。主入口现为 native-play.js/native.bundle.js，旧演示在 legacy.html。新 NativeSession/NativeBattle 已连接原作数据、运营、战斗和阶段；本轮仅构建，未运行测试。

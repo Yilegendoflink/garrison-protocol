@@ -56,5 +56,6 @@
     "node_modules",
     "derived SQLite files"
   ],
-  "limitation": "Pattern scan cannot prove absence of every possible secret. No external upload performed."
+  "limitation": "This was a read-only pre-publication pattern audit, not proof that every possible secret is absent. The user subsequently explicitly authorized this destination and scope.",
+  "publicationAuthorized": true
 }
