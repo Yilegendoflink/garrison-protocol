@@ -2,7 +2,9 @@
 
 非官方同人项目。主入口现已连接历史下半期数据、新运营控制器与战斗循环，旧版35人演示保留在 `dist/legacy.html`。
 
-计划仓库：`Yilegendoflink/garrison-protocol`。当前尚未上传，公开仓库创建操作被自动审批拦截。
+源码仓库：[Yilegendoflink/garrison-protocol](https://github.com/Yilegendoflink/garrison-protocol)
+
+在线手动验收：[GitHub Pages](https://yilegendoflink.github.io/garrison-protocol/)
 
 ## 当前版本
 
