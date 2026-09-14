@@ -1,0 +1,975 @@
+// 默认测试波次 v1：本期词条池，数量为前期6–8、中期15–20、后期35–40；非原作出怪表。
+export const DEFAULT_WAVE_TABLE = {
+  "version": 2,
+  "defaultCost": 1,
+  "costs": {
+    "enemy_1010_demon_2": 9,
+    "enemy_1071_dftman": 3,
+    "enemy_1010_demon": 6,
+    "enemy_1045_hammer": 8,
+    "enemy_1043_zomsbr": 3,
+    "enemy_1046_agent": 3,
+    "enemy_1118_lidbox_2": 6,
+    "enemy_1116_liprr": 3,
+    "enemy_1116_liprr_2": 5,
+    "enemy_1325_cbgpro_2": 4,
+    "enemy_1000_gopro_2": 2,
+    "enemy_1325_cbgpro": 3,
+    "enemy_1121_lifbos": 11,
+    "enemy_1006_shield_3": 14,
+    "enemy_1402_tgshd_2": 9,
+    "enemy_1329_cbshld": 11,
+    "enemy_1251_lysyta": 3,
+    "enemy_1249_lysdb_2": 5,
+    "enemy_1045_hammer_2": 14,
+    "enemy_1061_zomshd": 7,
+    "enemy_1387_winshd": 8,
+    "enemy_1381_winman": 4,
+    "enemy_1381_winman_2": 5,
+    "enemy_1121_lifbos_2": 14,
+    "enemy_1119_vofsd": 7,
+    "enemy_1320_wdrrl_2": 14,
+    "enemy_1422_lrsldr_2": 4,
+    "enemy_10124_uashld_2": 14,
+    "enemy_1328_cbjedi": 8,
+    "enemy_1254_lypa_2": 8,
+    "enemy_1425_lrcmra_2": 14,
+    "enemy_1329_cbshld_2": 13,
+    "enemy_1251_lysyta_2": 3,
+    "enemy_1252_lysytb_2": 6,
+    "enemy_1072_dlancer": 5,
+    "enemy_1041_lazerd": 3,
+    "enemy_10083_hlbird": 1,
+    "enemy_1005_yokai_2": 2,
+    "enemy_1355_mrfly": 4,
+    "enemy_1005_yokai": 1,
+    "enemy_1017_defdrn": 3,
+    "enemy_10084_hlegle": 6,
+    "enemy_1407_hummbd": 3,
+    "enemy_1005_yokai_3": 14,
+    "enemy_1112_emppnt": 10,
+    "enemy_1041_lazerd_2": 5,
+    "enemy_1042_frostd": 5,
+    "enemy_9009_acfort": 12,
+    "enemy_1355_mrfly_2": 5,
+    "enemy_1195_sfyin_2": 3,
+    "enemy_1195_sfyin": 2,
+    "enemy_1197_sfshu": 2,
+    "enemy_1288_duskls_2": 4,
+    "enemy_1288_duskls": 4,
+    "enemy_1292_duskld": 7,
+    "enemy_1207_sfji": 9,
+    "enemy_1199_sfjin": 6,
+    "enemy_9010_acpupp": 9,
+    "enemy_1197_sfshu_2": 3,
+    "enemy_1161_tidmag": 4,
+    "enemy_1158_divman": 3,
+    "enemy_1160_hvyslr": 8,
+    "enemy_1305_mhslim_2": 1,
+    "enemy_1305_mhslim": 1,
+    "enemy_2025_syufo": 11,
+    "enemy_2021_syfish": 3,
+    "enemy_1161_tidmag_2": 5,
+    "enemy_1160_hvyslr_2": 10,
+    "enemy_1439_dslntf": 14,
+    "enemy_1148_dssbr": 3,
+    "enemy_1148_dssbr_2": 3,
+    "enemy_1275_dwlock_2": 8,
+    "enemy_1229_darmy": 4,
+    "enemy_1229_darmy_2": 5,
+    "enemy_9007_acelem": 14,
+    "enemy_10067_ftsjc": 8,
+    "enemy_10065_ftzlc": 3,
+    "enemy_1234_dsubrl": 6,
+    "enemy_1433_dsbasi": 3,
+    "enemy_1433_dsbasi_2": 4,
+    "enemy_1272_nhtank": 8,
+    "enemy_1267_nhpbr": 4,
+    "enemy_1267_nhpbr_2": 4,
+    "enemy_1270_nhstlk": 7,
+    "enemy_1234_dsubrl_2": 8,
+    "enemy_10122_uacann_2": 6,
+    "enemy_1272_nhtank_2": 10,
+    "enemy_1270_nhstlk_2": 9,
+    "enemy_9006_actoxi": 8,
+    "enemy_1299_ymkilr": 6,
+    "enemy_1019_jshoot": 2,
+    "enemy_10034_cnvsax": 7,
+    "enemy_10042_prtrop_2": 6,
+    "enemy_10043_sailor": 4,
+    "enemy_10042_prtrop": 5,
+    "enemy_1389_winbab_2": 6,
+    "enemy_1019_jshoot_2": 3,
+    "enemy_1299_ymkilr_2": 8,
+    "enemy_1404_msnip": 5,
+    "enemy_1009_lurker": 2,
+    "enemy_9008_acbunn": 7,
+    "enemy_10031_cnvsld": 3,
+    "enemy_1283_sgkill": 9,
+    "enemy_1174_duholy": 10,
+    "enemy_1166_dusbr": 3,
+    "enemy_1170_dushld": 6,
+    "enemy_1168_dumage": 3,
+    "enemy_1165_duhond": 2,
+    "enemy_1169_duphlx": 3,
+    "enemy_1174_duholy_2": 13,
+    "enemy_1166_dusbr_2": 3,
+    "enemy_1170_dushld_2": 8,
+    "enemy_1169_duphlx_2": 5,
+    "enemy_1172_dugago": 7,
+    "enemy_9011_acrefr": 11,
+    "enemy_1175_dushdo_2": 9
+  },
+  "types": {
+    "SPECIAL": {
+      "1": {
+        "templates": [
+          {
+            "name": "前哨推进",
+            "budget": 40,
+            "pool": [
+              "enemy_1000_gopro_2",
+              "enemy_1043_zomsbr",
+              "enemy_1046_agent",
+              "enemy_1071_dftman",
+              "enemy_1116_liprr",
+              "enemy_1251_lysyta",
+              "enemy_1251_lysyta_2",
+              "enemy_1325_cbgpro",
+              "enemy_1325_cbgpro_2",
+              "enemy_1381_winman",
+              "enemy_1422_lrsldr_2",
+              "enemy_1072_dlancer",
+              "enemy_1116_liprr_2"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          },
+          {
+            "name": "前哨增援",
+            "budget": 40,
+            "pool": [
+              "enemy_1116_liprr",
+              "enemy_1251_lysyta",
+              "enemy_1251_lysyta_2",
+              "enemy_1325_cbgpro",
+              "enemy_1325_cbgpro_2",
+              "enemy_1381_winman",
+              "enemy_1422_lrsldr_2",
+              "enemy_1072_dlancer",
+              "enemy_1116_liprr_2"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          }
+        ]
+      },
+      "2": {
+        "templates": [
+          {
+            "name": "混合进攻",
+            "budget": 160,
+            "pool": [
+              "enemy_1000_gopro_2",
+              "enemy_1043_zomsbr",
+              "enemy_1046_agent",
+              "enemy_1071_dftman",
+              "enemy_1116_liprr",
+              "enemy_1251_lysyta",
+              "enemy_1251_lysyta_2",
+              "enemy_1325_cbgpro",
+              "enemy_1325_cbgpro_2",
+              "enemy_1381_winman",
+              "enemy_1422_lrsldr_2",
+              "enemy_1072_dlancer",
+              "enemy_1116_liprr_2",
+              "enemy_1249_lysdb_2",
+              "enemy_1381_winman_2",
+              "enemy_1010_demon",
+              "enemy_1118_lidbox_2",
+              "enemy_1252_lysytb_2",
+              "enemy_1061_zomshd",
+              "enemy_1119_vofsd",
+              "enemy_1045_hammer",
+              "enemy_1254_lypa_2",
+              "enemy_1328_cbjedi"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          },
+          {
+            "name": "精锐增援",
+            "budget": 160,
+            "pool": [
+              "enemy_1325_cbgpro",
+              "enemy_1325_cbgpro_2",
+              "enemy_1381_winman",
+              "enemy_1422_lrsldr_2",
+              "enemy_1072_dlancer",
+              "enemy_1116_liprr_2",
+              "enemy_1249_lysdb_2",
+              "enemy_1381_winman_2",
+              "enemy_1010_demon",
+              "enemy_1118_lidbox_2",
+              "enemy_1252_lysytb_2",
+              "enemy_1061_zomshd",
+              "enemy_1119_vofsd",
+              "enemy_1045_hammer",
+              "enemy_1254_lypa_2",
+              "enemy_1328_cbjedi"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          }
+        ]
+      },
+      "3": {
+        "templates": [
+          {
+            "name": "高压攻势",
+            "budget": 560,
+            "pool": [
+              "enemy_1000_gopro_2",
+              "enemy_1043_zomsbr",
+              "enemy_1046_agent",
+              "enemy_1071_dftman",
+              "enemy_1116_liprr",
+              "enemy_1251_lysyta",
+              "enemy_1251_lysyta_2",
+              "enemy_1325_cbgpro",
+              "enemy_1325_cbgpro_2",
+              "enemy_1381_winman",
+              "enemy_1422_lrsldr_2",
+              "enemy_1072_dlancer",
+              "enemy_1116_liprr_2",
+              "enemy_1249_lysdb_2",
+              "enemy_1381_winman_2",
+              "enemy_1010_demon",
+              "enemy_1118_lidbox_2",
+              "enemy_1252_lysytb_2",
+              "enemy_1061_zomshd",
+              "enemy_1119_vofsd",
+              "enemy_1045_hammer",
+              "enemy_1254_lypa_2",
+              "enemy_1328_cbjedi",
+              "enemy_1387_winshd",
+              "enemy_1010_demon_2",
+              "enemy_1402_tgshd_2",
+              "enemy_1121_lifbos",
+              "enemy_1329_cbshld",
+              "enemy_1329_cbshld_2",
+              "enemy_1006_shield_3",
+              "enemy_10124_uashld_2",
+              "enemy_1045_hammer_2",
+              "enemy_1121_lifbos_2",
+              "enemy_1320_wdrrl_2",
+              "enemy_1425_lrcmra_2"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          },
+          {
+            "name": "集中突破",
+            "budget": 560,
+            "pool": [
+              "enemy_1072_dlancer",
+              "enemy_1116_liprr_2",
+              "enemy_1249_lysdb_2",
+              "enemy_1381_winman_2",
+              "enemy_1010_demon",
+              "enemy_1118_lidbox_2",
+              "enemy_1252_lysytb_2",
+              "enemy_1061_zomshd",
+              "enemy_1119_vofsd",
+              "enemy_1045_hammer",
+              "enemy_1254_lypa_2",
+              "enemy_1328_cbjedi",
+              "enemy_1387_winshd",
+              "enemy_1010_demon_2",
+              "enemy_1402_tgshd_2",
+              "enemy_1121_lifbos",
+              "enemy_1329_cbshld",
+              "enemy_1329_cbshld_2",
+              "enemy_1006_shield_3",
+              "enemy_10124_uashld_2",
+              "enemy_1045_hammer_2",
+              "enemy_1121_lifbos_2",
+              "enemy_1320_wdrrl_2",
+              "enemy_1425_lrcmra_2"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          }
+        ]
+      }
+    },
+    "FLY": {
+      "1": {
+        "templates": [
+          {
+            "name": "前哨推进",
+            "budget": 24,
+            "pool": [
+              "enemy_1005_yokai",
+              "enemy_10083_hlbird",
+              "enemy_1005_yokai_2",
+              "enemy_1017_defdrn",
+              "enemy_1041_lazerd"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          },
+          {
+            "name": "前哨增援",
+            "budget": 24,
+            "pool": [
+              "enemy_10083_hlbird",
+              "enemy_1005_yokai_2",
+              "enemy_1017_defdrn",
+              "enemy_1041_lazerd"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          }
+        ]
+      },
+      "2": {
+        "templates": [
+          {
+            "name": "混合进攻",
+            "budget": 100,
+            "pool": [
+              "enemy_1005_yokai",
+              "enemy_10083_hlbird",
+              "enemy_1005_yokai_2",
+              "enemy_1017_defdrn",
+              "enemy_1041_lazerd",
+              "enemy_1407_hummbd",
+              "enemy_1355_mrfly",
+              "enemy_1041_lazerd_2",
+              "enemy_1042_frostd",
+              "enemy_1355_mrfly_2"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          },
+          {
+            "name": "精锐增援",
+            "budget": 100,
+            "pool": [
+              "enemy_1017_defdrn",
+              "enemy_1041_lazerd",
+              "enemy_1407_hummbd",
+              "enemy_1355_mrfly",
+              "enemy_1041_lazerd_2",
+              "enemy_1042_frostd",
+              "enemy_1355_mrfly_2"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          }
+        ]
+      },
+      "3": {
+        "templates": [
+          {
+            "name": "高压攻势",
+            "budget": 560,
+            "pool": [
+              "enemy_1005_yokai",
+              "enemy_10083_hlbird",
+              "enemy_1005_yokai_2",
+              "enemy_1017_defdrn",
+              "enemy_1041_lazerd",
+              "enemy_1407_hummbd",
+              "enemy_1355_mrfly",
+              "enemy_1041_lazerd_2",
+              "enemy_1042_frostd",
+              "enemy_1355_mrfly_2",
+              "enemy_10084_hlegle",
+              "enemy_1112_emppnt",
+              "enemy_9009_acfort",
+              "enemy_1005_yokai_3"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          },
+          {
+            "name": "集中突破",
+            "budget": 560,
+            "pool": [
+              "enemy_1041_lazerd",
+              "enemy_1407_hummbd",
+              "enemy_1355_mrfly",
+              "enemy_1041_lazerd_2",
+              "enemy_1042_frostd",
+              "enemy_1355_mrfly_2",
+              "enemy_10084_hlegle",
+              "enemy_1112_emppnt",
+              "enemy_9009_acfort",
+              "enemy_1005_yokai_3"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          }
+        ]
+      }
+    },
+    "TIMES": {
+      "1": {
+        "templates": [
+          {
+            "name": "前哨推进",
+            "budget": 24,
+            "pool": [
+              "enemy_1195_sfyin",
+              "enemy_1197_sfshu",
+              "enemy_1195_sfyin_2",
+              "enemy_1197_sfshu_2"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          },
+          {
+            "name": "前哨增援",
+            "budget": 24,
+            "pool": [
+              "enemy_1197_sfshu",
+              "enemy_1195_sfyin_2",
+              "enemy_1197_sfshu_2"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          }
+        ]
+      },
+      "2": {
+        "templates": [
+          {
+            "name": "混合进攻",
+            "budget": 120,
+            "pool": [
+              "enemy_1195_sfyin",
+              "enemy_1197_sfshu",
+              "enemy_1195_sfyin_2",
+              "enemy_1197_sfshu_2",
+              "enemy_1288_duskls",
+              "enemy_1288_duskls_2",
+              "enemy_1199_sfjin"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          },
+          {
+            "name": "精锐增援",
+            "budget": 120,
+            "pool": [
+              "enemy_1195_sfyin_2",
+              "enemy_1197_sfshu_2",
+              "enemy_1288_duskls",
+              "enemy_1288_duskls_2",
+              "enemy_1199_sfjin"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          }
+        ]
+      },
+      "3": {
+        "templates": [
+          {
+            "name": "高压攻势",
+            "budget": 360,
+            "pool": [
+              "enemy_1195_sfyin",
+              "enemy_1197_sfshu",
+              "enemy_1195_sfyin_2",
+              "enemy_1197_sfshu_2",
+              "enemy_1288_duskls",
+              "enemy_1288_duskls_2",
+              "enemy_1199_sfjin",
+              "enemy_1292_duskld",
+              "enemy_1207_sfji",
+              "enemy_9010_acpupp"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          },
+          {
+            "name": "集中突破",
+            "budget": 360,
+            "pool": [
+              "enemy_1197_sfshu_2",
+              "enemy_1288_duskls",
+              "enemy_1288_duskls_2",
+              "enemy_1199_sfjin",
+              "enemy_1292_duskld",
+              "enemy_1207_sfji",
+              "enemy_9010_acpupp"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          }
+        ]
+      }
+    },
+    "ELEMENT": {
+      "1": {
+        "templates": [
+          {
+            "name": "前哨推进",
+            "budget": 24,
+            "pool": [
+              "enemy_1305_mhslim",
+              "enemy_1305_mhslim_2",
+              "enemy_10065_ftzlc",
+              "enemy_1148_dssbr",
+              "enemy_1148_dssbr_2",
+              "enemy_1158_divman",
+              "enemy_2021_syfish"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          },
+          {
+            "name": "前哨增援",
+            "budget": 24,
+            "pool": [
+              "enemy_10065_ftzlc",
+              "enemy_1148_dssbr",
+              "enemy_1148_dssbr_2",
+              "enemy_1158_divman",
+              "enemy_2021_syfish"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          }
+        ]
+      },
+      "2": {
+        "templates": [
+          {
+            "name": "混合进攻",
+            "budget": 160,
+            "pool": [
+              "enemy_1305_mhslim",
+              "enemy_1305_mhslim_2",
+              "enemy_10065_ftzlc",
+              "enemy_1148_dssbr",
+              "enemy_1148_dssbr_2",
+              "enemy_1158_divman",
+              "enemy_2021_syfish",
+              "enemy_1161_tidmag",
+              "enemy_1229_darmy",
+              "enemy_1161_tidmag_2",
+              "enemy_1229_darmy_2",
+              "enemy_10067_ftsjc"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          },
+          {
+            "name": "精锐增援",
+            "budget": 160,
+            "pool": [
+              "enemy_1148_dssbr_2",
+              "enemy_1158_divman",
+              "enemy_2021_syfish",
+              "enemy_1161_tidmag",
+              "enemy_1229_darmy",
+              "enemy_1161_tidmag_2",
+              "enemy_1229_darmy_2",
+              "enemy_10067_ftsjc"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          }
+        ]
+      },
+      "3": {
+        "templates": [
+          {
+            "name": "高压攻势",
+            "budget": 560,
+            "pool": [
+              "enemy_1305_mhslim",
+              "enemy_1305_mhslim_2",
+              "enemy_10065_ftzlc",
+              "enemy_1148_dssbr",
+              "enemy_1148_dssbr_2",
+              "enemy_1158_divman",
+              "enemy_2021_syfish",
+              "enemy_1161_tidmag",
+              "enemy_1229_darmy",
+              "enemy_1161_tidmag_2",
+              "enemy_1229_darmy_2",
+              "enemy_10067_ftsjc",
+              "enemy_1160_hvyslr",
+              "enemy_1275_dwlock_2",
+              "enemy_1160_hvyslr_2",
+              "enemy_2025_syufo",
+              "enemy_1439_dslntf",
+              "enemy_9007_acelem"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          },
+          {
+            "name": "集中突破",
+            "budget": 560,
+            "pool": [
+              "enemy_2021_syfish",
+              "enemy_1161_tidmag",
+              "enemy_1229_darmy",
+              "enemy_1161_tidmag_2",
+              "enemy_1229_darmy_2",
+              "enemy_10067_ftsjc",
+              "enemy_1160_hvyslr",
+              "enemy_1275_dwlock_2",
+              "enemy_1160_hvyslr_2",
+              "enemy_2025_syufo",
+              "enemy_1439_dslntf",
+              "enemy_9007_acelem"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          }
+        ]
+      }
+    },
+    "DOT": {
+      "1": {
+        "templates": [
+          {
+            "name": "前哨推进",
+            "budget": 48,
+            "pool": [
+              "enemy_1433_dsbasi",
+              "enemy_1267_nhpbr",
+              "enemy_1267_nhpbr_2",
+              "enemy_1433_dsbasi_2",
+              "enemy_10122_uacann_2"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          },
+          {
+            "name": "前哨增援",
+            "budget": 48,
+            "pool": [
+              "enemy_1267_nhpbr",
+              "enemy_1267_nhpbr_2",
+              "enemy_1433_dsbasi_2",
+              "enemy_10122_uacann_2"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          }
+        ]
+      },
+      "2": {
+        "templates": [
+          {
+            "name": "混合进攻",
+            "budget": 160,
+            "pool": [
+              "enemy_1433_dsbasi",
+              "enemy_1267_nhpbr",
+              "enemy_1267_nhpbr_2",
+              "enemy_1433_dsbasi_2",
+              "enemy_10122_uacann_2",
+              "enemy_1234_dsubrl",
+              "enemy_1270_nhstlk",
+              "enemy_1234_dsubrl_2"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          },
+          {
+            "name": "精锐增援",
+            "budget": 160,
+            "pool": [
+              "enemy_1267_nhpbr_2",
+              "enemy_1433_dsbasi_2",
+              "enemy_10122_uacann_2",
+              "enemy_1234_dsubrl",
+              "enemy_1270_nhstlk",
+              "enemy_1234_dsubrl_2"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          }
+        ]
+      },
+      "3": {
+        "templates": [
+          {
+            "name": "高压攻势",
+            "budget": 400,
+            "pool": [
+              "enemy_1433_dsbasi",
+              "enemy_1267_nhpbr",
+              "enemy_1267_nhpbr_2",
+              "enemy_1433_dsbasi_2",
+              "enemy_10122_uacann_2",
+              "enemy_1234_dsubrl",
+              "enemy_1270_nhstlk",
+              "enemy_1234_dsubrl_2",
+              "enemy_1272_nhtank",
+              "enemy_9006_actoxi",
+              "enemy_1270_nhstlk_2",
+              "enemy_1272_nhtank_2"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          },
+          {
+            "name": "集中突破",
+            "budget": 400,
+            "pool": [
+              "enemy_10122_uacann_2",
+              "enemy_1234_dsubrl",
+              "enemy_1270_nhstlk",
+              "enemy_1234_dsubrl_2",
+              "enemy_1272_nhtank",
+              "enemy_9006_actoxi",
+              "enemy_1270_nhstlk_2",
+              "enemy_1272_nhtank_2"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          }
+        ]
+      }
+    },
+    "INVISIBLE": {
+      "1": {
+        "templates": [
+          {
+            "name": "前哨推进",
+            "budget": 32,
+            "pool": [
+              "enemy_1009_lurker",
+              "enemy_1019_jshoot",
+              "enemy_10031_cnvsld",
+              "enemy_1019_jshoot_2",
+              "enemy_1043_zomsbr",
+              "enemy_10043_sailor"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          },
+          {
+            "name": "前哨增援",
+            "budget": 32,
+            "pool": [
+              "enemy_10031_cnvsld",
+              "enemy_1019_jshoot_2",
+              "enemy_1043_zomsbr",
+              "enemy_10043_sailor"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          }
+        ]
+      },
+      "2": {
+        "templates": [
+          {
+            "name": "混合进攻",
+            "budget": 120,
+            "pool": [
+              "enemy_1009_lurker",
+              "enemy_1019_jshoot",
+              "enemy_10031_cnvsld",
+              "enemy_1019_jshoot_2",
+              "enemy_1043_zomsbr",
+              "enemy_10043_sailor",
+              "enemy_1381_winman",
+              "enemy_1422_lrsldr_2",
+              "enemy_10042_prtrop",
+              "enemy_1404_msnip",
+              "enemy_10042_prtrop_2",
+              "enemy_1299_ymkilr"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          },
+          {
+            "name": "精锐增援",
+            "budget": 120,
+            "pool": [
+              "enemy_1043_zomsbr",
+              "enemy_10043_sailor",
+              "enemy_1381_winman",
+              "enemy_1422_lrsldr_2",
+              "enemy_10042_prtrop",
+              "enemy_1404_msnip",
+              "enemy_10042_prtrop_2",
+              "enemy_1299_ymkilr"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          }
+        ]
+      },
+      "3": {
+        "templates": [
+          {
+            "name": "高压攻势",
+            "budget": 360,
+            "pool": [
+              "enemy_1009_lurker",
+              "enemy_1019_jshoot",
+              "enemy_10031_cnvsld",
+              "enemy_1019_jshoot_2",
+              "enemy_1043_zomsbr",
+              "enemy_10043_sailor",
+              "enemy_1381_winman",
+              "enemy_1422_lrsldr_2",
+              "enemy_10042_prtrop",
+              "enemy_1404_msnip",
+              "enemy_10042_prtrop_2",
+              "enemy_1299_ymkilr",
+              "enemy_1389_winbab_2",
+              "enemy_10034_cnvsax",
+              "enemy_9008_acbunn",
+              "enemy_1299_ymkilr_2",
+              "enemy_1283_sgkill"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          },
+          {
+            "name": "集中突破",
+            "budget": 360,
+            "pool": [
+              "enemy_10043_sailor",
+              "enemy_1381_winman",
+              "enemy_1422_lrsldr_2",
+              "enemy_10042_prtrop",
+              "enemy_1404_msnip",
+              "enemy_10042_prtrop_2",
+              "enemy_1299_ymkilr",
+              "enemy_1389_winbab_2",
+              "enemy_10034_cnvsax",
+              "enemy_9008_acbunn",
+              "enemy_1299_ymkilr_2",
+              "enemy_1283_sgkill"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          }
+        ]
+      }
+    },
+    "REFLECTION": {
+      "1": {
+        "templates": [
+          {
+            "name": "前哨推进",
+            "budget": 24,
+            "pool": [
+              "enemy_1165_duhond",
+              "enemy_1166_dusbr",
+              "enemy_1166_dusbr_2",
+              "enemy_1168_dumage",
+              "enemy_1169_duphlx"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          },
+          {
+            "name": "前哨增援",
+            "budget": 24,
+            "pool": [
+              "enemy_1166_dusbr",
+              "enemy_1166_dusbr_2",
+              "enemy_1168_dumage",
+              "enemy_1169_duphlx"
+            ],
+            "minCount": 6,
+            "maxCount": 8
+          }
+        ]
+      },
+      "2": {
+        "templates": [
+          {
+            "name": "混合进攻",
+            "budget": 160,
+            "pool": [
+              "enemy_1165_duhond",
+              "enemy_1166_dusbr",
+              "enemy_1166_dusbr_2",
+              "enemy_1168_dumage",
+              "enemy_1169_duphlx",
+              "enemy_1169_duphlx_2",
+              "enemy_1170_dushld",
+              "enemy_1172_dugago",
+              "enemy_1170_dushld_2"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          },
+          {
+            "name": "精锐增援",
+            "budget": 160,
+            "pool": [
+              "enemy_1168_dumage",
+              "enemy_1169_duphlx",
+              "enemy_1169_duphlx_2",
+              "enemy_1170_dushld",
+              "enemy_1172_dugago",
+              "enemy_1170_dushld_2"
+            ],
+            "minCount": 15,
+            "maxCount": 20
+          }
+        ]
+      },
+      "3": {
+        "templates": [
+          {
+            "name": "高压攻势",
+            "budget": 520,
+            "pool": [
+              "enemy_1165_duhond",
+              "enemy_1166_dusbr",
+              "enemy_1166_dusbr_2",
+              "enemy_1168_dumage",
+              "enemy_1169_duphlx",
+              "enemy_1169_duphlx_2",
+              "enemy_1170_dushld",
+              "enemy_1172_dugago",
+              "enemy_1170_dushld_2",
+              "enemy_1175_dushdo_2",
+              "enemy_1174_duholy",
+              "enemy_9011_acrefr",
+              "enemy_1174_duholy_2"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          },
+          {
+            "name": "集中突破",
+            "budget": 520,
+            "pool": [
+              "enemy_1169_duphlx",
+              "enemy_1169_duphlx_2",
+              "enemy_1170_dushld",
+              "enemy_1172_dugago",
+              "enemy_1170_dushld_2",
+              "enemy_1175_dushdo_2",
+              "enemy_1174_duholy",
+              "enemy_9011_acrefr",
+              "enemy_1174_duholy_2"
+            ],
+            "minCount": 35,
+            "maxCount": 40
+          }
+        ]
+      }
+    }
+  }
+};

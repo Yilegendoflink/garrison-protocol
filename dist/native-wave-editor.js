@@ -1,4 +1,4 @@
-import {TRAINING_TYPES,saveWaveTable,emptyWaveTable,enemyCost,tierPack,currentTemplate,emptyTemplate,templateLabel} from './native-wave-fill.js';
+import {TRAINING_TYPES,saveWaveTable,emptyWaveTable,defaultWaveTable,enemyCost,tierPack,currentTemplate,emptyTemplate,templateLabel} from './native-wave-fill.js';
 import {fillBudgetWave,waveRng} from './native-wave-random.js';
 
 const KIND_LABEL={ 'random-pool':'常规池','mode-effect':'策略／悬赏','template':'生成模板' };
@@ -65,10 +65,11 @@ export function renderWaveEditor(data,table,ui){
  return `<main class="wave-ed">
   <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>编制台 / WAVE LEDGER</small><h1>敌人波次</h1></div><span>本期 ${rows.length} 条可出怪档案</span></header>
   <p class="wave-ed-lead">同一词条、同一难度可编多套模板。开战时先随机抽一套，再按那一套的预算从它的池里抽怪，直到买不起为止。</p>
+  <p class="wave-ed-lead">内置默认配置覆盖全部 7 种词条、3 个压力档，每档 2 套模板；前期 6–8 只、中期 15–20 只、后期 35–40 只。默认预算足够完成数量目标；手动降低预算可能减少出怪数。预算与敌人难度用于测试，不代表原作波次；部分敌人特殊能力仍待完善。恢复默认会覆盖当前整张表。</p>
   <nav class="wave-ed-types">${TRAINING_TYPES.map(t=>`<button data-act="ed-type" data-id="${t.id}" class="${t.id===type.id?'chosen':''}">${esc(t.name)}<small>${esc(t.id)}</small></button>`).join('')}</nav>
   <div class="wave-ed-toolbar">
    <div class="wave-ed-tiers">${[1,2,3].map(n=>`<button data-act="ed-tier" data-tier="${n}" class="${ui.tier===n?'chosen':''}">${'I'.repeat(n)}</button>`).join('')}</div>
-   <nav class="wave-ed-temps">${pack.templates.map((row,i)=>`<button data-act="ed-temp" data-index="${i}" class="${i===ui.template?'chosen':''}">${esc(templateLabel(row,i))}<small>${row.pool.length} 种 · 预算 ${row.budget}</small></button>`).join('')}<button data-act="ed-add-temp">＋ 新模板</button><button data-act="ed-copy-temp">复制本套</button><button data-act="ed-del-temp" ${pack.templates.length<=1?'disabled':''}>删除本套</button></nav>
+   <nav class="wave-ed-temps">${pack.templates.map((row,i)=>`<button data-act="ed-temp" data-index="${i}" class="${i===ui.template?'chosen':''}">${esc(templateLabel(row,i))}<small>${row.pool.length} 种 · ${row.minCount?row.minCount+'–'+row.maxCount+'只 · ':''}预算 ${row.budget}</small></button>`).join('')}<button data-act="ed-add-temp">＋ 新模板</button><button data-act="ed-copy-temp">复制本套</button><button data-act="ed-del-temp" ${pack.templates.length<=1?'disabled':''}>删除本套</button></nav>
   </div>
   <div class="wave-ed-toolbar">
    <label>名称 <input id="ed-temp-name" data-act="ed-temp-name" value="${esc(slot.name)}" placeholder="模板 ${ui.template+1}" maxlength="24"></label>
@@ -78,6 +79,7 @@ export function renderWaveEditor(data,table,ui){
    <button data-act="ed-roll">预演抽取</button>
    <button data-act="ed-export">导出 JSON</button>
    <button data-act="ed-import">导入 JSON</button>
+   <button data-act="ed-defaults" title="替换全部词条、模板与费用为内置测试配置">恢复默认配置</button>
    <button data-act="ed-reset">清空本表</button>
   </div>
   <div class="wave-ed-meter" aria-label="预算占用"><i style="width:${pct}%"></i></div>
@@ -127,13 +129,14 @@ export function applyEditorAction(act,dataset,table,ui,data){
  if(act==='ed-tier'){ui.tier=Number(dataset.tier);ui.template=0;ui.sample=null;return 'render';}
  if(act==='ed-temp'){ui.template=Number(dataset.index)||0;ui.sample=null;return 'render';}
  if(act==='ed-add-temp'){const list=tierPack(table,ui.type,ui.tier).templates;list.push(emptyTemplate(ui.tier));ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
- if(act==='ed-copy-temp'){const list=tierPack(table,ui.type,ui.tier).templates,src=currentTemplate(table,ui.type,ui.tier,ui.template);list.push({name:(src.name||templateLabel(src,ui.template))+' 副本',budget:src.budget,pool:src.pool.slice()});ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
+ if(act==='ed-copy-temp'){const list=tierPack(table,ui.type,ui.tier).templates,src=currentTemplate(table,ui.type,ui.tier,ui.template);list.push({name:(src.name||templateLabel(src,ui.template))+' 副本',budget:src.budget,pool:src.pool.slice(),...(src.minCount?{minCount:src.minCount,maxCount:src.maxCount}:{})});ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-del-temp'){const list=tierPack(table,ui.type,ui.tier).templates;if(list.length<=1){list[0]=emptyTemplate(ui.tier);ui.template=0;}else{list.splice(ui.template,1);if(ui.template>=list.length)ui.template=list.length-1;}ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-select'){ui.selected=dataset.id;return 'render';}
  if(act==='ed-add'){const pool=currentTemplate(table,ui.type,ui.tier,ui.template).pool;if(!pool.includes(dataset.id))pool.push(dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-remove'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template);slot.pool=slot.pool.filter(id=>id!==dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-fill-type'){const ids=originalTypeIds(data,ui.type).filter(id=>data.enemies?.[id]||data.enemyIndex?.some(e=>e.id===id));currentTemplate(table,ui.type,ui.tier,ui.template).pool=[...new Set(ids)];ui.sample=null;saveWaveTable(table);return 'filled';}
  if(act==='ed-roll'){ui.sample=fillBudgetWave(waveRng((Date.now()&0xffffffff)>>>0),table,ui.type,ui.tier);return 'render';}
+ if(act==='ed-defaults'){Object.assign(table,defaultWaveTable());ui.template=0;ui.sample=null;ui.selected=null;saveWaveTable(table);return 'defaults';}
  if(act==='ed-reset'){Object.assign(table,emptyWaveTable());ui.template=0;ui.sample=null;saveWaveTable(table);return 'reset';}
  if(act==='ed-export'){return 'export';}
  if(act==='ed-import'){return 'import';}

@@ -86,8 +86,9 @@ export function fillBudgetWave(random,table,type,tier){
  const slot=list[templateIndex]||list[0],budget=Math.max(0,Number(slot.budget)||0),pool=(slot.pool||[]).filter(Boolean);
  const meta={templateIndex,templateName:templateLabel(slot,templateIndex),budget};
  if(!pool.length)return {ids:[PLACEHOLDER_ENEMY],spent:0,leftover:budget,unfilled:true,...meta};
+ const targetCount=slot.minCount?slot.minCount+Math.floor(random()*(slot.maxCount-slot.minCount+1)):80;
  const ids=[];let spent=0;
- for(let n=0;n<80;n++){
+ for(let n=0;n<targetCount;n++){
   const fit=pool.filter(id=>enemyCost(table,id)<=budget-spent);if(!fit.length)break;
   const id=fit[Math.floor(random()*fit.length)];ids.push(id);spent+=enemyCost(table,id);
  }

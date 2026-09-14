@@ -91,6 +91,7 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
   if(result==='export'){const url=URL.createObjectURL(new Blob([JSON.stringify(state.waveTable,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-wave-table.json';link.click();URL.revokeObjectURL(url);return;}
   if(result==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{state.waveTable=saveWaveTable(normalizeWaveTable(JSON.parse(await input.files[0].text())));notice('已导入波次表');render();}catch(e){notice(e.message||'无法读取波次表');}};input.click();return;}
   if(result==='filled')notice('已写入本期该词条名单，难度值仍需逐个设定。');
+  if(result==='defaults')notice('已恢复内置默认配置，下一次生成波次时生效。');
   if(result==='reset')notice('已清空全部词条池和自定义难度。');
   if(result)render();return;
  }
@@ -208,7 +209,7 @@ function draw(){
 }
 root.addEventListener('change',e=>{
  if(e.target.id==='native-mode')state.mode=e.target.value;if(e.target.id==='native-map')state.map=e.target.value;if(e.target.id==='native-skill'){state.game.perform('skill',Number(e.target.dataset.uid),Number(e.target.value));save();render();}
- if(state.view==='editor'&&e.target.dataset.act){const catalog=document.getElementById('ed-catalog');state.editor.scroll=catalog?.scrollTop||0;if(applyEditorField(e.target.dataset.act,e.target.dataset.id,e.target.value,state.waveTable,state.editor))render();}
+ if(state.view==='editor'&&e.target.dataset.act){const catalog=document.getElementById('ed-catalog');state.editor.scroll=catalog?.scrollTop||0;if(applyEditorField(e.target.dataset.act,e.target.dataset.id,e.target.value,state.waveTable,state.editor)){if(['ed-budget','ed-cost','ed-default','ed-temp-name'].includes(e.target.dataset.act)){const sample=root.querySelector('.wave-ed-sample');if(sample)sample.textContent='配置已更新，点击“预演抽取”查看新结果。';}else queueMicrotask(()=>render());}}
 });
 root.addEventListener('input',e=>{
  if(e.target.id==='native-volume'){state.volume=Number(e.target.value);savePreference('garrison-volume',String(state.volume));return;}

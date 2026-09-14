@@ -1,4 +1,5 @@
 // 词条波次表：每词条 × 压力档可有多套模板。开战时先随机一套，再按该套预算抽怪。
+import {DEFAULT_WAVE_TABLE} from './native-wave-defaults.js';
 export const WAVE_STORE_KEY='garrison-wave-table-v2';
 export const TRAINING_TYPES=[
  {id:'SPECIAL',name:'特异',desc:'输出和承伤突出'},
@@ -20,7 +21,9 @@ export function emptyTemplate(tier=1){
 
 export function normalizeTemplate(row,tier=1){
  const budget=Number(row?.budget);
+ const count=Number.isInteger(row?.minCount)&&Number.isInteger(row?.maxCount)&&row.minCount>0&&row.maxCount>=row.minCount?{minCount:Math.min(80,row.minCount),maxCount:Math.min(80,row.maxCount)}:{};
  return {
+  ...count,
   name:typeof row?.name==='string'?row.name.slice(0,24):'',
   budget:Number.isFinite(budget)&&budget>=0?budget:DEFAULT_BUDGETS[tier]||10,
   pool:cleanPool(row?.pool)
@@ -38,6 +41,8 @@ export function emptyWaveTable(){
  return {version:2,defaultCost:1,costs:{},types};
 }
 
+export function defaultWaveTable(){return normalizeWaveTable(DEFAULT_WAVE_TABLE);}
+
 export function normalizeWaveTable(raw){
  const base=emptyWaveTable();if(!raw||typeof raw!=='object')return base;
  base.defaultCost=Math.max(1,Number(raw.defaultCost)||1);
@@ -51,7 +56,7 @@ export function normalizeWaveTable(raw){
 
 export function loadWaveTable(){
  try{if(typeof localStorage!=='undefined'){const raw=JSON.parse(localStorage.getItem(WAVE_STORE_KEY)||'null');if(raw)return normalizeWaveTable(raw);}}catch{}
- return emptyWaveTable();
+ return defaultWaveTable();
 }
 
 export function saveWaveTable(table){
