@@ -7,6 +7,7 @@ export function attribute(base, {add = 0, ratio = 0, finalAdd = 0, scales = [], 
   return clamp(((base + add) * Math.max(0, 1 + ratio) + finalAdd) * scale, min, max);
 }
 export function attackTiming(interval, attackSpeed = 100, windup = interval * .3, intervalAdd = 0) {
+  // ponytail: 30% windup is a labeled adapter, not restored animation data.
   // Attribute floor is 20; the interval formula itself clamps to [10, 600].
   const speed = clamp(Math.max(20, attackSpeed), 10, 600) / 100;
   const frames = Math.max(1, Math.round(Math.max(0, interval + intervalAdd) / speed * FPS));
