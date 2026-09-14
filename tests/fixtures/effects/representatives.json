@@ -1,0 +1,27 @@
+{
+  "seed": 42,
+  "operators": {
+    "yak": {"name": "角峰", "charId": "char_199_yak", "chessId": "chess_char_1_02_b"},
+    "plosis": {"name": "白面鸮", "charId": "char_128_plosis", "chessId": "chess_char_4_21_b"},
+    "swire": {"name": "诗怀雅", "charId": "char_308_swire", "chessId": "chess_char_3_03_b"},
+    "liskam": {"name": "雷蛇", "charId": "char_107_liskam", "chessId": "chess_char_1_20_b"},
+    "bldsk": {"name": "华法琳", "charId": "char_171_bldsk", "chessId": "chess_char_4_26_b"},
+    "udflow": {"name": "深巡", "charId": "char_4137_udflow", "chessId": "chess_char_1_04_b"},
+    "flower": {"name": "调香师", "charId": "char_181_flower", "chessId": "chess_char_2_14_b"},
+    "lumen": {"name": "流明", "charId": "char_4042_lumen", "chessId": "chess_char_6_14_b", "skillIndex": 0},
+    "podego": {"name": "波登可", "charId": "char_258_podego", "chessId": "chess_char_1_13_b", "skillIndex": 1},
+    "lisa": {"name": "铃兰", "charId": "char_358_lisa", "chessId": "chess_char_5_10_b", "skillIndex": 2},
+    "reed2": {"name": "焰影苇草", "charId": "char_1020_reed2", "chessId": "chess_char_6_08_b", "skillIndex": 1},
+    "gravel": {"name": "砾", "charId": "char_237_gravel", "chessId": "chess_char_2_12_b", "skillIndex": 1},
+    "papyrs": {"name": "莎草", "charId": "char_4139_papyrs", "chessId": "chess_char_2_06_b"},
+    "mudrok": {"name": "泥岩", "charId": "char_311_mudrok", "chessId": "chess_char_4_18_b"},
+    "ghost": {"name": "幽灵鲨", "charId": "char_143_ghost", "chessId": "chess_char_2_07_b", "skillIndex": 1},
+    "surtr": {"name": "史尔特尔", "charId": "char_350_surtr", "chessId": "chess_char_5_07_b"},
+    "horn": {"name": "号角", "charId": "char_4039_horn", "chessId": "chess_char_5_08_b"},
+    "silent": {"name": "赫默", "charId": "char_108_silent", "chessId": "chess_char_2_02_b", "skillIndex": 1},
+    "dusk": {"name": "夕", "charId": "char_2015_dusk", "chessId": "chess_char_5_12_b"},
+    "nearl2": {"name": "耀骑士临光", "charId": "char_1014_nearl2", "chessId": "chess_char_6_17_b"},
+    "vigil": {"name": "伺夜", "charId": "char_427_vigil", "chessId": "chess_char_3_19_b"},
+    "cathy": {"name": "凯瑟琳", "charId": "char_4162_cathy", "chessId": "chess_char_4_11_b"}
+  }
+}

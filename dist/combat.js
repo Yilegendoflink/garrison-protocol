@@ -24,16 +24,36 @@ export function damage({amount, type = 'physical', attackScale = 1, attackAdd = 
   else throw new Error(`Unsupported damage type: ${type}`);
   return Math.max(0, mitigated * multiplier * (1 - clamp(reduction, 0, 1)));
 }
-export function applyDamage(target, amount, {immortal = false, type = 'physical', sourceId = null, sourceUid = null} = {}) {
+export function applyDamage(target, amount, {immortal = false, minHp = 0, type = 'physical', sourceId = null, sourceUid = null} = {}) {
   if(target.infiniteHealth)return recordDummyDamage(target,amount,{type,sourceId,sourceUid});
-  if (target.hp <= 0) return {hp: 0, shield: 0, total: 0};
+  if (target.hp <= 0) return {hp: 0, shield: 0, total: 0, blocked:false, consumedGuard:null, depletedLayers:[]};
+  const floor = Math.max(minHp, immortal ? 1 : 0);
   const barrier = (target.barriers || []).find(b => b.charges > 0 && (!b.types || b.types.includes(type)));
-  if(barrier && amount > 0){barrier.charges--;return {hp:0,shield:0,total:0,blocked:true};}
-  const shield = Math.min(Math.max(0, target.shield || 0), Math.max(0, amount));
-  target.shield = Math.max(0, (target.shield || 0) - shield);
-  const hp = Math.min(Math.max(0, target.hp - (immortal ? 1 : 0)), Math.max(0, amount - shield));
-  target.hp -= hp;
-  return {hp, shield, total: hp + shield};
+  if(barrier && amount > 0){
+    barrier.charges--;
+    return {hp:0,shield:0,total:0,blocked:true,consumedGuard:barrier,depletedLayers:[]};
+  }
+  const depletedLayers=[];
+  let leftover=Math.max(0, amount);
+  let shield=0;
+  if((target.shieldLayers||[]).length){
+    for(const layer of target.shieldLayers){
+      if(leftover<=0)break;
+      if(layer.types&&!layer.types.includes(type))continue;
+      const take=Math.min(leftover, Math.max(0, layer.remaining||0));
+      layer.remaining-=take;leftover-=take;shield+=take;
+      if(layer.remaining<=1e-9)depletedLayers.push(layer);
+    }
+    target.shieldLayers=target.shieldLayers.filter(l=>l.remaining>1e-9);
+    target.shield=target.shieldLayers.reduce((n,l)=>n+(l.remaining||0),0);
+  }else{
+    shield=Math.min(Math.max(0, target.shield || 0), leftover);
+    target.shield=Math.max(0, (target.shield || 0) - shield);
+    leftover-=shield;
+  }
+  const hp=Math.min(Math.max(0, target.hp - floor), leftover);
+  target.hp-=hp;
+  return {hp, shield, total: hp + shield, blocked:false, consumedGuard:null, depletedLayers};
 }
 export function recoverHP(target, amount) {
   if (target.hp <= 0) return 0;

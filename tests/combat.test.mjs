@@ -31,7 +31,8 @@ test('each hit pays defense; HP and shield accounting never includes overkill',(
  const amount=damage({amount:300,defense:200});
  for(let i=0;i<3;i++)applyDamage(target,amount);
  assert.equal(target.hp,800);assert.equal(target.shield,0);
- assert.deepEqual(applyDamage(target,99999),{hp:800,shield:0,total:800});
+ const last=applyDamage(target,99999);
+ assert.equal(last.hp,800);assert.equal(last.shield,0);assert.equal(last.total,800);assert.equal(last.blocked,false);
  assert.equal(recoverHP(target,100),0,'healing cannot resurrect');
  target.hp=100;assert.equal(recoverHP(target,9999),900);
  assert.equal(applyDamage(target,99999,{immortal:true}).hp,999);assert.equal(target.hp,1);

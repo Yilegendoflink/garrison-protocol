@@ -124,8 +124,8 @@ export function skillFlow(skill){
   changeAttack:kind==='duration'||kind==='ammo'||/攻击力|攻击间隔|攻击变为/.test(desc)
  };
 }
-export function combineStat(base,add,ratio,muls){
- return attribute(base,{add,ratio,scales:muls||[]});
+export function combineStat(base,add,ratio,muls,finalAdd=0){
+ return attribute(base,{add,ratio,finalAdd,scales:muls||[]});
 }
 export function emitEvent(s,type,extra={}){
  const {type:damageType,...details}=extra;
