@@ -88,7 +88,7 @@ test('all startup and image paths resolve under a nested folder and file URL',as
  refs.push(...createHost().images);
  for(const ref of refs){
   assert.ok(ref.startsWith('./'),`relative resource: ${ref}`);
-  await access(path.join(root,'dist',ref));
+  await access(path.join(root,'dist',ref.split(/[?#]/)[0]));
   for(const base of ['http://127.0.0.1:5500/unpacked/garrison-protocol/dist/index.html','file:///C:/Games/garrison-protocol/dist/index.html']){
    const resolved=new URL(ref,base);
    assert.ok(resolved.pathname.includes('/garrison-protocol/dist/'),resolved.href);
