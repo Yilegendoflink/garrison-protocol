@@ -134,7 +134,7 @@ export function drawFx(c,point,z,battle,opts={}){
 export function drawStatuses(c,x,y,unit,size){
  const kinds=[];
  for(const s of unit.statuses||[])if(['stun','frozen','sleep','silence','cold'].includes(s.kind)&&!kinds.includes(s.kind))kinds.push(s.kind);
- if((unit.shield||0)>0)kinds.push('shield');
+ if((unit.shield||0)>0||(unit.shieldLayers||[]).some(l=>l.remaining>0))kinds.push('shield');
  if((unit.barriers||[]).some(b=>b.charges>0))kinds.push('barrier');
  kinds.slice(0,3).forEach((k,i)=>mark(c,x-size/2+6+i*13,y-size*.82,k));
 }

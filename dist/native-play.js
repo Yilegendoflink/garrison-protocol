@@ -56,6 +56,7 @@ function inspectSame(kind,key){const inv=state.inspect;return !!inv&&inv.kind===
 function inspectTarget(){
  const g=state.game,inv=state.inspect;if(!g||!inv)return null;
  if(inv.kind==='unit'){const u=g.s.units.find(x=>x.uid===inv.uid);return u?{kind:'op',u,p:profile(u),live:g.battle?.s.units.find(a=>a.uid===u.uid),shop:false}:null;}
+ if(inv.kind==='summon'){const s=g.battle?.s.summons?.find(x=>x.uid===inv.uid);return s?{kind:'summon',s}:null;}
  if(inv.kind==='shop'){const id=g.s.offers[inv.index];if(!id)return null;const row=data.profiles[id];return {kind:'op',u:null,p:{...row,...(row.skillChoices?.[row.skillIndex]||{})},live:null,shop:true,price:g.price(id)};}
  if(inv.kind==='shopItem'){const id=g.s.itemOffers[inv.index];return id?{kind:'item',id,shop:true,price:data.season.trapChessDataDict[id]?.purchasePrice}:null;}
  if(inv.kind==='pack'){const it=g.s.items.find(i=>i.uid===inv.uid);return it?{kind:'item',id:it.chessId,shop:false,uid:it.uid}:null;}
@@ -66,6 +67,10 @@ function dossier(){
  if(t.kind==='item'){
   const fx=itemEffect(t.id);
   return `<aside class="native-dossier" aria-label="道具档案"><div class="native-dossier-body"><button data-act="inspect-close" class="native-dossier-close" aria-label="关闭">×</button><div class="native-dossier-art native-dossier-item">◇</div><h2>${esc(itemName(t.id))}</h2><p class="native-dossier-kicker">${esc(fx.name)}</p><h3>效果</h3><p>${esc(fx.desc||'无效果说明')}</p>${t.shop?`<p class="native-dossier-buy">再次点击卡片购买 · ${t.price} ◆</p>`:''}</div></aside>`;
+ }
+ if(t.kind==='summon'){
+  const s=t.s,owner=state.game.s.units.find(u=>u.uid===s.ownerUid);
+  return `<aside class="native-dossier" aria-label="召唤物档案"><div class="native-dossier-body"><button data-act="inspect-close" class="native-dossier-close" aria-label="关闭">×</button><h2>${esc(s.name||s.type)}</h2><p class="native-dossier-kicker">${s.device?'装置':'召唤物'}${owner?' · '+esc(data.profiles[owner.chessId]?.name||''):''}</p><p id="native-dossier-hp" class="native-dossier-hp">生命 <b>${Math.round(s.hp)}</b><i>/${Math.round(s.maxHp)}</i></p><p>${s.targetable===false?'不可被常规选中':''} ${s.canBlock?'可阻挡':''} ${s.canHeal?'可治疗':''}</p></div></aside>`;
  }
  const p=t.p,g=state.game,owned=t.u,a=t.live&&g.battle?g.battle.stats(t.live):p.attributes;
  const hp=Math.round(t.live?.hp??a.maxHp),max=Math.round(t.live?.maxHp??a.maxHp);
@@ -138,6 +143,10 @@ function unitAtPointer(x,y){
  const g=state.game,z=geometry(),px=x-z.r.left,py=y-z.r.top,size=Math.min(z.tw*.68,z.th*1.1);
  const units=g.s.units.filter(u=>u.position).slice().sort((a,b)=>b.position.y-a.position.y||b.position.x-a.position.x);
  for(const u of units){const cx=z.ox+(u.position.x+.5)*z.tw,cy=z.oy+(u.position.y+.5)*z.th-tileLift(g.map.grid[u.position.y][u.position.x],z)*.5;if(px>=cx-size/2-3&&px<=cx+size/2+3&&py>=cy-size*.75-3&&py<=cy+size*.35+14)return u;}
+ if(g.battle){
+  const summons=(g.battle.s.summons||[]).filter(s=>s.deployed).slice().sort((a,b)=>b.y-a.y||b.x-a.x);
+  for(const s of summons){const cx=z.ox+(s.x+.5)*z.tw,cy=z.oy+(s.y+.5)*z.th-tileLift(g.map.grid[s.y]?.[s.x],z)*.5;if(px>=cx-size/2-3&&px<=cx+size/2+3&&py>=cy-size*.75-3&&py<=cy+size*.35+14)return {uid:s.uid,kind:'summon',summon:true};}
+ }
  const cell=cellAt(x,y);return units.find(u=>u.position.x===cell.x&&u.position.y===cell.y);
 }
 function dragFeedback(){
@@ -183,6 +192,15 @@ function draw(){
   const sk=profile(u)?.skill,cost=g.battle&&u.sp!==undefined?g.battle.spCost(u):sk?.spData?.spCost||0,fill=spBarFill(u,sk,cost);if(fill&&u.deployed){const bx=p.x-size/2,by=p.y+size*.35+(u.hp!==undefined?6:0);if(fill.kind==='ammo'){const n=fill.cells,gap=1,cw=Math.max(1,(size-(n-1)*gap)/n);for(let i=0;i<n;i++){c.fillStyle='#122022';c.fillRect(bx+i*(cw+gap),by,cw,4);if(i<fill.filled){c.fillStyle='#f4d38b';c.fillRect(bx+i*(cw+gap),by,cw,4);}}}else{c.fillStyle='#122022';c.fillRect(bx,by,size,3);c.fillStyle=fill.on?'#f4d38b':fill.ready?'#f0d18a':'#7bbaf3';c.fillRect(bx,by,size*fill.ratio,3);}}
   if(g.battle)drawStatuses(c,p.x,p.y,u,size);if(down)drawDownRing(c,p,u,size);
  }
+ if(g.battle)for(const s of g.battle.s.summons||[]){
+  if(!s.deployed)continue;
+  const p=point(s.x,s.y);p.y-=tileLift(g.map.grid[s.y]?.[s.x],z)*.5;const size=Math.min(z.tw*.5,z.th*.8);
+  c.fillStyle=s.device?'#7ec8e3':'#c9a56a';c.beginPath();c.moveTo(p.x,p.y-size*.55);c.lineTo(p.x+size*.4,p.y);c.lineTo(p.x,p.y+size*.45);c.lineTo(p.x-size*.4,p.y);c.closePath();c.fill();
+  c.strokeStyle='#f4efe2';c.lineWidth=state.inspect?.kind==='summon'&&state.inspect.uid===s.uid?2:1;c.stroke();
+  c.fillStyle='#122022';c.fillRect(p.x-size/2,p.y+size*.35,size,4);c.fillStyle='#75d9aa';c.fillRect(p.x-size/2,p.y+size*.35,size*Math.max(0,s.hp/s.maxHp),4);
+  drawStatuses(c,p.x,p.y,s,size);
+  c.fillStyle='#e9fff7';c.font='10px sans-serif';c.textAlign='center';c.fillText(s.name||s.type,p.x,p.y-size*.65);
+ }
  if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),im=img(e.id),size=z.tw*.55;if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);}}
  if(g.battle&&g.s.phase==='battle')drawFx(c,point,z,g.battle,{reduceFx:state.reduceFx});
  if(drag?.moved&&overCanvas(drag.x,drag.y)){const cell=cellAt(drag.x,drag.y);if(g.map.grid[cell.y]?.[cell.x]){c.strokeStyle=g.canDeploy(drag.uid,cell.x,cell.y)?'#78f1bd':'#f88c78';c.lineWidth=3;c.strokeRect(z.ox+cell.x*z.tw+2,z.oy+cell.y*z.th+2,z.tw-4,z.th-4);}}
@@ -208,7 +226,7 @@ root.addEventListener('pointerdown',e=>{
  if(e.target!==canvas)return;
  if(state.preview&&manage){const z=geometry(),x=z.r.left+z.ox+(state.preview.x+.5)*z.tw,y=z.r.top+z.oy+(state.preview.y+.5)*z.th;if(Math.hypot(e.clientX-x,e.clientY-y)>95){state.preview=null;render();return;}aim={x,y,id:e.pointerId};canvas.setPointerCapture(e.pointerId);return;}
  const cell=cellAt(e.clientX,e.clientY),unit=unitAtPointer(e.clientX,e.clientY);canvasPress={...cell,uid:unit?.uid,x0:e.clientX,y0:e.clientY};
- if(unit&&manage&&!state.item)drag={uid:unit.uid,id:e.pointerId,from:'field',x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,moved:false};canvas.setPointerCapture(e.pointerId);
+ if(unit&&manage&&!state.item&&!unit.summon)drag={uid:unit.uid,id:e.pointerId,from:'field',x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,moved:false};canvas.setPointerCapture(e.pointerId);
 });
 root.addEventListener('pointermove',e=>{
  if(touchButton&&Math.hypot(e.clientX-touchButton.x,e.clientY-touchButton.y)>8)touchButton=null;
@@ -221,7 +239,7 @@ root.addEventListener('pointerup',e=>{
    else if(overCanvas(e.clientX,e.clientY)){const cell=cellAt(e.clientX,e.clientY);place(d.uid,cell.x,cell.y);}else render();return;
   }drag=null;dragFeedback();if(d.from==='field'){canvasPress=null;action({dataset:{act:'select',uid:String(d.uid)}});return;}}
  if(aim&&aim.id===e.pointerId){aim=null;ignoredClickPointer=e.pointerId;ignoredClickUntil=performance.now()+400;if(state.preview&&state.preview.dir!==null)commitPreview();else{state.preview=null;render();}return;}
- if(canvasPress){const press=canvasPress;canvasPress=null;if(overCanvas(e.clientX,e.clientY)){const cell=cellAt(e.clientX,e.clientY);if(press.uid)action({dataset:{act:'select',uid:String(press.uid)}});else if(state.selected)place(state.selected,cell.x,cell.y);}}
+ if(canvasPress){const press=canvasPress;canvasPress=null;if(overCanvas(e.clientX,e.clientY)){const cell=cellAt(e.clientX,e.clientY);if(press.uid){const summon=state.game.battle?.s.summons?.find(s=>s.uid===press.uid);if(summon){state.inspect={kind:'summon',uid:press.uid};state.selected=null;render();}else action({dataset:{act:'select',uid:String(press.uid)}});}else if(state.selected)place(state.selected,cell.x,cell.y);}}
  if(touchButton){const t=touchButton;touchButton=null;if(t.id===e.pointerId&&t.b.isConnected&&e.target.closest('button[data-act]')===t.b)action(t.b);}
 });
 root.addEventListener('pointercancel',()=>{clearDrag();aim=null;state.preview=null;render();});

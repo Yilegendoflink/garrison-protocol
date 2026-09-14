@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "checks": [
+    "restore battle without deployment replay",
+    "select summon dossier",
+    "resume simulation",
+    "persist summon ownership"
+  ],
+  "errors": []
+}
