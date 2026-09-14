@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    "offline launch",
+    "buy and deploy",
+    "battle layout",
+    "paused canvas frozen",
+    "volume persisted",
+    "mute and reduced effects",
+    "4x selection",
+    "resume simulation"
+  ],
+  "errors": []
+}

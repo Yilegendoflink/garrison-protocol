@@ -178,6 +178,7 @@ function attribute(base, {add = 0, ratio = 0, finalAdd = 0, scales = [], min = 0
   return clamp(((base + add) * Math.max(0, 1 + ratio) + finalAdd) * scale, min, max);
 }
 function attackTiming(interval, attackSpeed = 100, windup = interval * .3, intervalAdd = 0) {
+  // ponytail: 30% windup is a labeled adapter, not restored animation data.
   // Attribute floor is 20; the interval formula itself clamps to [10, 600].
   const speed = clamp(Math.max(20, attackSpeed), 10, 600) / 100;
   const frames = Math.max(1, Math.round(Math.max(0, interval + intervalAdd) / speed * FPS));
@@ -1706,6 +1707,158 @@ function spBarFill(u,skill,cost){
 
 return {spTypeOf,usesSp,skillKind,ammoCount,spIncrement,initSpOf,spCap,spBlocked,gainSp,tickTimeSp,spBarFill};
 },
+"native-combat.js": function(load) {
+const {attribute,FPS} = load("combat.js");
+const {permissions} = load("status.js");
+const {skillKind} = load("native-sp.js");
+// Tentative adapters — not original animation tables. Do not treat as restored data.
+const TENTATIVE_WINDUP_RATIO=.3;
+const TENTATIVE_PROJECTILE_SPEED=6;
+const TENTATIVE_HIT_GAP=2/FPS;
+
+function remainingDistance(e){
+ const route=e.route;if(!route||route.length===0)return 0;
+ let d=0,x=e.x,y=e.y,i=e.cmd??e.segment??0;
+ for(;i<route.length;i++){
+  const s=route[i],kind=s.kind||'move';
+  if(kind==='appear'){x=s.x;y=s.y;continue;}
+  if(kind!=='move')continue;
+  d+=Math.hypot((s.x??s[0])-x,(s.y??s[1])-y);
+  x=s.x??s[0];y=s.y??s[1];
+ }
+ return d;
+}
+function specialPriority(a,b,priority){
+ if(priority==='air')return Number(!!b.flying)-Number(!!a.flying);
+ if(priority==='defense')return (a.def||0)-(b.def||0);
+ if(priority==='weight')return (b.weight||0)-(a.weight||0);
+ return 0;
+}
+function compareOperatorTargets(a,b,uid,priority,position){
+ const blocked=position==='RANGED'?0:Number(b.block===uid)-Number(a.block===uid);
+ return blocked
+  || specialPriority(a,b,priority)
+  || (b.taunt||0)-(a.taunt||0)
+  || remainingDistance(a)-remainingDistance(b)
+  || a.uid-b.uid;
+}
+function compareEnemyTargets(a,b){
+ return (b.tauntLevel||b.taunt||0)-(a.tauntLevel||a.taunt||0) || (b.deployAt||0)-(a.deployAt||0) || b.uid-a.uid;
+}
+function enemyBlockCost(e){return Math.max(1,e.blockCost||1);}
+function canStayBlocked(e,u,used,cap){
+ if(!u||!e||e.hp<=0||e.flying||e.hidden||e.untargetable||e.unblockable)return false;
+ if(!permissions(e).beBlocked||!permissions(u).block||!u.deployed||u.hp<=0)return false;
+ if(Math.hypot(u.x-e.x,u.y-e.y)>=.72)return false;
+ return used+enemyBlockCost(e)<=cap;
+}
+function resolveBlocks(units,enemies,capOf){
+ const alive=units.filter(u=>u.hp>0&&u.deployed),used=new Map();
+ for(const u of alive)used.set(u.uid,0);
+ for(const e of enemies){
+  if(e.hp<=0||e.trainingDummy){e.block=null;continue;}
+  const u=alive.find(x=>x.uid===e.block),cap=u?capOf(u):0,need=enemyBlockCost(e);
+  if(!canStayBlocked(e,u,used.get(u?.uid)||0,cap))e.block=null;
+  else used.set(u.uid,(used.get(u.uid)||0)+need);
+ }
+ const seekers=enemies.filter(e=>e.hp>0&&!e.trainingDummy&&e.block==null&&!e.flying&&!e.hidden&&!e.untargetable&&!e.unblockable&&permissions(e).beBlocked).sort((a,b)=>a.uid-b.uid);
+ for(const e of seekers){
+  const need=enemyBlockCost(e);
+  const u=alive.filter(x=>permissions(x).block&&Math.hypot(x.x-e.x,x.y-e.y)<.72&&(used.get(x.uid)||0)+need<=capOf(x)).sort((a,b)=>a.uid-b.uid)[0];
+  if(u){e.block=u.uid;used.set(u.uid,(used.get(u.uid)||0)+need);}
+ }
+}
+function compileRoute(route,to,walk,bfs){
+ const start=to(route.startPosition),end=to(route.endPosition);
+ const raw=[{kind:'move',x:start.x,y:start.y},...(route.checkpoints||[]).map(c=>{
+  const p=c.position?to(c.position):start,type=c.type||'MOVE';
+  if(type==='WAIT_FOR_SECONDS'||type==='WAIT')return {kind:'wait',x:null,y:null,time:c.time||0};
+  if(type==='DISAPPEAR')return {kind:'disappear',x:null,y:null};
+  if(type==='APPEAR_AT_POS'||type==='APPEAR')return {kind:'appear',x:p.x,y:p.y};
+  if(type==='MOVE'||type==='PATROL_MOVE')return {kind:'move',x:p.x,y:p.y};
+  throw Error('未支持的路线指令 '+type);
+ }),{kind:'move',x:end.x,y:end.y}];
+ const steps=[{kind:'move',x:start.x,y:start.y}];let cur=start;
+ const pushWalk=(dest)=>{
+  if(cur.x===dest.x&&cur.y===dest.y)return;
+  if(!walk){steps.push({kind:'move',x:dest.x,y:dest.y});cur=dest;return;}
+  const segment=bfs(cur,dest);if(!segment)throw Error('原始路线不可达：'+cur.x+','+cur.y+' → '+dest.x+','+dest.y);
+  for(const p of segment)steps.push({kind:'move',x:p.x,y:p.y});
+  cur=dest;
+ };
+ for(const node of raw){
+  if(node.kind==='move')pushWalk(node);
+  else if(node.kind==='appear'){steps.push(node);cur={x:node.x,y:node.y};}
+  else{
+   if(node.x!=null&&(node.x!==cur.x||node.y!==cur.y))pushWalk({x:node.x,y:node.y});
+   steps.push({...node,x:cur.x,y:cur.y});
+  }
+ }
+ return steps.length?steps:[{kind:'move',x:start.x,y:start.y}];
+}
+function advanceEnemy(e,dt,onEvent,stopForAttack=false){
+ if(e.hp<=0||e.trainingDummy||!e.route)return false;
+ if(!Number.isInteger(e.cmd))e.cmd=Math.min(e.route.length,(e.segment||0)+1);
+ const slow=(e.statuses||[]).some(s=>s.kind==='sluggish')?0.2:1;
+ while(e.cmd<e.route.length){
+  const s=e.route[e.cmd];
+  if(s.kind==='wait'){
+   if(e.cmdLeft==null)e.cmdLeft=s.time;
+   const used=Math.min(dt,e.cmdLeft);e.cmdLeft-=used;dt-=used;
+   if(e.cmdLeft<=1e-9){e.cmd++;e.cmdLeft=null;}
+   if(dt<=1e-9)break;
+   continue;
+  }
+  if(s.kind==='disappear'){e.hidden=true;e.untargetable=true;e.block=null;e.action=null;e.cmd++;e.cmdLeft=null;onEvent?.('disappear',e);continue;}
+  if(s.kind==='appear'){e.x=s.x;e.y=s.y;e.hidden=false;e.untargetable=false;e.cmd++;e.cmdLeft=null;onEvent?.('appear',e);continue;}
+  const dx=s.x-e.x,dy=s.y-e.y,d=Math.hypot(dx,dy);
+  if(d<=1e-9){e.cmd++;continue;}
+  const speed=(!e.block&&permissions(e).move&&!stopForAttack)?e.speed*slow:0;
+  if(speed<=0||dt<=1e-9)break;
+  const move=speed*dt;
+  if(d<=move){e.x=s.x;e.y=s.y;e.cmd++;e.cmdLeft=null;dt-=d/speed;}
+  else{e.x+=dx/d*move;e.y+=dy/d*move;break;}
+ }
+ e.progress=remainingDistance(e);
+ return e.cmd>=e.route.length;
+}
+function skillFlow(skill){
+ const kind=skillKind(skill);
+ if(!kind)return {kind:null,resetAttack:false,lockSp:false,changeAttack:false};
+ const desc=skill.description||'';
+ return {
+  kind,
+  resetAttack:skill.combatFlow?.resetAttack??(kind!=='instant'),
+  lockSp:kind==='duration'||kind==='ammo',
+  changeAttack:kind==='duration'||kind==='ammo'||/攻击力|攻击间隔|攻击变为/.test(desc)
+ };
+}
+function combineStat(base,add,ratio,muls){
+ return attribute(base,{add,ratio,scales:muls||[]});
+}
+function emitEvent(s,type,extra={}){
+ const {type:damageType,...details}=extra;
+ s.eventId=(s.eventId||0)+1;
+ s.events??=[];s.events.push({...details,damageType,t:s.time,type,id:s.eventId});
+ if(s.events.length>96)s.events.splice(0,s.events.length-96);
+}
+function pruneEvents(s,keep=4){
+ if(!s.events)return;s.events=s.events.filter(e=>s.time-e.t<=keep);
+}
+function scheduleStrikes(s,hits,base){
+ const gap=base.gap??TENTATIVE_HIT_GAP;
+ for(let i=0;i<hits;i++)(s.strikes??=[]).push({...base,at:s.time+(base.delay||0)+i*gap,hit:i});
+}
+function dueStrikes(s){
+ const due=(s.strikes||[]).filter(x=>x.at<=s.time);s.strikes=(s.strikes||[]).filter(x=>x.at>s.time);return due;
+}
+function windupSeconds(interval,override){
+ if(Number.isFinite(override)&&override>=0)return override;
+ return interval*TENTATIVE_WINDUP_RATIO;
+}
+
+return {TENTATIVE_WINDUP_RATIO,TENTATIVE_PROJECTILE_SPEED,TENTATIVE_HIT_GAP,remainingDistance,specialPriority,compareOperatorTargets,compareEnemyTargets,enemyBlockCost,canStayBlocked,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds};
+},
 "native-battle.js": function(load) {
 const {branchBehavior,branchTrait} = load("native-branches.js");
 const {nativeWavePlan} = load("native-waves.js");
@@ -1714,10 +1867,12 @@ const {applyStatus,tickStatuses,permissions,statusAttributeChanges} = load("stat
 const {blackboard,skillPolicy,shouldAutoSkill} = load("protocol.js");
 const {createTrainingDummy,dummySummary} = load("benchmark.js");
 const {usesSp,spTypeOf,skillKind,ammoCount,initSpOf,gainSp,tickTimeSp} = load("native-sp.js");
+const {containsTarget} = load("targeting.js");
+const {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds,TENTATIVE_PROJECTILE_SPEED} = load("native-combat.js");
 class NativeBattle {
  constructor(data,economy,map,turn){
-  this.data=data;this.economy=economy;this.map=map;this.s={frame:0,time:0,units:[],enemies:[],projectiles:[],queue:[],damage:{},leaks:0,kills:0,finished:false,benchmark:!!turn.isBossTurn,limit:turn.isBossTurn?turn.bossTurnHpReduceTime:turn.normalPhaseTime,effects:[],nextId:100000};
-  this.rows=economy.bonds();this.layers=economy.s.bondLayers;this.s.band=economy.s.bandId;
+  this.data=data;this.economy=economy;this.map=map;this.s={frame:0,time:0,units:[],enemies:[],projectiles:[],queue:[],damage:{},leaks:0,kills:0,finished:false,benchmark:!!turn.isBossTurn,limit:turn.isBossTurn?turn.bossTurnHpReduceTime:turn.normalPhaseTime,effects:[],events:[],strikes:[],banner:null,nextId:100000};
+  this.rows=economy.bonds();this.layers=economy.s.bondLayers;this.s.band=economy.s.bandId;this.s.banner={text:'作战开始',life:1.6};
   const sources=economy.s.units.filter(u=>u.position).sort((a,b)=>a.position.y-b.position.y||a.position.x-b.position.x);
   this.s.units=sources.map((u,i)=>{const p=this.profile(u),a=p.attributes,skill=p.skill;return {uid:u.uid,id:u.charId,chessId:u.chessId,source:u,x:u.position.x,y:u.position.y,dir:u.dir,hp:a.maxHp,maxHp:a.maxHp,sp:initSpOf(skill),spCd:0,spLock:0,deployed:false,deployAt:3+i*.18,down:0,skillLeft:0,skillCount:0,ammo:0,ammoMax:0,attackCooldown:0,action:null,statuses:[],shield:0,barriers:[],damage:0,healing:0,lastAttack:0,lastSkill:-999,counters:{},buffs:[]};});
   if(this.s.benchmark){this.s.enemies=[createTrainingDummy(this.s.nextId++,5,3)];this.s.total=1;}else this.prepareWaves(turn);
@@ -1777,27 +1932,36 @@ class NativeBattle {
     let target=this.s.units.find(v=>v.uid===action.targets[0]&&this.canHeal(v,u)),power=action.amount;const visited=new Set(),max=trait['attack@chain.max_target']??3;
     for(let i=0;target&&i<max;i++){visited.add(target.uid);this.heal(u,target,power);const prev=target;target=this.s.units.filter(v=>!visited.has(v.uid)&&this.canHeal(v,u)&&this.inNamedRange({x:prev.x,y:prev.y,dir:0},v,behavior.jumpRange)).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||b.deployAt-a.deployAt||a.uid-b.uid)[0];power*=trait['attack@chain.atk_scale']??.75;}
    }else for(const id of action.targets){const target=this.s.units.find(v=>v.uid===id);if(!target)continue;this.heal(u,target,action.amount);if(behavior.elementHealing)this.healElements(u,target,action.amount*(trait.ep_heal_ratio??.5));}
-   return;
+   this.emit('attack',{uid:u.uid,x:u.x,y:u.y,kind:'heal',type:'healing',style:behavior.style,skill:this.skillActive(u)});return 1;
   }
   let released=0;for(const id of action.targets){const target=this.s.enemies.find(e=>e.uid===id&&e.hp>0);if(!target)continue;const ranged=p.position==='RANGED'||(['lord','agent','hookmaster','shotprotector','fortress'].includes(p.branch)&&target.block!==u.uid);
-   for(let n=0;n<action.hits;n++){released++;
-    const packet={owner:u.uid,target:id,x:u.x,y:u.y,amount:action.amount*this.branchAttackScale(u,target),type:action.type,speed:6,style:behavior.style,radius:behavior.radius||0,antiAir:behavior.antiAir,ownerDeployment:u.deployAt,returning:false,returns:!!behavior.returnProjectile};
-    if(ranged){this.s.projectiles.push(packet);if(packet.returns)u.pendingReturns=(u.pendingReturns||0)+1;}else this.impactNativeAttack(u,target,packet);
-   }
-   if(behavior.storage&&id===action.targets[0])for(let n=0;n<(action.storedEnergy||0);n++){released++;this.s.projectiles.push({owner:u.uid,target:id,x:u.x,y:u.y,amount:action.baseAmount??action.amount,type:'arts',speed:6,style:'single',antiAir:true,ownerDeployment:u.deployAt});}
-   if(behavior.drone){u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;this.s.projectiles.push({owner:u.uid,target:id,x:u.x,y:u.y,amount:action.amount*u.droneScale,type:'arts',speed:6,style:'single',antiAir:true,ownerDeployment:u.deployAt});}
-  }return released;
+   const hits=Math.max(1,action.hits||1);u.lockId=id;
+   scheduleStrikes(this.s,hits,{owner:u.uid,target:id,x:u.x,y:u.y,amount:action.amount*this.branchAttackScale(u,target),baseAmount:action.baseAmount??action.amount,type:action.type,style:behavior.style,radius:behavior.radius||0,antiAir:behavior.antiAir,ownerDeployment:u.deployAt,ranged,returns:!!behavior.returnProjectile,storedEnergy:id===action.targets[0]?(action.storedEnergy||0):0,drone:!!behavior.drone});
+   released+=hits;
+  }this.emit('attack',{uid:u.uid,x:u.x,y:u.y,kind:'damage',targetX:this.s.enemies.find(e=>e.uid===action.targets[0])?.x,targetY:this.s.enemies.find(e=>e.uid===action.targets[0])?.y,type:action.type,style:behavior.style,skill:this.skillActive(u),radius:behavior.radius||0});return released;
+ }
+ deliverStrike(packet){
+  const u=this.s.units.find(x=>x.uid===packet.owner);if(!u)return;
+  if(packet.aftershock){const target=this.s.enemies.find(e=>e.uid===packet.target&&e.hp>0&&!e.hidden);if(target)this.hit(u,target,packet.amount,packet.type);return;}
+  if(!u.deployed||u.hp<=0||packet.ownerDeployment!==u.deployAt||!permissions(u).attack)return;
+  const target=this.s.enemies.find(e=>e.uid===packet.target&&e.hp>0);if(!target)return;
+  const shot={...packet,speed:TENTATIVE_PROJECTILE_SPEED,returning:false};
+  if(packet.ranged){this.s.projectiles.push(shot);if(packet.returns)u.pendingReturns=(u.pendingReturns||0)+1;}
+  else this.impactNativeAttack(u,target,shot);
+  if(packet.hit===0&&packet.storedEnergy)for(let n=0;n<packet.storedEnergy;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.baseAmount??packet.amount,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',antiAir:true,ownerDeployment:u.deployAt});
+  if(packet.drone&&packet.hit===0){const trait=branchTrait(this.profile(u)).values;u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.amount*u.droneScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',antiAir:true,ownerDeployment:u.deployAt});}
  }
  impactNativeAttack(u,target,packet){
   const p=this.profile(u),trait=branchTrait(p).values,eligible=e=>e.hp>0&&!e.invulnerable&&!permissions(e).sleeping&&(packet.antiAir||!e.flying||e.uid===target.uid);
   if(packet.style==='chain'){
    const visited=new Set();let victim=target,power=packet.amount;const max=trait['attack@max_target']??3;
-   for(let i=0;victim&&i<max;i++){visited.add(victim.uid);this.hit(u,victim,power,packet.type);applyStatus(victim,'sluggish',trait['attack@sluggish']??.5,{source:u.uid});const previous=victim;victim=this.s.enemies.filter(e=>eligible(e)&&!visited.has(e.uid)&&Math.hypot(e.x-previous.x,e.y-previous.y)<=1.7).sort((a,b)=>Math.hypot(a.x-previous.x,a.y-previous.y)-Math.hypot(b.x-previous.x,b.y-previous.y)||(b.progress||0)-(a.progress||0))[0];power*=.85;}return;
+   for(let i=0;victim&&i<max;i++){visited.add(victim.uid);this.hit(u,victim,power,packet.type);applyStatus(victim,'sluggish',trait['attack@sluggish']??.5,{source:u.uid});const previous=victim;victim=this.s.enemies.filter(e=>eligible(e)&&!visited.has(e.uid)&&Math.hypot(e.x-previous.x,e.y-previous.y)<=1.7).sort((a,b)=>Math.hypot(a.x-previous.x,a.y-previous.y)-Math.hypot(b.x-previous.x,b.y-previous.y)||(a.progress||0)-(b.progress||0))[0];power*=.85;}this.emit('impact',{x:target.x,y:target.y,radius:1.7,style:'chain',type:packet.type});return;
   }
   const splash=packet.style==='splash'||packet.style==='aftershock'||packet.style==='hammer'||(packet.style==='fortress'&&target.block!==u.uid);
   const victims=splash?this.s.enemies.filter(e=>eligible(e)&&Math.hypot(e.x-target.x,e.y-target.y)<=packet.radius):[target];
   for(const e of victims){const scale=packet.style==='hammer'&&e.uid!==target.uid?(trait['attack@atk_scale_2']??.5):1;this.hit(u,e,packet.amount*scale,packet.type);}
-  if(packet.style==='aftershock')for(const e of victims)if(e.hp>0)this.hit(u,e,packet.amount*(trait['attack@append_atk_scale']??.5),packet.type);
+  if(packet.style==='aftershock')for(const e of victims)if(e.hp>0)scheduleStrikes(this.s,1,{owner:u.uid,target:e.uid,amount:packet.amount*(trait['attack@append_atk_scale']??.5),type:packet.type,aftershock:true,delay:2/30});
+  this.emit('impact',{x:target.x,y:target.y,radius:splash?packet.radius||0:0,style:packet.style,type:packet.type});
  }
  advanceNativeProjectiles(dt){
   const packets=this.s.projectiles;this.s.projectiles=[];for(const packet of packets){const u=this.s.units.find(u=>u.uid===packet.owner);if(!u)continue;
@@ -1806,73 +1970,84 @@ class NativeBattle {
    const dx=target.x-packet.x,dy=target.y-packet.y,d=Math.hypot(dx,dy);if(d<=packet.speed*dt){packet.x=target.x;packet.y=target.y;this.impactNativeAttack(u,target,packet);if(packet.returns){packet.returning=true;this.s.projectiles.push(packet);}}else{packet.x+=dx/d*packet.speed*dt;packet.y+=dy/d*packet.speed*dt;this.s.projectiles.push(packet);}
   }
  }
+ emit(type,extra={}){emitEvent(this.s,type,extra);}
  params(id){const b=this.data.season.bondInfoDict[id];return blackboard(this.data.season.effectBuffInfoDataDict[b?.effectId]?.find(e=>e.key==='env_gbuff_new')?.blackboard);}
  owns(u,id){const own=this.economy.ownBonds(u.source);return own.includes(id)||(own.includes('maniShip')&&this.data.common.bondInfoDict[id]?.isPower&&this.rows[id]?.active);}
  on(id){return !!this.rows[id]?.active;}
  stats(u){
-  const p=this.profile(u),a={...p.attributes},l=this.layers,has=id=>this.on(id)&&this.owns(u,id);let atk=0,hp=0,def=0,as=0;
-  if(has('yanShip')){const b=this.params('yanShip');atk+=b.base_atk+b.atk_per_stack*(l.yanShip||0);}
-  if(has('egirShip')){const b=this.params('egirShip');hp+=b.base_max_hp+b.max_hp_per_stack*(l.egirShip||0);}
-  if(this.on('steadShip')){const b=this.params('steadShip');hp+=b.base_max_hp+b.max_hp_per_stack*(l.steadShip||0);}
-  if(this.on('deputShip')){const b=this.params('deputShip');def+=b.base_def+b.def_per_stack*(l.deputShip||0);a.respawnTime*=.7;}
-  if(this.on('preciShip')&&(has('preciShip')||(this.rows.preciShip.count>=3&&p.position==='RANGED'))){const b=this.params('preciShip');atk+=b.base_atk+b.atk_per_stack*(l.preciShip||0);}
-  if(has('soloShip')){atk+=.6;hp+=.6;}
-  if(this.on('suntShip')&&p.isGolden)atk+=.3;
-  if(this.on('raidShip')&&(l.raidShip||0)>=50)as+=50;
-  if(has('siracusaShip')){const b=this.params('siracusaShip');if(this.s.time-u.deployAt<b.base_duration+b.duration_per_stack*(l.siracusaShip||0))as+=b.base_attack_speed+b.attack_speed_per_stack*(l.siracusaShip||0);}
-  if(this.on('skillfulShip')){const radius=(l.skillfulShip||0)>=40?1.42:1.01;if(this.s.units.some(v=>v.deployed&&v.hp>0&&this.owns(v,'skillfulShip')&&Math.hypot(u.x-v.x,u.y-v.y)<radius))as+=10+(l.skillfulShip||0);}
-  a.spRecoveryPerSec=p.attributes.spRecoveryPerSec??1;
-  for(const g of p.garrisons){const b=blackboard(g.blackboard);if(g.battleRuneKey==='char_attribute_mul'){a.atk*=b.atk??1;a.maxHp*=b.max_hp??1;}if(g.battleRuneKey==='env_gbuff_new_with_verify'&&b.bond_id&&b.atk_per_stack)atk+=b.atk_per_stack*(l[b.bond_id]||0);if(b.sp_recovery_per_sec)a.spRecoveryPerSec+=b.sp_recovery_per_sec;}
-  for(const item of u.source.equipment){const record=this.data.season.trapChessDataDict[item.chessId];for(const effect of this.data.season.effectBuffInfoDataDict[record?.effectId]||[]){const b=blackboard(effect.blackboard);if(effect.key==='char_attribute_mul'){a.atk*=b.atk??1;a.maxHp*=b.max_hp??1;a.def*=b.def??1;}else if(effect.key.startsWith('env_gbuff')){atk+=b.atk||0;hp+=b.max_hp||0;def+=b.def||0;as+=b.attack_speed||0;a.magicResistance+=b.magic_resistance||0;a.spRecoveryPerSec+=b.sp_recovery_per_sec||0;}}}
-  if(has('victoriaShip')&&this.rows.victoriaShip.count>=6)for(const i of u.source.equipment)atk+=this.data.season.trapChessDataDict[i.chessId].isGolden?.8:.5;
+  const p=this.profile(u),base={...p.attributes},l=this.layers,has=id=>this.on(id)&&this.owns(u,id),parts=[];
+  let atk=0,hp=0,def=0,as=0;const muls={atk:[],maxHp:[],def:[]};
+  const note=(stat,layer,v,src)=>{if(v)parts.push({stat,layer,v,src});};
+  const ratio=(stat,v,src)=>{if(!v)return;if(src.startsWith('盟约')||src.startsWith('策略')||src==='装备'||src==='部署加攻'||src==='击倒加攻'){muls[stat].push(1+v);note(stat,'mul',1+v,src);return;}if(stat==='atk')atk+=v;else if(stat==='maxHp')hp+=v;else def+=v;note(stat,'ratio',v,src);};
+  const mul=(stat,v,src)=>{if(!Number.isFinite(v)||v===1)return;muls[stat].push(v);note(stat,'mul',v,src);};
+  if(has('yanShip')){const b=this.params('yanShip'),v=b.base_atk+b.atk_per_stack*(l.yanShip||0);ratio('atk',v,'盟约·炎国');}
+  if(has('egirShip')){const b=this.params('egirShip'),v=b.base_max_hp+b.max_hp_per_stack*(l.egirShip||0);ratio('maxHp',v,'盟约·阿戈尔');}
+  if(this.on('steadShip')){const b=this.params('steadShip'),v=b.base_max_hp+b.max_hp_per_stack*(l.steadShip||0);ratio('maxHp',v,'盟约·坚毅');}
+  if(this.on('deputShip')){const b=this.params('deputShip'),v=b.base_def+b.def_per_stack*(l.deputShip||0);ratio('def',v,'盟约·代行');base.respawnTime*=.7;}
+  if(this.on('preciShip')&&(has('preciShip')||(this.rows.preciShip.count>=3&&p.position==='RANGED'))){const b=this.params('preciShip'),v=b.base_atk+b.atk_per_stack*(l.preciShip||0);ratio('atk',v,'盟约·精密');}
+  if(has('soloShip')){ratio('atk',.6,'盟约·独行');ratio('maxHp',.6,'盟约·独行');}
+  if(this.on('suntShip')&&p.isGolden)ratio('atk',.3,'盟约·萨米');
+  if(this.on('raidShip')&&(l.raidShip||0)>=50){as+=50;note('attackSpeed','add',50,'盟约·游击');}
+  if(has('siracusaShip')){const b=this.params('siracusaShip');if(this.s.time-u.deployAt<b.base_duration+b.duration_per_stack*(l.siracusaShip||0)){const v=b.base_attack_speed+b.attack_speed_per_stack*(l.siracusaShip||0);as+=v;note('attackSpeed','add',v,'盟约·叙拉古');}}
+  if(this.on('skillfulShip')){const radius=(l.skillfulShip||0)>=40?1.42:1.01;if(this.s.units.some(v=>v.deployed&&v.hp>0&&this.owns(v,'skillfulShip')&&Math.hypot(u.x-v.x,u.y-v.y)<radius)){const v=10+(l.skillfulShip||0);as+=v;note('attackSpeed','add',v,'盟约·技巧');}}
+  base.spRecoveryPerSec=p.attributes.spRecoveryPerSec??1;
+  for(const g of p.garrisons){const b=blackboard(g.blackboard);if(g.battleRuneKey==='char_attribute_mul'){mul('atk',b.atk??1,'卫戍');mul('maxHp',b.max_hp??1,'卫戍');}if(g.battleRuneKey==='env_gbuff_new_with_verify'&&b.bond_id&&b.atk_per_stack)ratio('atk',b.atk_per_stack*(l[b.bond_id]||0),'卫戍');if(b.sp_recovery_per_sec)base.spRecoveryPerSec+=b.sp_recovery_per_sec;}
+  for(const item of u.source.equipment){const record=this.data.season.trapChessDataDict[item.chessId];for(const effect of this.data.season.effectBuffInfoDataDict[record?.effectId]||[]){const b=blackboard(effect.blackboard);if(effect.key==='char_attribute_mul'){mul('atk',b.atk??1,'装备');mul('maxHp',b.max_hp??1,'装备');mul('def',b.def??1,'装备');}else if(effect.key.startsWith('env_gbuff')){ratio('atk',b.atk||0,'装备');ratio('maxHp',b.max_hp||0,'装备');ratio('def',b.def||0,'装备');as+=b.attack_speed||0;base.magicResistance+=b.magic_resistance||0;base.spRecoveryPerSec+=b.sp_recovery_per_sec||0;}}}
+  if(has('victoriaShip')&&this.rows.victoriaShip.count>=6)for(const i of u.source.equipment)ratio('atk',this.data.season.trapChessDataDict[i.chessId].isGolden?.8:.5,'盟约·维多利亚');
   const band=this.s.band,count=Object.values(this.rows).filter(b=>b.active).length;
-  if(band==='band_amiya'&&count>=3){const n=count>=5?.4:count===4?.3:.2;atk+=n;hp+=n;}
-  if(band==='band_dusk'&&this.s.units.filter(v=>v.id===u.id).length>1)atk+=.3;
-  if(band==='band_ioleta'&&p.isGolden){const n=this.s.units.filter(v=>this.profile(v).isGolden).length*.1;atk+=n;hp+=n;}
-  atk+=u.deathBuff||0;atk+=u.deploymentBuff||0;
-  if(u.skillLeft>0||u.ammo>0){const b=blackboard(p.skill?.blackboard);atk+=b.atk||0;hp+=b.max_hp||0;def+=b.def||0;as+=b.attack_speed||0;a.baseAttackTime=Math.max(.1,a.baseAttackTime+(b.base_attack_time||0));}
-  const branch=branchBehavior(p,this.skillActive(u)),trait=branchTrait(p).values;if(p.branch==='phalanx'&&!this.skillActive(u)){def+=trait.def??2;a.magicResistance+=trait.magic_resistance??20;}if(p.branch==='librator'){atk+=(trait.atk??2)*Math.min(1,Math.floor(u.branchCharge||0)/(trait.max_stack_cnt??40));if(!this.skillActive(u))a.blockCnt=0;}if(branch.blockZeroDuringSkill&&this.skillActive(u))a.blockCnt=0;if(branch.taunt!==undefined)a.tauntLevel=Math.min(a.tauntLevel??0,branch.taunt);const status=statusAttributeChanges(u);a.atk*=1+atk;a.maxHp*=1+hp;a.def*=1+def;a.attackSpeed=Math.max(10,Math.min(600,a.attackSpeed+as+status.attackSpeed));a.magicResistance+=status.resistance;for(const e of this.economy.s.operatorModifiers||[])for(const[k,v]of Object.entries(blackboard(e.blackboard))){const key={max_hp:'maxHp',atk:'atk',def:'def'}[k];if(key)a[key]*=v;}return a;
+  if(band==='band_amiya'&&count>=3){const n=count>=5?.4:count===4?.3:.2;ratio('atk',n,'策略·阿米娅');ratio('maxHp',n,'策略·阿米娅');}
+  if(band==='band_dusk'&&this.s.units.filter(v=>v.id===u.id).length>1)ratio('atk',.3,'策略·夕');
+  if(band==='band_ioleta'&&p.isGolden){const n=this.s.units.filter(v=>this.profile(v).isGolden).length*.1;ratio('atk',n,'策略·伊奥莱塔');ratio('maxHp',n,'策略·伊奥莱塔');}
+  ratio('atk',u.deathBuff||0,'击倒加攻');ratio('atk',u.deploymentBuff||0,'部署加攻');
+  if(u.skillLeft>0||u.ammo>0){const b=blackboard(p.skill?.blackboard);ratio('atk',b.atk||0,'技能');ratio('maxHp',b.max_hp||0,'技能');ratio('def',b.def||0,'技能');as+=b.attack_speed||0;base.baseAttackTime=Math.max(.1,base.baseAttackTime+(b.base_attack_time||0));}
+  const branch=branchBehavior(p,this.skillActive(u)),trait=branchTrait(p).values;if(p.branch==='phalanx'&&!this.skillActive(u)){ratio('def',trait.def??2,'法阵');base.magicResistance+=trait.magic_resistance??20;}if(p.branch==='librator'){ratio('atk',(trait.atk??2)*Math.min(1,Math.floor(u.branchCharge||0)/(trait.max_stack_cnt??40)),'解放者');if(!this.skillActive(u))base.blockCnt=0;}if(branch.blockZeroDuringSkill&&this.skillActive(u))base.blockCnt=0;if(branch.taunt!==undefined)base.tauntLevel=Math.min(base.tauntLevel??0,branch.taunt);
+  const status=statusAttributeChanges(u);as+=status.attackSpeed;base.magicResistance+=status.resistance;
+  for(const e of this.economy.s.operatorModifiers||[])for(const[k,v]of Object.entries(blackboard(e.blackboard))){const key={max_hp:'maxHp',atk:'atk',def:'def'}[k];if(key)mul(key,v,'全局修正');}
+  const a={...base,atk:combineStat(base.atk,0,atk,muls.atk),maxHp:combineStat(base.maxHp,0,hp,muls.maxHp),def:combineStat(base.def,0,def,muls.def),attackSpeed:Math.max(10,Math.min(600,base.attackSpeed+as)),parts};
+  return a;
  }
  range(u,skill=false){const p=this.profile(u),r=skill&&p.skill?.rangeId?this.data.ranges[p.skill.rangeId]:p.range;let grids=r?.grids||[{row:0,col:1}];if(p.branch==='fortress'&&!grids.some(g=>g.row===0&&g.col===0))grids=grids.concat({row:0,col:0});return grids.map(g=>{let x=g.col,y=-g.row;for(let i=0;i<u.dir;i++)[x,y]=[-y,x];return{x:u.x+x,y:u.y+y};});}
- inside(u,e,skill=(u.skillLeft>0||u.ammo>0)){return this.range(u,skill).some(g=>Math.abs(g.x-e.x)<=.7&&Math.abs(g.y-e.y)<=.7);}
- targets(u){const behavior=this.behavior(u);return this.s.enemies.filter(e=>e.hp>0&&!e.invulnerable&&!e.untargetable&&!permissions(e).sleeping&&(e.block===u.uid||((!e.flying||behavior.antiAir)&&(!behavior.airOnlyIdle||this.skillActive(u)||e.flying)&&this.inside(u,e)))).sort((a,b)=>Number(b.block===u.uid)-Number(a.block===u.uid)||(behavior.priority==='air'?Number(b.flying)-Number(a.flying):behavior.priority==='defense'?a.def-b.def:behavior.priority==='weight'?(b.weight||0)-(a.weight||0):0)||(b.progress||0)-(a.progress||0)||a.uid-b.uid);}
+ inside(u,e,skill=(u.skillLeft>0||u.ammo>0)){if(e.hidden)return false;return containsTarget(this.range(u,skill).map(g=>[g.x,g.y]),e);}
+ targets(u){const behavior=this.behavior(u),p=this.profile(u);return this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.invulnerable&&!e.untargetable&&!permissions(e).sleeping&&(e.block===u.uid||((!e.flying||behavior.antiAir)&&(!behavior.airOnlyIdle||this.skillActive(u)||e.flying)&&this.inside(u,e)))).sort((a,b)=>compareOperatorTargets(a,b,u.uid,behavior.priority,p.position));}
  prepareWaves(turn){const plan=nativeWavePlan(this.data,turn,this.economy.s.waveRoster);this.level=plan.level;this.s.queue=plan.queue;this.s.total=plan.total;this.combatScale=plan.scale||{atk:1,hp:1,moveSpeed:1};}
  path(route,flying){
-  const to=p=>({x:p.col-this.map.origin.col,y:this.map.origin.row-p.row}),start=to(route.startPosition),end=to(route.endPosition),points=[start,...(route.checkpoints||[]).filter(c=>c.position&&['MOVE','PATROL_MOVE'].includes(c.type)).map(c=>to(c.position)),end];if(flying)return points;
-  const result=[start],walk=p=>p.x>=0&&p.y>=0&&p.x<this.map.cols&&p.y<this.map.rows&&this.map.grid[p.y][p.x].passableMask!=='FLY_ONLY'&&this.map.grid[p.y][p.x].passableMask!=='NONE';
-  for(let n=1;n<points.length;n++){
-   const from=points[n-1],dest=points[n],key=p=>p.x+','+p.y,queue=[from],seen=new Map([[key(from),null]]),cost=new Map([[key(from),0]]),closed=new Set();
-   const steps=route.allowDiagonalMove?[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]:[[1,0],[-1,0],[0,1],[0,-1]];
+  const to=p=>({x:p.col-this.map.origin.col,y:this.map.origin.row-p.row});
+  const walk=p=>p.x>=0&&p.y>=0&&p.x<this.map.cols&&p.y<this.map.rows&&this.map.grid[p.y][p.x].passableMask!=='FLY_ONLY'&&this.map.grid[p.y][p.x].passableMask!=='NONE';
+  const bfs=(from,dest)=>{
+   if(flying)return from.x===dest.x&&from.y===dest.y?[]:[dest];
+   const key=p=>p.x+','+p.y,queue=[from],seen=new Map([[key(from),null]]),cost=new Map([[key(from),0]]),closed=new Set();
+   const dirs=route.allowDiagonalMove?[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]:[[1,0],[-1,0],[0,1],[0,-1]];
    while(queue.length){queue.sort((a,b)=>cost.get(key(a))-cost.get(key(b)));const p=queue.shift(),pk=key(p);if(closed.has(pk))continue;closed.add(pk);if(pk===key(dest))break;
-    for(const [dx,dy]of steps){const q={x:p.x+dx,y:p.y+dy},qk=key(q);if(!walk(q)||closed.has(qk)||(dx&&dy&&(!walk({x:p.x+dx,y:p.y})||!walk({x:p.x,y:p.y+dy}))))continue;const next=cost.get(pk)+Math.hypot(dx,dy);if(next<(cost.get(qk)??Infinity)){cost.set(qk,next);seen.set(qk,p);queue.push(q);}}
+    for(const [dx,dy]of dirs){const q={x:p.x+dx,y:p.y+dy},qk=key(q);if(!walk(q)||closed.has(qk)||(dx&&dy&&(!walk({x:p.x+dx,y:p.y})||!walk({x:p.x,y:p.y+dy}))))continue;const next=cost.get(pk)+Math.hypot(dx,dy);if(next<(cost.get(qk)??Infinity)){cost.set(qk,next);seen.set(qk,p);queue.push(q);}}
    }
-   if(!seen.has(key(dest)))throw Error('原始路线不可达：'+key(from)+' → '+key(dest));const segment=[];let p=dest;while(p&&key(p)!==key(from)){segment.unshift(p);p=seen.get(key(p));}result.push(...segment);
-  }
-  return result;
+   if(!seen.has(key(dest)))return null;const segment=[];let p=dest;while(p&&key(p)!==key(from)){segment.unshift(p);p=seen.get(key(p));}return segment;
+  };
+  return compileRoute(route,to,!flying,bfs);
  }
- spawn(q){const raw=this.level.enemyProfiles[q.id]||this.data.enemies[q.id];if(!raw)throw Error('缺少敌人数据 '+q.id);const a={...raw.attributes};for(const e of this.economy.s.enemyModifiers||[])for(const[k,v]of Object.entries(blackboard(e.blackboard))){const key={max_hp:'maxHp',atk:'atk',def:'def',magic_resistance:'magicResistance'}[k];if(key)a[key]=e.key.endsWith('_mul')?a[key]*v:a[key]+v;}const scale=this.s.benchmark?{atk:1,hp:1,moveSpeed:1}:this.combatScale||{atk:1,hp:1,moveSpeed:1},flying=raw.motion==='FLY'||this.level.routes[q.route].motionMode==='FLY',route=this.path(this.level.routes[q.route],flying),pos=route[0];this.s.enemies.push({uid:this.s.nextId++,id:q.id,name:raw.name,x:pos.x,y:pos.y,hp:a.maxHp*scale.hp,maxHp:a.maxHp*scale.hp,atk:a.atk*scale.atk,weight:a.massLevel??0,def:a.def,res:a.magicResistance,speed:(a.moveSpeed||0)*scale.moveSpeed,interval:a.baseAttackTime||1,attackSpeed:a.attackSpeed||100,regen:a.hpRecoveryPerSec||0,canAttack:raw.applyWay!=='NONE',ranged:raw.applyWay==='RANGED',range:raw.rangeRadius||0,damageType:(raw.description||'').includes('法术')?'arts':'physical',flying,route,segment:0,progress:0,block:null,leak:raw.lifePointReduce??1,statuses:[],immunities:{stun:a.stunImmune,silence:a.silenceImmune,frozen:a.frozenImmune,sleep:a.sleepImmune,levitate:a.levitateImmune},shield:0,attackCooldown:0,action:null});}
+ spawn(q){const raw=this.level.enemyProfiles[q.id]||this.data.enemies[q.id];if(!raw)throw Error('缺少敌人数据 '+q.id);const a={...raw.attributes};for(const e of this.economy.s.enemyModifiers||[])for(const[k,v]of Object.entries(blackboard(e.blackboard))){const key={max_hp:'maxHp',atk:'atk',def:'def',magic_resistance:'magicResistance'}[k];if(key)a[key]=e.key.endsWith('_mul')?a[key]*v:a[key]+v;}const scale=this.s.benchmark?{atk:1,hp:1,moveSpeed:1}:this.combatScale||{atk:1,hp:1,moveSpeed:1},flying=raw.motion==='FLY'||this.level.routes[q.route].motionMode==='FLY',route=this.path(this.level.routes[q.route],flying),pos=route[0];this.s.enemies.push({uid:this.s.nextId++,id:q.id,name:raw.name,x:pos.x,y:pos.y,hp:a.maxHp*scale.hp,maxHp:a.maxHp*scale.hp,atk:a.atk*scale.atk,weight:a.massLevel??0,blockCost:a.blockCnt||1,def:a.def,res:a.magicResistance,speed:(a.moveSpeed||0)*scale.moveSpeed,interval:a.baseAttackTime||1,attackSpeed:a.attackSpeed||100,regen:a.hpRecoveryPerSec||0,canAttack:raw.applyWay!=='NONE',ranged:raw.applyWay==='RANGED',range:raw.rangeRadius||0,damageType:(raw.description||'').includes('法术')?'arts':'physical',flying,route,cmd:0,cmdLeft:null,segment:0,progress:remainingDistance({route,cmd:0,x:pos.x,y:pos.y}),block:null,hidden:false,untargetable:false,leak:raw.lifePointReduce??1,statuses:[],immunities:{stun:a.stunImmune,silence:a.silenceImmune,frozen:a.frozenImmune,sleep:a.sleepImmune,levitate:a.levitateImmune},shield:0,attackCooldown:0,action:null});}
  event(u,event){
   const p=this.profile(u);for(const g of p.garrisons){if(g.eventType!=='IN_BATTLE'||g.effectType!=='ADD_BOND')continue;const b=blackboard(g.blackboard),key=b.key||'',match=event==='kill'?/selfkillenemy/.test(key):event==='skill'?/skill/.test(key):event==='deploy'?/born|deploy/.test(key):event==='ammo'?/consume_ammo/.test(key):false;if(!match)continue;const id=g.id+':'+event;u.counters[id]=(u.counters[id]||0)+1;const threshold=b.check_cnt||b.consume_count||1;if(u.counters[id]%threshold)continue;const limit=b.max_cnt||b.max_count||b.max_trigger_count||Infinity;if(u.counters[id]/threshold>limit)continue;const bonds=b.bond_id?String(b.bond_id).split(','):this.economy.ownBonds(u.source);for(const bond of bonds)this.economy.addLayers(bond,b.bond_add_type==='by_charlevel'?p.rank:(b.bond_add_count??1));}
  }
- deploy(u){u.deployed=true;u.branchCharge=0;u.branchSkillActive=false;u.pendingReturns=0;u.energy=0;u.magazine=branchTrait(this.profile(u)).values.value??8;u.pendingSelfHeals=[];u.droneTarget=null;u.droneScale=0;u.reaperWindowStart=-999;u.reaperWindowCount=0;u.nextSelfHealAt=0;u.hp=u.maxHp=this.stats(u).maxHp;u.sp=initSpOf(this.profile(u).skill);u.spCd=0;u.spLock=0;u.ammo=0;u.ammoMax=0;if(this.on('soloShip')&&this.owns(u,'soloShip'))u.sp+=15;u.deployAt=this.s.time;this.event(u,'deploy');if(this.on('kazimierzShip'))for(const v of this.s.units)if(this.owns(v,'kazimierzShip'))v.deploymentBuff=Math.min(.5+.01*(this.layers.kazimierzShip||0),(v.deploymentBuff||0)+.2);}
- activate(u){const p=this.profile(u),sk=p.skill;if(!sk||!permissions(u).skill||!usesSp(sk))return;const b=blackboard(sk.blackboard),cost=this.spCost(u),kind=skillKind(sk);if(u.sp<cost||(sk.skillType!=='AUTO'&&this.s.time-u.lastSkill<3))return;if(kind==='instant'&&sk.skillType==='AUTO'&&(u.action||u.attackCooldown>0))return;u.sp=Math.max(0,Math.trunc(u.sp)-cost);u.lastSkill=this.s.time;u.skillCount++;u.ammo=kind==='ammo'?ammoCount(sk):0;u.ammoMax=u.ammo;u.skillLeft=kind==='duration'?(sk.duration<0?1e9:sk.duration):0;if(kind==='instant'){const t=attackTiming(this.stats(u).baseAttackTime,this.stats(u).attackSpeed);u.spLock=t.seconds;}this.event(u,'skill');if(kind==='instant'&&sk.skillType==='AUTO'&&spTypeOf(sk)==='INCREASE_WHEN_ATTACK'){u.enhanced=true;return;}if(kind==='instant'){const targets=this.targets(u);if(p.branch!=='incantationmedic'&&/回复.*生命|治疗/.test(sk.description||'')){for(const v of this.healingTargets(u))this.heal(u,v,this.stats(u).atk*(b.heal_scale||b.atk_scale||1));}else if(b.atk_scale){for(const e of targets.slice(0,b.max_target||999))this.hit(u,e,this.stats(u).atk*b.atk_scale,this.baseDamageType(u));}if(b.stun)for(const e of targets)applyStatus(e,'stun',b.stun,{source:u.uid});}}
+ deploy(u){u.deployed=true;u.branchCharge=0;u.branchSkillActive=false;u.pendingReturns=0;u.energy=0;u.magazine=branchTrait(this.profile(u)).values.value??8;u.pendingSelfHeals=[];u.droneTarget=null;u.droneScale=0;u.reaperWindowStart=-999;u.reaperWindowCount=0;u.nextSelfHealAt=0;u.hp=u.maxHp=this.stats(u).maxHp;u.sp=initSpOf(this.profile(u).skill);u.spCd=0;u.spLock=0;u.ammo=0;u.ammoMax=0;u.lockId=null;if(this.on('soloShip')&&this.owns(u,'soloShip'))u.sp+=15;u.deployAt=this.s.time;this.event(u,'deploy');this.emit('deploy',{uid:u.uid,x:u.x,y:u.y});if(this.on('kazimierzShip'))for(const v of this.s.units)if(this.owns(v,'kazimierzShip'))v.deploymentBuff=Math.min(.5+.01*(this.layers.kazimierzShip||0),(v.deploymentBuff||0)+.2);}
+ activate(u){const p=this.profile(u),sk=p.skill;if(!sk||!permissions(u).skill||!usesSp(sk))return;const b=blackboard(sk.blackboard),cost=this.spCost(u),kind=skillKind(sk),flow=skillFlow(sk);if(u.sp<cost||(sk.skillType!=='AUTO'&&this.s.time-u.lastSkill<3))return;if(kind==='instant'&&sk.skillType==='AUTO'&&(u.action||u.attackCooldown>0))return;if(flow.resetAttack){u.action=null;u.attackCooldown=0;}u.sp=Math.max(0,Math.trunc(u.sp)-cost);u.lastSkill=this.s.time;u.skillCount++;u.ammo=kind==='ammo'?ammoCount(sk):0;u.ammoMax=u.ammo;u.skillLeft=kind==='duration'?(sk.duration<0?1e9:sk.duration):0;if(kind==='instant'){const t=attackTiming(this.stats(u).baseAttackTime,this.stats(u).attackSpeed,windupSeconds(this.stats(u).baseAttackTime,p.attackWindup));u.spLock=t.seconds;}this.event(u,'skill');this.emit('skill-start',{uid:u.uid,kind,name:sk.name,x:u.x,y:u.y});if(kind==='instant'&&sk.skillType==='AUTO'&&spTypeOf(sk)==='INCREASE_WHEN_ATTACK'){u.enhanced=true;return;}if(kind==='instant'){const targets=this.targets(u);if(p.branch!=='incantationmedic'&&/回复.*生命|治疗/.test(sk.description||'')){for(const v of this.healingTargets(u))this.heal(u,v,this.stats(u).atk*(b.heal_scale||b.atk_scale||1));}else if(b.atk_scale){for(const e of targets.slice(0,b.max_target||999))this.hit(u,e,this.stats(u).atk*b.atk_scale,this.baseDamageType(u));}if(b.stun)for(const e of targets){if(applyStatus(e,'stun',b.stun,{source:u.uid}))this.emit('control',{uid:e.uid,kind:'stun',x:e.x,y:e.y});}}}
  spCost(u){const p=this.profile(u),base=p.skill?.spData.spCost||0;return this.on('suntShip')&&this.rows.suntShip.count>=5&&p.isGolden?Math.floor(base*.7):base;}
  baseDamageType(u){const p=this.profile(u),description=p.skill?.description||'';if((u.skillLeft>0||u.ammo>0)&&description.includes('真实伤害'))return 'true';if((u.skillLeft>0||u.ammo>0)&&/变为.*法术|造成法术/.test(description))return 'arts';return this.behavior(u).damageType;}
- hit(u,e,amount,type){if(e.hp<=0||e.invulnerable||permissions(e).sleeping)return;const p=this.profile(u),stats=this.stats(u);let penetrationRatio=this.on('preciShip')&&this.rows.preciShip.count>=3&&(this.owns(u,'preciShip')||p.position==='RANGED')?.3:0;const physical=damage({amount,type:'physical',defense:e.def,penetrationRatio}),arts=damage({amount,type:'arts',resistance:Math.max(0,e.res+statusAttributeChanges(e).resistance),penetrationRatio});if(type!=='true'&&(this.s.band==='band_chen'||p.garrisons.some(g=>blackboard(g.blackboard).key==='act1autochess_gar_eff_chaos')))type=physical>=arts?'physical':'arts';let value=type==='physical'?physical:type==='arts'?arts:amount;
+ hit(u,e,amount,type){if(e.hp<=0||e.hidden||e.invulnerable||permissions(e).sleeping)return;const p=this.profile(u),stats=this.stats(u);let penetrationRatio=this.on('preciShip')&&this.rows.preciShip.count>=3&&(this.owns(u,'preciShip')||p.position==='RANGED')?.3:0;const physical=damage({amount,type:'physical',defense:e.def,penetrationRatio}),arts=damage({amount,type:'arts',resistance:Math.max(0,e.res+statusAttributeChanges(e).resistance),penetrationRatio});if(type!=='true'&&(this.s.band==='band_chen'||p.garrisons.some(g=>blackboard(g.blackboard).key==='act1autochess_gar_eff_chaos')))type=physical>=arts?'physical':'arts';let value=type==='physical'?physical:type==='arts'?arts:amount;
   if(this.on('victoriaShip')&&this.owns(u,'victoriaShip')&&u.source.equipment.length)value*=1.25+.008*(this.layers.victoriaShip||0);
   if(this.on('kjeragShip')&&this.owns(u,'kjeragShip'))value*=e.statuses.some(s=>s.kind==='cold'||s.kind==='frozen')?1.35+.01*(this.layers.kjeragShip||0):1.25;
   if(this.on('emptyShip')&&this.owns(u,'emptyShip'))value*=p.isGolden?1.4:1.2;
   if(type==='arts'&&e.artsWeak)value*=1+e.artsWeak.value;
-  const result=applyDamage(e,value,{type,sourceId:u.id,sourceUid:u.uid});const healingDamage=result.blocked?0:Math.max(0,value-result.shield);if(p.branch==='incantationmedic'&&healingDamage>0&&u.deployed&&u.hp>0){const target=this.healingTargets(u)[0];if(target)this.heal(u,target,healingDamage*(branchTrait(p).values.scale??.5));}if(!result.blocked&&value>0)this.selfHealAfterDamage(u);if(p.branch==='slower'&&healingDamage>0)applyStatus(e,'sluggish',branchTrait(p).values.sluggish??.8,{source:u.uid});u.damage+=result.total;this.s.damage[u.uid]=(this.s.damage[u.uid]||0)+result.total;this.s.effects.push({x:e.x,y:e.y,text:Math.round(result.total),life:.6,type});
+  const result=applyDamage(e,value,{type,sourceId:u.id,sourceUid:u.uid});const healingDamage=result.blocked?0:Math.max(0,value-result.shield);if(p.branch==='incantationmedic'&&healingDamage>0&&u.deployed&&u.hp>0){const target=this.healingTargets(u)[0];if(target)this.heal(u,target,healingDamage*(branchTrait(p).values.scale??.5));}if(!result.blocked&&value>0)this.selfHealAfterDamage(u);if(p.branch==='slower'&&healingDamage>0)applyStatus(e,'sluggish',branchTrait(p).values.sluggish??.8,{source:u.uid});u.damage+=result.total;this.s.damage[u.uid]=(this.s.damage[u.uid]||0)+result.total;this.emit('hit',{uid:e.uid,x:e.x,y:e.y,type,amount:result.total,blocked:!!result.blocked,skill:this.skillActive(u)});if(result.blocked)this.s.effects.push({x:e.x,y:e.y,text:'抵消',life:.5,type:'block'});
   if(type==='arts'&&this.on('arcaneShip')&&this.owns(u,'arcaneShip'))e.artsWeak={value:this.rows.arcaneShip.count>=3&&e.hp/e.maxHp<.5?.68+.014*(this.layers.arcaneShip||0):.2+.01*(this.layers.arcaneShip||0),until:this.s.time+3};
   if(e.hp<=0){this.s.kills++;this.event(u,'kill'); }
  }
- hurt(u,e){const evade=this.behavior(u).evasion;if(evade&&['physical','arts'].includes(e.damageType)&&this.economy.random()<(branchTrait(this.profile(u)).values.prob??evade)){this.s.effects.push({x:u.x,y:u.y,text:'闪避',life:.5,type:'evade'});return;}let value=damage({amount:e.atk,type:e.damageType,defense:this.stats(u).def,resistance:this.stats(u).magicResistance});if(this.on('emptyShip'))value*=.8;applyDamage(u,value,{type:e.damageType});u.lastDamagedAt=this.s.time;if(spTypeOf(this.profile(u).skill)==='INCREASE_WHEN_TAKEN_DAMAGE')gainSp(u,this.profile(u).skill,undefined,this.spCost(u));if(u.hp<=0){u.deployed=false;u.action=null;u.skillLeft=0;u.ammo=0;u.down=this.stats(u).respawnTime;if(this.s.band==='band_emperor')u.down*=.5;if(this.s.band==='band_ermengard'&&(this.s.revives||0)<3){this.s.revives=(this.s.revives||0)+1;u.down=0;}if(this.on('indomShip')&&this.profile(u).position==='MELEE'&&this.economy.random()<.18+.004*(this.layers.indomShip||0))u.down=0;if(this.s.band==='band_qalaisa')for(const v of this.s.units)if(v.deployed)v.deathBuff=Math.min(2,(v.deathBuff||0)+.2);if(this.s.band==='band_clementia'&&this.owns(u,'egirShip'))this.economy.addLayers('egirShip',this.profile(u).rank);}}
+ hurt(u,e){const evade=this.behavior(u).evasion;if(evade&&['physical','arts'].includes(e.damageType)&&this.economy.random()<(branchTrait(this.profile(u)).values.prob??evade)){this.s.effects.push({x:u.x,y:u.y,text:'闪避',life:.5,type:'evade'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'evade'});return;}let value=damage({amount:e.atk,type:e.damageType,defense:this.stats(u).def,resistance:this.stats(u).magicResistance});if(this.on('emptyShip'))value*=.8;const result=applyDamage(u,value,{type:e.damageType});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:e.damageType,amount:result.total,blocked:!!result.blocked});u.lastDamagedAt=this.s.time;if(spTypeOf(this.profile(u).skill)==='INCREASE_WHEN_TAKEN_DAMAGE')gainSp(u,this.profile(u).skill,undefined,this.spCost(u));if(u.hp<=0){u.deployed=false;u.action=null;u.skillLeft=0;u.ammo=0;u.down=this.stats(u).respawnTime;if(this.s.band==='band_emperor')u.down*=.5;if(this.s.band==='band_ermengard'&&(this.s.revives||0)<3){this.s.revives=(this.s.revives||0)+1;u.down=0;}if(this.on('indomShip')&&this.profile(u).position==='MELEE'&&this.economy.random()<.18+.004*(this.layers.indomShip||0))u.down=0;u.downMax=u.down;this.emit('down',{uid:u.uid,x:u.x,y:u.y,down:u.down});if(this.s.band==='band_qalaisa')for(const v of this.s.units)if(v.deployed)v.deathBuff=Math.min(2,(v.deathBuff||0)+.2);if(this.s.band==='band_clementia'&&this.owns(u,'egirShip'))this.economy.addLayers('egirShip',this.profile(u).rank);}}
  step(){
   if(this.s.finished)return;const dt=1/FPS;this.s.frame++;this.s.time=this.s.frame/FPS;while(this.s.queue.length&&this.s.queue[0].at<=this.s.time)this.spawn(this.s.queue.shift());
   for(const e of this.s.enemies){tickStatuses(e,dt);if(e.artsWeak?.until<this.s.time)e.artsWeak=null;}
   for(const u of this.s.units){
-   tickStatuses(u,dt);u.skillLeft=Math.max(0,u.skillLeft-dt);u.spLock=Math.max(0,(u.spLock||0)-dt);
+   tickStatuses(u,dt);const wasSkill=this.skillActive(u);u.skillLeft=Math.max(0,u.skillLeft-dt);u.spLock=Math.max(0,(u.spLock||0)-dt);
+   if(wasSkill&&!this.skillActive(u)){u.action=null;this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});}
    if(!u.deployed){if(u.hp<=0){u.down=Math.max(0,u.down-dt);if(u.down===0)this.deploy(u);}else if(this.s.time>=u.deployAt)this.deploy(u);continue;}if(u.hp<=0)continue;
    this.updateBranch(u,dt);const p=this.profile(u),skill=p.skill;let stats=this.stats(u),behavior=this.behavior(u);
    if(u.maxHp!==stats.maxHp){u.hp=u.hp/u.maxHp*stats.maxHp;u.maxHp=stats.maxHp;}recoverHP(u,(stats.hpRecoveryPerSec||0)*dt);
@@ -1889,23 +2064,26 @@ class NativeBattle {
    if(u.action&&--u.action.left<=0){const action=u.action;u.action=null;
     if(action.kind==='reload')u.magazine=Math.min(branchTrait(p).values.value??8,(u.magazine??0)+1);
     else if(action.kind==='charge')u.energy=Math.min(branchTrait(p).values.times??3,(u.energy||0)+1);
-    else{const released=this.releaseNativeAttack(u,action);if(released>0){if(behavior.magazine)u.magazine=Math.max(0,u.magazine-1);if(behavior.storage)u.energy=Math.max(0,(u.energy||0)-(action.storedEnergy||0));}u.lastAttack=this.s.time;if(spTypeOf(skill)==='INCREASE_WHEN_ATTACK'&&!action.enhanced)gainSp(u,skill,undefined,cost);if(u.ammo>0){u.ammo--;this.event(u,'ammo');}}
+    else{const released=this.releaseNativeAttack(u,action);if(released>0){if(behavior.magazine)u.magazine=Math.max(0,u.magazine-1);if(behavior.storage)u.energy=Math.max(0,(u.energy||0)-(action.storedEnergy||0));}u.lastAttack=this.s.time;if(spTypeOf(skill)==='INCREASE_WHEN_ATTACK'&&!action.enhanced)gainSp(u,skill,undefined,cost);if(u.ammo>0){u.ammo--;this.event(u,'ammo');this.emit('ammo',{uid:u.uid,x:u.x,y:u.y,ammo:u.ammo});if(u.ammo===0&&!u.skillLeft)this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});}}
    }
    if(u.action||u.attackCooldown>0||(behavior.returnProjectile&&u.pendingReturns>0))continue;
    const trait=branchTrait(p).values;
    if(behavior.magazine){u.magazine??=trait.value??8;if(u.magazine<=0||(!targets.length&&u.magazine<(trait.value??8))){u.action={kind:'reload',left:Math.max(1,Math.round(p.attributes.baseAttackTime*FPS))};continue;}}
-   if(behavior.storage&&!targets.length&&(u.energy||0)<(trait.times??3)){const t=attackTiming(stats.baseAttackTime,stats.attackSpeed);u.attackCooldown=t.frames;u.action={kind:'charge',left:t.windupFrames};continue;}
+   if(behavior.storage&&!targets.length&&(u.energy||0)<(trait.times??3)){const t=attackTiming(stats.baseAttackTime,stats.attackSpeed,windupSeconds(stats.baseAttackTime,p.attackWindup));u.attackCooldown=t.frames;u.action={kind:'charge',left:t.windupFrames};continue;}
    const active=this.skillActive(u)||u.enhanced,bb=active?blackboard(skill?.blackboard):{},defaultCount=behavior.style==='all'?this.s.enemies.length:behavior.style==='block-count'?Math.max(1,stats.blockCnt):behavior.targets||1;
    const count=bb.max_target??defaultCount,chosen=(healer?heals:targets).slice(0,count);
-   if(chosen.length){const timing=attackTiming(stats.baseAttackTime,stats.attackSpeed);u.attackCooldown=timing.frames;const hits=bb['attack@times']??bb.hit_count??bb.times??behavior.hits??1;u.action={kind:healer?'heal':'damage',left:timing.windupFrames,targets:chosen.map(e=>e.uid),amount:stats.atk*(bb.atk_scale??1),baseAmount:stats.atk,hits:Math.max(1,Math.min(10,hits)),type:this.baseDamageType(u),enhanced:!!u.enhanced,storedEnergy:behavior.storage?(u.energy||0):0};u.enhanced=false;}
+   if(chosen.length){const timing=attackTiming(stats.baseAttackTime,stats.attackSpeed,windupSeconds(stats.baseAttackTime,p.attackWindup));u.attackCooldown=timing.frames;const hits=bb['attack@times']??bb.hit_count??bb.times??behavior.hits??1;u.lockId=chosen[0].uid;u.action={kind:healer?'heal':'damage',left:timing.windupFrames,targets:chosen.map(e=>e.uid),amount:stats.atk*(bb.atk_scale??1),baseAmount:stats.atk,hits:Math.max(1,Math.min(10,hits)),type:this.baseDamageType(u),enhanced:!!u.enhanced,storedEnergy:behavior.storage?(u.energy||0):0};u.enhanced=false;}
   }
-  for(const e of this.s.enemies){if(e.hp<=0||e.trainingDummy)continue;const control=permissions(e),alive=this.s.units.filter(u=>u.hp>0&&u.deployed);e.block=null;if(!e.flying&&control.beBlocked){const b=alive.find(u=>permissions(u).block&&Math.hypot(u.x-e.x,u.y-e.y)<.72&&this.s.enemies.filter(v=>v!==e&&v.block===u.uid).length<(this.stats(u).blockCnt||0));if(b)e.block=b.uid;}
-   const target=e.block?alive.find(u=>u.uid===e.block):e.ranged?alive.filter(u=>!permissions(u).sleeping&&Math.hypot(u.x-e.x,u.y-e.y)<=e.range).sort((a,b)=>(this.stats(b).tauntLevel||0)-(this.stats(a).tauntLevel||0)||b.deployAt-a.deployAt)[0]:null;e.attackCooldown=Math.max(0,e.attackCooldown-1);
-   if(!control.attack)e.action=null;if(e.action&&--e.action.left<=0){const u=alive.find(u=>u.uid===e.action.target);e.action=null;if(u)this.hurt(u,e);}if(target&&e.canAttack&&control.attack&&!e.action&&!e.attackCooldown){const t=attackTiming(e.interval,e.attackSpeed);e.attackCooldown=t.frames;e.action={left:t.windupFrames,target:target.uid};}
-   if(!e.block&&!target&&control.move){let move=e.speed*dt*(e.statuses.some(s=>s.kind==='sluggish')?.2:1);while(move>0&&e.segment<e.route.length-1){const next=e.route[e.segment+1],dx=next.x-e.x,dy=next.y-e.y,d=Math.hypot(dx,dy);if(d<=move){e.x=next.x;e.y=next.y;e.segment++;move-=d;}else{e.x+=dx/d*move;e.y+=dy/d*move;move=0;}}e.progress=e.segment;if(e.segment>=e.route.length-1){this.s.leaks+=e.leak;e.hp=0;e.escaped=true;}}
+  resolveBlocks(this.s.units,this.s.enemies,u=>this.stats(u).blockCnt||0);
+  for(const e of this.s.enemies){if(e.hp<=0||e.trainingDummy)continue;const control=permissions(e),alive=this.s.units.filter(u=>u.hp>0&&u.deployed);
+   const target=e.hidden?null:e.block?alive.find(u=>u.uid===e.block):e.ranged?alive.filter(u=>!permissions(u).sleeping&&Math.hypot(u.x-e.x,u.y-e.y)<=e.range).sort((a,b)=>compareEnemyTargets({tauntLevel:this.stats(a).tauntLevel,deployAt:a.deployAt,uid:a.uid},{tauntLevel:this.stats(b).tauntLevel,deployAt:b.deployAt,uid:b.uid}))[0]:null;e.attackCooldown=Math.max(0,e.attackCooldown-1);
+   if(!control.attack||e.hidden)e.action=null;if(e.action&&--e.action.left<=0){const u=alive.find(u=>u.uid===e.action.target);e.action=null;if(u)this.hurt(u,e);}if(target&&e.canAttack&&control.attack&&!e.action&&!e.attackCooldown){const t=attackTiming(e.interval,e.attackSpeed,windupSeconds(e.interval));e.attackCooldown=t.frames;e.action={left:t.windupFrames,target:target.uid};}
+   if(advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),!!target||!!e.action)){this.s.leaks+=e.leak;e.hp=0;e.escaped=true;this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak});this.s.banner={text:'漏怪 −'+e.leak,life:1.4};}
   }
+  for(const packet of dueStrikes(this.s))this.deliverStrike(packet);
   this.advanceNativeProjectiles(dt);
-  this.s.effects=this.s.effects.filter(e=>(e.life-=dt)>0);this.s.enemies=this.s.enemies.filter(e=>e.hp>0);
+  if(this.s.banner){this.s.banner.life-=dt;if(this.s.banner.life<=0)this.s.banner=null;}
+  this.s.effects=this.s.effects.filter(e=>(e.life-=dt)>0);this.s.enemies=this.s.enemies.filter(e=>e.hp>0);pruneEvents(this.s);
   if(this.s.benchmark){if(this.s.time>=this.s.limit)this.finish('timeout');}else if((!this.s.queue.length&&!this.s.enemies.length)||this.s.time>=this.s.limit||this.s.leaks>=this.economy.s.hp)this.finish('complete');
  }
  finish(reason='manual'){if(this.s.finished)return;this.s.finished=true;this.s.result=this.s.benchmark?dummySummary(this.s.enemies[0],this.s.time,reason):{kind:'battle',elapsed:this.s.time,kills:this.s.kills,leaks:this.s.leaks+(this.s.time>=this.s.limit?this.s.enemies.reduce((n,e)=>n+e.leak,0):0),units:this.s.units.map(u=>({uid:u.uid,id:u.id,damage:u.damage,healing:u.healing})),totalDamage:Object.values(this.s.damage).reduce((a,b)=>a+b,0)};}
@@ -1995,6 +2173,95 @@ class NativeSession extends NativeEconomy {
 
 return {NativeSession};
 },
+"native-fx.js": function(load) {
+// Lightweight battle presentation. Animations follow simulation time; they never write combat state.
+const GAP={deploy:.16,attack:.05,hit:.04,skill:.14,ammo:.08,'skill-start':.14,'skill-end':.12,control:.12,down:.2,leak:.28,impact:.06};
+const TONE={deploy:430,attack:560,hit:190,skill:680,'skill-start':680,'skill-end':320,ammo:740,control:300,down:130,leak:90,impact:240};
+let ctx=null,heard=-1,last={};
+
+function resetFxClock(){heard=-1;last={};}
+function unlockAudio(){try{ctx??=new AudioContext();if(ctx.state==='suspended')ctx.resume();}catch{}}
+function beep(type,muted,volume){
+ if(muted||volume<=0)return;
+ try{ctx??=new AudioContext();if(ctx.state==='suspended')return;}catch{return;}
+ const now=ctx.currentTime,gap=GAP[type]??.1;if(now-(last[type]||0)<gap)return;last[type]=now;
+ const o=ctx.createOscillator(),g=ctx.createGain();
+ o.type=type==='leak'||type==='down'?'triangle':'square';
+ o.frequency.value=TONE[type]||400;
+ g.gain.value=Math.min(.06,volume*.06);g.gain.exponentialRampToValueAtTime(.0001,now+.09);
+ o.connect(g).connect(ctx.destination);o.onended=()=>{o.disconnect();g.disconnect();};o.start(now);o.stop(now+.1);
+}
+function playBattleEvents(s,muted,volume=1){
+ if(!s)return;
+ for(const e of s.events||[])if((e.id??e.t)>heard&&e.t<=s.time)beep(e.type,muted,volume);
+ heard=s.eventId??s.time;
+}
+function recent(events,t,type,span=.22){return (events||[]).filter(e=>e.type===type&&t-e.t>=0&&t-e.t<=span);}
+function mark(c,x,y,kind){
+ c.save();c.translate(x,y);c.strokeStyle='#f4f0e4';c.fillStyle='#1a2420';c.lineWidth=1.4;
+ if(kind==='stun'){c.beginPath();c.moveTo(-5,-6);c.lineTo(0,6);c.lineTo(5,-6);c.closePath();c.fill();c.stroke();}
+ else if(kind==='frozen'){c.beginPath();c.moveTo(0,-7);c.lineTo(4,0);c.lineTo(0,7);c.lineTo(-4,0);c.closePath();c.fill();c.stroke();}
+ else if(kind==='sleep'){c.font='9px sans-serif';c.fillStyle='#f4f0e4';c.fillText('Z',0,3);}
+ else if(kind==='silence'){c.beginPath();c.arc(0,0,5,0,Math.PI*2);c.moveTo(-3,-3);c.lineTo(3,3);c.stroke();}
+ else if(kind==='cold'){c.beginPath();c.moveTo(0,-6);c.lineTo(0,6);c.moveTo(-4,-3);c.lineTo(4,3);c.stroke();}
+ else if(kind==='shield'){c.beginPath();c.moveTo(0,-6);c.lineTo(5,-2);c.lineTo(4,5);c.lineTo(0,7);c.lineTo(-4,5);c.lineTo(-5,-2);c.closePath();c.fill();c.stroke();}
+ else if(kind==='barrier'){c.strokeRect(-5,-5,10,10);c.beginPath();c.moveTo(-5,0);c.lineTo(5,0);c.stroke();}
+ else{c.fillRect(-4,-4,8,8);}
+ c.restore();
+}
+function actorOffset(u,battle){
+ if(!u?.action||!u.lockId||u.action.kind==='reload'||u.action.kind==='charge')return {x:0,y:0};
+ const t=(battle?.s.enemies.find(e=>e.uid===u.lockId)||battle?.s.units.find(v=>v.uid===u.lockId));
+ if(!t)return {x:0,y:0};
+ const d=Math.hypot(t.x-u.x,t.y-u.y)||1;return {x:(t.x-u.x)/d*.12,y:(t.y-u.y)/d*.12};
+}
+function drawFx(c,point,z,battle,opts={}){
+ const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
+ for(const p of s.projectiles||[]){
+  const pos=point(p.x,p.y),arts=p.type==='arts',heal=p.type==='healing';
+  c.save();c.translate(pos.x,pos.y);
+  if(heal){c.strokeStyle='#8fe8b5';c.lineWidth=2;c.beginPath();c.moveTo(-6,0);c.lineTo(6,0);c.moveTo(0,-6);c.lineTo(0,6);c.stroke();}
+  else if(arts){c.fillStyle='#cda8ff';c.beginPath();c.moveTo(0,-5);c.lineTo(4,0);c.lineTo(0,5);c.lineTo(-4,0);c.closePath();c.fill();}
+  else{c.fillStyle='#fff0b1';c.beginPath();c.ellipse(0,0,6,2.4,Math.atan2(((s.enemies.find(e=>e.uid===p.target)||{}).y??p.y)-p.y,((s.enemies.find(e=>e.uid===p.target)||{}).x??p.x)-p.x)||0,0,Math.PI*2);c.fill();}
+  c.restore();
+ }
+ for(const e of recent(s.events,t,'impact',.28)){
+  if(!e.radius)continue;const p=point(e.x,e.y),r=e.radius*z.tw,fade=1-(t-e.t)/.28;
+  c.strokeStyle=e.damageType==='arts'?`rgba(180,140,255,${.55*fade})`:`rgba(255,230,150,${.5*fade})`;c.lineWidth=2;c.beginPath();c.ellipse(p.x,p.y,r,e.radius*z.th,0,0,Math.PI*2);c.stroke();
+ }
+ for(const e of recent(s.events,t,'attack',.2)){
+  if(e.kind!=='heal'){if(!reduce&&e.targetX!=null){const a=point(e.x,e.y),b=point(e.targetX,e.targetY);c.strokeStyle=e.damageType==='arts'?'#cda8ff':'#ffe6b1';c.lineWidth=2;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();}continue;}const p=point(e.x,e.y);c.strokeStyle='#8fe8b5aa';c.lineWidth=2;c.beginPath();c.arc(p.x,p.y,10+(t-e.t)*20,0,Math.PI*2);c.stroke();
+ }
+ for(const e of s.effects||[]){
+  if(e.type!=='healing'&&e.type!=='evade'&&e.type!=='block')continue;
+  const p=point(e.x,e.y);c.fillStyle=e.type==='healing'?'#8fe8b5':'#f6e7c8';c.font='12px sans-serif';c.textAlign='center';c.fillText(e.text,p.x,p.y-24-(.6-e.life)*30);
+ }
+ for(const e of recent(s.events,t,'deploy',.4)){const p=point(e.x,e.y);c.strokeStyle='#8fe8b5';c.lineWidth=2;c.beginPath();c.ellipse(p.x,p.y+8,reduce?12:12+18*(t-e.t),5,0,0,Math.PI*2);c.stroke();}
+ for(const e of recent(s.events,t,'skill-end',.3)){const p=point(e.x,e.y);c.strokeStyle='#f4d38b';c.strokeRect(p.x-12,p.y-12,24,24);}
+ for(const e of recent(s.events,t,'skill-start',.45)){
+  const p=point(e.x,e.y),k=1-(t-e.t)/.45;c.strokeStyle=`rgba(244,211,139,${.8*k})`;c.lineWidth=2;c.beginPath();c.arc(p.x,p.y,14+8*(1-k),0,Math.PI*2);c.stroke();c.fillStyle=`rgba(244,211,139,${.9*k})`;c.font='11px sans-serif';c.textAlign='center';c.fillText(e.name||'技能',p.x,p.y-22);
+ }
+ for(const e of recent(s.events,t,'leak',1.2)){
+  const p=point(e.x,e.y);c.fillStyle='#ffb48c';c.font='bold 14px sans-serif';c.textAlign='center';c.fillText('漏怪',p.x,p.y-18);
+ }
+ if(s.banner){c.fillStyle='#081511cc';c.fillRect(z.r.width/2-90,12,180,28);c.fillStyle='#e9fff7';c.font='bold 14px sans-serif';c.textAlign='center';c.fillText(s.banner.text,z.r.width/2,32);}
+ if(!reduce)for(const e of recent(s.events,t,'hit',.16)){const p=point(e.x,e.y);c.fillStyle='#fff8';c.beginPath();c.arc(p.x,p.y,11,0,Math.PI*2);c.fill();}
+}
+function drawStatuses(c,x,y,unit,size){
+ const kinds=[];
+ for(const s of unit.statuses||[])if(['stun','frozen','sleep','silence','cold'].includes(s.kind)&&!kinds.includes(s.kind))kinds.push(s.kind);
+ if((unit.shield||0)>0)kinds.push('shield');
+ if((unit.barriers||[]).some(b=>b.charges>0))kinds.push('barrier');
+ kinds.slice(0,3).forEach((k,i)=>mark(c,x-size/2+6+i*13,y-size*.82,k));
+}
+function drawDownRing(c,p,u,size){
+ const max=u.downMax||u.down||1,ratio=Math.max(0,Math.min(1,1-(u.down||0)/max));
+ c.strokeStyle='#8eb4a7';c.lineWidth=2;c.beginPath();c.arc(p.x,p.y-size*.1,size*.42,-Math.PI/2, -Math.PI/2+ratio*Math.PI*2);c.stroke();
+ c.fillStyle='#e9fff7';c.font='11px sans-serif';c.textAlign='center';c.fillText(Math.ceil(u.down||0)+'s',p.x,p.y+4);
+}
+
+return {resetFxClock,unlockAudio,playBattleEvents,recent,actorOffset,drawFx,drawStatuses,drawDownRing};
+},
 "native-play.js": function(load) {
 const {nativeWavePlan} = load("native-waves.js");
 const {TRAINING_TYPES,loadWaveTable,normalizeWaveTable,saveWaveTable} = load("native-wave-fill.js");
@@ -2004,12 +2271,15 @@ const {NATIVE_DATA} = load("runtime-data.js");
 const {NativeSession} = load("native-session.js");
 const {buildPhasePlan} = load("protocol.js");
 const {spBarFill} = load("native-sp.js");
+const {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawDownRing} = load("native-fx.js");
 const data=NATIVE_DATA,root=document.getElementById('app'),SAVE='garrison-native-manual-v1';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const skillDescription=skill=>{const values=Object.fromEntries((skill?.blackboard||[]).map(b=>[b.key,b.valueStr??b.value]));return plain(skill?.description).replace(/\{([^}:]+)(?::([^}]+))?\}/g,(all,key,format)=>{const value=values[key];return value===undefined?'—':format?.includes('%')?Math.round(value*100)+'%':String(value);});};
 const plain=s=>String(s||'').replace(/<[^>]+>/g,'').replace(/\\n/g,'\n');
 const imageCache=new Map(),img=id=>{const file=data.assets[id];if(!file)return null;if(!imageCache.has(file)){const im=new Image();im.src='./'+file;imageCache.set(file,im);}return imageCache.get(file);};
-const state={expiresAt:null,game:null,draft:null,view:'lobby',mode:'mode_single_normal',band:'band_bldsk',map:data.maps.find(m=>m.weight>0).stageId,selected:null,item:null,inspect:null,preview:null,paused:false,speed:1,modal:null,editor:editorState(),waveTable:loadWaveTable()};
+function preference(key,fallback){try{return localStorage.getItem(key)??fallback;}catch{return fallback;}}
+function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
+const state={expiresAt:null,game:null,draft:null,view:'lobby',mode:'mode_single_normal',band:'band_bldsk',map:data.maps.find(m=>m.weight>0).stageId,selected:null,item:null,inspect:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,editor:editorState(),waveTable:loadWaveTable()};
 let canvas,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0;
 try{const saved=JSON.parse(localStorage.getItem(SAVE)||'null');if(saved){state.game=NativeSession.restore(data,saved);if(state.game){state.paused=true;state.expiresAt=saved.expiresAt??null;}}}catch{}
 const profile=u=>{const base=data.profiles[u.chessId],selected=base?.skillChoices?.[u.skillIndex];return selected?{...base,...selected}:base;};
@@ -2028,7 +2298,7 @@ function render(){
  if(state.view==='lobby'){root.innerHTML=`<main class="native-lobby"><header><span>RHODES ISLAND / PRTS</span><button data-act="limits">手动验收版 · 已知差异</button></header><h1>卫戍协议<span>盟约 · 下半期</span></h1><p>原作数据驱动的独立模拟 · 最终领袖阶段以无限生命木桩替代</p><div class="native-home"><section><h2>难度</h2><select id="native-mode">${Object.values(data.season.modeDataDict).filter(m=>m.modeType!=='MULTI').map(m=>`<option value="${m.modeId}" ${m.modeId===state.mode?'selected':''}>${m.name}</option>`).join('')}</select><h2>地图</h2><select id="native-map">${data.maps.filter(m=>m.weight>0).map((m,i)=>`<option value="${m.stageId}" ${m.stageId===state.map?'selected':''}>阵地 ${i+1} · ${m.stageId}</option>`).join('')}</select><p>基础资金第1轮4，此后每轮+1，各难度相同。最终木桩150秒，可手动结束。</p><button class="native-primary" data-act="new">开启一局 →</button>${state.game?'<button data-act="resume">恢复本地模拟</button>':''}<button data-act="import">导入存档</button></section><section><h2>数据库</h2><button data-act="editor">敌人波次编制台</button><button data-act="branches">职业分支规则</button><a href="./legacy.html">旧版演示与资料库 ↗</a></section></div><footer>本期预设与属性来源：PRTS / 历史游戏数据 · 非官方同人作品</footer></main>`;renderModal();return;}
  if(state.view==='briefing'){const d=state.draft,mode=data.season.modeDataDict[d.modeId],mapName=data.maps.filter(m=>m.weight>0).findIndex(m=>m.stageId===d.mapId),tags=(d.roster.types||[]).map(id=>trainingType(id)).filter(Boolean),order=(d.roster.order||[]).map(id=>trainingType(id)?.name||id);root.innerHTML=`<main class="native-lobby native-briefing"><header><button data-act="home">‹ 大厅</button><span>战前准备</span></header><h1>战前准备</h1><p>${esc(mode?.name||'')} · 阵地 ${mapName+1}</p><h2>本局特训</h2><p>抽中三种词条，战斗按 ${order.map(esc).join(' → ')} 轮换出怪。</p><div class="native-tags">${tags.map(t=>`<article><b>${esc(t.name)}</b><small>${esc(t.id)}</small><p>${esc(t.desc)}</p></article>`).join('')}</div><h2>初始策略</h2><div class="native-strategies">${Object.values(data.season.bandDataListDict).map(b=>`<button data-act="band" data-id="${b.bandId}" class="${state.band===b.bandId?'chosen':''}">${avatar(b.bandId)}<span><b>${esc(data.common.bandDataDict[b.bandId].bandName)}</b><small>生命 ${b.totalHp}</small><p>${esc(plain(b.bandDesc))}</p></span></button>`).join('')}</div><button class="native-primary native-begin" data-act="begin">进入对局 →</button></main>`;renderModal();return;}
  if(state.view==='editor'){root.innerHTML=renderWaveEditor(data,state.waveTable,state.editor);const search=document.getElementById('ed-search'),catalog=document.getElementById('ed-catalog');if(search&&state.editor.keepSearch){search.focus();try{search.setSelectionRange(state.editor.caret,state.editor.caret);}catch{}}state.editor.keepSearch=false;if(catalog)catalog.scrollTop=state.editor.scroll||0;renderModal();return;}
- const g=state.game,s=g.s,turn=currentTurn(),rows=g.bonds();root.innerHTML=`<main class="native-game">${dossier()}<header class="native-top"><button data-act="home">‹ 大厅</button><strong>卫戍协议 / 盟约下半</strong><button data-act="limits">已知差异</button><button data-act="branches">分支规则</button><button data-act="export">导出存档</button></header><div class="native-workspace"><aside class="native-bonds">${Object.entries(rows).filter(([,b])=>b.count>0).map(([id,b])=>`<button data-act="bond-info" data-id="${id}" class="${b.active?'active':''}"><b>${data.season.bondInfoDict[id].name}</b><span>${b.count} / ${data.season.bondInfoDict[id].activeCount}</span><small>${data.season.bondInfoDict[id].noStack?'':(s.bondLayers[id]||0)+' 层'}</small></button>`).join('')||'<p>部署干员以激活盟约</p>'}</aside><section class="native-field"><div class="native-field-caption"><b>${s.phase==='battle'?(turn.isBossTurn?'木桩测试':'自动作战'):s.phase==='prep'?'阵地休整':s.phase==='finished'?'模拟结束':'回合结算'}</b><span>${s.units.filter(u=>u.position).length} / ${s.capacity} 部署</span></div><div class="native-terrain-legend" aria-label="地块图例"><span><i class="terrain-high"></i>高台</span><span><i class="terrain-ground"></i>地面／通道</span><span><i class="terrain-blocked"></i>阻隔工事</span><span><i class="terrain-entry"></i>敌方入口</span><span><i class="terrain-goal"></i>防守目标</span></div><canvas id="native-canvas" tabindex="0" aria-label="战场棋盘，先选位置再拖动朝向确认"></canvas><div class="native-facing" ${state.preview?'':'hidden'}>拖动选择朝向，松手确认；中心松手取消。${[0,1,2,3].map((d)=>`<button data-act="aim" data-dir="${d}">${['→','↓','←','↑'][d]}</button>`).join('')}<button data-act="place-confirm">确认放置</button><button data-act="cancel">取消</button></div><div class="native-controls"><button data-act="pause" ${s.phase!=='battle'?'disabled':''}>${state.paused?'继续':'暂停'}</button>${[1,2,4].map(n=>`<button data-act="speed" data-speed="${n}" class="${state.speed===n?'chosen':''}">${n}×</button>`).join('')}${s.phase==='prep'?'<button class="native-primary" data-act="start">准备完毕 →</button>':s.phase==='intermission'?'<button class="native-primary" data-act="next">进入下一回合 →</button>':s.phase==='battle'&&turn.isBossTurn?'<button data-act="stop">结束木桩并播报伤害</button>':s.phase==='finished'?'<button data-act="result">查看伤害报告</button>':''}</div><div class="native-bench-label">整备区 ${g.hand().length} / 10 <span id="native-drop-hint" aria-live="polite">可将场上干员拖回此处；换位后重新选朝向</span></div><div class="native-bench">${s.units.filter(u=>!u.position).map(u=>`<button data-act="select" data-uid="${u.uid}" class="${state.selected===u.uid||inspectSame('unit',u.uid)?'chosen':''}">${avatar(u.charId)}<b>${esc(data.profiles[u.chessId].name)}</b>${data.profiles[u.chessId].isGolden?'<small>精锐</small>':''}</button>`).join('')}${s.items.map(i=>`<button data-act="item" data-uid="${i.uid}" class="${state.item===i.uid||inspectSame('pack',i.uid)?'chosen':''}"><span class="native-item-icon">◇</span><b>${esc(itemName(i.chessId))}</b></button>`).join('')}</div></section><aside class="native-detail">${waveIntel()}${detail()}<h3>${esc(data.common.bandDataDict[s.bandId].bandName)}</h3><p>${esc(plain(data.season.bandDataListDict[s.bandId].bandDesc))}</p><p>${turn.isBossTurn?'最终木桩：生命无限，防御0、法抗0，倒计时150秒。':'开局抽取三种特训词条；每档按难度预算从敌人池抽取，空池使用占位模板。'}</p><div id="native-combat-stats"></div></aside></div><div class="native-status" id="native-status"></div><section class="native-shop"><div><h2>调度中心 ${s.level}</h2><button data-act="upgrade" ${s.phase!=='prep'?'disabled':''}>升级 ${g.terms().upgradeCost??'MAX'} ◆</button><button data-act="refresh" ${s.phase!=='prep'?'disabled':''}>刷新 ${s.freeRefresh?'免费':'1 ◆'}</button><button data-act="lock" ${s.phase!=='prep'?'disabled':''}>${s.locked?'❄ 已冻结':'冻结'}</button></div><div class="native-shop-cards">${s.offers.map((id,i)=>id?`<button data-act="buy" data-index="${i}" class="${inspectSame('shop',i)?'chosen':''}">${avatar(data.profiles[id].charId)}<strong>${esc(data.profiles[id].name)}</strong><small>${data.profiles[id].rank} 阶 · ${g.price(id)} ◆</small><p>${g.ownBonds({chessId:id}).map(b=>data.season.bondInfoDict[b].name).join(' / ')}</p></button>`:'<div class="native-empty">已调配</div>').join('')}${s.itemOffers.map((id,i)=>id?`<button data-act="buyItem" data-index="${i}" class="${inspectSame('shopItem',i)?'chosen':''}"><span class="native-item-icon">◇</span><strong>${esc(itemName(id))}</strong><small>${data.season.trapChessDataDict[id].purchasePrice} ◆</small></button>`:'<div class="native-empty">已调配</div>').join('')}</div></section></main>`;canvas=document.getElementById('native-canvas');updateHud();fitWaveFaces();draw();renderModal();showRequired();
+ const g=state.game,s=g.s,turn=currentTurn(),rows=g.bonds();root.innerHTML=`<main class="native-game${s.phase==='battle'?' is-battle':''}">${dossier()}<header class="native-top"><button data-act="home">‹ 大厅</button><strong>卫戍协议 / 盟约下半</strong><button data-act="limits">已知差异</button><button data-act="branches">分支规则</button><button data-act="export">导出存档</button></header><div class="native-workspace"><aside class="native-bonds">${Object.entries(rows).filter(([,b])=>b.count>0).map(([id,b])=>`<button data-act="bond-info" data-id="${id}" class="${b.active?'active':''}"><b>${data.season.bondInfoDict[id].name}</b><span>${b.count} / ${data.season.bondInfoDict[id].activeCount}</span><small>${data.season.bondInfoDict[id].noStack?'':(s.bondLayers[id]||0)+' 层'}</small></button>`).join('')||'<p>部署干员以激活盟约</p>'}</aside><section class="native-field"><div class="native-field-caption"><b>${s.phase==='battle'?(turn.isBossTurn?'木桩测试':'自动作战'):s.phase==='prep'?'阵地休整':s.phase==='finished'?'模拟结束':'回合结算'}</b><span id="native-wave-progress">${s.units.filter(u=>u.position).length} / ${s.capacity} 部署</span></div><div class="native-terrain-legend" aria-label="地块图例"><span><i class="terrain-high"></i>高台</span><span><i class="terrain-ground"></i>地面／通道</span><span><i class="terrain-blocked"></i>阻隔工事</span><span><i class="terrain-entry"></i>敌方入口</span><span><i class="terrain-goal"></i>防守目标</span></div><canvas id="native-canvas" tabindex="0" aria-label="战场棋盘，先选位置再拖动朝向确认"></canvas><div class="native-facing" ${state.preview?'':'hidden'}>拖动选择朝向，松手确认；中心松手取消。${[0,1,2,3].map((d)=>`<button data-act="aim" data-dir="${d}">${['→','↓','←','↑'][d]}</button>`).join('')}<button data-act="place-confirm">确认放置</button><button data-act="cancel">取消</button></div><div class="native-controls"><button data-act="pause" ${s.phase!=='battle'?'disabled':''}>${state.paused?'继续':'暂停'}</button>${[1,2,4].map(n=>`<button data-act="speed" data-speed="${n}" class="${state.speed===n?'chosen':''}">${n}×</button>`).join('')}<button data-act="mute">${state.muted?'声音关':'声音开'}</button><label>音量 <input id="native-volume" aria-label="战斗音量" type="range" min="0" max="1" step="0.05" value="${state.volume}" style="width:72px"></label><button data-act="reduce-fx">${state.reduceFx?'动效少':'动效'}</button>${s.phase==='prep'?'<button class="native-primary" data-act="start">准备完毕 →</button>':s.phase==='intermission'?'<button class="native-primary" data-act="next">进入下一回合 →</button>':s.phase==='battle'&&turn.isBossTurn?'<button data-act="stop">结束木桩并播报伤害</button>':s.phase==='finished'?'<button data-act="result">查看伤害报告</button>':''}</div><div class="native-bench-label">整备区 ${g.hand().length} / 10 <span id="native-drop-hint" aria-live="polite">可将场上干员拖回此处；换位后重新选朝向</span></div><div class="native-bench">${s.units.filter(u=>!u.position).map(u=>`<button data-act="select" data-uid="${u.uid}" class="${state.selected===u.uid||inspectSame('unit',u.uid)?'chosen':''}">${avatar(u.charId)}<b>${esc(data.profiles[u.chessId].name)}</b>${data.profiles[u.chessId].isGolden?'<small>精锐</small>':''}</button>`).join('')}${s.items.map(i=>`<button data-act="item" data-uid="${i.uid}" class="${state.item===i.uid||inspectSame('pack',i.uid)?'chosen':''}"><span class="native-item-icon">◇</span><b>${esc(itemName(i.chessId))}</b></button>`).join('')}</div></section><aside class="native-detail">${waveIntel()}${detail()}<h3>${esc(data.common.bandDataDict[s.bandId].bandName)}</h3><p>${esc(plain(data.season.bandDataListDict[s.bandId].bandDesc))}</p><p>${turn.isBossTurn?'最终木桩：生命无限，防御0、法抗0，倒计时150秒。':'开局抽取三种特训词条；每档按难度预算从敌人池抽取，空池使用占位模板。'}</p><div id="native-combat-stats"></div></aside></div><div class="native-status" id="native-status"></div><section class="native-shop"><div><h2>调度中心 ${s.level}</h2><button data-act="upgrade" ${s.phase!=='prep'?'disabled':''}>升级 ${g.terms().upgradeCost??'MAX'} ◆</button><button data-act="refresh" ${s.phase!=='prep'?'disabled':''}>刷新 ${s.freeRefresh?'免费':'1 ◆'}</button><button data-act="lock" ${s.phase!=='prep'?'disabled':''}>${s.locked?'❄ 已冻结':'冻结'}</button></div><div class="native-shop-cards">${s.offers.map((id,i)=>id?`<button data-act="buy" data-index="${i}" class="${inspectSame('shop',i)?'chosen':''}">${avatar(data.profiles[id].charId)}<strong>${esc(data.profiles[id].name)}</strong><small>${data.profiles[id].rank} 阶 · ${g.price(id)} ◆</small><p>${g.ownBonds({chessId:id}).map(b=>data.season.bondInfoDict[b].name).join(' / ')}</p></button>`:'<div class="native-empty">已调配</div>').join('')}${s.itemOffers.map((id,i)=>id?`<button data-act="buyItem" data-index="${i}" class="${inspectSame('shopItem',i)?'chosen':''}"><span class="native-item-icon">◇</span><strong>${esc(itemName(id))}</strong><small>${data.season.trapChessDataDict[id].purchasePrice} ◆</small></button>`:'<div class="native-empty">已调配</div>').join('')}</div></section></main>`;canvas=document.getElementById('native-canvas');updateHud();fitWaveFaces();draw();renderModal();showRequired();
 }
 function waveIntel(){
  const g=state.game;if(!g||g.s.phase==='finished')return '';
@@ -2063,7 +2333,10 @@ function dossier(){
  }
  const p=t.p,g=state.game,owned=t.u,a=t.live&&g.battle?g.battle.stats(t.live):p.attributes;
  const hp=Math.round(t.live?.hp??a.maxHp),max=Math.round(t.live?.maxHp??a.maxHp);
- return `<aside class="native-dossier" aria-label="干员档案"><div class="native-dossier-art">${avatar(p.charId)}</div><div class="native-dossier-body"><button data-act="inspect-close" class="native-dossier-close" aria-label="关闭">×</button><h2>${esc(p.name)}${p.isGolden?' · 精锐':''}</h2><p class="native-dossier-kicker">${esc(data.branchRules.records.find(r=>r.id===p.branch)?.name||p.branch||'')} · ${p.rank} 阶</p><p id="native-dossier-hp" class="native-dossier-hp">生命 <b>${hp}</b><i>/${max}</i></p><div class="native-dossier-stats"><span>攻击 ${Math.round(a.atk)}</span><span>防御 ${Math.round(a.def)}</span><span>法抗 ${Math.round(a.magicResistance)}</span><span>攻速 ${Math.round(a.attackSpeed)}</span></div><h3>技能</h3>${owned?`<label>携带技能<select data-uid="${owned.uid}" id="native-skill" ${g.s.phase!=='prep'?'disabled':''}>${data.profiles[owned.chessId].skillChoices.map((v,i)=>`<option value="${i}" ${(owned.skillIndex??data.profiles[owned.chessId].skillIndex)===i?'selected':''}>${esc(v.skill?.name||'无主动技能')}</option>`).join('')}</select></label>`:`<p class="native-dossier-skill-name">${esc(p.skill?.name||'无主动技能')}</p>`}<p>${esc(skillDescription(p.skill)||'无主动技能')}</p><h3>卫戍</h3>${(p.garrisons||[]).map(x=>`<p>${esc(plain(x.description||x.garrisonDesc))}</p>`).join('')||'<p>无卫戍效果</p>'}${owned?`<p class="native-dossier-gear">${owned.equipment.map(i=>esc(itemName(i.chessId))).join('<br>')||'未携带装备'}</p>`:''}${t.shop?`<p class="native-dossier-buy">再次点击卡片购买 · ${t.price} ◆</p>`:''}${owned&&g.s.phase==='prep'?`<div class="native-dossier-acts"><button data-act="withdraw" data-uid="${owned.uid}">撤回整备区</button><button data-act="sell" data-uid="${owned.uid}">出售 +1 ◆</button></div>`:''}</div></aside>`;
+ const live=t.live,phase=live?(live.ammo>0?`弹药 ${live.ammo}/${live.ammoMax}`:live.skillLeft>0?`技能持续 ${live.skillLeft.toFixed(1)}s`:live.down>0?`再部署 ${Math.ceil(live.down)}s`:(g.battle?spBarFill(live,p.skill,g.battle.spCost(live)):null)?.ready?'技力就绪':'待机'):'';
+ const parts=(a.parts||[]).map(x=>`${esc(x.src)} ${x.stat} ${x.layer} ${x.v}`).join('<br>')||'无额外加成';
+ const statuses=(live?.statuses||[]).map(s=>s.kind).join('、')||'无';
+ return `<aside class="native-dossier" aria-label="干员档案"><div class="native-dossier-art">${avatar(p.charId)}</div><div class="native-dossier-body"><button data-act="inspect-close" class="native-dossier-close" aria-label="关闭">×</button><h2>${esc(p.name)}${p.isGolden?' · 精锐':''}</h2><p class="native-dossier-kicker">${esc(data.branchRules.records.find(r=>r.id===p.branch)?.name||p.branch||'')} · ${p.rank} 阶</p><p id="native-dossier-hp" class="native-dossier-hp">生命 <b>${hp}</b><i>/${max}</i></p><div class="native-dossier-stats"><span>攻击 ${Math.round(a.atk)}</span><span>防御 ${Math.round(a.def)}</span><span>法抗 ${Math.round(a.magicResistance)}</span><span>攻速 ${Math.round(a.attackSpeed)}</span></div><div id="native-dossier-live" class="native-dossier-live"><p>阶段 ${esc(phase)}</p><p>状态 ${esc(statuses)}</p><h3>属性来源</h3><p>${parts}</p></div><h3>技能</h3>${owned?`<label>携带技能<select data-uid="${owned.uid}" id="native-skill" ${g.s.phase!=='prep'?'disabled':''}>${data.profiles[owned.chessId].skillChoices.map((v,i)=>`<option value="${i}" ${(owned.skillIndex??data.profiles[owned.chessId].skillIndex)===i?'selected':''}>${esc(v.skill?.name||'无主动技能')}</option>`).join('')}</select></label>`:`<p class="native-dossier-skill-name">${esc(p.skill?.name||'无主动技能')}</p>`}<p>${esc(skillDescription(p.skill)||'无主动技能')}</p><h3>卫戍</h3>${(p.garrisons||[]).map(x=>`<p>${esc(plain(x.description||x.garrisonDesc))}</p>`).join('')||'<p>无卫戍效果</p>'}${owned?`<p class="native-dossier-gear">${owned.equipment.map(i=>esc(itemName(i.chessId))).join('<br>')||'未携带装备'}</p>`:''}${t.shop?`<p class="native-dossier-buy">再次点击卡片购买 · ${t.price} ◆</p>`:''}${owned&&g.s.phase==='prep'?`<div class="native-dossier-acts"><button data-act="withdraw" data-uid="${owned.uid}">撤回整备区</button><button data-act="sell" data-uid="${owned.uid}">出售 +1 ◆</button></div>`:''}</div></aside>`;
 }
 function detail(){return state.inspect?'':'<h3>阵地指令</h3><p>点击干员或商店卡片查看档案。商店需再点一次才购买。</p>';}
 function showRequired(){const g=state.game,r=g.s.rewardPending;if(r){g.ensureRewards();modal(`<h2>晋升／特殊调配</h2><p>选择获得一项奖励</p><div class="native-rewards">${r.offers.map(id=>`<button data-act="reward" data-id="${id}">${r.kind==='item'?'◇':avatar(data.profiles[id].charId)}<b>${esc(r.kind==='item'?itemName(id):data.profiles[id].name)}</b></button>`).join('')}</div>`);}else if(g.s.phase==='decision')modal(`<h2>机变决策</h2><div class="native-rewards">${g.s.roundDecisions.map(id=>{const e=data.season.effectInfoDataDict[id];return `<button data-act="decision" data-id="${id}"><b>${esc(e.effectName)}</b><p>${esc(plain(e.effectDesc))}</p></button>`;}).join('')}</div>`);}
@@ -2087,18 +2360,26 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
  if(a==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{if(input.files[0].size>10e6)throw Error('存档文件过大');const record=JSON.parse(await input.files[0].text()),game=NativeSession.restore(data,record);if(!game)throw Error('存档版本、数据或有效期不匹配');state.game=game;state.view='game';state.paused=true;save();render();}catch(e){notice(e.message);}};input.click();return;}
  if(!g)return;
  if(a==='pause'){state.paused=!state.paused;render();return;}if(a==='speed'){state.speed=Number(button.dataset.speed);render();return;}
+ if(a==='mute'){state.muted=!state.muted;savePreference('garrison-mute',state.muted?'1':'0');if(!state.muted)unlockAudio();render();return;}
+ if(a==='reduce-fx'){state.reduceFx=!state.reduceFx;savePreference('garrison-reduce-fx',state.reduceFx?'1':'0');render();return;}
  if(a==='inspect-close'){state.inspect=null;render();return;}
  if(a==='select'){if(state.item){if(!g.perform('equip',state.item,uid)){const u=g.s.units.find(u=>u.uid===uid);if(u?.equipment.length>=2){modal(`<h2>选择替换的装备</h2>${u.equipment.map((e,i)=>`<button data-act="replace" data-uid="${uid}" data-slot="${i}">${esc(itemName(e.chessId))}</button>`).join('')}`);return;}}state.item=null;}state.selected=uid;state.inspect={kind:'unit',uid};state.preview=null;save();render();return;}
  if(a==='item'){if(inspectSame('pack',uid)){state.item=uid;notice('点击一名场上或整备区干员以装备／使用。');}else{state.item=null;state.selected=null;state.inspect={kind:'pack',uid};}render();return;}
  if(a==='replace'){g.perform('equip',state.item,uid,Number(button.dataset.slot));state.item=null;state.modal=null;save();render();return;}
  if(a==='bond-info'){const b=data.season.bondInfoDict[button.dataset.id];modal(`<h2>${esc(b.name)}</h2><p>${esc(plain(b.desc))}</p>`);return;}
  if(a==='aim'){if(state.preview){state.preview.dir=Number(button.dataset.dir);draw();}return;}if(a==='cancel'){state.preview=null;render();return;}if(a==='place-confirm'){commitPreview();return;}
- let ok;if(a==='buy'||a==='buyItem'){const kind=a==='buy'?'shop':'shopItem',index=Number(button.dataset.index);if(!inspectSame(kind,index)){state.inspect={kind,index};state.selected=null;state.item=null;render();return;}if(g.s.phase!=='prep'){notice('当前阶段不能购买');return;}ok=g.perform(a,index);if(ok){state.inspect=null;if(a==='buy')state.selected=g.s.units.at(-1)?.uid??null;}}else if(a==='reward'){ok=g.perform('takePromotion',button.dataset.id);state.modal=null;}else if(a==='decision'){ok=g.perform(a,button.dataset.id);state.modal=null;}else if(a==='sell'){ok=g.perform(a,uid);if(ok){state.selected=null;state.inspect=null;}}else if(a==='withdraw'){ok=g.perform(a,uid);}else if(['upgrade','refresh','lock','start','next','stop'].includes(a)){ok=g.perform(a);if(a==='start')state.paused=false;state.preview=null;if(a==='refresh')state.inspect=null;}else return;
+ let ok;if(a==='buy'||a==='buyItem'){const kind=a==='buy'?'shop':'shopItem',index=Number(button.dataset.index);if(!inspectSame(kind,index)){state.inspect={kind,index};state.selected=null;state.item=null;render();return;}if(g.s.phase!=='prep'){notice('当前阶段不能购买');return;}ok=g.perform(a,index);if(ok){state.inspect=null;if(a==='buy')state.selected=g.s.units.at(-1)?.uid??null;}}else if(a==='reward'){ok=g.perform('takePromotion',button.dataset.id);state.modal=null;}else if(a==='decision'){ok=g.perform(a,button.dataset.id);state.modal=null;}else if(a==='sell'){ok=g.perform(a,uid);if(ok){state.selected=null;state.inspect=null;}}else if(a==='withdraw'){ok=g.perform(a,uid);}else if(['upgrade','refresh','lock','start','next','stop'].includes(a)){ok=g.perform(a);if(a==='start'){state.paused=false;resetFxClock();unlockAudio();}state.preview=null;if(a==='refresh')state.inspect=null;}else return;
  if(!ok)notice(g.lastError||'当前资金、位置或阶段不允许此操作');save();render();if(g.s.phase==='finished')showResult();
 }
-function updateHud(){const g=state.game;if(!g||state.view!=='game')return;const status=document.getElementById('native-status');if(status){const rounds=buildPhasePlan(data,g.s.modeId).filter(r=>!r.isConditional).length;status.innerHTML=`<div><small>生命</small><b class="hp">${g.s.hp}<i>/${g.s.maxHp}</i></b></div><div><small>剩余资金</small><b class="funds">${g.s.funds}<i> ◆</i></b></div><div><small>回合</small><b>${g.s.round}<i>/${rounds}</i></b></div>`;}const live=document.getElementById('native-unit-live'),unit=g.battle?.s.units.find(u=>u.uid===state.selected);if(live)live.textContent=unit&&g.s.phase==='battle'?`当前生命 ${Math.round(unit.hp)}/${Math.round(unit.maxHp)} · 治疗 ${Math.round(unit.healing||0)} · 持续回复 ${Math.round(unit.regeneration||0)}`:'';
+function updateHud(){const g=state.game;if(!g||state.view!=='game')return;const b=g.battle?.s,rounds=buildPhasePlan(data,g.s.modeId).filter(r=>!r.isConditional).length,status=document.getElementById('native-status');
+ if(status){const time=b&&g.s.phase==='battle'?`<div><small>剩余时间</small><b>${Math.max(0,Math.ceil(b.limit-b.time))}<i> 秒</i></b></div>`:`<div><small>剩余资金</small><b class="funds">${g.s.funds}<i> ◆</i></b></div>`;
+  const wave=b&&g.s.phase==='battle'?`<div><small>波次</small><b>${b.kills}<i> / ${b.total}</i></b></div>`:`<div><small>回合</small><b>${g.s.round}<i>/${rounds}</i></b></div>`;
+  status.innerHTML=`<div><small>生命</small><b class="hp">${g.s.hp}<i>/${g.s.maxHp}</i></b></div>${time}${wave}`;}
+ const progress=document.getElementById('native-wave-progress');if(progress)progress.textContent=g.s.phase==='battle'&&b?`击倒 ${b.kills} / ${b.total} · 漏失 ${b.leaks}`:`${g.s.units.filter(u=>u.position).length} / ${g.s.capacity} 部署`;
+ const live=document.getElementById('native-unit-live'),unit=g.battle?.s.units.find(u=>u.uid===state.selected);if(live)live.textContent=unit&&g.s.phase==='battle'?`当前生命 ${Math.round(unit.hp)}/${Math.round(unit.maxHp)} · 治疗 ${Math.round(unit.healing||0)} · 持续回复 ${Math.round(unit.regeneration||0)}`:'';
  const dossierHp=document.getElementById('native-dossier-hp');if(dossierHp&&state.inspect?.kind==='unit'){const seen=g.battle?.s.units.find(u=>u.uid===state.inspect.uid),row=g.s.units.find(u=>u.uid===state.inspect.uid);if(row){const a=seen&&g.battle?g.battle.stats(seen):profile(row).attributes,hp=Math.round(seen?.hp??a.maxHp),max=Math.round(seen?.maxHp??a.maxHp);dossierHp.innerHTML=`生命 <b>${hp}</b><i>/${max}</i>`;}}
- const el=document.getElementById('native-combat-stats');if(el&&g.battle&&g.s.phase==='battle'){const b=g.battle.s,total=b.benchmark?b.enemies[0]?.damageLedger.total||0:Object.values(b.damage).reduce((n,v)=>n+v,0);el.innerHTML=`<h3>${Math.max(0,Math.ceil(b.limit-b.time))} 秒</h3><p>伤害 ${Math.round(total).toLocaleString()}<br>击倒 ${b.kills} / ${b.total}</p>`;}}
+ const dossierLive=document.getElementById('native-dossier-live');if(dossierLive&&state.inspect?.kind==='unit'){const seen=g.battle?.s.units.find(u=>u.uid===state.inspect.uid),row=g.s.units.find(u=>u.uid===state.inspect.uid);if(row){const a=seen&&g.battle?g.battle.stats(seen):profile(row).attributes,p=profile(row),fill=seen&&g.battle?spBarFill(seen,p.skill,g.battle.spCost(seen)):null,phase=seen?(seen.ammo>0?`弹药 ${seen.ammo}/${seen.ammoMax}`:seen.skillLeft>0?`技能持续 ${seen.skillLeft.toFixed(1)}s`:seen.down>0?`再部署 ${Math.ceil(seen.down)}s`:fill?.ready?'技力就绪':'待机'):'';dossierLive.innerHTML=`<p>阶段 ${esc(phase)}</p><p>状态 ${esc((seen?.statuses||[]).map(s=>s.kind).join('、')||'无')}</p><h3>属性来源</h3><p>${(a.parts||[]).map(x=>`${esc(x.src)} ${x.stat} ${x.layer} ${x.v}`).join('<br>')||'无额外加成'}</p>`;}}
+ const el=document.getElementById('native-combat-stats');if(el&&g.battle&&g.s.phase==='battle'){const btl=g.battle.s,total=btl.benchmark?btl.enemies[0]?.damageLedger.total||0:Object.values(btl.damage).reduce((n,v)=>n+v,0);el.innerHTML=`<h3>${Math.max(0,Math.ceil(btl.limit-btl.time))} 秒</h3><p>伤害 ${Math.round(total).toLocaleString()}<br>击倒 ${btl.kills} / ${btl.total}<br>漏失 ${btl.leaks}</p>`;}}
 function geometry(){const r=canvas.getBoundingClientRect(),v=state.game?.map.viewport||{left:0,right:10,top:0,bottom:6},cols=v.right-v.left+1,rows=v.bottom-v.top+1,tw=Math.min((r.width-32)/cols,(r.height-44)/rows/.82),th=tw*.82;return {r,tw,th,ox:(r.width-tw*cols)/2-v.left*tw,oy:(r.height-th*rows)/2-v.top*th};}
 function cellAt(x,y){const z=geometry();return{x:Math.floor((x-z.r.left-z.ox)/z.tw),y:Math.floor((y-z.r.top-z.oy)/z.th)};}
 function place(uid,x,y){
@@ -2147,11 +2428,27 @@ function drawTerrain(c,z,map){
 function draw(){
  if(!canvas||state.view!=='game'||!state.game)return;const g=state.game,z=geometry(),dpr=Math.min(2,window.devicePixelRatio||1);if(canvas.width!==Math.round(z.r.width*dpr)||canvas.height!==Math.round(z.r.height*dpr)){canvas.width=Math.round(z.r.width*dpr);canvas.height=Math.round(z.r.height*dpr);}const c=canvas.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,z.r.width,z.r.height);const point=(x,y)=>({x:z.ox+(x+.5)*z.tw,y:z.oy+(y+.5)*z.th});c.fillStyle='#111f23';c.fillRect(0,0,z.r.width,z.r.height);
  drawTerrain(c,z,g.map);
- const selected=g.s.units.find(u=>u.uid===(state.preview?.uid||state.selected));if(selected&&(selected.position||state.preview)){const p=state.preview||{...selected.position,dir:selected.dir},range=(profile(selected).range?.grids||[]).concat(profile(selected).branch==='fortress'?[{row:0,col:0}]:[]);for(const cell of range){let x=cell.col,y=-cell.row;for(let i=0;i<(p.dir??0);i++)[x,y]=[-y,x];c.fillStyle='#63d8b738';c.fillRect(z.ox+(p.x+x)*z.tw+2,z.oy+(p.y+y)*z.th+2,z.tw-4,z.th-4);}}
+ const selected=g.s.units.find(u=>u.uid===(state.preview?.uid||state.selected)),live=selected&&g.battle?g.battle.s.units.find(u=>u.uid===selected.uid):null;
+ if(selected&&(selected.position||state.preview)){
+  const p=state.preview||{...selected.position,dir:selected.dir};
+  const cells=g.s.phase==='battle'&&!state.preview&&g.battle&&live?g.battle.range(live,g.battle.skillActive(live)):((profile(selected).range?.grids||[]).concat(profile(selected).branch==='fortress'?[{row:0,col:0}]:[]).map(cell=>{let x=cell.col,y=-cell.row;for(let i=0;i<(p.dir??0);i++)[x,y]=[-y,x];return{x:p.x+x,y:p.y+y};}));
+  for(const cell of cells)c.fillStyle='#63d8b738',c.fillRect(z.ox+cell.x*z.tw+2,z.oy+cell.y*z.th+2,z.tw-4,z.th-4);
+ }
  const actors=g.s.phase==='battle'||g.s.phase==='finished'||g.s.phase==='intermission'?g.battle?.s.units||[]:g.s.units.filter(u=>u.position).map(u=>({...u,x:u.position.x,y:u.position.y,id:u.charId,deployed:true}));
- for(const u of actors){const p=point(u.x,u.y);p.y-=tileLift(g.map.grid[u.y]?.[u.x],z)*.5;const im=img(u.id),size=Math.min(z.tw*.68,z.th*1.1);c.globalAlpha=u.deployed===false?.35:1;c.fillStyle=data.profiles[u.chessId]?.isGolden?'#f3ce74':'#b8e7d8';c.fillRect(p.x-size/2-2,p.y-size*.75-2,size+4,size+4);if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size*.75,size,size);c.globalAlpha=1;c.fillStyle='#d5fff1';c.font='14px sans-serif';c.textAlign='center';c.fillText(['→','↓','←','↑'][u.dir],p.x+size*.65,p.y);if(u.hp!==undefined){c.fillStyle='#122022';c.fillRect(p.x-size/2,p.y+size*.35,size,4);c.fillStyle='#75d9aa';c.fillRect(p.x-size/2,p.y+size*.35,size*Math.max(0,u.hp/u.maxHp),4);}const sk=profile(u)?.skill,cost=g.battle&&u.sp!==undefined?g.battle.spCost(u):sk?.spData?.spCost||0,fill=spBarFill(u,sk,cost);if(fill){const bx=p.x-size/2,by=p.y+size*.35+(u.hp!==undefined?6:0);if(fill.kind==='ammo'){const n=fill.cells,gap=1,cw=Math.max(1,(size-(n-1)*gap)/n);for(let i=0;i<n;i++){c.fillStyle='#122022';c.fillRect(bx+i*(cw+gap),by,cw,4);if(i<fill.filled){c.fillStyle='#f4d38b';c.fillRect(bx+i*(cw+gap),by,cw,4);}}}else{c.fillStyle='#122022';c.fillRect(bx,by,size,3);c.fillStyle=fill.on?'#f4d38b':fill.ready?'#f0d18a':'#7bbaf3';c.fillRect(bx,by,size*fill.ratio,3);}}}
- if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){const p=point(e.x,e.y),im=img(e.id),size=z.tw*.55;if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);}}
- if(g.battle&&g.s.phase==='battle'){for(const p of g.battle.s.projectiles){const pos=point(p.x,p.y);c.fillStyle=p.type==='arts'?'#cda8ff':'#fff0b1';c.beginPath();c.arc(pos.x,pos.y,3,0,Math.PI*2);c.fill();}for(const e of g.battle.s.effects){const p=point(e.x,e.y);c.fillStyle=e.type==='healing'?'#8fe8b5':'#f6e7c8';c.font='12px sans-serif';c.fillText(e.text,p.x,p.y-24-(.6-e.life)*30);}}
+ for(const u of actors){
+  const shift=g.battle&&!state.reduceFx?actorOffset(u,g.battle):{x:0,y:0};
+  const p=point(u.x+shift.x,u.y+shift.y);p.y-=tileLift(g.map.grid[u.y]?.[u.x],z)*.5;const im=img(u.id),size=Math.min(z.tw*.68,z.th*1.1);
+  const waiting=!u.deployed&&u.hp>0,down=!u.deployed&&u.hp<=0;
+  c.globalAlpha=waiting?0.45:down?0.3:1;
+  c.fillStyle=data.profiles[u.chessId]?.isGolden?'#f3ce74':'#b8e7d8';c.fillRect(p.x-size/2-2,p.y-size*.75-2,size+4,size+4);if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size*.75,size,size);
+  if(u.skillLeft>0||u.ammo>0){c.strokeStyle='#f4d38b';c.lineWidth=2;c.strokeRect(p.x-size/2-3,p.y-size*.75-3,size+6,size+6);}
+  c.globalAlpha=1;c.fillStyle='#d5fff1';c.font='14px sans-serif';c.textAlign='center';c.fillText(['→','↓','←','↑'][u.dir],p.x+size*.65,p.y);
+  if(u.hp!==undefined&&u.deployed){c.fillStyle='#122022';c.fillRect(p.x-size/2,p.y+size*.35,size,4);c.fillStyle='#75d9aa';c.fillRect(p.x-size/2,p.y+size*.35,size*Math.max(0,u.hp/u.maxHp),4);}
+  const sk=profile(u)?.skill,cost=g.battle&&u.sp!==undefined?g.battle.spCost(u):sk?.spData?.spCost||0,fill=spBarFill(u,sk,cost);if(fill&&u.deployed){const bx=p.x-size/2,by=p.y+size*.35+(u.hp!==undefined?6:0);if(fill.kind==='ammo'){const n=fill.cells,gap=1,cw=Math.max(1,(size-(n-1)*gap)/n);for(let i=0;i<n;i++){c.fillStyle='#122022';c.fillRect(bx+i*(cw+gap),by,cw,4);if(i<fill.filled){c.fillStyle='#f4d38b';c.fillRect(bx+i*(cw+gap),by,cw,4);}}}else{c.fillStyle='#122022';c.fillRect(bx,by,size,3);c.fillStyle=fill.on?'#f4d38b':fill.ready?'#f0d18a':'#7bbaf3';c.fillRect(bx,by,size*fill.ratio,3);}}
+  if(g.battle)drawStatuses(c,p.x,p.y,u,size);if(down)drawDownRing(c,p,u,size);
+ }
+ if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),im=img(e.id),size=z.tw*.55;if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);}}
+ if(g.battle&&g.s.phase==='battle')drawFx(c,point,z,g.battle,{reduceFx:state.reduceFx});
  if(drag?.moved&&overCanvas(drag.x,drag.y)){const cell=cellAt(drag.x,drag.y);if(g.map.grid[cell.y]?.[cell.x]){c.strokeStyle=g.canDeploy(drag.uid,cell.x,cell.y)?'#78f1bd':'#f88c78';c.lineWidth=3;c.strokeRect(z.ox+cell.x*z.tw+2,z.oy+cell.y*z.th+2,z.tw-4,z.th-4);}}
  if(state.preview){const p=point(state.preview.x,state.preview.y);c.fillStyle='#08151195';c.fillRect(0,0,z.r.width,z.r.height);c.strokeStyle='#70e4c1';c.lineWidth=2;c.beginPath();c.moveTo(p.x,p.y-62);c.lineTo(p.x+62,p.y);c.lineTo(p.x,p.y+62);c.lineTo(p.x-62,p.y);c.closePath();c.stroke();c.fillStyle='#e9fff7';c.font='bold 32px sans-serif';c.fillText(state.preview.dir===null?'✥':['→','↓','←','↑'][state.preview.dir],p.x,p.y+10);}
 }
@@ -2160,6 +2457,7 @@ root.addEventListener('change',e=>{
  if(state.view==='editor'&&e.target.dataset.act){const catalog=document.getElementById('ed-catalog');state.editor.scroll=catalog?.scrollTop||0;if(applyEditorField(e.target.dataset.act,e.target.dataset.id,e.target.value,state.waveTable,state.editor))render();}
 });
 root.addEventListener('input',e=>{
+ if(e.target.id==='native-volume'){state.volume=Number(e.target.value);savePreference('garrison-volume',String(state.volume));return;}
  if(e.target.id!=='ed-search')return;state.editor.query=e.target.value;state.editor.caret=e.target.selectionStart||e.target.value.length;state.editor.keepSearch=true;const catalog=document.getElementById('ed-catalog');state.editor.scroll=catalog?.scrollTop||0;render();
 });
 root.addEventListener('click',e=>{if(e.pointerType==='touch'||(e.pointerId===ignoredClickPointer&&performance.now()<ignoredClickUntil))return;
@@ -2193,8 +2491,8 @@ root.addEventListener('pointerup',e=>{
 root.addEventListener('pointercancel',()=>{clearDrag();aim=null;state.preview=null;render();});
 document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea'))return;if(e.key==='Escape'){clearDrag();aim=null;state.preview=null;state.selected=null;state.inspect=null;if(!state.game?.s.rewardPending&&state.game?.s.phase!=='decision')state.modal=null;render();}if(state.preview){const d={ArrowRight:0,ArrowDown:1,ArrowLeft:2,ArrowUp:3}[e.key];if(d!==undefined){e.preventDefault();state.preview.dir=d;draw();}if(e.key==='Enter')commitPreview();}});
 window.addEventListener('beforeunload',()=>{state.expiresAt??=Date.now()+86400000;save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){state.paused=true;state.expiresAt??=Date.now()+86400000;save();}});
-function frame(now){const dt=Math.min(.15,(now-last)/1000);last=now;const g=state.game;if(state.view==='game'&&g?.s.phase==='battle'&&!state.paused){acc+=dt*state.speed;const previous=g.s.phase;while(acc>=1/30&&g.s.phase==='battle'){acc-=1/30;g.tick();}if(g.s.phase!==previous){acc=0;save();render();if(g.s.phase==='finished'){notice('模拟结束，总伤害 '+Math.round(g.s.runResult?.totalDamage||0).toLocaleString());showResult();}}}else acc=0;hudTime+=dt;saveTime+=dt;if(hudTime>.2){updateHud();hudTime=0;}if(saveTime>2&&g){save();saveTime=0;}draw();requestAnimationFrame(frame);}
-root.setAttribute('data-view','native');render();document.getElementById('boot-screen')?.remove();clearTimeout(window.__garrisonBootTimer);window.__garrisonReady=true;requestAnimationFrame(frame);
+function frame(now){const dt=Math.min(.15,(now-last)/1000);last=now;const g=state.game;if(state.view==='game'&&g?.s.phase==='battle'&&!state.paused){acc+=dt*state.speed;const previous=g.s.phase;while(acc>=1/30&&g.s.phase==='battle'){acc-=1/30;g.tick();}if(g.battle)playBattleEvents(g.battle.s,state.muted,state.volume);if(g.s.phase!==previous){acc=0;save();render();if(g.s.phase==='finished'){notice('模拟结束，总伤害 '+Math.round(g.s.runResult?.totalDamage||0).toLocaleString());showResult();}}}else acc=0;hudTime+=dt;saveTime+=dt;if(hudTime>.2){updateHud();hudTime=0;}if(saveTime>2&&g){save();saveTime=0;}draw();requestAnimationFrame(frame);}
+root.setAttribute('data-view','native');root.addEventListener('pointerdown',()=>unlockAudio(),{once:true});render();document.getElementById('boot-screen')?.remove();clearTimeout(window.__garrisonBootTimer);window.__garrisonReady=true;requestAnimationFrame(frame);
 
 return {};
 }
