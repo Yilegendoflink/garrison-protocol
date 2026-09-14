@@ -1,0 +1,2691 @@
+{
+  "scopeId": "alliance-lower-post-2026-03-27",
+  "periodLabel": "卫戍协议：盟约 下半",
+  "baseline": "2026-03-27 更新#2后固定名单",
+  "queriedAt": "2026-09-14",
+  "sources": [
+    {
+      "url": "https://prts.wiki/w/卫戍协议：盟约_下半",
+      "section": "模拟配置：参战干员一览（默认阵容）"
+    },
+    {
+      "url": "https://ak.hypergryph.com/news/9697.html",
+      "role": "官方下半期活动日期确认"
+    }
+  ],
+  "gameDataCommit": "86da4cfa3a4b958c3615fccf5afbc10b5c7f1bfb",
+  "fixedCount": 112,
+  "tierCounts": [
+    16,
+    17,
+    19,
+    22,
+    19,
+    19
+  ],
+  "excludedFromFixedRoster": [
+    "地灵",
+    "红豆",
+    "崖心",
+    "协律",
+    "见行者",
+    "巫恋",
+    "瑰盐",
+    "蜜蜡"
+  ],
+  "extensions": {
+    "prototypes": "单列本期原型补位，含领主Sharp分支变体，不计入112人",
+    "selection": "甄选规则另列候选池，必须按本期时间点筛选，不能直接使用当前全干员库",
+    "summons": "按固定干员技能展开附属召唤物、陷阱、装置和替身，不作为新增干员计数",
+    "strategyOnly": "策略提出者不自动等同可上场干员；策略产生的战斗单位另列依赖"
+  },
+  "operators": [
+    {
+      "name": "隐现",
+      "charId": "char_498_inside",
+      "tier": 1,
+      "chessId": "chess_char_1_01_a",
+      "goldenChessId": "chess_char_1_01_b",
+      "branch": "fastshot",
+      "skillChoices": [
+        {
+          "skillId": "skchr_inside_1",
+          "skillIndex": 0,
+          "name": "“不惹麻烦”"
+        },
+        {
+          "skillId": "skchr_inside_2",
+          "skillIndex": 1,
+          "name": "“解决麻烦”"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "角峰",
+      "charId": "char_199_yak",
+      "tier": 1,
+      "chessId": "chess_char_1_02_a",
+      "goldenChessId": "chess_char_1_02_b",
+      "branch": "protector",
+      "skillChoices": [
+        {
+          "skillId": "skchr_yak_1",
+          "skillIndex": 0,
+          "name": "体能强化"
+        },
+        {
+          "skillId": "skchr_yak_2",
+          "skillIndex": 1,
+          "name": "抗寒体质"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "惊蛰",
+      "charId": "char_306_leizi",
+      "tier": 1,
+      "chessId": "chess_char_1_03_a",
+      "goldenChessId": "chess_char_1_03_b",
+      "branch": "chain",
+      "skillChoices": [
+        {
+          "skillId": "skcom_atk_up[3]",
+          "skillIndex": 0,
+          "name": "攻击力强化·γ型"
+        },
+        {
+          "skillId": "skchr_leizi_2",
+          "skillIndex": 1,
+          "name": "初雷"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "深巡",
+      "charId": "char_4137_udflow",
+      "tier": 1,
+      "chessId": "chess_char_1_04_a",
+      "goldenChessId": "chess_char_1_04_b",
+      "branch": "shotprotector",
+      "skillChoices": [
+        {
+          "skillId": "skchr_udflow_1",
+          "skillIndex": 0,
+          "name": "侵袭破坏应对"
+        },
+        {
+          "skillId": "skchr_udflow_2",
+          "skillIndex": 1,
+          "name": "行动能力剥夺"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "刺玫",
+      "charId": "char_494_vendla",
+      "tier": 1,
+      "chessId": "chess_char_1_06_a",
+      "goldenChessId": "chess_char_1_06_b",
+      "branch": "incantationmedic",
+      "skillChoices": [
+        {
+          "skillId": "skcom_magic_rage[3]",
+          "skillIndex": 0,
+          "name": "战术咏唱·γ型"
+        },
+        {
+          "skillId": "skchr_vendla_2",
+          "skillIndex": 1,
+          "name": "荆藤庇荫"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "普罗旺斯",
+      "charId": "char_145_prove",
+      "tier": 1,
+      "chessId": "chess_char_1_07_a",
+      "goldenChessId": "chess_char_1_07_b",
+      "branch": "closerange",
+      "skillChoices": [
+        {
+          "skillId": "skchr_prove_1",
+          "skillIndex": 0,
+          "name": "狼眼"
+        },
+        {
+          "skillId": "skchr_prove_2",
+          "skillIndex": 1,
+          "name": "杀戮嗅觉"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "德克萨斯",
+      "charId": "char_102_texas",
+      "tier": 1,
+      "chessId": "chess_char_1_08_a",
+      "goldenChessId": "chess_char_1_08_b",
+      "branch": "pioneer",
+      "skillChoices": [
+        {
+          "skillId": "skcom_charge_cost[3]",
+          "skillIndex": 0,
+          "name": "冲锋号令·γ型"
+        },
+        {
+          "skillId": "skchr_texas_2",
+          "skillIndex": 1,
+          "name": "剑雨"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "跃跃",
+      "charId": "char_4100_caper",
+      "tier": 1,
+      "chessId": "chess_char_1_09_a",
+      "goldenChessId": "chess_char_1_09_b",
+      "branch": "loopshooter",
+      "skillChoices": [
+        {
+          "skillId": "skchr_caper_1",
+          "skillIndex": 0,
+          "name": "强力击·β型"
+        },
+        {
+          "skillId": "skchr_caper_2",
+          "skillIndex": 1,
+          "name": "乐趣加倍"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "古米",
+      "charId": "char_196_sunbr",
+      "tier": 1,
+      "chessId": "chess_char_1_10_a",
+      "goldenChessId": "chess_char_1_10_b",
+      "branch": "guardian",
+      "skillChoices": [
+        {
+          "skillId": "skchr_sunbr_1",
+          "skillIndex": 0,
+          "name": "备用军粮"
+        },
+        {
+          "skillId": "skchr_sunbr_2",
+          "skillIndex": 1,
+          "name": "食粮烹制"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "艾丝黛尔",
+      "charId": "char_127_estell",
+      "tier": 1,
+      "chessId": "chess_char_1_12_a",
+      "goldenChessId": "chess_char_1_12_b",
+      "branch": "centurion",
+      "skillChoices": [
+        {
+          "skillId": "skcom_atk_up[2]",
+          "skillIndex": 0,
+          "name": "攻击力强化·β型"
+        },
+        {
+          "skillId": "skchr_estell_2",
+          "skillIndex": 1,
+          "name": "舍身突击"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "波登可",
+      "charId": "char_258_podego",
+      "tier": 1,
+      "chessId": "chess_char_1_13_a",
+      "goldenChessId": "chess_char_1_13_b",
+      "branch": "slower",
+      "skillChoices": [
+        {
+          "skillId": "skchr_podego_1",
+          "skillIndex": 0,
+          "name": "花香疗法"
+        },
+        {
+          "skillId": "skchr_podego_2",
+          "skillIndex": 1,
+          "name": "孢子扩散"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "格雷伊",
+      "charId": "char_253_greyy",
+      "tier": 1,
+      "chessId": "chess_char_1_14_a",
+      "goldenChessId": "chess_char_1_14_b",
+      "branch": "splashcaster",
+      "skillChoices": [
+        {
+          "skillId": "skcom_magic_rage[2]",
+          "skillIndex": 0,
+          "name": "战术咏唱·β型"
+        },
+        {
+          "skillId": "skchr_greyy_2",
+          "skillIndex": 1,
+          "name": "静电释放"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "深靛",
+      "charId": "char_469_indigo",
+      "tier": 1,
+      "chessId": "chess_char_1_17_a",
+      "goldenChessId": "chess_char_1_17_b",
+      "branch": "mystic",
+      "skillChoices": [
+        {
+          "skillId": "skchr_indigo_1",
+          "skillIndex": 0,
+          "name": "灯塔守卫者"
+        },
+        {
+          "skillId": "skchr_indigo_2",
+          "skillIndex": 1,
+          "name": "光影迷宫"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "宴",
+      "charId": "char_337_utage",
+      "tier": 1,
+      "chessId": "chess_char_1_18_a",
+      "goldenChessId": "chess_char_1_18_b",
+      "branch": "musha",
+      "skillChoices": [
+        {
+          "skillId": "skchr_utage_1",
+          "skillIndex": 0,
+          "name": "分神"
+        },
+        {
+          "skillId": "skchr_utage_2",
+          "skillIndex": 1,
+          "name": "落地斩·破门"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "野鬃",
+      "charId": "char_496_wildmn",
+      "tier": 1,
+      "chessId": "chess_char_1_19_a",
+      "goldenChessId": "chess_char_1_19_b",
+      "branch": "charger",
+      "skillChoices": [
+        {
+          "skillId": "skchr_wildmn_1",
+          "skillIndex": 0,
+          "name": "骑枪刺击"
+        },
+        {
+          "skillId": "skchr_wildmn_2",
+          "skillIndex": 1,
+          "name": "夹枪冲锋"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "雷蛇",
+      "charId": "char_107_liskam",
+      "tier": 1,
+      "chessId": "chess_char_1_20_a",
+      "goldenChessId": "chess_char_1_20_b",
+      "branch": "shotprotector",
+      "skillChoices": [
+        {
+          "skillId": "skchr_liskam_1",
+          "skillIndex": 0,
+          "name": "充能防御"
+        },
+        {
+          "skillId": "skchr_liskam_2",
+          "skillIndex": 1,
+          "name": "反击电弧"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "送葬人",
+      "charId": "char_279_excu",
+      "tier": 2,
+      "chessId": "chess_char_2_01_a",
+      "goldenChessId": "chess_char_2_01_b",
+      "branch": "reaperrange",
+      "skillChoices": [
+        {
+          "skillId": "skchr_excu_1",
+          "skillIndex": 0,
+          "name": "铳口收束"
+        },
+        {
+          "skillId": "skchr_excu_2",
+          "skillIndex": 1,
+          "name": "最终旅程"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "赫默",
+      "charId": "char_108_silent",
+      "tier": 2,
+      "chessId": "chess_char_2_02_a",
+      "goldenChessId": "chess_char_2_02_b",
+      "branch": "physician",
+      "skillChoices": [
+        {
+          "skillId": "skcom_heal_up[3]",
+          "skillIndex": 0,
+          "name": "治疗强化·γ型"
+        },
+        {
+          "skillId": "skchr_silent_2",
+          "skillIndex": 1,
+          "name": "医疗无人机"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "小满",
+      "charId": "char_4122_grabds",
+      "tier": 2,
+      "chessId": "chess_char_2_04_a",
+      "goldenChessId": "chess_char_2_04_b",
+      "branch": "slower",
+      "skillChoices": [
+        {
+          "skillId": "skchr_grabds_1",
+          "skillIndex": 0,
+          "name": "竹笛飞声"
+        },
+        {
+          "skillId": "skchr_grabds_2",
+          "skillIndex": 1,
+          "name": "乡音沉沉"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "哈洛德",
+      "charId": "char_4114_harold",
+      "tier": 2,
+      "chessId": "chess_char_2_05_a",
+      "goldenChessId": "chess_char_2_05_b",
+      "branch": "wandermedic",
+      "skillChoices": [
+        {
+          "skillId": "skcom_heal_up[3]",
+          "skillIndex": 0,
+          "name": "治疗强化·γ型"
+        },
+        {
+          "skillId": "skchr_harold_2",
+          "skillIndex": 1,
+          "name": "重症优先"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "莎草",
+      "charId": "char_4139_papyrs",
+      "tier": 2,
+      "chessId": "chess_char_2_06_a",
+      "goldenChessId": "chess_char_2_06_b",
+      "branch": "chainhealer",
+      "skillChoices": [
+        {
+          "skillId": "skchr_papyrs_1",
+          "skillIndex": 0,
+          "name": "巧思乍现"
+        },
+        {
+          "skillId": "skchr_papyrs_2",
+          "skillIndex": 1,
+          "name": "临考发挥"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "幽灵鲨",
+      "charId": "char_143_ghost",
+      "tier": 2,
+      "chessId": "chess_char_2_07_a",
+      "goldenChessId": "chess_char_2_07_b",
+      "branch": "centurion",
+      "skillChoices": [
+        {
+          "skillId": "skcom_atk_up[3]",
+          "skillIndex": 0,
+          "name": "攻击力强化·γ型"
+        },
+        {
+          "skillId": "skchr_ghost_2",
+          "skillIndex": 1,
+          "name": "肉斩骨断"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "泡泡",
+      "charId": "char_381_bubble",
+      "tier": 2,
+      "chessId": "chess_char_2_08_a",
+      "goldenChessId": "chess_char_2_08_b",
+      "branch": "protector",
+      "skillChoices": [
+        {
+          "skillId": "skcom_def_up[2]",
+          "skillIndex": 0,
+          "name": "防御力强化·β型"
+        },
+        {
+          "skillId": "skchr_bubble_2",
+          "skillIndex": 1,
+          "name": "“挨打”"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "休谟斯",
+      "charId": "char_491_humus",
+      "tier": 2,
+      "chessId": "chess_char_2_09_a",
+      "goldenChessId": "chess_char_2_09_b",
+      "branch": "reaper",
+      "skillChoices": [
+        {
+          "skillId": "skchr_humus_1",
+          "skillIndex": 0,
+          "name": "固废切割"
+        },
+        {
+          "skillId": "skchr_humus_2",
+          "skillIndex": 1,
+          "name": "高效处理"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "洛洛",
+      "charId": "char_4040_rockr",
+      "tier": 2,
+      "chessId": "chess_char_2_10_a",
+      "goldenChessId": "chess_char_2_10_b",
+      "branch": "funnel",
+      "skillChoices": [
+        {
+          "skillId": "skcom_magic_rage[3]",
+          "skillIndex": 0,
+          "name": "战术咏唱·γ型"
+        },
+        {
+          "skillId": "skchr_rockr_2",
+          "skillIndex": 1,
+          "name": "自负此轭"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "风丸",
+      "charId": "char_4016_kazema",
+      "tier": 2,
+      "chessId": "chess_char_2_11_a",
+      "goldenChessId": "chess_char_2_11_b",
+      "branch": "dollkeeper",
+      "skillChoices": [
+        {
+          "skillId": "skchr_kazema_1",
+          "skillIndex": 0,
+          "name": "纸艺·迅击"
+        },
+        {
+          "skillId": "skchr_kazema_2",
+          "skillIndex": 1,
+          "name": "纸艺·双影"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "砾",
+      "charId": "char_237_gravel",
+      "tier": 2,
+      "chessId": "chess_char_2_12_a",
+      "goldenChessId": "chess_char_2_12_b",
+      "branch": "executor",
+      "skillChoices": [
+        {
+          "skillId": "skchr_gravel_1",
+          "skillIndex": 0,
+          "name": "影袭"
+        },
+        {
+          "skillId": "skchr_gravel_2",
+          "skillIndex": 1,
+          "name": "鼠群"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "蒂比",
+      "charId": "char_4191_tippi",
+      "tier": 2,
+      "chessId": "chess_char_2_13_a",
+      "goldenChessId": "chess_char_2_13_b",
+      "branch": "skywalker",
+      "skillChoices": [
+        {
+          "skillId": "skchr_tippi_1",
+          "skillIndex": 0,
+          "name": "专业喷绘技巧"
+        },
+        {
+          "skillId": "skchr_tippi_2",
+          "skillIndex": 1,
+          "name": "紧急赶场通知"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "调香师",
+      "charId": "char_181_flower",
+      "tier": 2,
+      "chessId": "chess_char_2_14_a",
+      "goldenChessId": "chess_char_2_14_b",
+      "branch": "ringhealer",
+      "skillChoices": [
+        {
+          "skillId": "skcom_heal_up[2]",
+          "skillIndex": 0,
+          "name": "治疗强化·β型"
+        },
+        {
+          "skillId": "skchr_flower_2",
+          "skillIndex": 1,
+          "name": "精调"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "拉普兰德",
+      "charId": "char_140_whitew",
+      "tier": 2,
+      "chessId": "chess_char_2_16_a",
+      "goldenChessId": "chess_char_2_16_b",
+      "branch": "lord",
+      "skillChoices": [
+        {
+          "skillId": "skchr_whitew_1",
+          "skillIndex": 0,
+          "name": "日晷"
+        },
+        {
+          "skillId": "skchr_whitew_2",
+          "skillIndex": 1,
+          "name": "狼魂"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "折桠",
+      "charId": "char_4207_branch",
+      "tier": 2,
+      "chessId": "chess_char_2_17_a",
+      "goldenChessId": "chess_char_2_17_b",
+      "branch": "unyield",
+      "skillChoices": [
+        {
+          "skillId": "skchr_branch_1",
+          "skillIndex": 0,
+          "name": "绝境抵抗"
+        },
+        {
+          "skillId": "skchr_branch_2",
+          "skillIndex": 1,
+          "name": "生存决心"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "灰毫",
+      "charId": "char_431_ashlok",
+      "tier": 2,
+      "chessId": "chess_char_2_18_a",
+      "goldenChessId": "chess_char_2_18_b",
+      "branch": "fortress",
+      "skillChoices": [
+        {
+          "skillId": "skcom_atk_up[3]",
+          "skillIndex": 0,
+          "name": "攻击力强化·γ型"
+        },
+        {
+          "skillId": "skchr_ashlok_2",
+          "skillIndex": 1,
+          "name": "专注轰击"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "锡人",
+      "charId": "char_4151_tinman",
+      "tier": 2,
+      "chessId": "chess_char_2_19_a",
+      "goldenChessId": "chess_char_2_19_b",
+      "branch": "alchemist",
+      "skillChoices": [
+        {
+          "skillId": "skchr_tinman_1",
+          "skillIndex": 0,
+          "name": "“老科利”"
+        },
+        {
+          "skillId": "skchr_tinman_2",
+          "skillIndex": 1,
+          "name": "“大拉里”"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "能天使",
+      "charId": "char_103_angel",
+      "tier": 3,
+      "chessId": "chess_char_3_01_a",
+      "goldenChessId": "chess_char_3_01_b",
+      "branch": "fastshot",
+      "skillChoices": [
+        {
+          "skillId": "skchr_angel_1",
+          "skillIndex": 0,
+          "name": "冲锋模式"
+        },
+        {
+          "skillId": "skchr_angel_2",
+          "skillIndex": 1,
+          "name": "扫射模式"
+        },
+        {
+          "skillId": "skchr_angel_3",
+          "skillIndex": 2,
+          "name": "过载模式"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "断崖",
+      "charId": "char_294_ayer",
+      "tier": 3,
+      "chessId": "chess_char_3_02_a",
+      "goldenChessId": "chess_char_3_02_b",
+      "branch": "lord",
+      "skillChoices": [
+        {
+          "skillId": "skchr_ayer_1",
+          "skillIndex": 0,
+          "name": "多导向散射弹丸"
+        },
+        {
+          "skillId": "skchr_ayer_2",
+          "skillIndex": 1,
+          "name": "浮游刃启动"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "诗怀雅",
+      "charId": "char_308_swire",
+      "tier": 3,
+      "chessId": "chess_char_3_03_a",
+      "goldenChessId": "chess_char_3_03_b",
+      "branch": "instructor",
+      "skillChoices": [
+        {
+          "skillId": "skchr_swire_1",
+          "skillIndex": 0,
+          "name": "指挥调度"
+        },
+        {
+          "skillId": "skchr_swire_2",
+          "skillIndex": 1,
+          "name": "协同作战"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "琳琅诗怀雅",
+      "charId": "char_1033_swire2",
+      "tier": 3,
+      "chessId": "chess_char_3_04_a",
+      "goldenChessId": "chess_char_3_04_b",
+      "branch": "merchant",
+      "skillChoices": [
+        {
+          "skillId": "skchr_swire2_1",
+          "skillIndex": 0,
+          "name": "仗义疏财"
+        },
+        {
+          "skillId": "skchr_swire2_2",
+          "skillIndex": 1,
+          "name": "“见面礼”"
+        },
+        {
+          "skillId": "skchr_swire2_3",
+          "skillIndex": 2,
+          "name": "千金一掷"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "斯卡蒂",
+      "charId": "char_263_skadi",
+      "tier": 3,
+      "chessId": "chess_char_3_05_a",
+      "goldenChessId": "chess_char_3_05_b",
+      "branch": "fearless",
+      "skillChoices": [
+        {
+          "skillId": "skcom_quickattack[3]",
+          "skillIndex": 0,
+          "name": "迅捷打击·γ型"
+        },
+        {
+          "skillId": "skchr_skadi_2",
+          "skillIndex": 1,
+          "name": "跃浪击"
+        },
+        {
+          "skillId": "skchr_skadi_3",
+          "skillIndex": 2,
+          "name": "涌潮悲歌"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "菲莱",
+      "charId": "char_4148_philae",
+      "tier": 3,
+      "chessId": "chess_char_3_06_a",
+      "goldenChessId": "chess_char_3_06_b",
+      "branch": "primprotector",
+      "skillChoices": [
+        {
+          "skillId": "skchr_philae_1",
+          "skillIndex": 0,
+          "name": "灵河护佑"
+        },
+        {
+          "skillId": "skchr_philae_2",
+          "skillIndex": 1,
+          "name": "冥河诅咒"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "薄绿",
+      "charId": "char_388_mint",
+      "tier": 3,
+      "chessId": "chess_char_3_08_a",
+      "goldenChessId": "chess_char_3_08_b",
+      "branch": "phalanx",
+      "skillChoices": [
+        {
+          "skillId": "skchr_mint_1",
+          "skillIndex": 0,
+          "name": "风语"
+        },
+        {
+          "skillId": "skchr_mint_2",
+          "skillIndex": 1,
+          "name": "聚能涡旋"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "海霓",
+      "charId": "char_4079_haini",
+      "tier": 3,
+      "chessId": "chess_char_3_09_a",
+      "goldenChessId": "chess_char_3_09_b",
+      "branch": "underminer",
+      "skillChoices": [
+        {
+          "skillId": "skchr_haini_1",
+          "skillIndex": 0,
+          "name": "迷惑性洋流图"
+        },
+        {
+          "skillId": "skchr_haini_2",
+          "skillIndex": 1,
+          "name": "阻滞性显色剂"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "松果",
+      "charId": "char_440_pinecn",
+      "tier": 3,
+      "chessId": "chess_char_3_10_a",
+      "goldenChessId": "chess_char_3_10_b",
+      "branch": "reaperrange",
+      "skillChoices": [
+        {
+          "skillId": "skchr_pinecn_1",
+          "skillIndex": 0,
+          "name": "RMA长钉"
+        },
+        {
+          "skillId": "skchr_pinecn_2",
+          "skillIndex": 1,
+          "name": "电能过载"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "雪猎",
+      "charId": "char_4211_snhunt",
+      "tier": 3,
+      "chessId": "chess_char_3_11_a",
+      "goldenChessId": "chess_char_3_11_b",
+      "branch": "hunter",
+      "skillChoices": [
+        {
+          "skillId": "skchr_snhunt_1",
+          "skillIndex": 0,
+          "name": "强力击·β型"
+        },
+        {
+          "skillId": "skchr_snhunt_2",
+          "skillIndex": 1,
+          "name": "风雪连弩"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "瑕光",
+      "charId": "char_423_blemsh",
+      "tier": 3,
+      "chessId": "chess_char_3_12_a",
+      "goldenChessId": "chess_char_3_12_b",
+      "branch": "guardian",
+      "skillChoices": [
+        {
+          "skillId": "skchr_blemsh_1",
+          "skillIndex": 0,
+          "name": "光芒涌动"
+        },
+        {
+          "skillId": "skchr_blemsh_2",
+          "skillIndex": 1,
+          "name": "慑敌辉光"
+        },
+        {
+          "skillId": "skchr_blemsh_3",
+          "skillIndex": 2,
+          "name": "先贤化身"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "至简",
+      "charId": "char_4054_malist",
+      "tier": 3,
+      "chessId": "chess_char_3_13_a",
+      "goldenChessId": "chess_char_3_13_b",
+      "branch": "funnel",
+      "skillChoices": [
+        {
+          "skillId": "skcom_quickattack[3]",
+          "skillIndex": 0,
+          "name": "迅捷打击·γ型"
+        },
+        {
+          "skillId": "skchr_malist_2",
+          "skillIndex": 1,
+          "name": "神工意匠"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "初雪",
+      "charId": "char_174_slbell",
+      "tier": 3,
+      "chessId": "chess_char_3_14_a",
+      "goldenChessId": "chess_char_3_14_b",
+      "branch": "underminer",
+      "skillChoices": [
+        {
+          "skillId": "skchr_slbell_1",
+          "skillIndex": 0,
+          "name": "传音回响"
+        },
+        {
+          "skillId": "skchr_slbell_2",
+          "skillIndex": 1,
+          "name": "自然震慑"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "蛇屠箱",
+      "charId": "char_150_snakek",
+      "tier": 3,
+      "chessId": "chess_char_3_16_a",
+      "goldenChessId": "chess_char_3_16_b",
+      "branch": "protector",
+      "skillChoices": [
+        {
+          "skillId": "skcom_def_up[2]",
+          "skillIndex": 0,
+          "name": "防御力强化·β型"
+        },
+        {
+          "skillId": "skchr_snakek_2",
+          "skillIndex": 1,
+          "name": "壳状防御"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "流星",
+      "charId": "char_126_shotst",
+      "tier": 3,
+      "chessId": "chess_char_3_17_a",
+      "goldenChessId": "chess_char_3_17_b",
+      "branch": "fastshot",
+      "skillChoices": [
+        {
+          "skillId": "skchr_shotst_1",
+          "skillIndex": 0,
+          "name": "碎甲击"
+        },
+        {
+          "skillId": "skchr_shotst_2",
+          "skillIndex": 1,
+          "name": "碎甲击·扩散"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "忍冬",
+      "charId": "char_4026_vulpis",
+      "tier": 3,
+      "chessId": "chess_char_3_18_a",
+      "goldenChessId": "chess_char_3_18_b",
+      "branch": "pioneer",
+      "skillChoices": [
+        {
+          "skillId": "skchr_vulpis_1",
+          "skillIndex": 0,
+          "name": "小施惩戒"
+        },
+        {
+          "skillId": "skchr_vulpis_2",
+          "skillIndex": 1,
+          "name": "坠刃拷问"
+        },
+        {
+          "skillId": "skchr_vulpis_3",
+          "skillIndex": 2,
+          "name": "隐狐之艺"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "伺夜",
+      "charId": "char_427_vigil",
+      "tier": 3,
+      "chessId": "chess_char_3_19_a",
+      "goldenChessId": "chess_char_3_19_b",
+      "branch": "tactician",
+      "skillChoices": [
+        {
+          "skillId": "skchr_vigil_1",
+          "skillIndex": 0,
+          "name": "领袖的呼唤"
+        },
+        {
+          "skillId": "skchr_vigil_2",
+          "skillIndex": 1,
+          "name": "领袖的馈赠"
+        },
+        {
+          "skillId": "skchr_vigil_3",
+          "skillIndex": 2,
+          "name": "领袖的尊严"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "耶拉",
+      "charId": "char_4013_kjera",
+      "tier": 3,
+      "chessId": "chess_char_3_20_a",
+      "goldenChessId": "chess_char_3_20_b",
+      "branch": "funnel",
+      "skillChoices": [
+        {
+          "skillId": "skcom_atk_up[3]",
+          "skillIndex": 0,
+          "name": "攻击力强化·γ型"
+        },
+        {
+          "skillId": "skchr_kjera_2",
+          "skillIndex": 1,
+          "name": "心随意动"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "空弦",
+      "charId": "char_332_archet",
+      "tier": 3,
+      "chessId": "chess_char_3_21_a",
+      "goldenChessId": "chess_char_3_21_b",
+      "branch": "fastshot",
+      "skillChoices": [
+        {
+          "skillId": "skchr_archet_1",
+          "skillIndex": 0,
+          "name": "箭矢·散逸"
+        },
+        {
+          "skillId": "skchr_archet_2",
+          "skillIndex": 1,
+          "name": "箭矢·追猎"
+        },
+        {
+          "skillId": "skchr_archet_3",
+          "skillIndex": 2,
+          "name": "箭矢·暴风"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "信仰搅拌机",
+      "charId": "char_4194_rmixer",
+      "tier": 4,
+      "chessId": "chess_char_4_01_a",
+      "goldenChessId": "chess_char_4_01_b",
+      "branch": "shotprotector",
+      "skillChoices": [
+        {
+          "skillId": "skchr_rmixer_1",
+          "skillIndex": 0,
+          "name": "铳骑主考官"
+        },
+        {
+          "skillId": "skchr_rmixer_2",
+          "skillIndex": 1,
+          "name": "八臂电锯侠"
+        },
+        {
+          "skillId": "skchr_rmixer_3",
+          "skillIndex": 2,
+          "name": "退休前布道"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "莫斯提马",
+      "charId": "char_213_mostma",
+      "tier": 4,
+      "chessId": "chess_char_4_02_a",
+      "goldenChessId": "chess_char_4_02_b",
+      "branch": "splashcaster",
+      "skillChoices": [
+        {
+          "skillId": "skcom_atk_up[3]",
+          "skillIndex": 0,
+          "name": "攻击力强化·γ型"
+        },
+        {
+          "skillId": "skchr_mostma_2",
+          "skillIndex": 1,
+          "name": "荒时之锁"
+        },
+        {
+          "skillId": "skchr_mostma_3",
+          "skillIndex": 2,
+          "name": "序时之匙"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "伊内丝",
+      "charId": "char_4087_ines",
+      "tier": 4,
+      "chessId": "chess_char_4_04_a",
+      "goldenChessId": "chess_char_4_04_b",
+      "branch": "agent",
+      "skillChoices": [
+        {
+          "skillId": "skchr_ines_1",
+          "skillIndex": 0,
+          "name": "淬影突袭"
+        },
+        {
+          "skillId": "skchr_ines_2",
+          "skillIndex": 1,
+          "name": "暗夜无明"
+        },
+        {
+          "skillId": "skchr_ines_3",
+          "skillIndex": 2,
+          "name": "独影归途"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "寒芒克洛丝",
+      "charId": "char_1021_kroos2",
+      "tier": 4,
+      "chessId": "chess_char_4_06_a",
+      "goldenChessId": "chess_char_4_06_b",
+      "branch": "fastshot",
+      "skillChoices": [
+        {
+          "skillId": "skchr_kroos2_1",
+          "skillIndex": 0,
+          "name": "无痕"
+        },
+        {
+          "skillId": "skchr_kroos2_2",
+          "skillIndex": 1,
+          "name": "封喉"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "风笛",
+      "charId": "char_222_bpipe",
+      "tier": 4,
+      "chessId": "chess_char_4_07_a",
+      "goldenChessId": "chess_char_4_07_b",
+      "branch": "charger",
+      "skillChoices": [
+        {
+          "skillId": "skcom_quickattack[3]",
+          "skillIndex": 0,
+          "name": "迅捷打击·γ型"
+        },
+        {
+          "skillId": "skchr_bpipe_2",
+          "skillIndex": 1,
+          "name": "高效冲击"
+        },
+        {
+          "skillId": "skchr_bpipe_3",
+          "skillIndex": 2,
+          "name": "闭膛连发"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "水月",
+      "charId": "char_437_mizuki",
+      "tier": 4,
+      "chessId": "chess_char_4_09_a",
+      "goldenChessId": "chess_char_4_09_b",
+      "branch": "stalker",
+      "skillChoices": [
+        {
+          "skillId": "skchr_mizuki_1",
+          "skillIndex": 0,
+          "name": "唤醒"
+        },
+        {
+          "skillId": "skchr_mizuki_2",
+          "skillIndex": 1,
+          "name": "囚徒困境"
+        },
+        {
+          "skillId": "skchr_mizuki_3",
+          "skillIndex": 2,
+          "name": "镜花水月"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "阿罗玛",
+      "charId": "char_446_aroma",
+      "tier": 4,
+      "chessId": "chess_char_4_10_a",
+      "goldenChessId": "chess_char_4_10_b",
+      "branch": "blastcaster",
+      "skillChoices": [
+        {
+          "skillId": "skchr_aroma_1",
+          "skillIndex": 0,
+          "name": "强效清洁"
+        },
+        {
+          "skillId": "skchr_aroma_2",
+          "skillIndex": 1,
+          "name": "小心地滑"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "凯瑟琳",
+      "charId": "char_4162_cathy",
+      "tier": 4,
+      "chessId": "chess_char_4_11_a",
+      "goldenChessId": "chess_char_4_11_b",
+      "branch": "craftsman",
+      "skillChoices": [
+        {
+          "skillId": "skchr_cathy_1",
+          "skillIndex": 0,
+          "name": "岁月锻打"
+        },
+        {
+          "skillId": "skchr_cathy_2",
+          "skillIndex": 1,
+          "name": "战火淬炼"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "歌蕾蒂娅",
+      "charId": "char_474_glady",
+      "tier": 4,
+      "chessId": "chess_char_4_12_a",
+      "goldenChessId": "chess_char_4_12_b",
+      "branch": "hookmaster",
+      "skillChoices": [
+        {
+          "skillId": "skchr_glady_1",
+          "skillIndex": 0,
+          "name": "缺水的大洋裂断"
+        },
+        {
+          "skillId": "skchr_glady_2",
+          "skillIndex": 1,
+          "name": "缺水的掌握怒海"
+        },
+        {
+          "skillId": "skchr_glady_3",
+          "skillIndex": 2,
+          "name": "缺水的碎漩狂舞"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "灵知",
+      "charId": "char_206_gnosis",
+      "tier": 4,
+      "chessId": "chess_char_4_13_a",
+      "goldenChessId": "chess_char_4_13_b",
+      "branch": "underminer",
+      "skillChoices": [
+        {
+          "skillId": "skchr_gnosis_1",
+          "skillIndex": 0,
+          "name": "高速思考"
+        },
+        {
+          "skillId": "skchr_gnosis_2",
+          "skillIndex": 1,
+          "name": "零度爆发"
+        },
+        {
+          "skillId": "skchr_gnosis_3",
+          "skillIndex": 2,
+          "name": "失温症"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "莱恩哈特",
+      "charId": "char_373_lionhd",
+      "tier": 4,
+      "chessId": "chess_char_4_14_a",
+      "goldenChessId": "chess_char_4_14_b",
+      "branch": "splashcaster",
+      "skillChoices": [
+        {
+          "skillId": "skcom_atk_up[3]",
+          "skillIndex": 0,
+          "name": "攻击力强化·γ型"
+        },
+        {
+          "skillId": "skchr_lionhd_2",
+          "skillIndex": 1,
+          "name": "解构与爆破"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "缄默德克萨斯",
+      "charId": "char_1028_texas2",
+      "tier": 4,
+      "chessId": "chess_char_4_16_a",
+      "goldenChessId": "chess_char_4_16_b",
+      "branch": "executor",
+      "skillChoices": [
+        {
+          "skillId": "skchr_texas2_1",
+          "skillIndex": 0,
+          "name": "细雨无声"
+        },
+        {
+          "skillId": "skchr_texas2_2",
+          "skillIndex": 1,
+          "name": "阵雨连绵"
+        },
+        {
+          "skillId": "skchr_texas2_3",
+          "skillIndex": 2,
+          "name": "剑雨滂沱"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "星熊",
+      "charId": "char_136_hsguma",
+      "tier": 4,
+      "chessId": "chess_char_4_17_a",
+      "goldenChessId": "chess_char_4_17_b",
+      "branch": "protector",
+      "skillChoices": [
+        {
+          "skillId": "skchr_hsguma_1",
+          "skillIndex": 0,
+          "name": "战意"
+        },
+        {
+          "skillId": "skchr_hsguma_2",
+          "skillIndex": 1,
+          "name": "荆棘"
+        },
+        {
+          "skillId": "skchr_hsguma_3",
+          "skillIndex": 2,
+          "name": "力之锯"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "泥岩",
+      "charId": "char_311_mudrok",
+      "tier": 4,
+      "chessId": "chess_char_4_18_a",
+      "goldenChessId": "chess_char_4_18_b",
+      "branch": "unyield",
+      "skillChoices": [
+        {
+          "skillId": "skcom_def_up[3]",
+          "skillIndex": 0,
+          "name": "防御力强化·γ型"
+        },
+        {
+          "skillId": "skchr_mudrok_2",
+          "skillIndex": 1,
+          "name": "岩崩锤"
+        },
+        {
+          "skillId": "skchr_mudrok_3",
+          "skillIndex": 2,
+          "name": "秽壤的血脉"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "焰尾",
+      "charId": "char_420_flamtl",
+      "tier": 4,
+      "chessId": "chess_char_4_19_a",
+      "goldenChessId": "chess_char_4_19_b",
+      "branch": "pioneer",
+      "skillChoices": [
+        {
+          "skillId": "skchr_flamtl_1",
+          "skillIndex": 0,
+          "name": "迅敏直觉"
+        },
+        {
+          "skillId": "skchr_flamtl_2",
+          "skillIndex": 1,
+          "name": "“红松林”"
+        },
+        {
+          "skillId": "skchr_flamtl_3",
+          "skillIndex": 2,
+          "name": "焰心"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "远牙",
+      "charId": "char_430_fartth",
+      "tier": 4,
+      "chessId": "chess_char_4_20_a",
+      "goldenChessId": "chess_char_4_20_b",
+      "branch": "longrange",
+      "skillChoices": [
+        {
+          "skillId": "skcom_quickattack[3]",
+          "skillIndex": 0,
+          "name": "迅捷打击·γ型"
+        },
+        {
+          "skillId": "skchr_fartth_2",
+          "skillIndex": 1,
+          "name": "同盟支援"
+        },
+        {
+          "skillId": "skchr_fartth_3",
+          "skillIndex": 2,
+          "name": "光羽箭"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "白面鸮",
+      "charId": "char_128_plosis",
+      "tier": 4,
+      "chessId": "chess_char_4_21_a",
+      "goldenChessId": "chess_char_4_21_b",
+      "branch": "ringhealer",
+      "skillChoices": [
+        {
+          "skillId": "skcom_heal_up[3]",
+          "skillIndex": 0,
+          "name": "治疗强化·γ型"
+        },
+        {
+          "skillId": "skchr_plosis_2",
+          "skillIndex": 1,
+          "name": "脑啡肽"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "银灰",
+      "charId": "char_172_svrash",
+      "tier": 4,
+      "chessId": "chess_char_4_22_a",
+      "goldenChessId": "chess_char_4_22_b",
+      "branch": "lord",
+      "skillChoices": [
+        {
+          "skillId": "skchr_svrash_1",
+          "skillIndex": 0,
+          "name": "强力击·γ型"
+        },
+        {
+          "skillId": "skchr_svrash_2",
+          "skillIndex": 1,
+          "name": "雪境生存法则"
+        },
+        {
+          "skillId": "skchr_svrash_3",
+          "skillIndex": 2,
+          "name": "真银斩"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "百炼嘉维尔",
+      "charId": "char_1026_gvial2",
+      "tier": 4,
+      "chessId": "chess_char_4_23_a",
+      "goldenChessId": "chess_char_4_23_b",
+      "branch": "centurion",
+      "skillChoices": [
+        {
+          "skillId": "skchr_gvial2_1",
+          "skillIndex": 0,
+          "name": "精准痛击"
+        },
+        {
+          "skillId": "skchr_gvial2_2",
+          "skillIndex": 1,
+          "name": "链锯强袭"
+        },
+        {
+          "skillId": "skchr_gvial2_3",
+          "skillIndex": 2,
+          "name": "丛林之魂"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "卡涅利安",
+      "charId": "char_426_billro",
+      "tier": 4,
+      "chessId": "chess_char_4_24_a",
+      "goldenChessId": "chess_char_4_24_b",
+      "branch": "phalanx",
+      "skillChoices": [
+        {
+          "skillId": "skchr_billro_1",
+          "skillIndex": 0,
+          "name": "沙暴守卫"
+        },
+        {
+          "skillId": "skchr_billro_2",
+          "skillIndex": 1,
+          "name": "沙缚镣锁"
+        },
+        {
+          "skillId": "skchr_billro_3",
+          "skillIndex": 2,
+          "name": "食噬之印"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "魔王",
+      "charId": "char_4134_cetsyr",
+      "tier": 4,
+      "chessId": "chess_char_4_25_a",
+      "goldenChessId": "chess_char_4_25_b",
+      "branch": "bard",
+      "skillChoices": [
+        {
+          "skillId": "skchr_cetsyr_1",
+          "skillIndex": 0,
+          "name": "往昔萦绕身旁"
+        },
+        {
+          "skillId": "skchr_cetsyr_2",
+          "skillIndex": 1,
+          "name": "明日渺远不及"
+        },
+        {
+          "skillId": "skchr_cetsyr_3",
+          "skillIndex": 2,
+          "name": "编织重构现世"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "华法琳",
+      "charId": "char_171_bldsk",
+      "tier": 4,
+      "chessId": "chess_char_4_26_a",
+      "goldenChessId": "chess_char_4_26_b",
+      "branch": "physician",
+      "skillChoices": [
+        {
+          "skillId": "skchr_bldsk_1",
+          "skillIndex": 0,
+          "name": "紧急包扎"
+        },
+        {
+          "skillId": "skchr_bldsk_2",
+          "skillIndex": 1,
+          "name": "不稳定血浆"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "妮芙",
+      "charId": "char_4146_nymph",
+      "tier": 5,
+      "chessId": "chess_char_5_22_a",
+      "goldenChessId": "chess_char_5_22_b",
+      "branch": "primcaster",
+      "skillChoices": [
+        {
+          "skillId": "skchr_nymph_1",
+          "skillIndex": 0,
+          "name": "笞心击"
+        },
+        {
+          "skillId": "skchr_nymph_2",
+          "skillIndex": 1,
+          "name": "怵然震爆"
+        },
+        {
+          "skillId": "skchr_nymph_3",
+          "skillIndex": 2,
+          "name": "心防溃决"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "圣约送葬人",
+      "charId": "char_1032_excu2",
+      "tier": 5,
+      "chessId": "chess_char_5_01_a",
+      "goldenChessId": "chess_char_5_01_b",
+      "branch": "reaper",
+      "skillChoices": [
+        {
+          "skillId": "skchr_excu2_1",
+          "skillIndex": 0,
+          "name": "遗嘱执行"
+        },
+        {
+          "skillId": "skchr_excu2_2",
+          "skillIndex": 1,
+          "name": "近身铳斗"
+        },
+        {
+          "skillId": "skchr_excu2_3",
+          "skillIndex": 2,
+          "name": "圣约决裁"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "缇缇",
+      "charId": "char_4056_titi",
+      "tier": 5,
+      "chessId": "chess_char_5_02_a",
+      "goldenChessId": "chess_char_5_02_b",
+      "branch": "incantationmedic",
+      "skillChoices": [
+        {
+          "skillId": "skchr_titi_1",
+          "skillIndex": 0,
+          "name": "缓蚀"
+        },
+        {
+          "skillId": "skchr_titi_2",
+          "skillIndex": 1,
+          "name": "封护"
+        },
+        {
+          "skillId": "skchr_titi_3",
+          "skillIndex": 2,
+          "name": "旧日绽放"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "烛煌",
+      "charId": "char_1040_blaze2",
+      "tier": 5,
+      "chessId": "chess_char_5_03_a",
+      "goldenChessId": "chess_char_5_03_b",
+      "branch": "primcaster",
+      "skillChoices": [
+        {
+          "skillId": "skchr_blaze2_1",
+          "skillIndex": 0,
+          "name": "炙手之援"
+        },
+        {
+          "skillId": "skchr_blaze2_2",
+          "skillIndex": 1,
+          "name": "沸血燎原"
+        },
+        {
+          "skillId": "skchr_blaze2_3",
+          "skillIndex": 2,
+          "name": "众恶的焚场"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "乌尔比安",
+      "charId": "char_4145_ulpia",
+      "tier": 5,
+      "chessId": "chess_char_5_05_a",
+      "goldenChessId": "chess_char_5_05_b",
+      "branch": "crusher",
+      "skillChoices": [
+        {
+          "skillId": "skchr_ulpia_1",
+          "skillIndex": 0,
+          "name": "必须促成的接触"
+        },
+        {
+          "skillId": "skchr_ulpia_2",
+          "skillIndex": 1,
+          "name": "必须维系的界限"
+        },
+        {
+          "skillId": "skchr_ulpia_3",
+          "skillIndex": 2,
+          "name": "必须开辟的通路"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "隐德来希",
+      "charId": "char_4010_etlchi",
+      "tier": 5,
+      "chessId": "chess_char_5_06_a",
+      "goldenChessId": "chess_char_5_06_b",
+      "branch": "reaper",
+      "skillChoices": [
+        {
+          "skillId": "skchr_etlchi_1",
+          "skillIndex": 0,
+          "name": "玫影觅迹"
+        },
+        {
+          "skillId": "skchr_etlchi_2",
+          "skillIndex": 1,
+          "name": "绯红壁合"
+        },
+        {
+          "skillId": "skchr_etlchi_3",
+          "skillIndex": 2,
+          "name": "灵与欲的惜别"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "史尔特尔",
+      "charId": "char_350_surtr",
+      "tier": 5,
+      "chessId": "chess_char_5_07_a",
+      "goldenChessId": "chess_char_5_07_b",
+      "branch": "artsfghter",
+      "skillChoices": [
+        {
+          "skillId": "skchr_surtr_1",
+          "skillIndex": 0,
+          "name": "烈焰魔剑"
+        },
+        {
+          "skillId": "skchr_surtr_2",
+          "skillIndex": 1,
+          "name": "熔核巨影"
+        },
+        {
+          "skillId": "skchr_surtr_3",
+          "skillIndex": 2,
+          "name": "黄昏"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "号角",
+      "charId": "char_4039_horn",
+      "tier": 5,
+      "chessId": "chess_char_5_08_a",
+      "goldenChessId": "chess_char_5_08_b",
+      "branch": "fortress",
+      "skillChoices": [
+        {
+          "skillId": "skchr_horn_1",
+          "skillIndex": 0,
+          "name": "照明榴弹"
+        },
+        {
+          "skillId": "skchr_horn_2",
+          "skillIndex": 1,
+          "name": "暴风号令"
+        },
+        {
+          "skillId": "skchr_horn_3",
+          "skillIndex": 2,
+          "name": "终极防线"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "铃兰",
+      "charId": "char_358_lisa",
+      "tier": 5,
+      "chessId": "chess_char_5_10_a",
+      "goldenChessId": "chess_char_5_10_b",
+      "branch": "slower",
+      "skillChoices": [
+        {
+          "skillId": "skchr_lisa_1",
+          "skillIndex": 0,
+          "name": "全力以赴"
+        },
+        {
+          "skillId": "skchr_lisa_2",
+          "skillIndex": 1,
+          "name": "儿时的舞乐"
+        },
+        {
+          "skillId": "skchr_lisa_3",
+          "skillIndex": 2,
+          "name": "狐火渺然"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "塞雷娅",
+      "charId": "char_202_demkni",
+      "tier": 5,
+      "chessId": "chess_char_5_11_a",
+      "goldenChessId": "chess_char_5_11_b",
+      "branch": "guardian",
+      "skillChoices": [
+        {
+          "skillId": "skchr_demkni_1",
+          "skillIndex": 0,
+          "name": "急救"
+        },
+        {
+          "skillId": "skchr_demkni_2",
+          "skillIndex": 1,
+          "name": "药物配置"
+        },
+        {
+          "skillId": "skchr_demkni_3",
+          "skillIndex": 2,
+          "name": "钙质化"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "夕",
+      "charId": "char_2015_dusk",
+      "tier": 5,
+      "chessId": "chess_char_5_12_a",
+      "goldenChessId": "chess_char_5_12_b",
+      "branch": "splashcaster",
+      "skillChoices": [
+        {
+          "skillId": "skchr_dusk_1",
+          "skillIndex": 0,
+          "name": "工笔入化"
+        },
+        {
+          "skillId": "skchr_dusk_2",
+          "skillIndex": 1,
+          "name": "泼墨淋漓"
+        },
+        {
+          "skillId": "skchr_dusk_3",
+          "skillIndex": 2,
+          "name": "写意胜形"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "归溟幽灵鲨",
+      "charId": "char_1023_ghost2",
+      "tier": 5,
+      "chessId": "chess_char_5_13_a",
+      "goldenChessId": "chess_char_5_13_b",
+      "branch": "dollkeeper",
+      "skillChoices": [
+        {
+          "skillId": "skchr_ghost2_1",
+          "skillIndex": 0,
+          "name": "生存的技巧"
+        },
+        {
+          "skillId": "skchr_ghost2_2",
+          "skillIndex": 1,
+          "name": "生存的渴望"
+        },
+        {
+          "skillId": "skchr_ghost2_3",
+          "skillIndex": 2,
+          "name": "生存的重压"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "凛御银灰",
+      "charId": "char_1045_svash2",
+      "tier": 5,
+      "chessId": "chess_char_5_14_a",
+      "goldenChessId": "chess_char_5_14_b",
+      "branch": "counsellor",
+      "skillChoices": [
+        {
+          "skillId": "skchr_svash2_1",
+          "skillIndex": 0,
+          "name": "周旋的谋略"
+        },
+        {
+          "skillId": "skchr_svash2_2",
+          "skillIndex": 1,
+          "name": "御敌的锋锐"
+        },
+        {
+          "skillId": "skchr_svash2_3",
+          "skillIndex": 2,
+          "name": "变革已至"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "引星棘刺",
+      "charId": "char_1039_thorn2",
+      "tier": 5,
+      "chessId": "chess_char_5_15_a",
+      "goldenChessId": "chess_char_5_15_b",
+      "branch": "alchemist",
+      "skillChoices": [
+        {
+          "skillId": "skchr_thorn2_1",
+          "skillIndex": 0,
+          "name": "度算浪波"
+        },
+        {
+          "skillId": "skchr_thorn2_2",
+          "skillIndex": 1,
+          "name": "解构涌潮"
+        },
+        {
+          "skillId": "skchr_thorn2_3",
+          "skillIndex": 2,
+          "name": "“我的海疆”"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "山",
+      "charId": "char_264_f12yin",
+      "tier": 5,
+      "chessId": "chess_char_5_17_a",
+      "goldenChessId": "chess_char_5_17_b",
+      "branch": "fighter",
+      "skillChoices": [
+        {
+          "skillId": "skchr_f12yin_1",
+          "skillIndex": 0,
+          "name": "左勾扫拳"
+        },
+        {
+          "skillId": "skchr_f12yin_2",
+          "skillIndex": 1,
+          "name": "横扫架势"
+        },
+        {
+          "skillId": "skchr_f12yin_3",
+          "skillIndex": 2,
+          "name": "震地碎岩击"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "玛恩纳",
+      "charId": "char_4064_mlynar",
+      "tier": 5,
+      "chessId": "chess_char_5_19_a",
+      "goldenChessId": "chess_char_5_19_b",
+      "branch": "librator",
+      "skillChoices": [
+        {
+          "skillId": "skchr_mlynar_1",
+          "skillIndex": 0,
+          "name": "未声张的怒火"
+        },
+        {
+          "skillId": "skchr_mlynar_2",
+          "skillIndex": 1,
+          "name": "未宽解的悲哀"
+        },
+        {
+          "skillId": "skchr_mlynar_3",
+          "skillIndex": 2,
+          "name": "未照耀的荣光"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "安洁莉娜",
+      "charId": "char_291_aglina",
+      "tier": 5,
+      "chessId": "chess_char_5_20_a",
+      "goldenChessId": "chess_char_5_20_b",
+      "branch": "slower",
+      "skillChoices": [
+        {
+          "skillId": "skchr_aglina_1",
+          "skillIndex": 0,
+          "name": "秘杖·速充模式"
+        },
+        {
+          "skillId": "skchr_aglina_2",
+          "skillIndex": 1,
+          "name": "秘杖·微粒模式"
+        },
+        {
+          "skillId": "skchr_aglina_3",
+          "skillIndex": 2,
+          "name": "秘杖·反重力模式"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "寒檀",
+      "charId": "char_341_sntlla",
+      "tier": 5,
+      "chessId": "chess_char_5_21_a",
+      "goldenChessId": "chess_char_5_21_b",
+      "branch": "splashcaster",
+      "skillChoices": [
+        {
+          "skillId": "skcom_quickattack[3]",
+          "skillIndex": 0,
+          "name": "迅捷打击·γ型"
+        },
+        {
+          "skillId": "skchr_sntlla_2",
+          "skillIndex": 1,
+          "name": "“女巫之泪”"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "录武官",
+      "charId": "char_4196_reckpr",
+      "tier": 5,
+      "chessId": "chess_char_5_23_a",
+      "goldenChessId": "chess_char_5_23_b",
+      "branch": "physician",
+      "skillChoices": [
+        {
+          "skillId": "skchr_reckpr_1",
+          "skillIndex": 0,
+          "name": "触类旁通"
+        },
+        {
+          "skillId": "skchr_reckpr_2",
+          "skillIndex": 1,
+          "name": "一点关窍"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "蕾缪安",
+      "charId": "char_4193_lemuen",
+      "tier": 6,
+      "chessId": "chess_char_6_01_a",
+      "goldenChessId": "chess_char_6_01_b",
+      "branch": "longrange",
+      "skillChoices": [
+        {
+          "skillId": "skchr_lemuen_1",
+          "skillIndex": 0,
+          "name": "重逢问候"
+        },
+        {
+          "skillId": "skchr_lemuen_2",
+          "skillIndex": 1,
+          "name": "归乡邀约"
+        },
+        {
+          "skillId": "skchr_lemuen_3",
+          "skillIndex": 2,
+          "name": "礼炮·强制追思"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "圣聆初雪",
+      "charId": "char_1046_sbell2",
+      "tier": 6,
+      "chessId": "chess_char_6_02_a",
+      "goldenChessId": "chess_char_6_02_b",
+      "branch": "phalanx",
+      "skillChoices": [
+        {
+          "skillId": "skchr_sbell2_1",
+          "skillIndex": 0,
+          "name": "铃音吹雪"
+        },
+        {
+          "skillId": "skchr_sbell2_2",
+          "skillIndex": 1,
+          "name": "霜涛覆岭"
+        },
+        {
+          "skillId": "skchr_sbell2_3",
+          "skillIndex": 2,
+          "name": "群山俯首"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "余",
+      "charId": "char_2026_yu",
+      "tier": 6,
+      "chessId": "chess_char_6_03_a",
+      "goldenChessId": "chess_char_6_03_b",
+      "branch": "primprotector",
+      "skillChoices": [
+        {
+          "skillId": "skchr_yu_1",
+          "skillIndex": 0,
+          "name": "今日做东"
+        },
+        {
+          "skillId": "skchr_yu_2",
+          "skillIndex": 1,
+          "name": "厚礼上宾"
+        },
+        {
+          "skillId": "skchr_yu_3",
+          "skillIndex": 2,
+          "name": "灶里乾坤"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "浊心斯卡蒂",
+      "charId": "char_1012_skadi2",
+      "tier": 6,
+      "chessId": "chess_char_6_04_a",
+      "goldenChessId": "chess_char_6_04_b",
+      "branch": "bard",
+      "skillChoices": [
+        {
+          "skillId": "skchr_skadi2_1",
+          "skillIndex": 0,
+          "name": "同归殊途之吟"
+        },
+        {
+          "skillId": "skchr_skadi2_2",
+          "skillIndex": 1,
+          "name": "同葬无光之愿"
+        },
+        {
+          "skillId": "skchr_skadi2_3",
+          "skillIndex": 2,
+          "name": "\"潮涌，潮枯\""
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "异客",
+      "charId": "char_472_pasngr",
+      "tier": 6,
+      "chessId": "chess_char_6_05_a",
+      "goldenChessId": "chess_char_6_05_b",
+      "branch": "chain",
+      "skillChoices": [
+        {
+          "skillId": "skchr_pasngr_1",
+          "skillIndex": 0,
+          "name": "电能之触"
+        },
+        {
+          "skillId": "skchr_pasngr_2",
+          "skillIndex": 1,
+          "name": "聚焦指令"
+        },
+        {
+          "skillId": "skchr_pasngr_3",
+          "skillIndex": 2,
+          "name": "辉煌裂片"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "佩佩",
+      "charId": "char_4058_pepe",
+      "tier": 6,
+      "chessId": "chess_char_6_06_a",
+      "goldenChessId": "chess_char_6_06_b",
+      "branch": "hammer",
+      "skillChoices": [
+        {
+          "skillId": "skchr_pepe_1",
+          "skillIndex": 0,
+          "name": "盖戳！"
+        },
+        {
+          "skillId": "skchr_pepe_2",
+          "skillIndex": 1,
+          "name": "阻遏混乱锤"
+        },
+        {
+          "skillId": "skchr_pepe_3",
+          "skillIndex": 2,
+          "name": "时光震荡"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "维娜·维多利亚",
+      "charId": "char_1019_siege2",
+      "tier": 6,
+      "chessId": "chess_char_6_07_a",
+      "goldenChessId": "chess_char_6_07_b",
+      "branch": "artsfghter",
+      "skillChoices": [
+        {
+          "skillId": "skchr_siege2_1",
+          "skillIndex": 0,
+          "name": "重铸晖光"
+        },
+        {
+          "skillId": "skchr_siege2_2",
+          "skillIndex": 1,
+          "name": "进赴故土"
+        },
+        {
+          "skillId": "skchr_siege2_3",
+          "skillIndex": 2,
+          "name": "俱以我之名"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "焰影苇草",
+      "charId": "char_1020_reed2",
+      "tier": 6,
+      "chessId": "chess_char_6_08_a",
+      "goldenChessId": "chess_char_6_08_b",
+      "branch": "incantationmedic",
+      "skillChoices": [
+        {
+          "skillId": "skcom_quickattack[3]",
+          "skillIndex": 0,
+          "name": "迅捷打击·γ型"
+        },
+        {
+          "skillId": "skchr_reed2_2",
+          "skillIndex": 1,
+          "name": "枯荣共息"
+        },
+        {
+          "skillId": "skchr_reed2_3",
+          "skillIndex": 2,
+          "name": "生命火种"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "塑心",
+      "charId": "char_245_cello",
+      "tier": 6,
+      "chessId": "chess_char_6_09_a",
+      "goldenChessId": "chess_char_6_09_b",
+      "branch": "ritualist",
+      "skillChoices": [
+        {
+          "skillId": "skchr_cello_1",
+          "skillIndex": 0,
+          "name": "“黄金的狂喜”"
+        },
+        {
+          "skillId": "skchr_cello_2",
+          "skillIndex": 1,
+          "name": "“安魂的弥撒”"
+        },
+        {
+          "skillId": "skchr_cello_3",
+          "skillIndex": 2,
+          "name": "“自由的探戈”"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "缪尔赛思",
+      "charId": "char_249_mlyss",
+      "tier": 6,
+      "chessId": "chess_char_6_11_a",
+      "goldenChessId": "chess_char_6_11_b",
+      "branch": "tactician",
+      "skillChoices": [
+        {
+          "skillId": "skchr_mlyss_1",
+          "skillIndex": 0,
+          "name": "渐进性润化"
+        },
+        {
+          "skillId": "skchr_mlyss_2",
+          "skillIndex": 1,
+          "name": "生态耦合"
+        },
+        {
+          "skillId": "skchr_mlyss_3",
+          "skillIndex": 2,
+          "name": "浅层非熵适应"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "迷迭香",
+      "charId": "char_391_rosmon",
+      "tier": 6,
+      "chessId": "chess_char_6_12_a",
+      "goldenChessId": "chess_char_6_12_b",
+      "branch": "bombarder",
+      "skillChoices": [
+        {
+          "skillId": "skchr_rosmon_1",
+          "skillIndex": 0,
+          "name": "思维膨大"
+        },
+        {
+          "skillId": "skchr_rosmon_2",
+          "skillIndex": 1,
+          "name": "末梢阻断"
+        },
+        {
+          "skillId": "skchr_rosmon_3",
+          "skillIndex": 2,
+          "name": "“如你所愿”"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "新约能天使",
+      "charId": "char_1041_angel2",
+      "tier": 6,
+      "chessId": "chess_char_6_13_a",
+      "goldenChessId": "chess_char_6_13_b",
+      "branch": "geek",
+      "skillChoices": [
+        {
+          "skillId": "skchr_angel2_1",
+          "skillIndex": 0,
+          "name": "天空大扫除"
+        },
+        {
+          "skillId": "skchr_angel2_2",
+          "skillIndex": 1,
+          "name": "开火成瘾症"
+        },
+        {
+          "skillId": "skchr_angel2_3",
+          "skillIndex": 2,
+          "name": "使命必达！"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "流明",
+      "charId": "char_4042_lumen",
+      "tier": 6,
+      "chessId": "chess_char_6_14_a",
+      "goldenChessId": "chess_char_6_14_b",
+      "branch": "healer",
+      "skillChoices": [
+        {
+          "skillId": "skchr_lumen_1",
+          "skillIndex": 0,
+          "name": "沐雨"
+        },
+        {
+          "skillId": "skchr_lumen_2",
+          "skillIndex": 1,
+          "name": "沛霖"
+        },
+        {
+          "skillId": "skchr_lumen_3",
+          "skillIndex": 2,
+          "name": "灯火不灭"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "仇白",
+      "charId": "char_4082_qiubai",
+      "tier": 6,
+      "chessId": "chess_char_6_15_a",
+      "goldenChessId": "chess_char_6_15_b",
+      "branch": "lord",
+      "skillChoices": [
+        {
+          "skillId": "skchr_qiubai_1",
+          "skillIndex": 0,
+          "name": "留羽"
+        },
+        {
+          "skillId": "skchr_qiubai_2",
+          "skillIndex": 1,
+          "name": "承影"
+        },
+        {
+          "skillId": "skchr_qiubai_3",
+          "skillIndex": 2,
+          "name": "问雪"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "溯光星源",
+      "charId": "char_1047_halo2",
+      "tier": 6,
+      "chessId": "chess_char_6_16_a",
+      "goldenChessId": "chess_char_6_16_b",
+      "branch": "slower",
+      "skillChoices": [
+        {
+          "skillId": "skchr_halo2_1",
+          "skillIndex": 0,
+          "name": "星图闪烁"
+        },
+        {
+          "skillId": "skchr_halo2_2",
+          "skillIndex": 1,
+          "name": "星束引力"
+        },
+        {
+          "skillId": "skchr_halo2_3",
+          "skillIndex": 2,
+          "name": "并流连锁"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "耀骑士临光",
+      "charId": "char_1014_nearl2",
+      "tier": 6,
+      "chessId": "chess_char_6_17_a",
+      "goldenChessId": "chess_char_6_17_b",
+      "branch": "fearless",
+      "skillChoices": [
+        {
+          "skillId": "skchr_nearl2_1",
+          "skillIndex": 0,
+          "name": "灿焰长刃"
+        },
+        {
+          "skillId": "skchr_nearl2_2",
+          "skillIndex": 1,
+          "name": "逐夜烁光"
+        },
+        {
+          "skillId": "skchr_nearl2_3",
+          "skillIndex": 2,
+          "name": "耀阳颔首"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "荒芜拉普兰德",
+      "charId": "char_1038_whitw2",
+      "tier": 6,
+      "chessId": "chess_char_6_18_a",
+      "goldenChessId": "chess_char_6_18_b",
+      "branch": "funnel",
+      "skillChoices": [
+        {
+          "skillId": "skchr_whitw2_1",
+          "skillIndex": 0,
+          "name": "慵怠者悲鸣"
+        },
+        {
+          "skillId": "skchr_whitw2_2",
+          "skillIndex": 1,
+          "name": "逐猎狂飙"
+        },
+        {
+          "skillId": "skchr_whitw2_3",
+          "skillIndex": 2,
+          "name": "终幕·浩劫"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "锏",
+      "charId": "char_4116_blkkgt",
+      "tier": 6,
+      "chessId": "chess_char_6_19_a",
+      "goldenChessId": "chess_char_6_19_b",
+      "branch": "sword",
+      "skillChoices": [
+        {
+          "skillId": "skchr_blkkgt_1",
+          "skillIndex": 0,
+          "name": "纯粹的武力"
+        },
+        {
+          "skillId": "skchr_blkkgt_2",
+          "skillIndex": 1,
+          "name": "无声的嘲笑"
+        },
+        {
+          "skillId": "skchr_blkkgt_3",
+          "skillIndex": 2,
+          "name": "归于宁静"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    },
+    {
+      "name": "纯烬艾雅法拉",
+      "charId": "char_1016_agoat2",
+      "tier": 6,
+      "chessId": "chess_char_6_20_a",
+      "goldenChessId": "chess_char_6_20_b",
+      "branch": "wandermedic",
+      "skillChoices": [
+        {
+          "skillId": "skchr_agoat2_1",
+          "skillIndex": 0,
+          "name": "无声润物"
+        },
+        {
+          "skillId": "skchr_agoat2_2",
+          "skillIndex": 1,
+          "name": "云霭荫佑"
+        },
+        {
+          "skillId": "skchr_agoat2_3",
+          "skillIndex": 2,
+          "name": "火山回响"
+        }
+      ],
+      "implementationStatus": "pending-individual-audit"
+    }
+  ]
+}

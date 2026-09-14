@@ -1,6 +1,30 @@
 export function baseFunding(round){if(!Number.isInteger(round)||round<1)throw Error('Invalid round');return round+3;}
 // Versioned native data helpers. No missing rule is guessed or silently simulated.
 export function blackboard(entries=[]){return Object.fromEntries((entries||[]).map(e=>[e.key,e.valueStr??e.value]));}
+export function talentCandidateOpen(candidate,status,potentialRank=0){
+ const phase=Number(String(status?.evolvePhase||'PHASE_0').replace('PHASE_','')),need=Number(String(candidate.unlockCondition?.phase||'PHASE_0').replace('PHASE_',''));
+ const level=status?.charLevel??1;
+ if(need>phase||(need===phase&&(candidate.unlockCondition?.level||1)>level))return false;
+ return (candidate.requiredPotentialRank||0)<=potentialRank;
+}
+export function resolveActiveTalents(entity,status,{potentialRank=0,modulePhase=null}={}){
+ const slots=[];
+ for(const [index,slot] of (entity?.talents||[]).entries()){
+  const pick=(slot.candidates||[]).filter(c=>talentCandidateOpen(c,status,potentialRank)).at(-1);
+  if(pick)slots.push({slot:index,name:pick.name,description:pick.description,blackboard:pick.blackboard||[],prefabKey:pick.prefabKey||null});
+ }
+ for(const part of modulePhase?.parts||[]){
+  if(part.isToken)continue;
+  const cands=part.addOrOverrideTalentDataBundle?.candidates;
+  if(!cands?.length)continue;
+  const pick=cands.filter(c=>talentCandidateOpen(c,status,potentialRank)).at(-1);
+  if(!pick)continue;
+  const row={slot:slots.length,name:pick.name,description:pick.description||pick.upgradeDescription,blackboard:pick.blackboard||[],prefabKey:pick.prefabKey||null,fromModule:true};
+  const i=Number.isInteger(pick.talentIndex)&&pick.talentIndex>=0?slots.findIndex(s=>s.slot===pick.talentIndex):slots.findIndex(s=>pick.name&&s.name===pick.name);
+  if(i>=0){const previous=slots[i];row.slot=previous.slot;row.name??=previous.name;row.description??=previous.description;const merged={...blackboard(previous.blackboard),...blackboard(row.blackboard)};row.blackboard=Object.entries(merged).map(([key,value])=>({key,value}));slots[i]=row;}else slots.push(row);
+ }
+ return slots;
+}
 export function nativeAttributes(entity,status){
  const phaseIndex=Math.min(entity.phases.length-1,Number(status.evolvePhase.replace('PHASE_',''))),phase=entity.phases[phaseIndex];const level=Math.max(1,Math.min(status.charLevel,phase.maxLevel));const frames=phase.attributesKeyFrames;
  let left=frames[0],right=frames.at(-1);for(let i=1;i<frames.length;i++)if(level<=frames[i].level){left=frames[i-1];right=frames[i];break;}
@@ -16,7 +40,7 @@ export function resolveChess(data,base,chessId,{skillIndex,ownedBonus=null,poten
  // Only native additive potential modifiers are handled here; other effects stay in their descriptors.
  for(const p of (entity.potentials||[]).slice(0,potentialRank))for(const m of p.buff?.attributes?.attributeModifiers||[]){const key={MAX_HP:'maxHp',ATK:'atk',DEF:'def',MAGIC_RESISTANCE:'magicResistance',COST:'cost',RESPAWN_TIME:'respawnTime'}[m.attributeType];if(key&&m.formulaItem==='ADDITION')attributes[key]+=m.value;}
  if(ownedBonus)for(const[k,v]of Object.entries(ownedBonus))if(['maxHp','atk','def'].includes(k))attributes[k]*=1+v;
- return {chessId,normalId,charId:shop.charId,name:entity.name,rank:shop.chessLevel,isGolden:chess.isGolden,status:chess.status,...state,attributes,range:base.ranges[state.rangeId],skillId:ref?.skillId||null,skillIndex:index,skill,moduleId:modulePhase?shop.defaultUniEquipId:null,modulePhase,bonds:chess.bondIds,garrisons:chess.garrisonIds.map(id=>({id,...data.season.garrisonDataDict[id]})),talents:entity.talents,trait:entity.trait,sourceCommit:data.source.commit};
+ return {chessId,normalId,charId:shop.charId,name:entity.name,rank:shop.chessLevel,isGolden:chess.isGolden,status:chess.status,...state,attributes,range:base.ranges[state.rangeId],skillId:ref?.skillId||null,skillIndex:index,skill,moduleId:modulePhase?shop.defaultUniEquipId:null,modulePhase,bonds:chess.bondIds,garrisons:chess.garrisonIds.map(id=>({id,...data.season.garrisonDataDict[id]})),talents:entity.talents,activeTalents:resolveActiveTalents(entity,chess.status,{potentialRank,modulePhase}),trait:entity.trait,sourceCommit:data.source.commit};
 }
 export function skillPolicy(common,entity,skillIndex){const matches=common.skillTriggerDataList.filter(p=>(p.charId? p.charId===entity.id&&p.skillIndex===skillIndex:p.subProfessionId?p.subProfessionId===entity.branch:p.profession===entity.profession));return matches.find(p=>p.charId)||matches.find(p=>p.subProfessionId)||matches[0]||{skillTriggerType:'DEFAULT'};}
 export function shouldAutoSkill({policy,ready,deployed,now,lastOperation=0,initialDeployment=0,hasTarget=false,hasEnemyInSkillRange=false,hasEnemyInInitialRange=false,hasAnyTarget=false,wasDamaged=false,toggleUsed=false,isToggle=false}){

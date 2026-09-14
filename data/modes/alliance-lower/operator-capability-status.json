@@ -1,0 +1,1094 @@
+{
+  "scopeId": "alliance-lower-post-2026-03-27",
+  "sourceCommit": "86da4cfa3a4b958c3615fccf5afbc10b5c7f1bfb",
+  "updatedAt": "2026-09-14T10:10:47.772Z",
+  "capabilities": [
+    "talentsAuras",
+    "persistEffects",
+    "protection",
+    "summons"
+  ],
+  "values": [
+    "unimplemented",
+    "wired",
+    "verified",
+    "exception"
+  ],
+  "note": "状态由验收人工维护，构建脚本不会升级。verified仅覆盖verificationScope中指定项，不代表整名干员或整类能力完成。",
+  "operators": [
+    {
+      "name": "隐现",
+      "charId": "char_498_inside",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "角峰",
+      "charId": "char_199_yak",
+      "tier": 1,
+      "talentsAuras": "verified",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented",
+      "note": "精锐天赋法抗 +15",
+      "verificationScope": "精锐天赋法抗 +15",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "惊蛰",
+      "charId": "char_306_leizi",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "深巡",
+      "charId": "char_4137_udflow",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "verified",
+      "protection": "unimplemented",
+      "summons": "unimplemented",
+      "note": "命中 DoT 刷新",
+      "verificationScope": "命中 DoT 刷新",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "刺玫",
+      "charId": "char_494_vendla",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "普罗旺斯",
+      "charId": "char_145_prove",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "德克萨斯",
+      "charId": "char_102_texas",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "跃跃",
+      "charId": "char_4100_caper",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "古米",
+      "charId": "char_196_sunbr",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "艾丝黛尔",
+      "charId": "char_127_estell",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "波登可",
+      "charId": "char_258_podego",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "wired",
+      "protection": "unimplemented",
+      "summons": "unimplemented",
+      "note": "仅 S2 孢子扩散区域",
+      "verificationScope": "仅 S2 孢子扩散区域",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "格雷伊",
+      "charId": "char_253_greyy",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "深靛",
+      "charId": "char_469_indigo",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "宴",
+      "charId": "char_337_utage",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "野鬃",
+      "charId": "char_496_wildmn",
+      "tier": 1,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "雷蛇",
+      "charId": "char_107_liskam",
+      "tier": 1,
+      "talentsAuras": "verified",
+      "persistEffects": "unimplemented",
+      "protection": "wired",
+      "summons": "unimplemented",
+      "note": "受击回技力已验证；S1 次数抵挡已挂上未整名验收",
+      "verificationScope": "受击回技力已验证；S1 次数抵挡已挂上未整名验收",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "送葬人",
+      "charId": "char_279_excu",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "赫默",
+      "charId": "char_108_silent",
+      "tier": 2,
+      "talentsAuras": "wired",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "wired",
+      "note": "医疗无人机归属与主人退场保留；医疗攻速光环已挂",
+      "verificationScope": "医疗无人机归属与主人退场保留；医疗攻速光环已挂",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "小满",
+      "charId": "char_4122_grabds",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "哈洛德",
+      "charId": "char_4114_harold",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "莎草",
+      "charId": "char_4139_papyrs",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "verified",
+      "summons": "unimplemented",
+      "note": "治疗附期限屏障",
+      "verificationScope": "治疗附期限屏障",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "幽灵鲨",
+      "charId": "char_143_ghost",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "verified",
+      "summons": "unimplemented",
+      "note": "仅 S2 锁血后自晕",
+      "verificationScope": "仅 S2 锁血后自晕",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "泡泡",
+      "charId": "char_381_bubble",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "休谟斯",
+      "charId": "char_491_humus",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "洛洛",
+      "charId": "char_4040_rockr",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "风丸",
+      "charId": "char_4016_kazema",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "砾",
+      "charId": "char_237_gravel",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "verified",
+      "summons": "unimplemented",
+      "note": "仅 S2 部署衰减屏障",
+      "verificationScope": "仅 S2 部署衰减屏障",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "蒂比",
+      "charId": "char_4191_tippi",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "调香师",
+      "charId": "char_181_flower",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "verified",
+      "protection": "unimplemented",
+      "summons": "unimplemented",
+      "note": "全场 regen 熏衣香",
+      "verificationScope": "全场 regen 熏衣香",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "拉普兰德",
+      "charId": "char_140_whitew",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "折桠",
+      "charId": "char_4207_branch",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "灰毫",
+      "charId": "char_431_ashlok",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "锡人",
+      "charId": "char_4151_tinman",
+      "tier": 2,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "能天使",
+      "charId": "char_103_angel",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "断崖",
+      "charId": "char_294_ayer",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "诗怀雅",
+      "charId": "char_308_swire",
+      "tier": 3,
+      "talentsAuras": "wired",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented",
+      "note": "近战加攻光环；S1 扩范围、S2 talent_scale",
+      "verificationScope": "近战加攻光环；S1 扩范围、S2 talent_scale",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "琳琅诗怀雅",
+      "charId": "char_1033_swire2",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "斯卡蒂",
+      "charId": "char_263_skadi",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "菲莱",
+      "charId": "char_4148_philae",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "薄绿",
+      "charId": "char_388_mint",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "海霓",
+      "charId": "char_4079_haini",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "松果",
+      "charId": "char_440_pinecn",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "雪猎",
+      "charId": "char_4211_snhunt",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "瑕光",
+      "charId": "char_423_blemsh",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "至简",
+      "charId": "char_4054_malist",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "初雪",
+      "charId": "char_174_slbell",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "蛇屠箱",
+      "charId": "char_150_snakek",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "流星",
+      "charId": "char_126_shotst",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "忍冬",
+      "charId": "char_4026_vulpis",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "伺夜",
+      "charId": "char_427_vigil",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "wired",
+      "note": "单个狼群实体含多条狼影、周期恢复；完整技能和部署交互待补",
+      "verificationScope": "狼群归属与库存",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "耶拉",
+      "charId": "char_4013_kjera",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "空弦",
+      "charId": "char_332_archet",
+      "tier": 3,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "信仰搅拌机",
+      "charId": "char_4194_rmixer",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "莫斯提马",
+      "charId": "char_213_mostma",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "伊内丝",
+      "charId": "char_4087_ines",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "寒芒克洛丝",
+      "charId": "char_1021_kroos2",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "风笛",
+      "charId": "char_222_bpipe",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "水月",
+      "charId": "char_437_mizuki",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "阿罗玛",
+      "charId": "char_446_aroma",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "凯瑟琳",
+      "charId": "char_4162_cathy",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "wired",
+      "note": "有限库存、绑定友方屏障及自动补充已接入；手动初始站位/完整技能联动待补",
+      "verificationScope": "支援装置未受击补充",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "歌蕾蒂娅",
+      "charId": "char_474_glady",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "灵知",
+      "charId": "char_206_gnosis",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "莱恩哈特",
+      "charId": "char_373_lionhd",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "缄默德克萨斯",
+      "charId": "char_1028_texas2",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "星熊",
+      "charId": "char_136_hsguma",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "泥岩",
+      "charId": "char_311_mudrok",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "verified",
+      "summons": "unimplemented",
+      "note": "周期次数盾与层消耗回血",
+      "verificationScope": "周期次数盾与层消耗回血",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "焰尾",
+      "charId": "char_420_flamtl",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "远牙",
+      "charId": "char_430_fartth",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "白面鸮",
+      "charId": "char_128_plosis",
+      "tier": 4,
+      "talentsAuras": "verified",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented",
+      "note": "全场技力光环 maxSame",
+      "verificationScope": "全场技力光环 maxSame",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "银灰",
+      "charId": "char_172_svrash",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "百炼嘉维尔",
+      "charId": "char_1026_gvial2",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "卡涅利安",
+      "charId": "char_426_billro",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "魔王",
+      "charId": "char_4134_cetsyr",
+      "tier": 4,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "华法琳",
+      "charId": "char_171_bldsk",
+      "tier": 4,
+      "talentsAuras": "verified",
+      "persistEffects": "wired",
+      "protection": "unimplemented",
+      "summons": "unimplemented",
+      "note": "范围击杀回技力已验证；S2 流失已挂上未整名验收",
+      "verificationScope": "范围击杀回技力已验证；S2 流失已挂上未整名验收",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "妮芙",
+      "charId": "char_4146_nymph",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "圣约送葬人",
+      "charId": "char_1032_excu2",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "缇缇",
+      "charId": "char_4056_titi",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "烛煌",
+      "charId": "char_1040_blaze2",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "乌尔比安",
+      "charId": "char_4145_ulpia",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "隐德来希",
+      "charId": "char_4010_etlchi",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "史尔特尔",
+      "charId": "char_350_surtr",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "verified",
+      "summons": "unimplemented",
+      "note": "余烬锁血后强制退场",
+      "verificationScope": "余烬锁血后强制退场",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "号角",
+      "charId": "char_4039_horn",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "verified",
+      "summons": "unimplemented",
+      "note": "血战单次部署原地复活",
+      "verificationScope": "血战单次部署原地复活",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "铃兰",
+      "charId": "char_358_lisa",
+      "tier": 5,
+      "talentsAuras": "wired",
+      "persistEffects": "wired",
+      "protection": "unimplemented",
+      "summons": "unimplemented",
+      "note": "仅 S3 回复+停顿+脆弱；辅助技力光环已挂",
+      "verificationScope": "仅 S3 回复+停顿+脆弱；辅助技力光环已挂",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "塞雷娅",
+      "charId": "char_202_demkni",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "夕",
+      "charId": "char_2015_dusk",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "wired",
+      "note": "首次有效攻击/S3攻击召唤与刷新，固定属性；完整天赋及模组联动待补",
+      "verificationScope": "小自在可被攻击/阻挡",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "归溟幽灵鲨",
+      "charId": "char_1023_ghost2",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "凛御银灰",
+      "charId": "char_1045_svash2",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "引星棘刺",
+      "charId": "char_1039_thorn2",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "山",
+      "charId": "char_264_f12yin",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "玛恩纳",
+      "charId": "char_4064_mlynar",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "安洁莉娜",
+      "charId": "char_291_aglina",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "寒檀",
+      "charId": "char_341_sntlla",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "录武官",
+      "charId": "char_4196_reckpr",
+      "tier": 5,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "蕾缪安",
+      "charId": "char_4193_lemuen",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "圣聆初雪",
+      "charId": "char_1046_sbell2",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "余",
+      "charId": "char_2026_yu",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "浊心斯卡蒂",
+      "charId": "char_1012_skadi2",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "异客",
+      "charId": "char_472_pasngr",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "佩佩",
+      "charId": "char_4058_pepe",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "维娜·维多利亚",
+      "charId": "char_1019_siege2",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "焰影苇草",
+      "charId": "char_1020_reed2",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "wired",
+      "protection": "unimplemented",
+      "summons": "unimplemented",
+      "note": "仅 S2 附着与咒愈治疗",
+      "verificationScope": "仅 S2 附着与咒愈治疗",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "塑心",
+      "charId": "char_245_cello",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "缪尔赛思",
+      "charId": "char_249_mlyss",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "迷迭香",
+      "charId": "char_391_rosmon",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "新约能天使",
+      "charId": "char_1041_angel2",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "流明",
+      "charId": "char_4042_lumen",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "wired",
+      "protection": "unimplemented",
+      "summons": "unimplemented",
+      "note": "仅 S1 沐雨 HoT",
+      "verificationScope": "仅 S1 沐雨 HoT",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "仇白",
+      "charId": "char_4082_qiubai",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "溯光星源",
+      "charId": "char_1047_halo2",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "耀骑士临光",
+      "charId": "char_1014_nearl2",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "wired",
+      "note": "仅S3召唤耀阳，固定属性，可阻挡不可普攻；完整技能/模式部署限制待补",
+      "verificationScope": "耀阳占部署位且可阻挡/攻击",
+      "evidence": "tests/native-effects.test.mjs"
+    },
+    {
+      "name": "荒芜拉普兰德",
+      "charId": "char_1038_whitw2",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "锏",
+      "charId": "char_4116_blkkgt",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    },
+    {
+      "name": "纯烬艾雅法拉",
+      "charId": "char_1016_agoat2",
+      "tier": 6,
+      "talentsAuras": "unimplemented",
+      "persistEffects": "unimplemented",
+      "protection": "unimplemented",
+      "summons": "unimplemented"
+    }
+  ]
+}
