@@ -28,10 +28,10 @@ export class NativeBattle {
  elementInjury(target){const value=target.elementInjury;return typeof value==='number'?Math.max(0,value):Object.values(value||{}).reduce((sum,n)=>sum+Math.max(0,n||0),0);}
  healingTargets(u,allowFull=false){const element=this.behavior(u).elementHealing;return this.s.units.filter(v=>this.canHeal(v,u)&&this.inside(u,v)&&(allowFull||v.hp<v.maxHp||(element&&this.elementInjury(v)>0))).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||(element?this.elementInjury(b)-this.elementInjury(a):0)||a.uid-b.uid);}
  inNamedRange(center,target,id){const range=this.data.ranges[id];return (range?.grids||[]).some(g=>{let x=g.col,y=-g.row;for(let i=0;i<(center.dir||0);i++)[x,y]=[-y,x];return Math.abs(center.x+x-target.x)<=.5&&Math.abs(center.y+y-target.y)<=.5;});}
- heal(source,target,amount){
+ heal(source,target,amount,origin=source){
   if(!source.deployed||source.hp<=0||!this.canHeal(target,source)||!Number.isFinite(amount)||amount<=0)return 0;
   const behavior=this.behavior(source),trait=branchTrait(this.profile(source));if(behavior.farHealRange&&!this.inNamedRange(source,target,behavior.farHealRange))amount*=trait.values.heal_scale??.8;if(behavior.healsDuringSkill&&this.skillActive(source))amount*=trait.values.heal_scale??.75;
-  const real=recoverHP(target,amount*(target.healingReceived??1)*(source.healingMultiplier??1));source.healing+=real;if(real>0)this.s.effects.push({x:target.x,y:target.y,text:'+'+Math.round(real),life:.6,type:'healing'});return real;
+  const real=recoverHP(target,amount*(target.healingReceived??1)*(source.healingMultiplier??1));source.healing+=real;if(real>0)this.emit('heal',{uid:source.uid,x:origin.x,y:origin.y,targetX:target.x,targetY:target.y,chain:origin!==source,amount:real,type:'healing'});if(real>0)this.s.effects.push({x:target.x,y:target.y,text:'+'+Math.round(real),life:.6,type:'healing'});return real;
  }
  healElements(source,target,amount){
   if(!this.canHeal(target,source)||amount<=0)return;let restored=0;if(typeof target.elementInjury==='number'){restored=Math.min(target.elementInjury,amount);target.elementInjury-=restored;}else if(target.elementInjury){for(const key of Object.keys(target.elementInjury)){const n=Math.min(Math.max(0,target.elementInjury[key]),amount);target.elementInjury[key]-=n;restored+=n;}}source.elementHealing=(source.elementHealing||0)+restored;
@@ -68,37 +68,40 @@ export class NativeBattle {
   const p=this.profile(u),behavior=this.behavior(u),trait=branchTrait(p).values,kind=action.kind||behavior.kind;
   if(kind==='heal'){
    if(behavior.style==='heal-chain'){
-    let target=this.s.units.find(v=>v.uid===action.targets[0]&&this.canHeal(v,u)),power=action.amount;const visited=new Set(),max=trait['attack@chain.max_target']??3;
-    for(let i=0;target&&i<max;i++){visited.add(target.uid);this.heal(u,target,power);const prev=target;target=this.s.units.filter(v=>!visited.has(v.uid)&&this.canHeal(v,u)&&this.inNamedRange({x:prev.x,y:prev.y,dir:0},v,behavior.jumpRange)).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||b.deployAt-a.deployAt||a.uid-b.uid)[0];power*=trait['attack@chain.atk_scale']??.75;}
+    let target=this.s.units.find(v=>v.uid===action.targets[0]&&this.canHeal(v,u)),power=action.amount;const visited=new Set(),max=trait['attack@chain.max_target']??3;let origin=u;
+    for(let i=0;target&&i<max;i++){visited.add(target.uid);this.heal(u,target,power,origin);origin=target;const prev=target;target=this.s.units.filter(v=>!visited.has(v.uid)&&this.canHeal(v,u)&&this.inNamedRange({x:prev.x,y:prev.y,dir:0},v,behavior.jumpRange)).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||b.deployAt-a.deployAt||a.uid-b.uid)[0];power*=trait['attack@chain.atk_scale']??.75;}
    }else for(const id of action.targets){const target=this.s.units.find(v=>v.uid===id);if(!target)continue;this.heal(u,target,action.amount);if(behavior.elementHealing)this.healElements(u,target,action.amount*(trait.ep_heal_ratio??.5));}
    this.emit('attack',{uid:u.uid,x:u.x,y:u.y,kind:'heal',type:'healing',style:behavior.style,skill:this.skillActive(u)});return 1;
   }
   let released=0;for(const id of action.targets){const target=this.s.enemies.find(e=>e.uid===id&&e.hp>0);if(!target)continue;const ranged=p.position==='RANGED'||(['lord','agent','hookmaster','shotprotector','fortress'].includes(p.branch)&&target.block!==u.uid);
    const hits=Math.max(1,action.hits||1);u.lockId=id;
-   scheduleStrikes(this.s,hits,{owner:u.uid,target:id,x:u.x,y:u.y,amount:action.amount*this.branchAttackScale(u,target),baseAmount:action.baseAmount??action.amount,type:action.type,style:behavior.style,radius:behavior.radius||0,antiAir:behavior.antiAir,ownerDeployment:u.deployAt,ranged,returns:!!behavior.returnProjectile,storedEnergy:id===action.targets[0]?(action.storedEnergy||0):0,drone:!!behavior.drone});
+   scheduleStrikes(this.s,hits,{owner:u.uid,target:id,x:u.x,y:u.y,amount:action.amount*this.branchAttackScale(u,target),baseAmount:action.baseAmount??action.amount,type:action.type,style:behavior.style,radius:behavior.radius||0,antiAir:behavior.antiAir,ownerDeployment:u.deployAt,ranged,branch:p.branch,returns:!!behavior.returnProjectile,storedEnergy:id===action.targets[0]?(action.storedEnergy||0):0,drone:!!behavior.drone});
    released+=hits;
   }this.emit('attack',{uid:u.uid,x:u.x,y:u.y,kind:'damage',targetX:this.s.enemies.find(e=>e.uid===action.targets[0])?.x,targetY:this.s.enemies.find(e=>e.uid===action.targets[0])?.y,type:action.type,style:behavior.style,skill:this.skillActive(u),radius:behavior.radius||0});return released;
  }
  deliverStrike(packet){
   const u=this.s.units.find(x=>x.uid===packet.owner);if(!u)return;
+  if(packet.effectOnly){this.emit('aftershock',{x:packet.x,y:packet.y,radius:packet.radius,type:packet.type});return;}
   if(packet.aftershock){const target=this.s.enemies.find(e=>e.uid===packet.target&&e.hp>0&&!e.hidden);if(target)this.hit(u,target,packet.amount,packet.type);return;}
   if(!u.deployed||u.hp<=0||packet.ownerDeployment!==u.deployAt||!permissions(u).attack)return;
   const target=this.s.enemies.find(e=>e.uid===packet.target&&e.hp>0);if(!target)return;
-  const shot={...packet,speed:TENTATIVE_PROJECTILE_SPEED,returning:false};
+  this.emit('strike',{uid:u.uid,x:u.x,y:u.y,targetX:target.x,targetY:target.y,branch:packet.branch,style:packet.style,ranged:packet.ranged,hit:packet.hit,type:packet.type});
+  const shot={...packet,startX:packet.x,startY:packet.y,speed:TENTATIVE_PROJECTILE_SPEED,returning:false};
   if(packet.ranged){this.s.projectiles.push(shot);if(packet.returns)u.pendingReturns=(u.pendingReturns||0)+1;}
   else this.impactNativeAttack(u,target,shot);
-  if(packet.hit===0&&packet.storedEnergy)for(let n=0;n<packet.storedEnergy;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.baseAmount??packet.amount,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',antiAir:true,ownerDeployment:u.deployAt});
-  if(packet.drone&&packet.hit===0){const trait=branchTrait(this.profile(u)).values;u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.amount*u.droneScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',antiAir:true,ownerDeployment:u.deployAt});}
+  if(packet.hit===0&&packet.storedEnergy)for(let n=0;n<packet.storedEnergy;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.baseAmount??packet.amount,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'mystic',antiAir:true,ownerDeployment:u.deployAt});
+  if(packet.drone&&packet.hit===0){const trait=branchTrait(this.profile(u)).values;u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.amount*u.droneScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'funnel',antiAir:true,ownerDeployment:u.deployAt});}
  }
  impactNativeAttack(u,target,packet){
   const p=this.profile(u),trait=branchTrait(p).values,eligible=e=>e.hp>0&&!e.invulnerable&&!permissions(e).sleeping&&(packet.antiAir||!e.flying||e.uid===target.uid);
   if(packet.style==='chain'){
-   const visited=new Set();let victim=target,power=packet.amount;const max=trait['attack@max_target']??3;
-   for(let i=0;victim&&i<max;i++){visited.add(victim.uid);this.hit(u,victim,power,packet.type);applyStatus(victim,'sluggish',trait['attack@sluggish']??.5,{source:u.uid});const previous=victim;victim=this.s.enemies.filter(e=>eligible(e)&&!visited.has(e.uid)&&Math.hypot(e.x-previous.x,e.y-previous.y)<=1.7).sort((a,b)=>Math.hypot(a.x-previous.x,a.y-previous.y)-Math.hypot(b.x-previous.x,b.y-previous.y)||(a.progress||0)-(b.progress||0))[0];power*=.85;}this.emit('impact',{x:target.x,y:target.y,radius:1.7,style:'chain',type:packet.type});return;
+   const visited=new Set();let victim=target,power=packet.amount;const max=trait['attack@max_target']??3;let origin={x:target.x,y:target.y};
+   for(let i=0;victim&&i<max;i++){visited.add(victim.uid);if(i>0)this.emit('chain',{x:origin.x,y:origin.y,targetX:victim.x,targetY:victim.y,type:packet.type});origin={x:victim.x,y:victim.y};this.hit(u,victim,power,packet.type);applyStatus(victim,'sluggish',trait['attack@sluggish']??.5,{source:u.uid});const previous=victim;victim=this.s.enemies.filter(e=>eligible(e)&&!visited.has(e.uid)&&Math.hypot(e.x-previous.x,e.y-previous.y)<=1.7).sort((a,b)=>Math.hypot(a.x-previous.x,a.y-previous.y)-Math.hypot(b.x-previous.x,b.y-previous.y)||(a.progress||0)-(b.progress||0))[0];power*=.85;}return;
   }
   const splash=packet.style==='splash'||packet.style==='aftershock'||packet.style==='hammer'||(packet.style==='fortress'&&target.block!==u.uid);
   const victims=splash?this.s.enemies.filter(e=>eligible(e)&&Math.hypot(e.x-target.x,e.y-target.y)<=packet.radius):[target];
   for(const e of victims){const scale=packet.style==='hammer'&&e.uid!==target.uid?(trait['attack@atk_scale_2']??.5):1;this.hit(u,e,packet.amount*scale,packet.type);}
+  if(packet.style==='aftershock')scheduleStrikes(this.s,1,{owner:u.uid,effectOnly:true,x:target.x,y:target.y,radius:packet.radius,type:packet.type,delay:2/30});
   if(packet.style==='aftershock')for(const e of victims)if(e.hp>0)scheduleStrikes(this.s,1,{owner:u.uid,target:e.uid,amount:packet.amount*(trait['attack@append_atk_scale']??.5),type:packet.type,aftershock:true,delay:2/30});
   this.emit('impact',{x:target.x,y:target.y,radius:splash?packet.radius||0:0,style:packet.style,type:packet.type});
  }
@@ -216,7 +219,7 @@ export class NativeBattle {
   resolveBlocks(this.s.units,this.s.enemies,u=>this.stats(u).blockCnt||0);
   for(const e of this.s.enemies){if(e.hp<=0||e.trainingDummy)continue;const control=permissions(e),alive=this.s.units.filter(u=>u.hp>0&&u.deployed);
    const target=e.hidden?null:e.block?alive.find(u=>u.uid===e.block):e.ranged?alive.filter(u=>!permissions(u).sleeping&&Math.hypot(u.x-e.x,u.y-e.y)<=e.range).sort((a,b)=>compareEnemyTargets({tauntLevel:this.stats(a).tauntLevel,deployAt:a.deployAt,uid:a.uid},{tauntLevel:this.stats(b).tauntLevel,deployAt:b.deployAt,uid:b.uid}))[0]:null;e.attackCooldown=Math.max(0,e.attackCooldown-1);
-   if(!control.attack||e.hidden)e.action=null;if(e.action&&--e.action.left<=0){const u=alive.find(u=>u.uid===e.action.target);e.action=null;if(u)this.hurt(u,e);}if(target&&e.canAttack&&control.attack&&!e.action&&!e.attackCooldown){const t=attackTiming(e.interval,e.attackSpeed,windupSeconds(e.interval));e.attackCooldown=t.frames;e.action={left:t.windupFrames,target:target.uid};}
+   if(!control.attack||e.hidden)e.action=null;if(e.action&&--e.action.left<=0){const u=alive.find(u=>u.uid===e.action.target);e.action=null;if(u){this.emit('strike',{uid:e.uid,x:e.x,y:e.y,targetX:u.x,targetY:u.y,ranged:e.ranged,enemy:true,type:e.damageType,style:'single'});this.hurt(u,e);}}if(target&&e.canAttack&&control.attack&&!e.action&&!e.attackCooldown){const t=attackTiming(e.interval,e.attackSpeed,windupSeconds(e.interval));e.attackCooldown=t.frames;e.action={left:t.windupFrames,target:target.uid};}
    if(advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),!!target||!!e.action)){this.s.leaks+=e.leak;e.hp=0;e.escaped=true;this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak});this.s.banner={text:'漏怪 −'+e.leak,life:1.4};}
   }
   for(const packet of dueStrikes(this.s))this.deliverStrike(packet);

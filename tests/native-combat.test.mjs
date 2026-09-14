@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {remainingDistance,compareOperatorTargets,resolveBlocks,compileRoute,advanceEnemy,scheduleStrikes,dueStrikes} from '../dist/native-combat.js';
 import {emitEvent,skillFlow} from '../dist/native-combat.js';
-import {recent} from '../dist/native-fx.js';
+import {recent,attackVisual} from '../dist/native-fx.js';
 import {NativeSession} from '../dist/native-session.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 
@@ -10,6 +10,22 @@ function liveBattle(){
  let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(g.canDeploy(unit.uid,x,y))placed=g.deploy(unit.uid,x,y,0);
  assert.ok(placed);assert.ok(g.perform('start'));const b=g.battle;b.s.queue=[];b.s.enemies=[];b.deploy(b.s.units[0]);return b;
 }
+test('attack visuals distinguish branch behaviors instead of damage color alone',()=>{
+ const cases=[[{branch:'fighter'},'punch'],[{branch:'instructor'},'thrust'],[{branch:'sword'},'slash'],[{style:'block-count'},'sweep'],[{ranged:true,branch:'reaperrange'},'scatter'],[{ranged:true,style:'all'},'area'],[{ranged:true,style:'splash'},'artillery'],[{returns:true},'return'],[{branch:'funnel'},'drone'],[{branch:'mystic'},'stored'],[{enemy:true,ranged:true},'enemy-shot']];
+ for(const [input,want]of cases)assert.equal(attackVisual(input),want);
+});
+test('native chain effects connect actual targets and never emit a splash circle',()=>{
+ const b=liveBattle(),u=b.s.units[0];b.hit=()=>{};const enemies=[0,1,2].map(i=>({uid:100+i,x:i,y:0,hp:100,statuses:[]}));b.s.enemies=enemies;b.s.events=[];
+ b.impactNativeAttack(u,enemies[0],{style:'chain',amount:1,type:'arts',antiAir:true});
+ const links=b.s.events.filter(e=>e.type==='chain');assert.equal(links.length,2);assert.equal(links[0].x,0);assert.equal(links[0].targetX,1);assert.equal(links[1].targetX,2);assert.equal(b.s.events.some(e=>e.type==='impact'),false);
+});
+test('healing and aftershock effects originate from actual combat events',()=>{
+ const b=liveBattle(),u=b.s.units[0];u.hp-=10;b.s.events=[];b.heal(u,u,5);const heal=b.s.events.find(e=>e.type==='heal');assert.ok(heal);assert.equal(heal.targetX,u.x);
+ const enemy={uid:100,x:u.x+1,y:u.y,hp:1000,statuses:[]};b.s.enemies=[enemy];b.hit=()=>{};
+ b.impactNativeAttack(u,enemy,{style:'aftershock',radius:.9,type:'physical',amount:1,antiAir:true});
+ assert.equal(b.s.events.some(e=>e.type==='aftershock'),false);b.s.time+=2/30;for(const packet of dueStrikes(b.s))b.deliverStrike(packet);
+ assert.equal(b.s.events.filter(e=>e.type==='aftershock').length,1);
+});
 test('native spawn uses route origin and ranged attacks hold position',()=>{
  const b=liveBattle(),u=b.s.units[0];const origin={col:b.map.origin.col+u.x+1,row:b.map.origin.row-u.y};
  b.level={routes:[{motionMode:'FLY',startPosition:origin,endPosition:{col:origin.col+2,row:origin.row},checkpoints:[]}],enemyProfiles:{probe:{name:'probe',motion:'FLY',applyWay:'RANGED',rangeRadius:3,attributes:{maxHp:100000,atk:1,moveSpeed:1,baseAttackTime:1,def:0,magicResistance:0}}}};

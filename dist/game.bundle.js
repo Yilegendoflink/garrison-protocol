@@ -1889,10 +1889,10 @@ class NativeBattle {
  elementInjury(target){const value=target.elementInjury;return typeof value==='number'?Math.max(0,value):Object.values(value||{}).reduce((sum,n)=>sum+Math.max(0,n||0),0);}
  healingTargets(u,allowFull=false){const element=this.behavior(u).elementHealing;return this.s.units.filter(v=>this.canHeal(v,u)&&this.inside(u,v)&&(allowFull||v.hp<v.maxHp||(element&&this.elementInjury(v)>0))).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||(element?this.elementInjury(b)-this.elementInjury(a):0)||a.uid-b.uid);}
  inNamedRange(center,target,id){const range=this.data.ranges[id];return (range?.grids||[]).some(g=>{let x=g.col,y=-g.row;for(let i=0;i<(center.dir||0);i++)[x,y]=[-y,x];return Math.abs(center.x+x-target.x)<=.5&&Math.abs(center.y+y-target.y)<=.5;});}
- heal(source,target,amount){
+ heal(source,target,amount,origin=source){
   if(!source.deployed||source.hp<=0||!this.canHeal(target,source)||!Number.isFinite(amount)||amount<=0)return 0;
   const behavior=this.behavior(source),trait=branchTrait(this.profile(source));if(behavior.farHealRange&&!this.inNamedRange(source,target,behavior.farHealRange))amount*=trait.values.heal_scale??.8;if(behavior.healsDuringSkill&&this.skillActive(source))amount*=trait.values.heal_scale??.75;
-  const real=recoverHP(target,amount*(target.healingReceived??1)*(source.healingMultiplier??1));source.healing+=real;if(real>0)this.s.effects.push({x:target.x,y:target.y,text:'+'+Math.round(real),life:.6,type:'healing'});return real;
+  const real=recoverHP(target,amount*(target.healingReceived??1)*(source.healingMultiplier??1));source.healing+=real;if(real>0)this.emit('heal',{uid:source.uid,x:origin.x,y:origin.y,targetX:target.x,targetY:target.y,chain:origin!==source,amount:real,type:'healing'});if(real>0)this.s.effects.push({x:target.x,y:target.y,text:'+'+Math.round(real),life:.6,type:'healing'});return real;
  }
  healElements(source,target,amount){
   if(!this.canHeal(target,source)||amount<=0)return;let restored=0;if(typeof target.elementInjury==='number'){restored=Math.min(target.elementInjury,amount);target.elementInjury-=restored;}else if(target.elementInjury){for(const key of Object.keys(target.elementInjury)){const n=Math.min(Math.max(0,target.elementInjury[key]),amount);target.elementInjury[key]-=n;restored+=n;}}source.elementHealing=(source.elementHealing||0)+restored;
@@ -1929,37 +1929,40 @@ class NativeBattle {
   const p=this.profile(u),behavior=this.behavior(u),trait=branchTrait(p).values,kind=action.kind||behavior.kind;
   if(kind==='heal'){
    if(behavior.style==='heal-chain'){
-    let target=this.s.units.find(v=>v.uid===action.targets[0]&&this.canHeal(v,u)),power=action.amount;const visited=new Set(),max=trait['attack@chain.max_target']??3;
-    for(let i=0;target&&i<max;i++){visited.add(target.uid);this.heal(u,target,power);const prev=target;target=this.s.units.filter(v=>!visited.has(v.uid)&&this.canHeal(v,u)&&this.inNamedRange({x:prev.x,y:prev.y,dir:0},v,behavior.jumpRange)).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||b.deployAt-a.deployAt||a.uid-b.uid)[0];power*=trait['attack@chain.atk_scale']??.75;}
+    let target=this.s.units.find(v=>v.uid===action.targets[0]&&this.canHeal(v,u)),power=action.amount;const visited=new Set(),max=trait['attack@chain.max_target']??3;let origin=u;
+    for(let i=0;target&&i<max;i++){visited.add(target.uid);this.heal(u,target,power,origin);origin=target;const prev=target;target=this.s.units.filter(v=>!visited.has(v.uid)&&this.canHeal(v,u)&&this.inNamedRange({x:prev.x,y:prev.y,dir:0},v,behavior.jumpRange)).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||b.deployAt-a.deployAt||a.uid-b.uid)[0];power*=trait['attack@chain.atk_scale']??.75;}
    }else for(const id of action.targets){const target=this.s.units.find(v=>v.uid===id);if(!target)continue;this.heal(u,target,action.amount);if(behavior.elementHealing)this.healElements(u,target,action.amount*(trait.ep_heal_ratio??.5));}
    this.emit('attack',{uid:u.uid,x:u.x,y:u.y,kind:'heal',type:'healing',style:behavior.style,skill:this.skillActive(u)});return 1;
   }
   let released=0;for(const id of action.targets){const target=this.s.enemies.find(e=>e.uid===id&&e.hp>0);if(!target)continue;const ranged=p.position==='RANGED'||(['lord','agent','hookmaster','shotprotector','fortress'].includes(p.branch)&&target.block!==u.uid);
    const hits=Math.max(1,action.hits||1);u.lockId=id;
-   scheduleStrikes(this.s,hits,{owner:u.uid,target:id,x:u.x,y:u.y,amount:action.amount*this.branchAttackScale(u,target),baseAmount:action.baseAmount??action.amount,type:action.type,style:behavior.style,radius:behavior.radius||0,antiAir:behavior.antiAir,ownerDeployment:u.deployAt,ranged,returns:!!behavior.returnProjectile,storedEnergy:id===action.targets[0]?(action.storedEnergy||0):0,drone:!!behavior.drone});
+   scheduleStrikes(this.s,hits,{owner:u.uid,target:id,x:u.x,y:u.y,amount:action.amount*this.branchAttackScale(u,target),baseAmount:action.baseAmount??action.amount,type:action.type,style:behavior.style,radius:behavior.radius||0,antiAir:behavior.antiAir,ownerDeployment:u.deployAt,ranged,branch:p.branch,returns:!!behavior.returnProjectile,storedEnergy:id===action.targets[0]?(action.storedEnergy||0):0,drone:!!behavior.drone});
    released+=hits;
   }this.emit('attack',{uid:u.uid,x:u.x,y:u.y,kind:'damage',targetX:this.s.enemies.find(e=>e.uid===action.targets[0])?.x,targetY:this.s.enemies.find(e=>e.uid===action.targets[0])?.y,type:action.type,style:behavior.style,skill:this.skillActive(u),radius:behavior.radius||0});return released;
  }
  deliverStrike(packet){
   const u=this.s.units.find(x=>x.uid===packet.owner);if(!u)return;
+  if(packet.effectOnly){this.emit('aftershock',{x:packet.x,y:packet.y,radius:packet.radius,type:packet.type});return;}
   if(packet.aftershock){const target=this.s.enemies.find(e=>e.uid===packet.target&&e.hp>0&&!e.hidden);if(target)this.hit(u,target,packet.amount,packet.type);return;}
   if(!u.deployed||u.hp<=0||packet.ownerDeployment!==u.deployAt||!permissions(u).attack)return;
   const target=this.s.enemies.find(e=>e.uid===packet.target&&e.hp>0);if(!target)return;
-  const shot={...packet,speed:TENTATIVE_PROJECTILE_SPEED,returning:false};
+  this.emit('strike',{uid:u.uid,x:u.x,y:u.y,targetX:target.x,targetY:target.y,branch:packet.branch,style:packet.style,ranged:packet.ranged,hit:packet.hit,type:packet.type});
+  const shot={...packet,startX:packet.x,startY:packet.y,speed:TENTATIVE_PROJECTILE_SPEED,returning:false};
   if(packet.ranged){this.s.projectiles.push(shot);if(packet.returns)u.pendingReturns=(u.pendingReturns||0)+1;}
   else this.impactNativeAttack(u,target,shot);
-  if(packet.hit===0&&packet.storedEnergy)for(let n=0;n<packet.storedEnergy;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.baseAmount??packet.amount,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',antiAir:true,ownerDeployment:u.deployAt});
-  if(packet.drone&&packet.hit===0){const trait=branchTrait(this.profile(u)).values;u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.amount*u.droneScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',antiAir:true,ownerDeployment:u.deployAt});}
+  if(packet.hit===0&&packet.storedEnergy)for(let n=0;n<packet.storedEnergy;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.baseAmount??packet.amount,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'mystic',antiAir:true,ownerDeployment:u.deployAt});
+  if(packet.drone&&packet.hit===0){const trait=branchTrait(this.profile(u)).values;u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.amount*u.droneScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'funnel',antiAir:true,ownerDeployment:u.deployAt});}
  }
  impactNativeAttack(u,target,packet){
   const p=this.profile(u),trait=branchTrait(p).values,eligible=e=>e.hp>0&&!e.invulnerable&&!permissions(e).sleeping&&(packet.antiAir||!e.flying||e.uid===target.uid);
   if(packet.style==='chain'){
-   const visited=new Set();let victim=target,power=packet.amount;const max=trait['attack@max_target']??3;
-   for(let i=0;victim&&i<max;i++){visited.add(victim.uid);this.hit(u,victim,power,packet.type);applyStatus(victim,'sluggish',trait['attack@sluggish']??.5,{source:u.uid});const previous=victim;victim=this.s.enemies.filter(e=>eligible(e)&&!visited.has(e.uid)&&Math.hypot(e.x-previous.x,e.y-previous.y)<=1.7).sort((a,b)=>Math.hypot(a.x-previous.x,a.y-previous.y)-Math.hypot(b.x-previous.x,b.y-previous.y)||(a.progress||0)-(b.progress||0))[0];power*=.85;}this.emit('impact',{x:target.x,y:target.y,radius:1.7,style:'chain',type:packet.type});return;
+   const visited=new Set();let victim=target,power=packet.amount;const max=trait['attack@max_target']??3;let origin={x:target.x,y:target.y};
+   for(let i=0;victim&&i<max;i++){visited.add(victim.uid);if(i>0)this.emit('chain',{x:origin.x,y:origin.y,targetX:victim.x,targetY:victim.y,type:packet.type});origin={x:victim.x,y:victim.y};this.hit(u,victim,power,packet.type);applyStatus(victim,'sluggish',trait['attack@sluggish']??.5,{source:u.uid});const previous=victim;victim=this.s.enemies.filter(e=>eligible(e)&&!visited.has(e.uid)&&Math.hypot(e.x-previous.x,e.y-previous.y)<=1.7).sort((a,b)=>Math.hypot(a.x-previous.x,a.y-previous.y)-Math.hypot(b.x-previous.x,b.y-previous.y)||(a.progress||0)-(b.progress||0))[0];power*=.85;}return;
   }
   const splash=packet.style==='splash'||packet.style==='aftershock'||packet.style==='hammer'||(packet.style==='fortress'&&target.block!==u.uid);
   const victims=splash?this.s.enemies.filter(e=>eligible(e)&&Math.hypot(e.x-target.x,e.y-target.y)<=packet.radius):[target];
   for(const e of victims){const scale=packet.style==='hammer'&&e.uid!==target.uid?(trait['attack@atk_scale_2']??.5):1;this.hit(u,e,packet.amount*scale,packet.type);}
+  if(packet.style==='aftershock')scheduleStrikes(this.s,1,{owner:u.uid,effectOnly:true,x:target.x,y:target.y,radius:packet.radius,type:packet.type,delay:2/30});
   if(packet.style==='aftershock')for(const e of victims)if(e.hp>0)scheduleStrikes(this.s,1,{owner:u.uid,target:e.uid,amount:packet.amount*(trait['attack@append_atk_scale']??.5),type:packet.type,aftershock:true,delay:2/30});
   this.emit('impact',{x:target.x,y:target.y,radius:splash?packet.radius||0:0,style:packet.style,type:packet.type});
  }
@@ -2077,7 +2080,7 @@ class NativeBattle {
   resolveBlocks(this.s.units,this.s.enemies,u=>this.stats(u).blockCnt||0);
   for(const e of this.s.enemies){if(e.hp<=0||e.trainingDummy)continue;const control=permissions(e),alive=this.s.units.filter(u=>u.hp>0&&u.deployed);
    const target=e.hidden?null:e.block?alive.find(u=>u.uid===e.block):e.ranged?alive.filter(u=>!permissions(u).sleeping&&Math.hypot(u.x-e.x,u.y-e.y)<=e.range).sort((a,b)=>compareEnemyTargets({tauntLevel:this.stats(a).tauntLevel,deployAt:a.deployAt,uid:a.uid},{tauntLevel:this.stats(b).tauntLevel,deployAt:b.deployAt,uid:b.uid}))[0]:null;e.attackCooldown=Math.max(0,e.attackCooldown-1);
-   if(!control.attack||e.hidden)e.action=null;if(e.action&&--e.action.left<=0){const u=alive.find(u=>u.uid===e.action.target);e.action=null;if(u)this.hurt(u,e);}if(target&&e.canAttack&&control.attack&&!e.action&&!e.attackCooldown){const t=attackTiming(e.interval,e.attackSpeed,windupSeconds(e.interval));e.attackCooldown=t.frames;e.action={left:t.windupFrames,target:target.uid};}
+   if(!control.attack||e.hidden)e.action=null;if(e.action&&--e.action.left<=0){const u=alive.find(u=>u.uid===e.action.target);e.action=null;if(u){this.emit('strike',{uid:e.uid,x:e.x,y:e.y,targetX:u.x,targetY:u.y,ranged:e.ranged,enemy:true,type:e.damageType,style:'single'});this.hurt(u,e);}}if(target&&e.canAttack&&control.attack&&!e.action&&!e.attackCooldown){const t=attackTiming(e.interval,e.attackSpeed,windupSeconds(e.interval));e.attackCooldown=t.frames;e.action={left:t.windupFrames,target:target.uid};}
    if(advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),!!target||!!e.action)){this.s.leaks+=e.leak;e.hp=0;e.escaped=true;this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak});this.s.banner={text:'漏怪 −'+e.leak,life:1.4};}
   }
   for(const packet of dueStrikes(this.s))this.deliverStrike(packet);
@@ -2193,10 +2196,84 @@ function beep(type,muted,volume){
 }
 function playBattleEvents(s,muted,volume=1){
  if(!s)return;
- for(const e of s.events||[])if((e.id??e.t)>heard&&e.t<=s.time)beep(e.type,muted,volume);
+ for(const e of s.events||[])if((e.id??e.t)>heard&&e.t<=s.time&&e.type!=='attack')beep(e.type==='strike'?'attack':e.type==='chain'||e.type==='aftershock'?'impact':e.type==='heal'?'skill':e.type,muted,volume);
  heard=s.eventId??s.time;
 }
 function recent(events,t,type,span=.22){return (events||[]).filter(e=>e.type===type&&t-e.t>=0&&t-e.t<=span);}
+// Visual categories describe existing attacks; rendering never applies damage.
+function attackVisual(p){
+ if(p.enemy)return p.ranged?'enemy-shot':'enemy-melee';
+ if(p.returns)return 'return';
+ if(p.branch==='funnel')return 'drone';
+ if(p.branch==='mystic')return 'stored';
+ if(p.branch==='reaperrange')return 'scatter';
+ if(p.style==='all')return p.ranged?'area':'sweep';
+ if(p.ranged)return ['splash','aftershock','fortress'].includes(p.style)?'artillery':p.type==='arts'||p.damageType==='arts'?'arts':'bullet';
+ if(['fighter','crusher','hammer'].includes(p.branch))return 'punch';
+ if(['instructor','charger','duelist','agent'].includes(p.branch))return 'thrust';
+ return p.style==='block-count'?'sweep':'slash';
+}
+function line(c,a,b){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();}
+function cross(c,p,r=6){line(c,{x:p.x-r,y:p.y},{x:p.x+r,y:p.y});line(c,{x:p.x,y:p.y-r},{x:p.x,y:p.y+r});}
+function ring(c,p,rx,ry){c.beginPath();c.ellipse(p.x,p.y,rx,ry,0,0,Math.PI*2);c.stroke();}
+function drawCombatFx(c,point,z,battle,reduce){
+ const s=battle.s,t=s.time;
+ c.save();c.lineCap='round';
+ for(const u of s.units){
+  if(!u.deployed||u.hp<=0)continue;
+  const behavior=battle.behavior(u),p=point(u.x,u.y),pulse=reduce?0:Math.sin(t*3)*2;
+  if(behavior.kind==='regeneration'){
+   c.strokeStyle='#8fe8b54d';c.lineWidth=1;
+   for(const cell of battle.range(u,battle.skillActive(u))){const a=point(cell.x,cell.y);c.strokeRect(a.x-z.tw*.47,a.y-z.th*.47,z.tw*.94,z.th*.94);}
+   c.strokeStyle='#8fe8b5';ring(c,p,18+pulse,8);cross(c,{x:p.x,y:p.y-27},4);
+  }
+  if(behavior.drone){
+   const a=reduce?0:t*1.7,q={x:p.x+Math.cos(a)*22,y:p.y-27+Math.sin(a)*6};
+   c.strokeStyle='#bdadff';c.lineWidth=2;ring(c,q,5,3);line(c,{x:q.x-8,y:q.y-3},{x:q.x+8,y:q.y-3});
+  }
+  if(behavior.storage){c.fillStyle='#cda8ff';for(let i=0;i<(u.energy||0);i++){c.beginPath();c.arc(p.x-10+i*10,p.y-30,3,0,Math.PI*2);c.fill();}}
+  if(behavior.magazine){c.fillStyle='#ffe6a4';for(let i=0;i<Math.min(12,u.magazine||0);i++)c.fillRect(p.x-18+i*4,p.y+17,2,5);if(u.action?.kind==='reload'){c.strokeStyle='#ffe6a4';ring(c,p,22,10);}}
+ }
+ for(const p of s.projectiles||[]){
+  const visual=attackVisual(p),owner=s.units.find(u=>u.uid===p.owner),target=p.returning?owner:s.enemies.find(e=>e.uid===p.target);
+  const ground=point(p.x,p.y),dest=target?point(target.x,target.y):ground,pos={...ground};
+  const angle=Math.atan2(dest.y-ground.y,dest.x-ground.x),arts=p.type==='arts';
+  if(visual==='artillery'&&!reduce&&target){const ox=p.startX??owner?.x??p.x,oy=p.startY??owner?.y??p.y,total=Math.hypot(target.x-ox,target.y-oy)||1,progress=Math.max(0,Math.min(1,1-Math.hypot(target.x-p.x,target.y-p.y)/total));pos.y-=Math.sin(progress*Math.PI)*Math.min(45,z.th*.8);c.fillStyle='#0005';c.beginPath();c.ellipse(ground.x,ground.y,5,2,0,0,Math.PI*2);c.fill();}
+  c.save();c.translate(pos.x,pos.y);c.rotate(angle);c.strokeStyle=arts?'#cda8ff':'#ffe6a4';c.fillStyle=c.strokeStyle;c.lineWidth=2;
+  if(visual==='return'){c.rotate(reduce?0:t*15);c.beginPath();c.arc(0,0,8,.3,Math.PI*1.8);c.stroke();line(c,{x:-6,y:0},{x:6,y:0});}
+  else if(visual==='artillery'){c.beginPath();c.arc(0,0,5,0,Math.PI*2);c.fill();if(!reduce)line(c,{x:-15,y:0},{x:-7,y:0});}
+  else if(arts){c.beginPath();c.moveTo(7,0);c.lineTo(0,-4);c.lineTo(-7,0);c.lineTo(0,4);c.closePath();c.fill();if(visual==='stored')ring(c,{x:0,y:0},10,6);if(visual==='drone')line(c,{x:-16,y:0},{x:-7,y:0});}
+  else{line(c,{x:-7,y:0},{x:6,y:0});if(!reduce){c.globalAlpha=.35;line(c,{x:-19,y:0},{x:-9,y:0});}}
+  c.restore();
+ }
+ for(const e of recent(s.events,t,'strike',.24)){
+  if(e.targetX==null)continue;const a=point(e.x,e.y),b=point(e.targetX,e.targetY),visual=attackVisual(e),age=(t-e.t)/.24;
+  c.save();c.globalAlpha=1-age;c.strokeStyle=e.enemy?'#ff927d':e.damageType==='arts'?'#cda8ff':'#fff0b1';c.lineWidth=2;
+  const angle=Math.atan2(b.y-a.y,b.x-a.x);
+  if(['slash','sweep','enemy-melee'].includes(visual)){c.beginPath();c.arc(b.x,b.y,reduce?12:12+age*14,angle-1.2,angle+1.2);c.stroke();if(!reduce){c.lineWidth=1;c.beginPath();c.arc(b.x,b.y,19+age*14,angle-.9,angle+.9);c.stroke();}}
+  else if(visual==='punch'){ring(c,b,8+age*12,8+age*12);for(let i=0;i<4;i++){const r=i*Math.PI/2;line(c,{x:b.x+Math.cos(r)*12,y:b.y+Math.sin(r)*12},{x:b.x+Math.cos(r)*20,y:b.y+Math.sin(r)*20});}}
+  else if(visual==='thrust'){line(c,a,b);c.beginPath();c.moveTo(b.x-Math.cos(angle-.5)*10,b.y-Math.sin(angle-.5)*10);c.lineTo(b.x,b.y);c.lineTo(b.x-Math.cos(angle+.5)*10,b.y-Math.sin(angle+.5)*10);c.stroke();}
+  else if(visual==='scatter'){line(c,a,b);if(!reduce)for(const d of [-.12,.12]){const len=Math.hypot(b.x-a.x,b.y-a.y);line(c,a,{x:a.x+Math.cos(angle+d)*len,y:a.y+Math.sin(angle+d)*len});}}
+  else if(visual==='area'){ring(c,b,10+age*12,6+age*7);}
+  else if(visual==='enemy-shot'){line(c,a,b);cross(c,b,3);}
+  else{c.translate(a.x,a.y);c.rotate(angle);line(c,{x:4,y:-3},{x:10,y:0});line(c,{x:10,y:0},{x:4,y:3});}
+  c.restore();
+ }
+ for(const e of (s.events||[]).filter(e=>['heal','chain'].includes(e.type)&&t-e.t>=0&&t-e.t<.4)){
+  const a=point(e.x,e.y),b=point(e.targetX,e.targetY),heal=e.type==='heal',age=(t-e.t)/.4;
+  c.save();c.globalAlpha=1-age;c.strokeStyle=heal?'#8fe8b5':'#bb9dff';c.lineWidth=heal?2:2.5;
+  if(heal){c.beginPath();c.moveTo(a.x,a.y);c.quadraticCurveTo((a.x+b.x)/2,Math.min(a.y,b.y)-18,b.x,b.y);c.stroke();cross(c,b,5);ring(c,b,10,6);}
+  else{const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;c.beginPath();c.moveTo(a.x,a.y);for(let i=1;i<=6;i++){const k=i/6,off=reduce||i===6?0:(i%2?5:-5);c.lineTo(a.x+dx*k-dy/len*off,a.y+dy*k+dx/len*off);}c.stroke();}
+  c.restore();
+ }
+ for(const e of (s.events||[]).filter(e=>['impact','aftershock'].includes(e.type)&&e.radius&&t-e.t>=0&&t-e.t<.38)){
+  const p=point(e.x,e.y),age=(t-e.t)/.38,after=e.type==='aftershock';c.save();c.globalAlpha=1-age;c.strokeStyle=after?'#f3bc75':e.damageType==='arts'?'#cda8ff':'#ffe6a4';c.lineWidth=after?3:2;
+  const scale=reduce?1:.55+age*.45;ring(c,p,e.radius*z.tw*scale,e.radius*z.th*scale);
+  if(!reduce){ring(c,p,e.radius*z.tw*.55*scale,e.radius*z.th*.55*scale);for(let i=0;i<6;i++){const a=i*Math.PI/3,r=e.radius*z.tw*.7*age;line(c,{x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r*z.th/z.tw},{x:p.x+Math.cos(a)*(r+7),y:p.y+Math.sin(a)*(r+7)*z.th/z.tw});}}
+  c.restore();
+ }
+ c.restore();
+}
 function mark(c,x,y,kind){
  c.save();c.translate(x,y);c.strokeStyle='#f4f0e4';c.fillStyle='#1a2420';c.lineWidth=1.4;
  if(kind==='stun'){c.beginPath();c.moveTo(-5,-6);c.lineTo(0,6);c.lineTo(5,-6);c.closePath();c.fill();c.stroke();}
@@ -2217,21 +2294,7 @@ function actorOffset(u,battle){
 }
 function drawFx(c,point,z,battle,opts={}){
  const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
- for(const p of s.projectiles||[]){
-  const pos=point(p.x,p.y),arts=p.type==='arts',heal=p.type==='healing';
-  c.save();c.translate(pos.x,pos.y);
-  if(heal){c.strokeStyle='#8fe8b5';c.lineWidth=2;c.beginPath();c.moveTo(-6,0);c.lineTo(6,0);c.moveTo(0,-6);c.lineTo(0,6);c.stroke();}
-  else if(arts){c.fillStyle='#cda8ff';c.beginPath();c.moveTo(0,-5);c.lineTo(4,0);c.lineTo(0,5);c.lineTo(-4,0);c.closePath();c.fill();}
-  else{c.fillStyle='#fff0b1';c.beginPath();c.ellipse(0,0,6,2.4,Math.atan2(((s.enemies.find(e=>e.uid===p.target)||{}).y??p.y)-p.y,((s.enemies.find(e=>e.uid===p.target)||{}).x??p.x)-p.x)||0,0,Math.PI*2);c.fill();}
-  c.restore();
- }
- for(const e of recent(s.events,t,'impact',.28)){
-  if(!e.radius)continue;const p=point(e.x,e.y),r=e.radius*z.tw,fade=1-(t-e.t)/.28;
-  c.strokeStyle=e.damageType==='arts'?`rgba(180,140,255,${.55*fade})`:`rgba(255,230,150,${.5*fade})`;c.lineWidth=2;c.beginPath();c.ellipse(p.x,p.y,r,e.radius*z.th,0,0,Math.PI*2);c.stroke();
- }
- for(const e of recent(s.events,t,'attack',.2)){
-  if(e.kind!=='heal'){if(!reduce&&e.targetX!=null){const a=point(e.x,e.y),b=point(e.targetX,e.targetY);c.strokeStyle=e.damageType==='arts'?'#cda8ff':'#ffe6b1';c.lineWidth=2;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();}continue;}const p=point(e.x,e.y);c.strokeStyle='#8fe8b5aa';c.lineWidth=2;c.beginPath();c.arc(p.x,p.y,10+(t-e.t)*20,0,Math.PI*2);c.stroke();
- }
+ drawCombatFx(c,point,z,battle,reduce);
  for(const e of s.effects||[]){
   if(e.type!=='healing'&&e.type!=='evade'&&e.type!=='block')continue;
   const p=point(e.x,e.y);c.fillStyle=e.type==='healing'?'#8fe8b5':'#f6e7c8';c.font='12px sans-serif';c.textAlign='center';c.fillText(e.text,p.x,p.y-24-(.6-e.life)*30);
@@ -2260,7 +2323,7 @@ function drawDownRing(c,p,u,size){
  c.fillStyle='#e9fff7';c.font='11px sans-serif';c.textAlign='center';c.fillText(Math.ceil(u.down||0)+'s',p.x,p.y+4);
 }
 
-return {resetFxClock,unlockAudio,playBattleEvents,recent,actorOffset,drawFx,drawStatuses,drawDownRing};
+return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawFx,drawStatuses,drawDownRing};
 },
 "native-play.js": function(load) {
 const {nativeWavePlan} = load("native-waves.js");
