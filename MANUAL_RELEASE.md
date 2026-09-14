@@ -14,4 +14,4 @@
 
 目标为 Yilegendoflink/garrison-protocol 和对应 GitHub Pages。用户在收到公开目的地、约310MB源码／数据／素材及版本历史范围后，明确确认“就直接上传到我账号仓库并部署就行了”。公开仓库已创建，按授权上传并通过只构建、不测试的工作流发布。
 
-实际部署采用 gh-pages 静态分支，因为自定义Actions启动API返回500。源码和静态分支均已上传；Pages源已配置并触发构建。当前main推送不自动同步静态分支，详见PUBLISHING.md。
+2026-09-14 更新：Pages 已改用 GitHub Actions 发布源，推送 main 自动构建并部署。此前 gh-pages 静态发布仅为历史方案，详见 PUBLISHING.md。

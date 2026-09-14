@@ -1,23 +1,26 @@
-# GitHub Pages 发布约定
-
-用户于2026-09-13明确批准将当前手动验收版、源码、数据／素材及版本历史公开到其账号，并要求不运行测试。
+# GitHub Pages 自动发布
 
 仓库：https://github.com/Yilegendoflink/garrison-protocol
-
 页面：https://yilegendoflink.github.io/garrison-protocol/
 
-## 当前发布方式
+## 当前发布方式（2026-09-14）
 
-- main 保存完整源码、数据与构建产物。
-- Pages 使用 gh-pages 分支根目录，build_type 为 legacy；.nojekyll 表示直接发布静态构建。
-- 首次发布尝试的自定义 Actions dispatch API 连续返回500，因此改为上传已有 dist 到 gh-pages。配置源后再推送部署元数据，已触发 GitHub 的 pages build and deployment。
-- 页面 deployment.json 记录其来源提交、发布时间以及 testsRun=false。
-- .github/workflows/pages.yml 仅保留手动备用入口。使用前须把 Pages 发布源切换为 GitHub Actions；当前 main 推送不会自动同步静态分支。
+用户要求每次推送后自动更新 Pages。发布源改为 GitHub Actions（build_type=workflow）。
+
+- 推送 main 自动触发 .github/workflows/pages.yml；不设置路径过滤，因此文档提交也会触发。
+- 使用 Node.js 24 执行 npm run build，将 dist 作为 Pages artifact 部署。
+- 工作流只构建和部署，不运行自动测试或 release:check。
+- github-pages 环境允许 main 部署；只给部署任务 pages:write 和 id-token:write 权限。
+- 部署串行执行，不中断正在进行的发布。密集推送时 GitHub concurrency 可能合并等待中的任务，最终发布最新提交。
+- 站点 deployment.json 包含 sourceCommit、deployedAt、testsRun=false 和 runUrl，可核对线上版本。
+- 可在 Actions 页面手动运行该工作流重发 main；其他分支不会发布生产站点。
 
 ## 后续更新
 
-按用户要求仅运行 npm run build，随后将 dist 内容同步到 gh-pages，保留 .nojekyll 并更新 deployment.json，再推送该分支。应通过已配置的本地系统代理访问GitHub；不要修改全局代理，不要把凭据写入仓库。
+提交代码后执行 git push origin main，等待 Actions 成功即可。无需手动同步 gh-pages，也不需要额外 PAT 或仓库 Secret。
 
-此次本地暂存目录为 artifacts/research/pages-publish-20260913，已被主仓库忽略。它是独立的 gh-pages 工作副本，不要在该目录覆盖或提交 main 的完整资料库。
+排障时先查看该提交的 Actions 日志，再核对线上 deployment.json。构建或部署失败不代表新版已上线。
 
-仅确认发布服务状态和线上部署元数据，不进行游戏功能测试。机制差异及本轮未测试说明见 README.md、MANUAL_RELEASE.md。
+## 历史记录
+
+2026-09-13 因手动 dispatch API 返回 500，曾采用 gh-pages 静态分支发布。该方式现已被自动工作流替代。artifacts/research/pages-publish-20260913 是旧独立工作副本，后续无需向它同步。

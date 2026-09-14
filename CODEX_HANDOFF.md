@@ -8,7 +8,11 @@
 
 本文件是当前对话的项目摘要，不是完整聊天记录；用于让新的 Codex 会话接续现有代码。
 
-## 2026-09-13 GitHub上传与静态Pages部署
+## 2026-09-14 Pages自动发布
+
+Pages现使用GitHub Actions源，推送main自动构建并部署，保留手动重发入口。无需同步gh-pages。仅构建不运行测试；线上deployment.json记录来源提交和运行链接。详见PUBLISHING.md。下方静态分支发布说明仅为历史记录。
+
+## 2026-09-13 GitHub上传与静态Pages部署（历史）
 
 仓库已创建并推送：Yilegendoflink/garrison-protocol。用户已明确批准公开整个已说明的范围，不要再次索要同一授权。源码在main，Pages使用gh-pages根目录。自定义Actions的dispatch返回500，已改用静态分支发布；配置源后推送会触发pages build and deployment。备用workflow仅手动触发，当前不要把main推送当作页面同步。详见PUBLISHING.md。
 

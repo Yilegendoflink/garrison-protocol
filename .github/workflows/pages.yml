@@ -1,6 +1,8 @@
-name: 备用Actions发布（当前使用gh-pages静态源）
+name: 自动构建并发布 GitHub Pages
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -12,6 +14,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -20,6 +23,17 @@ jobs:
           node-version: '24'
       - name: 构建客户端（按要求不运行测试）
         run: npm run build
+      - name: 写入部署版本
+        run: |
+          node --input-type=module <<'NODE'
+          import {writeFileSync} from 'node:fs';
+          writeFileSync('dist/deployment.json', JSON.stringify({
+            sourceCommit: process.env.GITHUB_SHA,
+            deployedAt: new Date().toISOString(),
+            testsRun: false,
+            runUrl: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+          }, null, 2));
+          NODE
       - name: 上传站点文件
         uses: actions/upload-pages-artifact@v5.0.0
         with:
