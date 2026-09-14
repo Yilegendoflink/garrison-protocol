@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const names = ['data.js', 'benchmark.js', 'combat.js', 'status.js', 'targeting.js', 'actions.js', 'content.js', 'protocol.js', 'protocol-data.js', 'engine.js', 'renderer.js', 'session.js', 'catalog.js', 'screens.js', 'app.js','garrison.js','strategy.js','native-economy.js','runtime-data.js','native-branches.js','native-wave-fill.js','native-wave-random.js','native-waves.js','native-wave-editor.js','native-battle.js','native-session.js','native-play.js'];
+const names = ['data.js', 'benchmark.js', 'combat.js', 'status.js', 'targeting.js', 'actions.js', 'content.js', 'protocol.js', 'protocol-data.js', 'engine.js', 'renderer.js', 'session.js', 'catalog.js', 'screens.js', 'app.js','garrison.js','strategy.js','native-economy.js','runtime-data.js','native-branches.js','native-wave-fill.js','native-wave-random.js','native-waves.js','native-wave-editor.js','native-sp.js','native-battle.js','native-session.js','native-play.js'];
 const factories = [];
 for (const name of names) {
   let source = (await readFile(path.join(root, 'dist', name), 'utf8')).replace(/\r\n/g,'\n');
