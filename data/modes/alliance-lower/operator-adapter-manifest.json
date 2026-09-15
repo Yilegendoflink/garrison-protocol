@@ -153,7 +153,7 @@
       "partialHandlers": [
         "timed-zone"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "格雷伊",
@@ -470,7 +470,7 @@
       "partialHandlers": [
         "blocker-follow-up"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "诗怀雅",
@@ -538,7 +538,7 @@
       "partialHandlers": [
         "pull-and-end-burst"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "海霓",
@@ -630,7 +630,7 @@
       "partialHandlers": [
         "max-hp-regen"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "流星",

@@ -811,8 +811,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1伤害转治疗模式缺失；S2持续区域伤害、沉默、停顿缺失",
-      "talentGaps": "辅助职业加攻光环缺失",
+      "skillGaps": "S1伤害转治疗模式、S2持续区域伤害/沉默/停顿已接入",
+      "talentGaps": "辅助职业加攻光环已接入",
       "prtsReference": "https://prts.wiki/w/%E6%B3%A2%E7%99%BB%E5%8F%AF",
       "sourceProfileIds": [
         "chess_char_1_13_a",
@@ -2551,8 +2551,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1多目标停顿未挂接；S2额外攻击邻近友方阻挡敌人缺失",
-      "talentGaps": "周围八格攻速光环缺失",
+      "skillGaps": "S1多目标停顿、S2额外攻击邻近友方阻挡敌人已接入",
+      "talentGaps": "周围八格攻速光环已接入",
       "prtsReference": "https://prts.wiki/w/%E6%96%AD%E5%B4%96",
       "sourceProfileIds": [
         "chess_char_3_02_a",
@@ -3014,8 +3014,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1独立倍率字段；S2拖拽和技能结束爆发缺失",
-      "talentGaps": "非技能期邻格防御光环、技能期降仇恨缺失",
+      "skillGaps": "S1独立倍率字段、S2拖拽和技能结束爆发已接入",
+      "talentGaps": "非技能期邻格防御光环、技能期降仇恨已接入",
       "prtsReference": "https://prts.wiki/w/%E8%96%84%E7%BB%BF",
       "sourceProfileIds": [
         "chess_char_3_08_a",
@@ -3574,8 +3574,8 @@
         }
       ],
       "category": "A",
-      "skillGaps": "S1防御可复用；S2额外阻挡和百分比回复未接入",
-      "talentGaps": "固定防御天赋未接入",
+      "skillGaps": "S1防御、S2额外阻挡和百分比回复已接入",
+      "talentGaps": "固定防御天赋已接入",
       "prtsReference": "https://prts.wiki/w/%E8%9B%87%E5%B1%A0%E7%AE%B1",
       "sourceProfileIds": [
         "chess_char_3_16_a",

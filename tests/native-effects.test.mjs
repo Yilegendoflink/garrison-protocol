@@ -314,6 +314,14 @@ test('断崖 S2 adds one nearby blocker follow-up and瑕光 S3 adds arts plus al
  const l=openBattle([{chessId:'chess_char_3_12_b',skillIndex:2},reps.operators.yak]);deployNow(l.b);const blem=l.b.s.units.find(u=>u.id==='char_423_blemsh'),ally=l.b.s.units.find(u=>u.id==='char_199_yak'),victim=enemy(l.b,{x:blem.x+1,y:blem.y,hp:5000,def:0});ally.hp=ally.maxHp-100;blem.sp=l.b.spCost(blem);l.b.activate(blem);const h0=ally.hp,v0=victim.hp;l.b.hit(blem,victim,20,'physical');assert.ok(victim.hp<v0-20);assert.ok(ally.hp>h0);
 });
 
+test('断崖 S1 施加范围停顿且天赋提供周围攻速',()=>{
+ const {b}=openBattle([{chessId:'chess_char_3_02_b',skillIndex:0},reps.operators.yak]);deployNow(b);const ayer=byId(b,'char_294_ayer'),yak=byId(b,'char_199_yak'),e=enemy(b,{x:ayer.x+1,y:ayer.y,hp:10000,def:0});yak.x=ayer.x+1;yak.y=ayer.y;ayer.sp=b.spCost(ayer);b.activate(ayer);for(let i=0;i<30;i++)b.step();assert.ok(e.statuses.some(s=>s.kind==='sluggish'));assert.equal(b.stats(yak).attackSpeed,b.profile(yak).attributes.attackSpeed+8);
+});
+
+test('波登可 S1 技能期间普通攻击改为治疗',()=>{
+ const {b}=openBattle([{chessId:'chess_char_1_13_b',skillIndex:0},reps.operators.yak]);deployNow(b);const pod=byId(b,'char_258_podego'),yak=byId(b,'char_199_yak');yak.x=pod.x+1;yak.y=pod.y;yak.hp=yak.maxHp-200;pod.sp=b.spCost(pod);b.activate(pod);assert.equal(pod.focusHeal,true);const before=yak.hp;for(let i=0;i<90;i++)b.step();assert.ok(yak.hp>before);
+});
+
 test('信仰搅拌机 damage stacks refresh finite defense and attack-speed bonuses',()=>{
  const {b}=openBattle({chessId:'chess_char_4_01_b',skillIndex:2});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:10000,def:0});u.sp=b.spCost(u);b.activate(u);const d0=b.stats(u).def;b.hit(u,e,10,'physical');const d1=b.stats(u).def;b.hit(u,e,10,'physical');assert.ok(d1>d0);assert.ok(b.stats(u).attackSpeed>b.profile(u).attributes.attackSpeed);b.s.time=11;tickLogic(b,11);assert.equal(b.stats(u).def,d0);
 });
@@ -354,6 +362,10 @@ test('蛇屠箱 S1 的持续回复按最大生命比例结算',()=>{
  const {b}=openBattle({chessId:'chess_char_3_16_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.hp=u.maxHp-100;u.sp=b.spCost(u);b.activate(u);const before=u.hp;b.s.time=1;tickLogic(b,1);assert.equal(u.hp,before+u.maxHp*.02);
 });
 
+test('蛇屠箱 S2 只为自身回复并增加阻挡数',()=>{
+ const {b}=openBattle([{chessId:'chess_char_3_16_b',skillIndex:1},reps.operators.yak]);deployNow(b);const u=byId(b,'char_150_snakek'),ally=byId(b,'char_199_yak');ally.x=u.x+4;ally.y=u.y;u.hp=u.maxHp-100;ally.hp=ally.maxHp-100;const baseBlock=b.profile(u).attributes.blockCnt;u.sp=b.spCost(u);b.activate(u);assert.equal(b.stats(u).blockCnt,baseBlock+1);const before=u.hp,allyBefore=ally.hp;b.s.time=1;tickLogic(b,1);assert.equal(u.hp,before+u.maxHp*.02);assert.equal(ally.hp,allyBefore);
+});
+
 test('泡泡技能受击反伤并给攻击者施加攻击下降',()=>{
  const {b}=openBattle({chessId:'chess_char_2_08_b',skillIndex:1});deployNow(b);const bubble=b.s.units[0],enemyUnit=enemy(b,{x:bubble.x+1,y:bubble.y,hp:1000,def:0,atk:100});bubble.sp=b.spCost(bubble);b.activate(bubble);const before=enemyUnit.hp;b.hurt(bubble,enemyUnit);assert.ok(enemyUnit.hp<before);assert.ok(enemyUnit.statuses.some(s=>s.kind==='attackDown'));
 });
@@ -375,7 +387,7 @@ test('跃跃回旋投射物按技能黑板追加独立投射',()=>{
 });
 
 test('薄绿技能结束释放范围法术爆发并保留命中拖拽',()=>{
- const {b}=openBattle({chessId:'chess_char_3_08_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.ok(u.skillLeft>0);b.hit(u,e,10,'arts');u.skillLeft=0;dispatch(b,'skill-end',{target:u});assert.ok(e.hp<990);
+ const {b}=openBattle({chessId:'chess_char_3_08_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+2,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.ok(u.skillLeft>0);assert.equal(b.stats(u).tauntLevel,-1);const beforeX=e.x;b.hit(u,e,10,'arts');assert.ok(e.x<beforeX);u.skillLeft=0;dispatch(b,'skill-end',{target:u});assert.ok(e.hp<990);
 });
 
 test('菲莱技能受击反击造成法伤并积累凋亡损伤',()=>{

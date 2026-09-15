@@ -78,7 +78,7 @@ export function targetFilter(text,source,target,battle){
  if(target.uid===source.uid)return true;
  const profile=battle.profile(target),profession=profile?.profession||'',position=profile?.position||'';
  const match=text.match(/所有(?:友方|我方)?【([^】]+)】(?:职业)?干员/);if(match){const professionMap={医疗:'MEDIC',辅助:'SUPPORT',术师:'CASTER',近卫:'WARRIOR',重装:'TANK',狙击:'SNIPER',先锋:'PIONEER',特种:'SPECIAL'};if(match[1]==='拉特兰')return profile?.bonds?.includes('lateranoShip');return profession===match[1]||profession===professionMap[match[1]]||battle.data.branchRules?.records?.find(r=>r.name===match[1])?.id===profile?.branch;}
- const nearby=text.match(/周围(?:最多)?(\d+|一|两|二|四|八)格/);if(nearby){const radius={一:1,两:2,二:2,四:4,八:8}[nearby[1]]??Number(nearby[1]);if(Math.max(Math.abs((source.x??0)-(target.x??0)),Math.abs((source.y??0)-(target.y??0)))>radius)return false;}
+ const nearby=text.match(/周围(?:最多)?(\d+|一|两|二|四|八)格/);if(nearby){const radius={一:1,两:2,二:2,四:4,八:8}[nearby[1]]??Number(nearby[1]);if(Math.max(Math.abs((source.x??0)-(target.x??0)),Math.abs((source.y??0)-(target.y??0)))>radius)return false;return true;}
  if(has(text,/所有友方单位|所有我方单位|全体友方单位/))return true;
  if(has(text,/近战友方|近战干员/))return position==='MELEE';
  if(has(text,/远程友方|远程干员/))return position==='RANGED';
@@ -147,6 +147,7 @@ export function statMods(battle,u){
   if(Number.isFinite(as)&&direct(text,'攻击速度')){out.attackSpeed+=as;note('attackSpeed','add',as,sourceName);}
   if(Number.isFinite(blocks)&&direct(text,'阻挡数')){out.add.blockCnt+=blocks;note('blockCnt','add',blocks,sourceName);}
   if(Number.isFinite(taunt)&&direct(text,'嘲讽等级')){out.add.tauntLevel+=taunt;note('tauntLevel','add',taunt,sourceName);}
+  if(Number.isFinite(taunt)&&has(text,/不容易受到敌人攻击|更容易受到敌人攻击/)){out.add.tauntLevel+=taunt;note('tauntLevel','add',taunt,sourceName);}
   if(Number.isFinite(sp)&&has(text,/技力自然回复速度/))out.auras.push({stat:'spRecoveryPerSec',layer:'maxSame',value:sp,text,source:u});
   if(Number.isFinite(atk)&&has(text,/所有友方|全体友方|所有【/))out.auras.push({stat:'atk',layer:'ratio',value:atk,text,source:u});
   if(Number.isFinite(def)&&has(text,/所有友方|全体友方|所有【/))out.auras.push({stat:'def',layer:'ratio',value:def,text,source:u});
@@ -199,6 +200,7 @@ export function operatorSkillStart(battle,u,ctx){
  const profile=battle.profile(u),config=skillConfig(profile),text=config.description,bb=config.bb;
  let suppressDefault=false;
  if(/烹饪完成后专注于治疗/.test(text)&&Number(bb.disarm)>0){u.skillDisarmUntil=battle.s.time+Number(bb.disarm);u.focusHealAfter=u.skillDisarmUntil;u.focusHeal=false;}
+ if(/普通攻击改为.*治疗.*友方|攻击改为.*治疗.*友方/.test(text))u.focusHeal=true;
  if(Number(bb.one_minus_status_resistance)<0||has(text,/获得抵抗/))u.statusResistance=Math.max(0,Math.min(1,-Number(bb.one_minus_status_resistance||0)));
  if(has(text,/技能结束时恢复.*最大生命|技能结束时回复.*最大生命/)&&Number(bb.hp_ratio)>0)u.skillEndHealRatio=Number(bb.hp_ratio);
  if(u.id==='char_4145_ulpia'&&has(text,/若船锚停留的位置可以部署/)&&ctx.teleportActor){
@@ -221,7 +223,7 @@ export function operatorSkillStart(battle,u,ctx){
  const attackCost=costValueForText(config,text,'attack');if(attackCost!=null&&has(text,/下次攻击.*获得.*费用/))u.pendingCostGain={amount:attackCost,skillCount:u.skillCount};
  if(has(text,/下次攻击/)&&has(text,/额外造成|获得.*费用|回复|恢复/)){const extraScale=Number(bb.extra_damage_ratio??bb['bleed_atk_scale']??bb['attack@atk_scale']??bb.atk_scale);u.pendingNextAttack={skillCount:u.skillCount,extraScale:Number.isFinite(extraScale)?extraScale:null,extraType:config.damageType||has(text,/法术/)||has(text,/流失/) ? 'arts':'physical',bleedDuration:Number(bb.bleed_duration)||0};suppressDefault=true;}
  if(has(text,/每[^，。；]*秒.*受到|持续.*受到|周期.*造成|每[^，。；]*秒.*攻击|每[^，。；]*秒.*额外攻击/)&&Number.isFinite(periodicScale)&&has(text,/伤害|法术|攻击/)){const requiresStatus=has(text,/处于.*束缚|束缚状态/)?'root':null;ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:Number(bb.projectile_range)|| (config.multiTarget===Infinity?2:1),interval:Math.max(.1,periodicInterval),nextAt:battle.s.time+Math.max(.1,periodicInterval),endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),trackArea:has(text,/区域|影响范围|火墙/),trackSide:has(text,/友方单位|友方干员/)?'all':'enemy',values:{dot:true,atk_scale:periodicScale,type:config.damageType||'arts',requiresStatus},snapshot:{damage:battle.stats(u).atk*periodicScale},refKind:'owner',persistAfterSourceGone:false});}
- if(has(text,/每秒.*(?:回复|恢复)|持续.*(?:回复|恢复)/)&&(Number.isFinite(config.regenScale)||Number.isFinite(config.maxHpRegenScale))){const amount=has(text,/最大生命/) ? u.maxHp*(config.maxHpRegenScale||0) : battle.stats(u).atk*(config.regenScale||0);ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-heal-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:Number(bb.projectile_range)||1,interval:1,nextAt:battle.s.time+1,endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),trackArea:has(text,/区域|影响范围|地面敌人/),trackSide:'ally',values:{hot:amount},refKind:'owner',persistAfterSourceGone:false});}
+  if(has(text,/每秒.*(?:回复|恢复)|持续.*(?:回复|恢复)/)&&(Number.isFinite(config.regenScale)||Number.isFinite(config.maxHpRegenScale))){const amount=has(text,/最大生命/) ? u.maxHp*(config.maxHpRegenScale||0) : battle.stats(u).atk*(config.regenScale||0),selfOnly=!has(text,/周围|附近|友方|队友/),kind=selfOnly?'regen':'zone';ctx.addEffect(battle,{kind,sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:selfOnly?u.uid:undefined,talentOrSkillId:'skill-heal-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:Number(bb.projectile_range)||1,interval:1,nextAt:battle.s.time+1,endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),trackArea:has(text,/区域|影响范围|地面敌人/),trackSide:'ally',values:selfOnly?{regen:amount}:{hot:amount},snapshot:selfOnly?{regen:amount}:{hot:amount},refKind:'owner',persistAfterSourceGone:false});}
  if(has(text,/获得隐匿|进入隐匿|迷彩/)){const time=duration>0?duration:1e9;applyStatus(u,has(text,/迷彩/)?'camouflage':'invisible',time,{source:u.uid,resistible:false});}
  if(has(text,/屏障|护盾/)&&ctx.grantShield){const ratio=Number(bb.shield_max_hp_ratio),amount=Number(bb.shield_value)||(Number.isFinite(ratio)?u.maxHp*ratio:0);if(Number.isFinite(amount)&&amount>0)ctx.grantShield(battle,u,{amount,endsAt:duration>0?battle.s.time+duration:null,sourceUid:u.uid,id:'skill-shield:'+u.id+':'+u.skillCount});}
   if(has(text,/每秒流失.*生命/)&&Number.isFinite(Number(bb.lose_hp_scale??bb.hp_ratio))){const interval=1/30,ratio=Number(bb.lose_hp_scale??bb.hp_ratio);ctx.addEffect(battle,{kind:'loss',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:u.uid,talentOrSkillId:'skill-loss:'+u.id+':'+u.skillCount,interval,nextAt:battle.s.time+interval,endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),values:{amount:u.maxHp*ratio*interval},refKind:'owner',persistAfterSourceGone:false});}
@@ -229,7 +231,7 @@ export function operatorSkillStart(battle,u,ctx){
  if(has(text,/其余伤害延后至技能结束|伤害延后至技能结束/)){u.damageProtection={immediateRatio:Number.isFinite(Number(bb.damage_resistance))?Number(bb.damage_resistance):0,until:duration>0?battle.s.time+duration:battle.s.time,buffer:0,finalDuration:Number(bb.final_duration)||1,sourceUid:u.uid};}
  if(has(text,/生命值不会低于1|生命值始终不会低于1/)&&!u.lockHp)u.lockHp={min:1,endsAt:duration>0?battle.s.time+duration:null,onEnd:'none'};
  if(has(text,/不再成为其他角色的治疗目标|无法成为其他角色的治疗目标/))u.unhealable=true;
- if(has(text,/对周围所有敌人|攻击范围内所有敌人/)&&Number.isFinite(config.atkScale)&&(bb.atkScale!=null||has(text,/造成.*伤害/))){for(const e of allTargets(battle,u,true))ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*config.atkScale,type:config.damageType||'physical',cause:'skill',skill:true});suppressDefault=true;}
+ if(!has(text,/技能结束/)&&has(text,/对周围所有敌人|攻击范围内所有敌人/)&&Number.isFinite(config.atkScale)&&(bb.atkScale!=null||has(text,/造成.*伤害/))){for(const e of allTargets(battle,u,true))ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*config.atkScale,type:config.damageType||'physical',cause:'skill',skill:true});suppressDefault=true;}
  if(has(text,/立即.*治疗|立即.*恢复.*生命/)&&Number.isFinite(config.healScale)){for(const a of allAllies(battle,u,true))ctx.applyHeal(battle,{source:u,target:a,amount:battle.stats(u).atk*config.healScale});suppressDefault=true;}
  return suppressDefault;
 }
