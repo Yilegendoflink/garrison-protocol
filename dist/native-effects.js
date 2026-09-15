@@ -592,7 +592,7 @@ function onOperatorExit(battle,u,reason){
 
 const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld'};
 export function spawnSummon(battle,owner,spec){
- const tokenId=TOKEN_IDS[spec.type],entity=battle.data.tokens?.[tokenId];
+ const tokenId=spec.tokenId||TOKEN_IDS[spec.type],entity=battle.data.tokens?.[tokenId];
  if(!entity)throw Error('缺少固定召唤物数据 '+spec.type);
  const ctrl=owner.summonCtrl,live=battle.s.summons.filter(x=>x.ownerUid===owner.uid&&x.type===spec.type&&x.deployed);
  if(ctrl&&((ctrl.stock??0)<=0||live.length>=ctrl.cap))return null;
@@ -600,8 +600,8 @@ export function spawnSummon(battle,owner,spec){
  const candidates=spec.x!=null?[[spec.x,spec.y]]:[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>[owner.x+dx,owner.y+dy]);
  const position=candidates.find(([x,y])=>{const tile=battle.map.grid[y]?.[x];return tile&&tile.buildableType!=='NONE'&&!tile.obstacle&&(!spec.canBlock||tile.heightType!=='HIGHLAND')&&!occupied.has(x+','+y)&&(spec.type!=='vigil-wolf'||battle.inside(owner,{x,y}));});
  if(!position)return null;
- const [x,y]=position,a=nativeAttributes(entity,battle.profile(owner).status).attributes,uid=battle.s.nextId++;
- const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type,name:spec.name,kind:'summon',allied:true,x,y,dir:owner.dir,hp:a.maxHp,maxHp:a.maxHp,atk:a.atk,def:a.def,res:a.magicResistance,interval:a.baseAttackTime,attackSpeed:a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,canBlock:!!spec.canBlock,canAttack:!!spec.canAttack,canHeal:!!spec.canHeal,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??!!spec.canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime};
+ const [x,y]=position,a=nativeAttributes(entity,battle.profile(owner).status).attributes,uid=battle.s.nextId++,canBlock=spec.canBlock??a.blockCnt>0,canAttack=spec.canAttack??(a.baseAttackTime>0&&entity.skillRefs?.some(r=>r.skillId));
+ const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type||tokenId,name:spec.name||entity.name,kind:'summon',allied:true,x,y,dir:owner.dir,hp:a.maxHp,maxHp:a.maxHp,atk:a.atk,def:a.def,res:a.magicResistance,interval:a.baseAttackTime,attackSpeed:a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,canBlock,canAttack,canHeal:spec.canHeal??false,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime};
  battle.s.summons.push(row);if(ctrl)ctrl.stock--;
  log(battle,'summon',{uid,ownerUid:owner.uid,type:spec.type,x,y});return row;
 }

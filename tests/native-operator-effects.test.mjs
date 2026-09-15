@@ -77,3 +77,8 @@ test('resource adapter preserves named ammo consumption instead of assuming one 
  assert.equal(u.ammo,50);assert.equal(u.ammoPerAttack,5);
  const cfg=operatorSkillConfig(b,u);assert.equal(cfg.ammoPerAttack,5);
 });
+
+test('runtime contains the pinned summon token catalogue for later per-operator adapters',()=>{
+ assert.ok(Object.keys(NATIVE_DATA.tokens||{}).length>=60);
+ for(const token of ['token_10000_silent_healrb','token_10015_dusk_drgn','token_10019_nearl2_sword','token_10028_vigil_wolf','token_10041_cathy_catsld'])assert.equal(NATIVE_DATA.tokens[token].kind,'summon');
+});
