@@ -99,6 +99,11 @@ test('Blaze revival talent enters a downed state, blocks healing, then revives o
  u.hp=u.maxHp-1;b.step();assert.equal(u.downed,false);assert.equal(u.healable,true);assert.equal(b.s.logicLog.some(x=>x.type==='revive'&&x.uid===u.uid),true);
 });
 
+test('four summon skills resolve through the shared token lifecycle',()=>{
+ const cases=[['chess_char_4_05_b','beewax-obelisk'],['chess_char_2_11_b','kazema-shadow'],['chess_char_6_07_b','siege2-golden'],['chess_char_6_11_b','mlyss-fluid']];
+ for(const [chessId,type] of cases){const {b}=openBattle({chessId});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);const token=b.s.summons.find(s=>s.ownerUid===u.uid&&s.type===type);assert.ok(token,type);assert.equal(token.kind,'summon');assert.ok(token.maxHp>0);}
+});
+
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
  assert.equal(manifest.sourceCommit,source.source.commit);
  assert.equal(manifest.gameDataCommit,scope.gameDataCommit);
@@ -240,6 +245,10 @@ test('角峰 elite talent writes magic resistance into stats.parts',()=>{
  const stats=b.stats(u);
  assert.ok(stats.magicResistance>=15);
  assert.ok(stats.parts.some(p=>p.src.includes('角峰')&&p.stat==='magicResistance'&&p.v===15));
+});
+
+test('角峰 skill blackboard contributes its magic resistance while active',()=>{
+ const {b}=openBattle(reps.operators.yak);deployNow(b);const u=b.s.units[0],before=b.stats(u).magicResistance;u.sp=b.spCost(u);b.activate(u);assert.ok(b.stats(u).magicResistance>before);
 });
 
 test('白面鸮 SP aura uses maxSame and does not stack',()=>{

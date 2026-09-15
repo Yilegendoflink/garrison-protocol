@@ -631,6 +631,10 @@ function onOperatorDeploy(battle,u){
 }
 function onSkillStart(battle,u){
  const idx=u.source?.skillIndex??battle.profile(u).skillIndex;
+ if(u.id==='char_344_beewax'&&idx===1){const bb=skillBB(battle,u),token=spawnSummon(battle,u,{type:'beewax-obelisk',name:'沙之碑',targetable:true,canBlock:true,canAttack:false,occupiesTile:true,duration:u.skillLeft});if(token)for(const e of enemyActors(battle.s).filter(e=>chebyshev(token,e)<=1)){dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(bb.atk_scale||2),type:'arts',cause:'skill'});applyStatus(e,'stun',bb.stun||1,{source:u.uid,resistible:false});}return true;}
+ if(u.id==='char_4016_kazema'&&idx===1){spawnSummon(battle,u,{type:'kazema-shadow',name:'纸偶',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});}
+ if(u.id==='char_1019_siege2'&&idx===2){spawnSummon(battle,u,{type:'siege2-golden',name:'黄金盟誓',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});}
+ if(u.id==='char_249_mlyss'&&idx===2){spawnSummon(battle,u,{type:'mlyss-fluid',name:'流形',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:25,persistAfterSourceGone:true});}
  if(u.id==='char_143_ghost'&&idx===1){u.lockHp={min:1,endsAt:null,onEnd:null};log(battle,'lock',{uid:u.uid,min:1});}
  if(u.id==='char_107_liskam'&&idx===0){
   const bb=skillBB(battle,u);grantGuard(battle,u,{charges:1,sourceUid:u.uid,id:'liskam-s1',endsAt:battle.s.time+(bb.duration||8)});
@@ -682,7 +686,7 @@ function onOperatorExit(battle,u,reason){
  }
 }
 
-const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld'};
+const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman'};
 export function spawnSummon(battle,owner,spec){
  const tokenId=spec.tokenId||TOKEN_IDS[spec.type],entity=battle.data.tokens?.[tokenId];
  if(!entity)throw Error('缺少固定召唤物数据 '+spec.type);

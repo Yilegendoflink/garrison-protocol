@@ -2904,7 +2904,7 @@ const NUMERIC_KEYS={
  silence:['silence','attack@silence'],root:['root','attack@root'],
  healScale:['heal_scale','attack@heal_scale','attack@atk_to_hp_recovery_ratio'],regenScale:['hp_recovery_per_sec_ratio_chr','hp_recovery_per_sec_ratio','hp_recovery_per_sec_by_max_hp_ratio','atk_to_hp_recovery_ratio'],elementScale:['ep_damage_ratio','element_damage_scale','element_multiplier','magic_atk_scale'],
  cost:['cost','attack@cost'],ammo:['attack@trigger_time'],attackSpeed:['attack_speed'],value:['value'],hpRatio:['hp_ratio'],
- maxHp:['max_hp'],def:['def'],atk:['atk'],blockCnt:['block_cnt'],defPenetrateFixed:['def_penetrate_fixed'],damageScale:['damage_scale']
+ maxHp:['max_hp'],def:['def'],atk:['atk'],magicResistance:['magic_resistance'],blockCnt:['block_cnt'],defPenetrateFixed:['def_penetrate_fixed'],damageScale:['damage_scale']
 };
 const firstNumber=(bb,keys)=>{for(const key of keys){const value=bb[key];if(Number.isFinite(Number(value)))return Number(value);}return null;};
 function blackboardValues(skill){const bb=Object.fromEntries((skill?.blackboard||[]).map(x=>[x.key,x.valueStr??x.value]));const out={...bb,raw:bb};for(const [name,keys] of Object.entries(NUMERIC_KEYS)){const value=firstNumber(bb,keys);if(value!=null)out[name]=value;}return out;}
@@ -3705,6 +3705,10 @@ function onOperatorDeploy(battle,u){
 }
 function onSkillStart(battle,u){
  const idx=u.source?.skillIndex??battle.profile(u).skillIndex;
+ if(u.id==='char_344_beewax'&&idx===1){const bb=skillBB(battle,u),token=spawnSummon(battle,u,{type:'beewax-obelisk',name:'沙之碑',targetable:true,canBlock:true,canAttack:false,occupiesTile:true,duration:u.skillLeft});if(token)for(const e of enemyActors(battle.s).filter(e=>chebyshev(token,e)<=1)){dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(bb.atk_scale||2),type:'arts',cause:'skill'});applyStatus(e,'stun',bb.stun||1,{source:u.uid,resistible:false});}return true;}
+ if(u.id==='char_4016_kazema'&&idx===1){spawnSummon(battle,u,{type:'kazema-shadow',name:'纸偶',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});}
+ if(u.id==='char_1019_siege2'&&idx===2){spawnSummon(battle,u,{type:'siege2-golden',name:'黄金盟誓',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});}
+ if(u.id==='char_249_mlyss'&&idx===2){spawnSummon(battle,u,{type:'mlyss-fluid',name:'流形',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:25,persistAfterSourceGone:true});}
  if(u.id==='char_143_ghost'&&idx===1){u.lockHp={min:1,endsAt:null,onEnd:null};log(battle,'lock',{uid:u.uid,min:1});}
  if(u.id==='char_107_liskam'&&idx===0){
   const bb=skillBB(battle,u);grantGuard(battle,u,{charges:1,sourceUid:u.uid,id:'liskam-s1',endsAt:battle.s.time+(bb.duration||8)});
@@ -3756,7 +3760,7 @@ function onOperatorExit(battle,u,reason){
  }
 }
 
-const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld'};
+const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman'};
 function spawnSummon(battle,owner,spec){
  const tokenId=spec.tokenId||TOKEN_IDS[spec.type],entity=battle.data.tokens?.[tokenId];
  if(!entity)throw Error('缺少固定召唤物数据 '+spec.type);
@@ -3954,7 +3958,7 @@ class NativeBattle {
   if(band==='band_dusk'&&this.s.units.filter(v=>v.id===u.id).length>1)ratio('atk',.3,'策略·夕');
   if(band==='band_ioleta'&&p.isGolden){const n=this.s.units.filter(v=>this.profile(v).isGolden).length*.1;ratio('atk',n,'策略·伊奥莱塔');ratio('maxHp',n,'策略·伊奥莱塔');}
   ratio('atk',u.deathBuff||0,'击倒加攻');ratio('atk',u.deploymentBuff||0,'部署加攻');
-  if(u.skillLeft>0||u.ammo>0){const b=blackboard(p.skill?.blackboard),cfg=operatorSkillConfig(this,u);ratio('atk',b.atk??cfg.bb.atk??0,'技能');ratio('maxHp',b.max_hp??cfg.bb.maxHp??0,'技能');ratio('def',b.def??cfg.bb.def??0,'技能');as+=b.attack_speed??cfg.bb.attackSpeed??0;base.baseAttackTime=Math.max(.1,base.baseAttackTime+(b.base_attack_time||0));}
+  if(u.skillLeft>0||u.ammo>0){const b=blackboard(p.skill?.blackboard),cfg=operatorSkillConfig(this,u);ratio('atk',b.atk??cfg.bb.atk??0,'技能');ratio('maxHp',b.max_hp??cfg.bb.maxHp??0,'技能');ratio('def',b.def??cfg.bb.def??0,'技能');base.magicResistance+=b.magic_resistance??cfg.bb.magicResistance??0;as+=b.attack_speed??cfg.bb.attackSpeed??0;base.baseAttackTime=Math.max(.1,base.baseAttackTime+(b.base_attack_time||0));}
   const branch=branchBehavior(p,this.skillActive(u)),trait=branchTrait(p).values;if(p.branch==='phalanx'&&!this.skillActive(u)){ratio('def',trait.def??2,'法阵');base.magicResistance+=trait.magic_resistance??20;}if(p.branch==='librator'){ratio('atk',(trait.atk??2)*Math.min(1,Math.floor(u.branchCharge||0)/(trait.max_stack_cnt??40)),'解放者');if(!this.skillActive(u))base.blockCnt=0;}if(branch.blockZeroDuringSkill&&this.skillActive(u))base.blockCnt=0;if(branch.taunt!==undefined)base.tauntLevel=Math.min(base.tauntLevel??0,branch.taunt);
   const status=statusAttributeChanges(u);as+=status.attackSpeed;ratio('atk',status.attack||0,'状态');ratio('def',status.defense||0,'状态');base.magicResistance+=(status.resistance||0)+(status.magicResistance||0);
   for(const e of this.economy.s.operatorModifiers||[])for(const[k,v]of Object.entries(blackboard(e.blackboard))){const key={max_hp:'maxHp',atk:'atk',def:'def'}[k];if(key)mul(key,v,'全局修正');}
