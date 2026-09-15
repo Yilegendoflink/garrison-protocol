@@ -5,6 +5,7 @@ import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {openBattle,deployNow} from './effects-harness.mjs';
 
 const scope=JSON.parse(fs.readFileSync('data/modes/alliance-lower/operator-scope.json','utf8'));
+const adapterManifest=JSON.parse(fs.readFileSync('data/modes/alliance-lower/operator-adapter-manifest.json','utf8'));
 
 test('all fixed operators and all listed skills enter the native adapter without runtime errors',()=>{
  let skills=0;
@@ -19,4 +20,7 @@ test('all fixed operators and all listed skills enter the native adapter without
   }
  }
  assert.equal(skills,283);
+ assert.equal(adapterManifest.operators.length,112);
+ assert.equal(adapterManifest.operators.filter(x=>x.needsSpecialHandler).length,0);
+ assert.equal(adapterManifest.operators.filter(x=>x.partialHandlers.length).length,112);
 });

@@ -1065,3 +1065,10 @@ test('remaining operator adapters expose element, link, summon and shield lifecy
  const h=openBattle({chessId:'chess_char_6_16_a',skillIndex:1}).b;deployNow(h);const hu=h.s.units[0],he=enemy(h,{x:hu.x+1,y:hu.y,hp:20000});hu.sp=h.spCost(hu);h.activate(hu);assert.ok(he.statuses.some(s=>s.kind==='sluggish')||he.hp<20000);
  const a=openBattle({chessId:'chess_char_6_20_a',skillIndex:1}).b;deployNow(a);const au=a.s.units[0];au.sp=a.spCost(au);a.activate(au);assert.ok(au.shieldLayers.length>0);
 });
+
+test('逐名适配覆盖被动撤回、狼影、心烛、雪山复起与链路状态',()=>{
+ const ines=openBattle({chessId:'chess_char_4_04_a',skillIndex:2}).b;deployNow(ines);assert.equal(ines.s.units[0].deployed,false);assert.ok(ines.s.logicEffects.some(f=>f.talentOrSkillId==='ines-shadow'));
+ const dust=openBattle({chessId:'chess_char_4_25_a',skillIndex:0}).b;deployNow(dust);assert.equal(dust.s.summons.filter(s=>s.type==='cetsyr-dust').length,3);
+ const sbell=openBattle({chessId:'chess_char_6_02_a',skillIndex:0}).b;deployNow(sbell);const su=sbell.s.units[0];dealDamage(sbell,{source:enemy(sbell,{atk:999999}),target:su,value:999999,type:'true'});assert.ok(su.hp>0&&su.sbellRevived);
+ const mlyss=openBattle({chessId:'chess_char_6_11_a',skillIndex:0}).b;deployNow(mlyss);const mu=mlyss.s.units[0];mu.sp=mlyss.spCost(mu);mlyss.activate(mu);assert.ok(mlyss.s.summons.some(s=>s.type==='mlyss-fluid'));
+});

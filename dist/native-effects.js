@@ -185,6 +185,7 @@ function runFatal(battle,target,wouldDie,event){
   log(battle,'fatal-revive',{uid:target.uid,eventId:event.eventId});
   return true;
  }
+ if(target.id==='char_1046_sbell2'&&!target.sbellRevived){const t=activeTalentsOf(battle,target).find(x=>x.name==='圣山的祝福');if(t){const bb=t.values||{};target.sbellRevived=true;target.hp=target.maxHp*(Number(bb.hp_ratio)||1);applyStatus(target,'frozen',Number(bb.freeze)||4,{source:target.uid,resistible:false});for(const e of enemyActors(battle.s).filter(e=>battle.inside(target,e,true)))applyStatus(e,'frozen',Number(bb.c2e_freeze)||8,{source:target.uid,resistible:false});log(battle,'fatal-revive',{uid:target.uid,eventId:event.eventId,kind:'sbell2'});return true;}}
  if(target.id==='char_350_surtr'&&!target.surtrLock){
   const t=activeTalentsOf(battle,target).find(x=>x.name==='余烬');if(!t)return false;
   target.lockHp={min:1,endsAt:battle.s.time+(t.values['surtr_t_2[withdraw].interval']??8),onEnd:'forced'};
@@ -310,7 +311,7 @@ export function applyElementDamage(battle,{source,target,amount,type='elemental'
  const before=target.elemental[type]||0,limit=target.elementalMax,added=Math.min(amount,Math.max(0,limit-before));target.elemental[type]=before+added;
  const event=nextEvent(battle,{cause,parentEventId,type:'element',sourceUid:source?.uid,targetUid:target.uid});log(battle,'element',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,element:type,amount:added,current:target.elemental[type],max:limit});
  if(target.id==='char_4148_philae'&&type==='necrosis'){gainSp(target,battle.profile(target).skill,2,battle.spCost(target));if(battle.skillActive?.(target)&&(target.source?.skillIndex??battle.profile(target).skillIndex)===1)target.philaeElementBoost=true;}
- let burst=false;if(target.elemental[type]>=limit){target.elemental[type]=0;target.elementBurst=(target.elementBurst||0)+1;burst=true;dispatch(battle,'element-burst',{source,target,element:type,event});}
+ let burst=false;if(target.elemental[type]>=limit){target.elemental[type]=0;target.elementBurst=(target.elementBurst||0)+1;target.elementBurstUntil=battle.s.time+3;burst=true;dispatch(battle,'element-burst',{source,target,element:type,event});}
  return {added,burst};
 }
 
@@ -405,6 +406,7 @@ function settlePeriodic(battle,fx){
  }else if(fx.kind==='hot'){
   const t=getActor(battle.s,fx.targetUid);if(!t)return;
   applyHeal(battle,{source,target:t,amount:fx.snapshot?.heal??fx.values?.heal??0,effectId:fx.id,persistAfterSourceGone:fx.persistAfterSourceGone});
+  if(fx.values?.elementRegen&&source)battle.healElements?.(source,t,fx.values.elementRegen);
  }else if(fx.kind==='regen'){
   const targets=fx.targetUid?[getActor(battle.s,fx.targetUid)]:alliedActors(battle.s).filter(u=>u.deployed&&u.hp>0);
   const amount=fx.snapshot?.regen??fx.values?.regen??0;
@@ -415,13 +417,18 @@ function settlePeriodic(battle,fx){
   if(fx.values?.dot)for(const e of zoneActors(battle,fx,'enemy'))if(!fx.values.requiresStatus||(e.statuses||[]).some(s=>s.kind===fx.values.requiresStatus)){dealDamage(battle,{source,target:e,amount:fx.snapshot?.damage??(source?battle.stats(source).atk:0)*(fx.values.atk_scale||1),type:fx.values?.type||'arts',cause:'dot',effectId:fx.id});if(fx.values.elementScale&&source)applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot',parentEventId:null});}
   if(fx.values?.elementScale&&!fx.values?.dot&&source)for(const e of zoneActors(battle,fx,'enemy'))applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot'});
   if(fx.values?.sluggish)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'sluggish',fx.interval||1,{source:source?.uid,resistible:false});
+  if(fx.values?.cold)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'cold',fx.values.cold,{source:source?.uid,resistible:false});
   if(fx.values?.attackDown)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'attackDown',fx.interval||1,{source:source?.uid,value:fx.values.attackDown,resistible:false});
+  if(fx.values?.defDown)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'defDown',fx.interval||1,{source:source?.uid,value:fx.values.defDown,resistible:false});
+  if(fx.values?.resDown)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'resDown',fx.interval||1,{source:source?.uid,value:fx.values.resDown,resistible:false});
   if(fx.values?.stun)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'stun',fx.values.stun,{source:source?.uid,resistible:false});
   if(fx.values?.pull&&source)for(const e of zoneActors(battle,fx,'enemy'))moveActor(battle,e,{x:fx.x,y:fx.y,uid:source.uid},'拖拽');
   if(fx.values?.fragile)for(const e of zoneActors(battle,fx,'enemy'))e.fragile=Math.max(e.fragile||1,Number(fx.values.fragile));
   if(fx.values?.silence)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'silence',fx.interval||1,{source:source?.uid,resistible:false});
+  if(fx.values?.reveal)for(const e of zoneActors(battle,fx,'enemy'))e.revealed=true;
   if(fx.values?.hot)for(const a of zoneActors(battle,fx,'ally'))applyHeal(battle,{source,target:a,amount:fx.values.hot,effectId:fx.id});
   if(fx.values?.elementRegen&&source)for(const a of zoneActors(battle,fx,'ally'))battle.healElements?.(source,a,fx.values.elementRegen);
+  if(fx.values?.defBuff)for(const a of zoneActors(battle,fx,'ally')){a.thornDefBuff=Number(fx.values.defBuff);a.thornDefBuffUntil=battle.s.time+1.1;}
   if(fx.values?.regen)for(const a of zoneActors(battle,fx,'ally'))applyRegen(battle,{source,target:a,amount:fx.values.regen});
  }else if(fx.kind==='attached'){
   const anchor=getActor(battle.s,fx.anchorUid);if(!anchor?.deployed||anchor.hp<=0)return;
@@ -453,6 +460,8 @@ function updateAreas(battle){
 
 function tickAuras(battle){
  for(const e of enemyActors(battle.s))e.fragile=null;
+ for(const e of enemyActors(battle.s))e.attackSpeedMod=0;
+ for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1039_thorn2')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='视界'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s))e.attackSpeedMod-=Number(bb.attack_speed_enemy)||5;}
  for(const fx of battle.s.logicEffects||[])if(fx.kind==='zone'&&fx.values?.fragile&&(fx.endsAt==null||battle.s.time<fx.endsAt))for(const e of zoneActors(battle,fx,'enemy'))e.fragile=Math.max(e.fragile||1,Number(fx.values.fragile));
  for(const u of battle.s.units){
   if(!u.deployed||u.hp<=0)continue;
@@ -508,6 +517,8 @@ export function effectStatMods(battle,u){
   }
   if(src.id==='char_4162_cathy'&&(src.source?.skillIndex??battle.profile(src).skillIndex)===0){const bb=skillBB(battle,src),devices=battle.s.summons.filter(s=>s.ownerUid===src.uid&&s.type==='cathy-device');auras.push({key:'cathy-device-atk',stat:'atk',layer:'maxSame',v:Number(bb.s1_atk)||.11,src:'凯瑟琳',ok:v=>devices.some(d=>d.anchorUid===v.uid)});auras.push({key:'cathy-device-def',stat:'def',layer:'maxSame',v:Number(bb.s1_def)||.11,src:'凯瑟琳',ok:v=>devices.some(d=>d.anchorUid===v.uid)});}
   if(src.id==='char_245_cello'&&battle.skillActive(src)&&(src.source?.skillIndex??battle.profile(src).skillIndex)===2){const bb=skillBB(battle,src),all=battle.s.units.filter(v=>v.uid!==src.uid&&v.deployed&&v.hp>0&&battle.inside(src,v,true));const hp=all.slice().sort((a,b)=>b.maxHp-a.maxHp)[0],atk=all.slice().sort((a,b)=>b.atk-a.atk)[0],def=all.slice().sort((a,b)=>b.def-a.def)[0];if(hp)auras.push({key:'cello-maxhp',stat:'maxHp',layer:'maxSame',v:Number(bb['cello_s_3[max_hp].max_hp'])||.2,src:'塑心',ok:v=>v.uid===hp.uid});if(atk)auras.push({key:'cello-atk',stat:'atk',layer:'maxSame',v:Number(bb['cello_s_3[atk].atk'])||.2,src:'塑心',ok:v=>v.uid===atk.uid});if(def)auras.push({key:'cello-def',stat:'def',layer:'maxSame',v:Number(bb['cello_s_3[def].def'])||.2,src:'塑心',ok:v=>v.uid===def.uid});}
+  if(src.id==='char_4134_cetsyr'&&battle.skillActive(src)&&(src.source?.skillIndex??battle.profile(src).skillIndex)===2){const bb=skillBB(battle,src);auras.push({key:'cetsyr-maxhp',stat:'maxHp',layer:'maxSame',v:Number(bb.max_hp)||.65,src:'魔王',ok:v=>v.uid!==src.uid&&battle.inside(src,v,true)});}
+  if(src.id==='char_391_rosmon'&&src.rosmonPartner!=null)auras.push({key:'rosmon-caster',stat:'atk',layer:'maxSame',v:.08,src:'迷迭香·感知稳定',ok:v=>v.uid===src.rosmonPartner});
   if(src.id==='char_1012_skadi2'&&src.inspireAura&&battle.s.time<src.inspireAura.endsAt)auras.push({key:'skadi2-inspire',stat:'atkFlat',layer:'inspire',v:src.inspireAura.value,src:'浊心斯卡蒂',ok:v=>v.uid===src.uid||battle.inside(src,v,true)});
   if(src.id==='char_1012_skadi2'&&battle.skillActive(src)&&(src.source?.skillIndex??battle.profile(src).skillIndex)===1){const bb=skillBB(battle,src),atk=Number(bb.atk)||.45,def=Number(bb.def)||.45,baseAtk=Number(battle.profile(src).attributes.atk)||0,baseDef=Number(battle.profile(src).attributes.def)||0;auras.push({key:'skadi2-s2-atk',stat:'atkFlat',layer:'inspire',v:baseAtk*atk,src:'浊心斯卡蒂',ok:v=>v.uid!==src.uid&&battle.inside(src,v,true)});auras.push({key:'skadi2-s2-def',stat:'defFlat',layer:'inspire',v:baseDef*def,src:'浊心斯卡蒂',ok:v=>v.uid!==src.uid&&battle.inside(src,v,true)});}
   if(src.id==='char_237_gravel'){
@@ -567,7 +578,7 @@ export function moveActor(battle,target,source,description=''){
 
 export function dispatch(battle,type,payload){
  const {source,target,event}=payload;
- const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,log:(b,t,p)=>log(b,t,p)};
+ const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,exit:commitExit,log:(b,t,p)=>log(b,t,p)};
  if(type==='skill-start')payload.genericSuppress=operatorSkillStart(battle,target,ctx);
  else onEvent(battle,type,payload,ctx);
  if(type==='after-damage'&&payload.cause!=='dot'&&payload.cause!=='reflect'){
@@ -676,11 +687,16 @@ function onOperatorDeploy(battle,u){
  if(u.id==='char_108_silent'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===1){u.summonCtrl.stock=1;spawnSummon(battle,u,{type:'silent-drone',name:'医疗探机',targetable:false,healable:false,canHeal:true,duration:10,persistAfterSourceGone:true});}
  if(u.id==='char_1023_ghost2'){spawnSummon(battle,u,{type:'ghost2-substitute',tokenId:'token_10024_ebnhlz_rcube',name:'旧日残影',targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:false});}
  if(u.id==='char_4134_cetsyr'){u.cetsyrDust=3;for(let n=0;n<3;n++)spawnSummon(battle,u,{type:'cetsyr-dust',name:'微尘',synthetic:true,targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:true});}
+ if(u.id==='char_4087_ines'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'ines-shadow',x:u.x,y:u.y,radius:2,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+25,trackArea:true,trackSide:'enemy',values:{sluggish:true,reveal:true},snapshot:{},refKind:'live',persistAfterSourceGone:true});commitExit(battle,{target:u,reason:'skill'});}
  if(u.id==='char_1012_skadi2'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='远古血亲');if(talent)spawnSummon(battle,u,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:Number((talent.description||'').match(/持续(\d+)秒/)?.[1])||30,persistAfterSourceGone:false});}
  if(u.id==='char_103_angel'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='天使的祝福');if(talent){const values=talent.values||{},candidates=battle.s.units.filter(v=>v.uid!==u.uid&&v.deployed&&v.hp>0);if(candidates.length){const target=candidates[Math.floor(battle.economy.random()*candidates.length)];target.angelBlessing={atk:Number(values.atk)||.06,maxHp:Number(values.max_hp)||.1,sourceUid:u.uid};}}}
  if(u.id==='char_332_archet'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='铁弦');if(talent)grantShield(battle,u,{amount:Number(talent.values?.shield_value)||500,sourceUid:u.uid,id:'archet-deploy-shield'});}
  if(u.id==='char_4148_philae'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='神河谕使');u.elementDamageResistance=Number(talent?.values?.damage_resistance)||.1;}
+ if(u.id==='char_1046_sbell2'){const t=activeTalentsOf(battle,u).find(x=>x.name==='无垠的雪景'),bb=t&&t.values;if(t)addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'sbell2-snow',x:u.x,y:u.y,radius:2,interval:Number(bb.interval)||5,nextAt:battle.s.time+(Number(bb.interval)||5),endsAt:null,trackArea:true,trackSide:'enemy',values:{dot:true,sluggish:true,cold:Number(bb.cold)||5,elementScale:Number(bb.talent_magic_scale)||.75,type:'arts',elementType:'elemental'},snapshot:{damage:battle.stats(u).atk*(Number(bb.talent_magic_scale)||.75)},refKind:'live',persistAfterSourceGone:false});}
+ if(u.id==='char_1045_svash2'&&!battle.s.summons.some(s=>s.ownerUid===u.uid&&s.type==='svash2-eye'))spawnSummon(battle,u,{type:'svash2-eye',name:'风雪之眼',synthetic:true,targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:true});
  if(u.id==='char_1014_nearl2'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===1){const bb=skillBB(battle,u);u.skillLeft=Number(battle.profile(u).skill.duration)||25;for(let n=0;n<(Number(bb.times)||3);n++)grantGuard(battle,u,{charges:1,sourceUid:u.uid,id:'nearl2-s2-'+n});}
+ if(u.id==='char_1014_nearl2'){const t=activeTalentsOf(battle,u).find(x=>x.name==='不畏苦暗'),bb=t&&t.values;if(t)for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&chebyshev(e,u)<=4)){dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(bb.atk_scale)||.8),type:'true',cause:'skill'});applyStatus(e,'stun',Number(bb.stun)||3,{source:u.uid,resistible:false});}}
+ if(u.id==='char_391_rosmon'){const t=activeTalentsOf(battle,u).find(x=>x.name==='感知稳定');if(t){const caster=battle.s.units.find(v=>v.uid!==u.uid&&v.deployed&&v.hp>0&&battle.profile(v).profession==='CASTER');u.rosmonPartner=caster?.uid??null;}}
  if(u.initialSpBonus){u.sp+=u.initialSpBonus;u.initialSpBonus=0;}
  u.duskFirstAttack=false;
 }
@@ -695,6 +711,7 @@ function onSkillStart(battle,u){
  if(u.id==='char_344_beewax'&&idx===1){const bb=skillBB(battle,u),token=spawnSummon(battle,u,{type:'beewax-obelisk',name:'沙之碑',targetable:true,canBlock:true,canAttack:false,occupiesTile:true,duration:u.skillLeft});if(token)for(const e of enemyActors(battle.s).filter(e=>chebyshev(token,e)<=1)){dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(bb.atk_scale||2),type:'arts',cause:'skill'});applyStatus(e,'stun',bb.stun||1,{source:u.uid,resistible:false});}return true;}
  if(u.id==='char_4016_kazema'&&idx===1){const token=spawnSummon(battle,u,{type:'kazema-shadow',name:'纸偶',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});if(token)for(const e of enemyActors(battle.s).filter(e=>chebyshev(token,e)<=1))dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(activeTalentsOf(battle,u).find(t=>t.name==='折纸生花')?.values?.damage_scale)||2.7),type:'arts',cause:'skill'});}
  if(u.id==='char_1019_siege2'&&idx===2){spawnSummon(battle,u,{type:'siege2-golden',name:'黄金盟誓',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});}
+ if(u.id==='char_391_rosmon'&&idx===2){const bb=skillBB(battle,u);for(let n=0;n<2;n++){const token=spawnSummon(battle,u,{type:'rosmon-gear-'+n,name:'战术装备',synthetic:true,targetable:true,canBlock:true,canAttack:false,occupiesTile:true,duration:u.skillLeft});if(token)for(const e of enemyActors(battle.s).filter(e=>chebyshev(token,e)<=1))applyStatus(e,'stun',Number(bb.stun)||2,{source:u.uid,resistible:false});}}
  if(u.id==='char_1033_swire2'&&idx===1){
   const target=battle.targets(u)[0],cfg=skillConfig(battle.profile(u)),range=battle.range(u,true),candidates=[...(target?[target]:[]),...range.map(p=>({x:p.x,y:p.y}))];
   let token=null;
@@ -704,7 +721,7 @@ function onSkillStart(battle,u){
  }
  if(u.id==='char_427_vigil'&&idx===0){const wolf=battle.s.summons.find(s=>s.ownerUid===u.uid&&s.type==='vigil-wolf'&&s.deployed);if(wolf){wolf.lives=Math.min(3,(wolf.lives||1)+1);wolf.blockCnt=wolf.lives;}}
  if(u.id==='char_427_vigil'&&idx===1){const wolf=battle.s.summons.find(s=>s.ownerUid===u.uid&&s.type==='vigil-wolf'&&s.deployed);if(wolf){const bb=skillBB(battle,u);wolf.vigilBuff={scale:Number(bb['vigil_wolf_s_2.atk_scale'])||1.7,heal:Number(bb['vigil_wolf_s_2.hp_ratio'])||.15,endsAt:battle.s.time+5};}}
- if(u.id==='char_249_mlyss'&&idx===2){const token=spawnSummon(battle,u,{type:'mlyss-fluid',name:'流形',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:25,persistAfterSourceGone:true});const copy=battle.s.units.find(v=>v.uid!==u.uid&&!v.deployed&&v.hp>0);if(token&&copy){const attrs=battle.profile(copy).attributes;token.copyOf=copy.uid;for(const [to,from] of [['maxHp','maxHp'],['hp','maxHp'],['atk','atk'],['def','def'],['res','magicResistance'],['blockCnt','blockCnt'],['interval','baseAttackTime'],['attackSpeed','attackSpeed']])if(Number.isFinite(attrs[from]))token[to]=attrs[from];token.canBlock=token.blockCnt>0;token.occupiesTile=token.canBlock;token.damageType=battle.behavior?.(copy)?.damageType||'physical';token.range=Math.max(1.1,Math.max(...(battle.profile(copy).range?.grids||[]).map(g=>Math.hypot(g.col,g.row)),1));} }
+ if(u.id==='char_249_mlyss'&&(idx===0||idx===1||idx===2)){const token=spawnSummon(battle,u,{type:'mlyss-fluid',name:'流形',synthetic:!battle.data.tokens?.token_10030_mlyss_wtrman,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:idx===2?25:u.skillLeft,persistAfterSourceGone:true});const copy=battle.s.units.find(v=>v.uid!==u.uid&&!v.deployed&&v.hp>0);if(token&&copy){const attrs=battle.profile(copy).attributes;token.copyOf=copy.uid;for(const [to,from] of [['maxHp','maxHp'],['hp','maxHp'],['atk','atk'],['def','def'],['res','magicResistance'],['blockCnt','blockCnt'],['interval','baseAttackTime'],['attackSpeed','attackSpeed']])if(Number.isFinite(attrs[from]))token[to]=attrs[from];token.canBlock=token.blockCnt>0;token.occupiesTile=token.canBlock;token.damageType=battle.behavior?.(copy)?.damageType||'physical';token.range=Math.max(1.1,Math.max(...(battle.profile(copy).range?.grids||[]).map(g=>Math.hypot(g.col,g.row)),1));}}
  if(u.id==='char_143_ghost'&&idx===1){u.lockHp={min:1,endsAt:null,onEnd:null};log(battle,'lock',{uid:u.uid,min:1});}
  if(u.id==='char_1023_ghost2'&&idx===1){u.lockHp={min:1,endsAt:null,onEnd:'forced'};log(battle,'lock',{uid:u.uid,min:1,operator:'归溟幽灵鲨'});}
  if(u.id==='char_107_liskam'&&idx===0){
@@ -734,11 +751,11 @@ function onSkillStart(battle,u){
 }
  function onSkillEnd(battle,u){
  const idx=u.source?.skillIndex??battle.profile(u).skillIndex;
- u.skillDisarmUntil=null;u.focusHealAfter=null;u.focusHeal=false;u.statusResistance=0;u.papyrsTargetUid=null;if(u.id==='char_311_mudrok')u.invulnerableUntil=0;if(u.id==='char_4056_titi'){for(const actor of battle.s.units)actor.statuses=(actor.statuses||[]).filter(s=>s.source!==u.uid||s.kind!=='sleep');u.titiSleepUid=null;}
- u.pendingPeriodicCost=null;u.pendingNextAttack=null;u.pendingAttackSelfHeal=null;u.pendingHealScale=null;u.papyrsShieldScale=null;u.pendingCostGain=null;
+ u.skillDisarmUntil=null;u.focusHealAfter=null;u.focusHeal=false;u.statusResistance=0;u.papyrsTargetUid=null;if(u.id==='char_311_mudrok')u.invulnerableUntil=0;if(u.id==='char_311_mudrok'&&idx===2){const bb=skillBB(battle,u);for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&!e.flying&&chebyshev(e,u)<=1))applyStatus(e,'stun',Number(bb.stun)||3,{source:u.uid,resistible:false});u.mudrokAwake=false;}if(u.id==='char_4056_titi'){for(const actor of battle.s.units)actor.statuses=(actor.statuses||[]).filter(s=>s.source!==u.uid||s.kind!=='sleep');u.titiSleepUid=null;}
+ u.pendingPeriodicCost=null;u.svashCostRemaining=0;u.svashCostHandled=false;u.pendingNextAttack=null;u.pendingAttackSelfHeal=null;u.pendingHealScale=null;u.papyrsShieldScale=null;u.pendingCostGain=null;
  for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-heal-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-loss:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-regen-zone:${u.id}:${u.skillCount}`))dropEffect(battle,fx,'skill-end');
  for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId==='warfarin-s2-ally'||fx.talentOrSkillId==='saria-s3'))dropEffect(battle,fx,'skill-end');
- for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&fx.talentOrSkillId==='surtr-s3-loss')dropEffect(battle,fx,'skill-end');
+ for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId==='surtr-s3-loss'||fx.talentOrSkillId==='horn-s3-loss'))dropEffect(battle,fx,'skill-end');
  if(u.warfarinTargetUid!=null){const target=getActor(battle.s,u.warfarinTargetUid);if(target?.warfarinBuff?.sourceUid===u.uid)target.warfarinBuff=null;u.warfarinTargetUid=null;}
  if(u.vendlaTargetUid!=null){const target=getActor(battle.s,u.vendlaTargetUid);if(target?.vendlaBuff?.sourceUid===u.uid){target.vendlaBuff=null;target.healingReceived=target.vendlaPreviousHeal??1;target.vendlaPreviousHeal=null;}u.vendlaTargetUid=null;}
  for(const talent of activeTalentsOf(battle,u)){const text=talent.description||'',bb=talent.values||{};if(/技能结束.*恢复.*生命|技能结束.*回复.*生命/.test(text)&&Number(bb.hp_ratio)>0)applyHeal(battle,{source:u,target:u,amount:u.maxHp*Number(bb.hp_ratio)});}
@@ -767,6 +784,8 @@ function onSkillStart(battle,u){
  if(u.id==='char_1012_skadi2')for(const ally of battle.s.units)if(ally.damageRedirects)ally.damageRedirects=ally.damageRedirects.filter(row=>row.sourceUid!==u.uid);
  if(u.id==='char_1014_nearl2'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===1&&u.deployed)commitExit(battle,{target:u,reason:'skill'});
  if(u.id==='char_1032_excu2'&&idx===2&&u.excu2Targets?.length){const bb=skillBB(battle,u);for(const uid of u.excu2Targets){const target=battle.s.enemies.find(e=>e.uid===uid&&e.hp>0);if(target)dealDamage(battle,{source:u,target,amount:battle.stats(u).atk*(Number(bb['attack@final_atk_scale'])||2),type:'physical',cause:'skill'});}u.excu2Targets=[];}
+ if(u.id==='char_4058_pepe'&&u.pepeKillSp){gainSp(u,skill,u.pepeKillSp,battle.spCost(u));u.pepeKillSp=0;}
+ if(u.id==='char_4087_ines'&&idx===2&&u.deployed)commitExit(battle,{target:u,reason:'skill'});
  if(u.id==='char_4193_lemuen'&&u.lemuenTargets?.length){const bb=skillBB(battle,u);for(const uid of u.lemuenTargets){const target=battle.s.enemies.find(e=>e.uid===uid&&e.hp>0);if(target)for(const e of battle.s.enemies.filter(e=>e.hp>0&&Math.max(Math.abs(e.x-target.x),Math.abs(e.y-target.y))<=1.5))dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(e.uid===uid?Number(bb['attack@proj_atk_scale_1'])||3.6:Number(bb['attack@proj_atk_scale_2'])||2.4),type:'physical',cause:'skill'});}u.lemuenTargets=[];u.lemuenNextAt=0;}
  if(u.id==='char_174_slbell'){for(const e of enemyActors(battle.s).filter(e=>(e.statuses||[]).some(s=>s.kind==='attackSpeedDown'&&s.source===u.uid)))e.attackSpeedMod=0;}
  if(u.id==='char_1023_ghost2'&&idx===1){u.lockHp=null;if(u.hp>0)commitExit(battle,{target:u,reason:'forced'});}
@@ -789,7 +808,7 @@ export function spawnSummon(battle,owner,spec){
  if(!entity)throw Error('缺少固定召唤物数据 '+spec.type);
  const ctrl=owner.summonCtrl,live=battle.s.summons.filter(x=>x.ownerUid===owner.uid&&x.type===spec.type&&x.deployed);
  if(ctrl&&((ctrl.stock??0)<=0||live.length>=ctrl.cap))return null;
- const occupied=new Set(alliedActors(battle.s).filter(x=>x.kind!=='summon'||(x.deployed&&x.hp>0)).map(x=>x.x+','+x.y));
+ const occupied=new Set(alliedActors(battle.s).filter(x=>x.occupiesTile!==false&&(x.kind!=='summon'||(x.deployed&&x.hp>0))).map(x=>x.x+','+x.y));
  const candidates=spec.x!=null?[[spec.x,spec.y]]:[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>[owner.x+dx,owner.y+dy]);
  const position=candidates.find(([x,y])=>{const tile=battle.map.grid[y]?.[x];return tile&&tile.buildableType!=='NONE'&&!tile.obstacle&&(!spec.canBlock||tile.heightType!=='HIGHLAND')&&!occupied.has(x+','+y)&&(spec.type!=='vigil-wolf'||battle.inside(owner,{x,y}));});
  if(!position)return null;
@@ -804,6 +823,7 @@ function tickSummons(battle,dt){
   if(s.endsAt!=null&&battle.s.time>=s.endsAt){commitExit(battle,{target:s,reason:'forced'});continue;}
   if(s.canHeal&&battle.s.time+1e-9>=s.nextHealAt){for(const a of alliedActors(battle.s).filter(v=>v.deployed&&v.hp>0&&chebyshev(s,v)<=1&&v.healable!==false))applyHeal(battle,{source:s,target:a,amount:s.atk,origin:s});s.nextHealAt+=s.interval;}
   if(s.type==='ghost2-substitute'&&s.deployed&&s.hp>0){const owner=getActor(battle.s,s.ownerUid),talent=owner&&activeTalentsOf(battle,owner).find(t=>t.name==='拥抱自我'),bb=talent?.values||{};s.nextAuraAt??=battle.s.time+1;if(battle.s.time+1e-9>=s.nextAuraAt){s.nextAuraAt+=1;for(const e of enemyActors(battle.s).filter(e=>chebyshev(s,e)<=1)){applyStatus(e,'sluggish',1.1,{source:s.uid,resistible:false});dealDamage(battle,{source:owner||s,target:e,amount:(owner?battle.stats(owner).atk:s.atk)*(Number(bb.atk_scale)||.4),type:'arts',cause:'skill'});}}}
+  if(s.type==='cetsyr-dust'&&s.deployed&&s.hp>0){const owner=getActor(battle.s,s.ownerUid);if(owner&&battle.skillActive(owner)){s.nextAuraAt??=battle.s.time+1;if(battle.s.time+1e-9>=s.nextAuraAt){s.nextAuraAt+=1;for(const e of enemyActors(battle.s).filter(e=>chebyshev(owner,e)<=2)){dealDamage(battle,{source:owner,target:e,amount:battle.stats(owner).atk*(Number(skillBB(battle,owner).atkScale)||2.2),type:'true',cause:'skill'});applyStatus(e,'root',Number(skillBB(battle,owner).unmoveable_duration)||3,{source:owner.uid,resistible:false});}}}}
   if(s.type==='swire2-trap'&&s.deployed&&s.hp>0){
    const owner=getActor(battle.s,s.ownerUid),touching=enemyActors(battle.s).filter(e=>!e.hidden&&chebyshev(s,e)<=.5).sort((a,b)=>a.uid-b.uid)[0];
    if(touching&&!s.trapTriggered){s.trapTriggered=true;s.trapTargetUid=touching.uid;s.trapExtraAt=battle.s.time+3;dealDamage(battle,{source:owner||s,target:touching,amount:(owner?battle.stats(owner).atk:s.atk)*(s.trapScale||1),type:'physical',cause:'skill',skill:true});applyStatus(touching,'sluggish',s.trapSlow||2,{source:owner?.uid||s.uid});log(battle,'trap-trigger',{uid:s.uid,targetUid:touching.uid,ownerUid:owner?.uid});}
@@ -815,7 +835,7 @@ function tickSummons(battle,dt){
  for(const owner of battle.s.units.filter(u=>u.id==='char_4162_cathy'&&u.deployed&&u.hp>0)){
   const ctrl=owner.summonCtrl;if(!ctrl)continue;const devices=battle.s.summons.filter(s=>s.ownerUid===owner.uid&&s.type==='cathy-device');
   for(const target of battle.s.units.filter(t=>t.uid!==owner.uid&&t.deployed&&t.hp>0&&!devices.some(s=>s.anchorUid===t.uid))){if(ctrl.stock<=0||devices.length>=ctrl.cap)break;const device=spawnSummon(battle,owner,{type:'cathy-device',name:'支援装置',targetable:false,healable:false,canBlock:false,anchorUid:target.uid});if(device){device.nextShieldAt=battle.s.time+1;device.shieldId='cathy-'+target.uid;device.shieldCap=battle.stats(owner).maxHp*.2;grantShield(battle,target,{id:device.shieldId,amount:device.shieldCap,sourceUid:owner.uid});devices.push(device);}}
-  for(const device of devices){const target=getActor(battle.s,device.anchorUid);if(!target?.deployed)continue;if(battle.s.time>=device.nextShieldAt){device.nextShieldAt+=1;if(battle.s.time-(target.lastDamagedAt??-999)>=5){const layer=target.shieldLayers.find(l=>l.id===device.shieldId),remaining=Math.min(device.shieldCap,(layer?.remaining||0)+battle.stats(owner).maxHp*.06);grantShield(battle,target,{id:device.shieldId,amount:remaining,sourceUid:owner.uid});}}}
+  for(const device of devices){const target=getActor(battle.s,device.anchorUid);if(!target?.deployed)continue;if(battle.s.time>=device.nextShieldAt){device.nextShieldAt+=1;const ownerSkill=owner.source?.skillIndex??battle.profile(owner).skillIndex,obb=ownerSkill===1?skillBB(battle,owner):null;if(ownerSkill===1){const cap=device.shieldCap,layer=target.shieldLayers.find(l=>l.id===device.shieldId),remaining=Math.min(cap,(layer?.remaining||0)+battle.stats(owner).maxHp*(Number(obb.overwrite_ratio)||.06));grantShield(battle,target,{id:device.shieldId,amount:remaining,sourceUid:owner.uid});}else if(battle.s.time-(target.lastDamagedAt??-999)>=5){const layer=target.shieldLayers.find(l=>l.id===device.shieldId),remaining=Math.min(device.shieldCap,(layer?.remaining||0)+battle.stats(owner).maxHp*.06);grantShield(battle,target,{id:device.shieldId,amount:remaining,sourceUid:owner.uid});}}}
  }
 }
 
