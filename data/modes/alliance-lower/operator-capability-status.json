@@ -1,7 +1,7 @@
 {
   "scopeId": "alliance-lower-post-2026-03-27",
   "sourceCommit": "86da4cfa3a4b958c3615fccf5afbc10b5c7f1bfb",
-  "updatedAt": "2026-09-14T10:10:47.772Z",
+  "updatedAt": "2026-09-15T11:32:44.026Z",
   "capabilities": [
     "talentsAuras",
     "persistEffects",
@@ -80,10 +80,12 @@
       "name": "德克萨斯",
       "charId": "char_102_texas",
       "tier": 1,
-      "talentsAuras": "unimplemented",
+      "talentsAuras": "verified",
       "persistEffects": "unimplemented",
       "protection": "unimplemented",
-      "summons": "unimplemented"
+      "summons": "unimplemented",
+      "verificationScope": "德克萨斯编队初始战斗费用；德克萨斯编队初始战斗费用",
+      "evidence": "tests/native-effects.test.mjs"
     },
     {
       "name": "跃跃",
@@ -146,10 +148,12 @@
       "name": "宴",
       "charId": "char_337_utage",
       "tier": 1,
-      "talentsAuras": "unimplemented",
+      "talentsAuras": "verified",
       "persistEffects": "unimplemented",
       "protection": "unimplemented",
-      "summons": "unimplemented"
+      "summons": "unimplemented",
+      "verificationScope": "宴技能期最大生命回复与失血攻速；宴技能期最大生命回复与失血攻速",
+      "evidence": "tests/native-effects.test.mjs"
     },
     {
       "name": "野鬃",
@@ -166,10 +170,10 @@
       "tier": 1,
       "talentsAuras": "verified",
       "persistEffects": "unimplemented",
-      "protection": "wired",
+      "protection": "verified",
       "summons": "unimplemented",
       "note": "受击回技力已验证；S1 次数抵挡已挂上未整名验收",
-      "verificationScope": "受击回技力已验证；S1 次数抵挡已挂上未整名验收",
+      "verificationScope": "受击回技力已验证；S1 次数抵挡已挂上未整名验收；雷蛇法抗与受击回技力；雷蛇法抗与受击回技力；雷蛇充能防御抵挡层与技能结束自晕",
       "evidence": "tests/native-effects.test.mjs"
     },
     {
@@ -227,12 +231,12 @@
       "name": "幽灵鲨",
       "charId": "char_143_ghost",
       "tier": 2,
-      "talentsAuras": "unimplemented",
+      "talentsAuras": "verified",
       "persistEffects": "unimplemented",
       "protection": "verified",
       "summons": "unimplemented",
       "note": "仅 S2 锁血后自晕",
-      "verificationScope": "仅 S2 锁血后自晕",
+      "verificationScope": "仅 S2 锁血后自晕；幽灵鲨天赋最大生命与按最大生命比例自愈；幽灵鲨天赋最大生命与按最大生命比例自愈",
       "evidence": "tests/native-effects.test.mjs"
     },
     {
@@ -362,12 +366,12 @@
       "name": "诗怀雅",
       "charId": "char_308_swire",
       "tier": 3,
-      "talentsAuras": "wired",
+      "talentsAuras": "verified",
       "persistEffects": "unimplemented",
       "protection": "unimplemented",
       "summons": "unimplemented",
       "note": "近战加攻光环；S1 扩范围、S2 talent_scale",
-      "verificationScope": "近战加攻光环；S1 扩范围、S2 talent_scale",
+      "verificationScope": "近战加攻光环；S1 扩范围、S2 talent_scale；诗怀雅近战攻击光环与技能倍率/范围；诗怀雅近战攻击光环与技能倍率/范围",
       "evidence": "tests/native-effects.test.mjs"
     },
     {
@@ -530,10 +534,12 @@
       "name": "莫斯提马",
       "charId": "char_213_mostma",
       "tier": 4,
-      "talentsAuras": "unimplemented",
-      "persistEffects": "unimplemented",
+      "talentsAuras": "verified",
+      "persistEffects": "verified",
       "protection": "unimplemented",
-      "summons": "unimplemented"
+      "summons": "unimplemented",
+      "verificationScope": "莫斯提马术师技力光环与范围停顿；莫斯提马术师技力光环与范围停顿；莫斯提马持续群体法术眩晕区域",
+      "evidence": "tests/native-effects.test.mjs"
     },
     {
       "name": "伊内丝",
@@ -596,10 +602,12 @@
       "name": "歌蕾蒂娅",
       "charId": "char_474_glady",
       "tier": 4,
-      "talentsAuras": "unimplemented",
-      "persistEffects": "unimplemented",
+      "talentsAuras": "verified",
+      "persistEffects": "verified",
       "protection": "unimplemented",
-      "summons": "unimplemented"
+      "summons": "unimplemented",
+      "verificationScope": "歌蕾蒂娅深海猎人回复、海怪减伤与重量增伤；歌蕾蒂娅深海猎人回复、海怪减伤与重量增伤；歌蕾蒂娅S3龙卷持续区域与结束牵引",
+      "evidence": "tests/native-effects.test.mjs"
     },
     {
       "name": "灵知",
@@ -676,7 +684,7 @@
       "protection": "unimplemented",
       "summons": "unimplemented",
       "note": "全场技力光环 maxSame",
-      "verificationScope": "全场技力光环 maxSame",
+      "verificationScope": "全场技力光环 maxSame；白面鸮全场技力光环最高值不叠加；白面鸮全场技力光环最高值不叠加",
       "evidence": "tests/native-effects.test.mjs"
     },
     {

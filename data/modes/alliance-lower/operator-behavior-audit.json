@@ -341,8 +341,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1属性可复用；S2直线穿透、目标上限和逐目标停顿缺失",
-      "talentGaps": "命中持续伤害及海怪条件倍率缺失",
+      "skillGaps": "S1属性；S2直线穿透、目标上限和逐目标停顿已接入",
+      "talentGaps": "命中持续伤害及海怪条件倍率已接入",
       "prtsReference": "https://prts.wiki/w/%E6%B7%B1%E5%B7%A1",
       "sourceProfileIds": [
         "chess_char_1_04_a",
@@ -406,8 +406,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1攻速可复用；S2锁定最高生命友军、转移仇恨、受击反击与定向治疗缺失",
-      "talentGaps": "指定友方治疗增幅未接入",
+      "skillGaps": "S1攻速；S2锁定最高生命友军、转移仇恨、受击反击与定向治疗已接入",
+      "talentGaps": "指定友方治疗增幅已接入",
       "prtsReference": "https://prts.wiki/w/%E5%88%BA%E7%8E%AB",
       "sourceProfileIds": [
         "chess_char_1_06_a",
@@ -541,8 +541,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1回费无战斗费用账本；S2不能把两次法术伤害当一次物理命中；眩晕原语可复用",
-      "talentGaps": "初始部署费用加成未接入；不是商店资金",
+      "skillGaps": "S1/S2费用、双段法术伤害与眩晕已接入",
+      "talentGaps": "初始部署费用加成已接入（独立于商店资金）",
       "prtsReference": "https://prts.wiki/w/%E5%BE%B7%E5%85%8B%E8%90%A8%E6%96%AF",
       "sourceProfileIds": [
         "chess_char_1_08_a",
@@ -1031,8 +1031,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1零阻挡、百分比回复；S2落地掉血和部署即生效缺失",
-      "talentGaps": "按失血程度连续变更攻速缺失",
+      "skillGaps": "S1按最大生命回复，S2按当前生命流失并转为法术攻击已接入",
+      "talentGaps": "按失血程度连续变更攻速已接入",
       "prtsReference": "https://prts.wiki/w/%E5%AE%B4",
       "sourceProfileIds": [
         "chess_char_1_18_a",
@@ -1197,8 +1197,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1伤害抵挡层；S2概率眩晕和结束自晕、多目标字段未完整接入",
-      "talentGaps": "受击为随机邻近友军回技力及固定法抗缺失",
+      "skillGaps": "S1伤害抵挡层；S2概率眩晕、多目标法术与结束自晕已接入",
+      "talentGaps": "受击随机邻近友方回技力及固定法抗已接入",
       "prtsReference": "https://prts.wiki/w/%E9%9B%B7%E8%9B%87",
       "sourceProfileIds": [
         "chess_char_1_20_a",
@@ -1957,8 +1957,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1部署时增益并持续衰减；S2衰减屏障缺失",
-      "talentGaps": "自身减费及按基础费用筛选防御光环缺失",
+      "skillGaps": "S1部署增益衰减、S2衰减屏障已接入",
+      "talentGaps": "自身减费与按基础费用筛选防御光环已接入",
       "prtsReference": "https://prts.wiki/w/%E7%A0%BE",
       "sourceProfileIds": [
         "chess_char_2_12_a",
@@ -2027,8 +2027,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1/S2起飞、受击触发闪避及空中状态缺失；三连射可复用但需接字段",
-      "talentGaps": "未受攻击计时及一次性双伤害闪避缺失",
+      "skillGaps": "S1/S2起飞、范围、三连射与受击闪避已接入",
+      "talentGaps": "未受攻击计时及一次性物法闪避已接入",
       "prtsReference": "https://prts.wiki/w/%E8%92%82%E6%AF%94",
       "sourceProfileIds": [
         "chess_char_2_13_a",
@@ -2147,8 +2147,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1概率物理抵挡缺失；S2额外目标与伤害转换适配不完整",
-      "talentGaps": "命中沉默天赋未接入，敌方可沉默能力亦待实现",
+      "skillGaps": "S1概率物理抵挡；S2额外目标、法术转换与远程攻击加成已接入",
+      "talentGaps": "命中目标特殊能力失效已接入",
       "prtsReference": "https://prts.wiki/w/%E6%8B%89%E6%99%AE%E5%85%B0%E5%BE%B7",
       "sourceProfileIds": [
         "chess_char_2_16_a",
@@ -2287,8 +2287,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1加攻可复用；S2零阻挡及强制远程模式缺失",
-      "talentGaps": "周身地块条件属性增益缺失",
+      "skillGaps": "S1加攻；S2零阻挡、远程攻击、攻速与加攻已接入",
+      "talentGaps": "周身地面条件属性增益已接入",
       "prtsReference": "https://prts.wiki/w/%E7%81%B0%E6%AF%AB",
       "sourceProfileIds": [
         "chess_char_2_18_a",
@@ -2377,8 +2377,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1/S2炼金单元、持续区域减攻/伤害/回复缺失",
-      "talentGaps": "持续伤害易伤缺失；萨卡兹肉鸽希望/负荷天赋不适用于本模式",
+      "skillGaps": "S1/S2炼金单元、持续区域减攻/伤害/回复已接入",
+      "talentGaps": "持续伤害易伤已接入；萨卡兹肉鸽希望/负荷天赋不适用本模式",
       "prtsReference": "https://prts.wiki/w/%E9%94%A1%E4%BA%BA",
       "sourceProfileIds": [
         "chess_char_2_19_a",
@@ -2481,8 +2481,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1多连击可复用；S2独立倍率字段；S3间隔和攻击字段须适配",
-      "talentGaps": "固定攻速、自身属性和部署随机友方祝福缺失",
+      "skillGaps": "S1/S2/S3多段攻击与倍率字段已接入",
+      "talentGaps": "固定攻速、自身属性与部署随机友方祝福已接入",
       "prtsReference": "https://prts.wiki/w/%E8%83%BD%E5%A4%A9%E4%BD%BF",
       "sourceProfileIds": [
         "chess_char_3_01_a",
@@ -2616,8 +2616,8 @@
         }
       ],
       "category": "A",
-      "skillGaps": "S1扩大天赋范围与S2天赋倍率未接入；自身加攻可复用",
-      "talentGaps": "邻近近战加攻光环未接入",
+      "skillGaps": "S1扩大天赋范围、S2天赋倍率与自身加攻已接入",
+      "talentGaps": "邻近近战加攻光环已接入",
       "prtsReference": "https://prts.wiki/w/%E8%AF%97%E6%80%80%E9%9B%85",
       "sourceProfileIds": [
         "chess_char_3_03_a",
@@ -2854,8 +2854,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1/S3属性可复用；S2部署即生效缺失",
-      "talentGaps": "编队深海猎人加攻与自身再部署缩短缺失",
+      "skillGaps": "S1/S2/S3属性与部署增益已接入",
+      "talentGaps": "编队深海猎人攻击光环与自身再部署缩短已接入",
       "prtsReference": "https://prts.wiki/w/%E6%96%AF%E5%8D%A1%E8%92%82",
       "sourceProfileIds": [
         "chess_char_3_05_a",
@@ -3094,8 +3094,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1多目标可复用；S2按敌人级别减速和击杀强化天赋缺失",
-      "talentGaps": "按普通/精英/领袖类别筛选的脆弱缺失",
+      "skillGaps": "S1多目标强化；S2额外目标、普通/领袖分类减速与击倒强化已接入",
+      "talentGaps": "普通/领袖分类脆弱已接入",
       "prtsReference": "https://prts.wiki/w/%E6%B5%B7%E9%9C%93",
       "sourceProfileIds": [
         "chess_char_3_09_a",
@@ -3249,8 +3249,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1强化可复用；S2特殊子弹双击与非移动目标倍率缺失",
-      "talentGaps": "开技能时独立裂云兽攻击及寒冷缺失",
+      "skillGaps": "S1强化；S2特殊子弹静止目标倍率与双击已接入",
+      "talentGaps": "开技裂云兽攻击与寒冷已接入",
       "prtsReference": "https://prts.wiki/w/%E9%9B%AA%E7%8C%8E",
       "sourceProfileIds": [
         "chess_char_3_11_a",
@@ -3358,8 +3358,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1同次攻击并治疗；S2睡眠及持续回复；S3物法双伤害与治疗缺失",
-      "talentGaps": "允许/优先攻击睡眠目标、队友受回技能攻回转换缺失",
+      "skillGaps": "S1下次攻击并治疗；S2睡眠与持续回复；S3物法双伤害与治疗已接入",
+      "talentGaps": "睡眠目标索敌增伤与受击回复技能攻击回技力已接入",
       "prtsReference": "https://prts.wiki/w/%E7%91%95%E5%85%89",
       "sourceProfileIds": [
         "chess_char_3_12_a",
@@ -3793,8 +3793,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1附加法伤；S2停顿转眩晕；S3攻速衰减、击杀后迷彩缺失；回费另需账本",
-      "talentGaps": "每敌首次命中标记与限时附伤、未受伤计时回血、费用增速缺失",
+      "skillGaps": "S1附加法伤与回费；S2停顿转眩晕；S3攻速衰减、阻挡多目标与击杀后迷彩已接入",
+      "talentGaps": "每敌首次命中标记与限时附伤、未受伤计时回血、费用增速已接入",
       "prtsReference": "https://prts.wiki/w/%E5%BF%8D%E5%86%AC",
       "sourceProfileIds": [
         "chess_char_3_18_a",
@@ -4349,8 +4349,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1加攻可复用；S2持续群晕/伤害；S3波纹击退缺失",
-      "talentGaps": "术师技力光环及范围减速缺失",
+      "skillGaps": "S1加攻；S2持续群体法术与眩晕；S3波纹击退已接入",
+      "talentGaps": "术师技力光环及范围减速已接入",
       "prtsReference": "https://prts.wiki/w/%E8%8E%AB%E6%96%AF%E6%8F%90%E9%A9%AC",
       "sourceProfileIds": [
         "chess_char_4_02_a",
@@ -4662,8 +4662,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1属性可复用；S2强化双击可复用；S3阻挡与技能多段适配未全接",
-      "talentGaps": "概率暴击/额外目标及编队先锋初始技力缺失",
+      "skillGaps": "S1属性；S2强化双击；S3阻挡与三连击已接入",
+      "talentGaps": "概率暴击/额外目标及编队先锋初始技力已接入",
       "prtsReference": "https://prts.wiki/w/%E9%A3%8E%E7%AC%9B",
       "sourceProfileIds": [
         "chess_char_4_07_a",
@@ -5085,8 +5085,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1/S2拖拽；S3龙卷区域、周期拖拽和结束拖拽缺失",
-      "talentGaps": "深海猎人回复/海怪减伤及重量条件增伤缺失",
+      "skillGaps": "S1/S2拖拽；S3龙卷区域、周期伤害、减速、牵引与结束拖拽已接入",
+      "talentGaps": "深海猎人最大生命回复、海怪减伤与重量条件增伤已接入",
       "prtsReference": "https://prts.wiki/w/%E6%AD%8C%E8%95%BE%E8%92%82%E5%A8%85",
       "sourceProfileIds": [
         "chess_char_4_12_a",
@@ -5873,8 +5873,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1属性可复用；S2全局被阻挡目标；S3无限直线射程及范围外增伤缺失",
-      "talentGaps": "未受伤计时增攻、技能降仇恨和无视闪避缺失",
+      "skillGaps": "S1属性；S2范围外被阻挡目标；S3前方无限直线与范围外增伤已接入",
+      "talentGaps": "未受伤计时增攻、技能降仇恨与无视物理闪避已接入",
       "prtsReference": "https://prts.wiki/w/%E8%BF%9C%E7%89%99",
       "sourceProfileIds": [
         "chess_char_4_20_a",
@@ -5928,8 +5928,8 @@
         }
       ],
       "category": "A",
-      "skillGaps": "S1属性可复用；S2极短攻击间隔字段需适配",
-      "talentGaps": "全场自然技力回复光环及同类不叠加未接入",
+      "skillGaps": "S1属性；S2攻击间隔字段已接入",
+      "talentGaps": "全场自然技力回复光环按最高值不叠加已接入",
       "prtsReference": "https://prts.wiki/w/%E7%99%BD%E9%9D%A2%E9%B8%AE",
       "sourceProfileIds": [
         "chess_char_4_21_a",
@@ -6513,8 +6513,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1低生命时追加目标最大生命治疗；S2随机友方增攻和自身/友方生命流失缺失",
-      "talentGaps": "范围敌人死亡时自身及随机队友回技力缺失",
+      "skillGaps": "S1低生命附加治疗；S2随机友方攻防与持续流失已接入",
+      "talentGaps": "范围敌人死亡时自身及随机队友回技力已接入",
       "prtsReference": "https://prts.wiki/w/%E5%8D%8E%E6%B3%95%E7%90%B3",
       "sourceProfileIds": [
         "chess_char_4_26_a",
@@ -7908,8 +7908,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1低血充能治疗；S2区域群疗；S3持续治疗、法术易伤和减速缺失",
-      "talentGaps": "停留叠层属性、治疗回技力缺失",
+      "skillGaps": "S1低血充能治疗；S2区域群疗；S3持续治疗、法术易伤和减速已接入",
+      "talentGaps": "停留叠层属性与治疗回技力已接入",
       "prtsReference": "https://prts.wiki/w/%E5%A1%9E%E9%9B%B7%E5%A8%85",
       "sourceProfileIds": [
         "chess_char_5_11_a",

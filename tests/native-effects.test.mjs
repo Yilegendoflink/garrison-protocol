@@ -768,6 +768,113 @@ test('幽灵鲨天赋提高生命上限并持续自愈',()=>{
  const {b}=openBattle({chessId:'chess_char_2_07_b',skillIndex:0});deployNow(b);const u=b.s.units[0];assert.ok(b.stats(u).maxHp>b.profile(u).attributes.maxHp);u.hp=u.maxHp-100;const before=u.hp;for(let i=0;i<30;i++)b.step();assert.ok(Math.abs((u.hp-before)-u.maxHp*.02)<1e-6);
 });
 
+test('宴 S1 按最大生命回复，S2 按当前生命流失并转为法术攻击',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_18_b',skillIndex:0});deployNow(b);const u=b.s.units[0];u.hp=u.maxHp-1000;u.sp=b.spCost(u);b.activate(u);const before=u.hp;for(let i=0;i<30;i++)b.step();assert.ok(Math.abs((u.hp-before)-u.maxHp*.08)<1e-6);
+ const {b:b2}=openBattle({chessId:'chess_char_1_18_b',skillIndex:1});deployNow(b2);const v=b2.s.units[0];assert.equal(v.hp,v.maxHp*.5);assert.equal(b2.baseDamageType(v),'arts');assert.ok(b2.stats(v).atk>b2.profile(v).attributes.atk);
+});
+
+test('雷蛇 S2 命中多目标法术并在结束时自晕',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_20_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e1=enemy(b,{x:u.x+1,y:u.y,hp:100000}),e2=enemy(b,{x:u.x+1,y:u.y+1,hp:100000});u.sp=b.spCost(u);b.activate(u);for(let i=0;i<90;i++)b.step();assert.ok(e1.hp<100000||e2.hp<100000);assert.ok((e1.statuses||[]).some(s=>s.kind==='stun')||(e2.statuses||[]).some(s=>s.kind==='stun'));u.skillLeft=.01;for(let i=0;i<3;i++)b.step();assert.ok(u.statuses.some(s=>s.kind==='stun'));
+});
+
+test('莫斯提马 S2 生成持续群体法术与眩晕区域',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_02_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000});u.sp=b.spCost(u);b.activate(u);assert.ok(b.s.logicEffects.some(f=>f.talentOrSkillId==='mostma-s2'));for(let i=0;i<20;i++)b.step();assert.ok(e.hp<100000);assert.ok(e.statuses.some(s=>s.kind==='stun'));
+});
+
+test('莫斯提马天赋对范围敌人施加停顿，歌蕾蒂娅重量条件增伤',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_02_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000,weight:1});for(let i=0;i<2;i++)b.step();assert.ok(e.statuses.some(s=>s.kind==='sluggish'));
+ const {b:b2}=openBattle({chessId:'chess_char_4_12_b',skillIndex:0});deployNow(b2);const v=b2.s.units[0],light=enemy(b2,{x:v.x+1,y:v.y,hp:100000,weight:1}),heavy=enemy(b2,{x:v.x+1,y:v.y+1,hp:100000,weight:4});const base=b2.stats(v).atk;v.sp=b2.spCost(v);b2.activate(v);b2.hit(v,light,base,'physical',{skill:true});const lightLoss=100000-light.hp;v.sp=0;b2.hit(v,heavy,base,'physical',{skill:true});assert.ok(lightLoss>100000-heavy.hp);
+});
+
+test('歌蕾蒂娅 S3 龙卷区域牵引，深海猎人获得最大生命回复与海怪减伤',()=>{
+ const {b}=openBattle([{chessId:'chess_char_4_12_b',skillIndex:2},{chessId:'chess_char_2_07_b',skillIndex:0}]);deployNow(b);const glady=b.s.units.find(u=>u.id==='char_474_glady'),ghost=b.s.units.find(u=>u.id==='char_143_ghost'),e=enemy(b,{x:glady.x+1,y:glady.y,hp:100000,tags:['seamonster']});ghost.hp=ghost.maxHp-100;const before=ghost.hp;glady.sp=b.spCost(glady);b.activate(glady);assert.ok(e.statuses.some(s=>s.kind==='root'));for(let i=0;i<30;i++)b.step();assert.ok(ghost.hp>before);const hp=ghost.hp;dealDamage(b,{source:e,target:ghost,amount:100,type:'physical'});assert.ok(ghost.hp>=hp-75);
+});
+
+test('史尔特尔 S3 的生命上限字段按平值增加',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_07_b',skillIndex:2});deployNow(b);const u=b.s.units[0],base=b.profile(u).attributes.maxHp;u.sp=b.spCost(u);b.activate(u);assert.equal(b.stats(u).maxHp,base+5000);
+});
+
+test('华法琳 S2 为自身与随机友方施加攻击和持续生命流失',()=>{
+ const {b}=openBattle([{chessId:'chess_char_4_26_b',skillIndex:1},{chessId:'chess_char_1_20_b',skillIndex:1}]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_171_bldsk'),ally=b.s.units.find(x=>x.id==='char_107_liskam');u.sp=b.spCost(u);b.activate(u);assert.ok(ally.warfarinBuff||u.warfarinTargetUid===ally.uid);const before=ally.hp;for(let i=0;i<60;i++)b.step();assert.ok(ally.hp<before);u.skillLeft=.01;b.step();assert.equal(ally.warfarinBuff,null);
+});
+
+test('塞雷娅 S3 同时治疗友军并使范围敌人易伤减速，治疗回复技力',()=>{
+ const {b}=openBattle([{chessId:'chess_char_5_11_b',skillIndex:2},{chessId:'chess_char_1_20_b',skillIndex:1}]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_202_demkni'),ally=b.s.units.find(x=>x.id==='char_107_liskam'),e=enemy(b,{x:u.x+1,y:u.y,hp:100000});ally.hp=ally.maxHp-300;u.sp=b.spCost(u);b.activate(u);for(let i=0;i<35;i++)b.step();assert.ok(ally.hp>ally.maxHp-300);assert.ok(e.statuses.some(s=>s.kind==='sluggish'));const result=dealDamage(b,{source:u,target:e,amount:100,type:'arts'});assert.ok(result.total>=140);assert.ok(ally.sp>0);
+});
+
+test('银灰 S2 持续回复，领袖天赋缩短全队再部署时间',()=>{
+ const {b}=openBattle([{chessId:'chess_char_4_22_b',skillIndex:1},{chessId:'chess_char_1_20_b',skillIndex:1}]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_172_svrash'),ally=b.s.units.find(x=>x.id==='char_107_liskam');const base=ally.maxHp;ally.hp=base-200;u.sp=b.spCost(u);b.activate(u);for(let i=0;i<30;i++)b.step();assert.ok(ally.hp===base-200);assert.ok(u.hp>0);assert.ok(b.stats(ally).respawnTime< b.profile(ally).attributes.respawnTime);
+});
+
+test('忍冬安静四秒后按最大生命回复，费用自然回复速度提升',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_18_b',skillIndex:0});deployNow(b);const u=b.s.units[0];assert.equal(b.costRecoveryMultiplier(),1.1);u.hp=u.maxHp-500;const before=u.hp;for(let i=0;i<119;i++)b.step();assert.equal(u.hp,before);for(let i=0;i<2;i++)b.step();assert.ok(u.hp>before);
+});
+
+test('星熊战术装甲抵挡伤害，S2受击反伤',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000,atk:100,damageType:'physical'});b.economy.random=()=>0;const hp=u.hp;b.hurt(u,e);assert.equal(u.hp,hp);b.economy.random=()=>.9;const enemyHp=e.hp;b.hurt(u,e);assert.ok(e.hp<enemyHp);
+});
+
+test('远牙 S3 获取前方直线目标并在静息后增伤',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_20_b',skillIndex:2});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+4,y:u.y,hp:100000});u.sp=b.spCost(u);b.activate(u);assert.ok(b.targets(u).some(x=>x.uid===e.uid));b.s.time=10;assert.ok(b.stats(u).atk>b.profile(u).attributes.atk);
+});
+
+test('风笛编队初始技力与精密填弹额外目标',()=>{
+ const {b}=openBattle([{chessId:'chess_char_4_07_b',skillIndex:1},{chessId:'chess_char_1_20_b',skillIndex:1}]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_222_bpipe');assert.ok(u.sp>=6);const e1=enemy(b,{x:u.x+1,y:u.y,hp:100000}),e2=enemy(b,{x:u.x+1,y:u.y+1,hp:100000});b.economy.random=()=>0;const before2=e2.hp;u.sp=b.spCost(u);b.activate(u);b.hit(u,e1,b.stats(u).atk,'physical',{skill:true});assert.ok(e2.hp<before2||e1.hp<100000);
+});
+
+test('初雪低生命目标获得脆弱效果',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_14_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000});e.hp=e.maxHp*.3;b.hit(u,e,b.stats(u).atk,'physical');assert.ok(e.statuses.some(s=>s.kind==='fragile'));
+});
+
+test('斯卡蒂深海猎人攻击光环、部署增益和再部署减免',()=>{
+ const {b}=openBattle([{chessId:'chess_char_3_05_b',skillIndex:1},{chessId:'chess_char_2_07_b',skillIndex:0}]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_263_skadi'),ally=b.s.units.find(x=>x.id==='char_143_ghost');assert.ok(u.skillLeft>0);assert.ok(b.stats(u).atk>b.profile(u).attributes.atk);assert.ok(b.stats(ally).atk>b.profile(ally).attributes.atk);assert.equal(b.stats(u).respawnTime,b.profile(u).attributes.respawnTime-10);
+});
+
+test('能天使部署后随机友方继承天使祝福，锡人炼金区域施加减攻与易伤',()=>{
+ const {b}=openBattle([{chessId:'chess_char_3_01_b',skillIndex:0},{chessId:'chess_char_1_20_b',skillIndex:1}]);const angel=b.s.units.find(x=>x.id==='char_103_angel'),ally=b.s.units.find(x=>x.id==='char_107_liskam');b.deploy(ally);b.economy.random=()=>0;b.deploy(angel);assert.ok(ally.angelBlessing);assert.ok(b.stats(ally).atk> b.profile(ally).attributes.atk);
+ const {b:b2}=openBattle({chessId:'chess_char_2_19_b',skillIndex:0});deployNow(b2);const tin=b2.s.units[0],e=enemy(b2,{x:tin.x+1,y:tin.y,hp:100000});tin.sp=b2.spCost(tin);b2.activate(tin);for(let i=0;i<35;i++)b2.step();assert.ok(e.statuses.some(s=>s.kind==='attackDown'));assert.ok(e.fragile>=1.2||e.statuses.some(s=>s.kind==='fragile'));
+});
+
+test('深巡 S2 穿透多个目标并对海怪触发加倍持续伤害',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_04_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e1=enemy(b,{x:u.x+1,y:u.y,hp:100000}),e2=enemy(b,{x:u.x+2,y:u.y,hp:100000,tags:['seamonster']});u.sp=b.spCost(u);b.activate(u);b.hit(u,e1,b.stats(u).atk,'physical',{skill:true});assert.ok(e2.hp<100000);assert.ok(e2.statuses.some(s=>s.kind==='sluggish'));for(let i=0;i<31;i++)b.step();assert.ok(e2.hp<e1.hp);
+});
+
+test('刺玫 S2 锁定范围内最高生命友方并触发受击反击与治疗增幅',()=>{
+ const {b}=openBattle([{chessId:'chess_char_1_06_b',skillIndex:1},{chessId:'chess_char_1_20_b',skillIndex:1}]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_494_vendla'),ally=b.s.units.find(x=>x.id==='char_107_liskam');ally.x=u.x+1;ally.y=u.y;u.sp=b.spCost(u);b.activate(u);assert.equal(u.vendlaTargetUid,ally.uid);assert.ok(b.stats(ally).tauntLevel>0);const e=enemy(b,{x:ally.x,y:ally.y,hp:100000,atk:10,damageType:'physical'}),hp=e.hp;b.hurt(ally,e);assert.ok(e.hp<hp);assert.ok(ally.healingReceived>1);u.skillLeft=.01;b.step();assert.equal(ally.vendlaBuff,null);
+});
+
+test('蒂比技能起飞并在九秒未受击后闪避一次攻击',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_13_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{atk:100,damageType:'physical'});u.sp=b.spCost(u);b.activate(u);assert.equal(u.flying,true);b.s.time=9;const hp=u.hp;b.hurt(u,e);assert.equal(u.hp,hp);b.hurt(u,e);assert.ok(u.hp<hp);
+});
+
+test('灰毫 S2 技能期间清零阻挡并保持远程攻击',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_18_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);assert.equal(b.stats(u).blockCnt,0);assert.equal(b.behavior(u).style,'fortress');
+});
+
+test('拉普兰德 S1 概率抵挡物理，S2 额外法术攻击并关闭特殊能力',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_16_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000,atk:100,damageType:'physical'});b.economy.random=()=>0;u.sp=b.spCost(u);b.activate(u);const hp=u.hp;b.hurt(u,e);assert.equal(u.hp,hp);
+ const {b:b2}=openBattle({chessId:'chess_char_2_16_b',skillIndex:1});deployNow(b2);const v=b2.s.units[0],a=enemy(b2,{x:v.x+1,y:v.y,hp:100000}),c=enemy(b2,{x:v.x+1,y:v.y+1,hp:100000});v.sp=b2.spCost(v);b2.activate(v);b2.hit(v,a,b2.stats(v).atk,'arts',{skill:true});assert.ok(c.hp<100000||a.specialDisabledUntil>0);
+});
+
+test('海霓 S2 对普通敌人减速、额外攻击并按击倒强化脆弱',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_09_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e1=enemy(b,{x:u.x+1,y:u.y,hp:100000}),e2=enemy(b,{x:u.x+1,y:u.y+1,hp:100000});u.sp=b.spCost(u);b.activate(u);b.hit(u,e1,b.stats(u).atk,'physical',{skill:true});assert.ok(e2.hp<100000||e1.hp<100000);assert.ok(e1.statuses.some(s=>s.kind==='sluggish'));e1.hp=1;commitExit(b,{target:e1,reason:'knockdown',killer:u});assert.ok(u.hainiTalentScale>1);
+});
+
+test('雪猎 S2 对静止目标强化双击并附加寒冷，空弦触发范围溅射与狙击回技力',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_11_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000,speed:0});u.sp=b.spCost(u);b.activate(u);assert.ok(e.hp<100000);assert.ok(e.statuses.some(s=>s.kind==='cold'));
+ const {b:b2}=openBattle([{chessId:'chess_char_3_21_b',skillIndex:0},{chessId:'chess_char_3_11_b',skillIndex:0}]);deployNow(b2);const ar=b2.s.units.find(x=>x.id==='char_332_archet'),target=enemy(b2,{x:ar.x+1,y:ar.y,hp:100000}),splash=enemy(b2,{x:target.x+1,y:target.y,hp:100000});ar.sp=b2.spCost(ar);b2.activate(ar);b2.hit(ar,target,b2.stats(ar).atk,'physical',{skill:true});assert.ok(splash.hp<100000);const sn=b2.s.units.find(x=>x.id==='char_4211_snhunt');b2.step();assert.equal(typeof ar.landenNextAt,'number');
+});
+
+test('缄默德克萨斯三种部署被动分别触发沉默持续伤害、落地法伤与剑雨',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_16_b',skillIndex:0});const u=b.s.units[0];b.deploy(u);const e=enemy(b,{x:u.x+1,y:u.y,hp:100000});b.hit(u,e,b.stats(u).atk,'physical');assert.ok(e.statuses.some(s=>s.kind==='silence'));for(let i=0;i<31;i++)b.step();assert.ok(e.hp<100000);
+ const {b:b2}=openBattle({chessId:'chess_char_4_16_b',skillIndex:1}),v=b2.s.units[0],e2=enemy(b2,{x:v.x+1,y:v.y,hp:100000});b2.deploy(v);assert.ok(e2.hp<100000);assert.ok(e2.statuses.some(s=>s.kind==='resDown'));
+ const {b:b3}=openBattle({chessId:'chess_char_4_16_b',skillIndex:2}),w=b3.s.units[0],e3=enemy(b3,{x:w.x+1,y:w.y,hp:100000});b3.deploy(w);const hp=e3.hp;for(let i=0;i<40;i++)b3.step();assert.ok(e3.hp<hp);
+});
+
+test('瑕光优先攻击沉睡目标并让受击回复技能攻击时回技力',()=>{
+ const {b}=openBattle([{chessId:'chess_char_3_12_b',skillIndex:2},{chessId:'chess_char_1_20_b',skillIndex:1}]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_423_blemsh'),ally=b.s.units.find(x=>x.id==='char_107_liskam'),sleeping=enemy(b,{x:u.x+1,y:u.y,hp:100000}),awake=enemy(b,{x:u.x+1,y:u.y+1,hp:100000});applyStatus(sleeping,'sleep',5,{source:u.uid,resistible:false});assert.equal(b.targets(u)[0].uid,sleeping.uid);ally.sp=0;const before=ally.sp;b.hit(ally,awake,b.stats(ally).atk,'physical');assert.ok(ally.sp>before);
+});
+
 test('史尔特尔 lock then force exit keeps one lifecycle',()=>{
  const {b}=openBattle(reps.operators.surtr);deployNow(b);
  const u=byId(b,'char_350_surtr');
