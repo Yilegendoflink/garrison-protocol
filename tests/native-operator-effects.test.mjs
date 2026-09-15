@@ -4,6 +4,8 @@ import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {operatorRegistry,skillConfig,statMods} from '../dist/native-operator-effects.js';
 import {openBattle,deployNow,enemy,byId} from './effects-harness.mjs';
 import {dealDamage} from '../dist/native-effects.js';
+import {moveActor} from '../dist/native-effects.js';
+import {applyStatus,tickStatuses} from '../dist/status.js';
 
 test('every fixed operator has an adapter entry and every skill resolves a safe config',()=>{
  const registry=operatorRegistry(NATIVE_DATA);
@@ -45,4 +47,16 @@ test('duration skills with periodic damage create a timed logic zone',()=>{
  const u=byId(b,'char_213_mostma'),e=enemy(b,{x:u.x+1,y:u.y,hp:10000,res:0});u.sp=b.spCost(u)+1;b.activate(u);
  const zone=b.s.logicEffects.find(x=>x.talentOrSkillId.startsWith('skill-zone:'));
  assert.ok(zone);assert.ok(e.statuses.some(s=>s.kind==='stun'));const hp=e.hp;for(let i=0;i<35;i++)b.step();assert.ok(e.hp<hp);
+});
+
+test('skill target rules alter acquisition without changing the shared priority engine',()=>{
+ const {b}=openBattle({name:'隐现',chessId:'chess_char_1_01_b',skillIndex:1});deployNow(b);const u=b.s.units[0];
+ const ranged=enemy(b,{x:u.x+1,y:u.y,ranged:true,range:3}),melee=enemy(b,{x:u.x,y:u.y+1,ranged:false,range:0});
+ assert.equal(b.targets(u)[0].uid,ranged.uid);assert.ok(b.targets(u).every(e=>e.ranged||e.canAttack&&e.range>0));
+});
+
+test('status flags and bounded push/pull share the simulation state',()=>{
+ const {b}=openBattle({name:'隐现',chessId:'chess_char_1_01_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y});
+ applyStatus(e,'invisible',1e3,{source:u.uid,resistible:false});assert.equal(e.invisible,true);assert.equal(b.targets(u).length,0);e.revealed=true;e.block=u.uid;assert.equal(b.targets(u).length,1);tickStatuses(e,1e3);assert.equal(e.invisible,false);
+ const before=e.x;assert.equal(moveActor(b,e,u,'推开'),true);assert.equal(e.x,before+1);assert.equal(moveActor(b,e,u,'拉向'),true);assert.equal(e.x,before);
 });

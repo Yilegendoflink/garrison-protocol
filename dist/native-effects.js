@@ -311,7 +311,7 @@ export function tickLogic(battle,dt){
  tickSummons(battle,dt);
 }
 
-function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,gainSp,addEffect,log:(b,t,p)=>log(b,t,p)};}
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};}
 
 function zoneActors(battle,fx,side){
  const cx=fx.x,cy=fx.y,r=fx.radius??1;
@@ -430,9 +430,18 @@ export function effectStatMods(battle,u){
  return {add,ratio,finalAdd,attackSpeed,magicResistance,spRecoveryPerSec,parts};
 }
 
+export function moveActor(battle,target,source,description=''){
+ if(!target||target.hp<=0||target.hidden||target.levitated)return false;
+ const away=/推开|推动|击退/.test(description),toward=/拖拽|拉向|拉至/.test(description);if(!away&&!toward)return false;
+ const dx=target.x-source.x,dy=target.y-source.y,len=Math.hypot(dx,dy)||1,step=away?1:-1,nx=Math.round(target.x+(dx/len)*step),ny=Math.round(target.y+(dy/len)*step);
+ const tile=battle.map.grid[ny]?.[nx];if(!tile||tile.passableMask==='NONE'||tile.passableMask==='FLY_ONLY'||tile.obstacle)return false;
+ const occupied=new Set(alliedActors(battle.s).filter(a=>a!==target&&a.deployed&&a.occupiesTile).map(a=>a.x+','+a.y));if(occupied.has(nx+','+ny))return false;
+ target.x=nx;target.y=ny;target.block=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode:away?'push':'pull'});battle.emit('move',{uid:target.uid,x:nx,y:ny,mode:away?'push':'pull'});return true;
+}
+
 export function dispatch(battle,type,payload){
  const {source,target,event}=payload;
- const ctx={dealDamage,applyHeal,applyRegen,applyLoss,gainSp,addEffect,log:(b,t,p)=>log(b,t,p)};
+ const ctx={dealDamage,applyHeal,applyRegen,applyLoss,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};
  if(type==='skill-start')payload.genericSuppress=operatorSkillStart(battle,target,ctx);
  else onEvent(battle,type,payload,ctx);
  if(type==='after-damage'&&payload.cause!=='dot'&&payload.cause!=='reflect'){

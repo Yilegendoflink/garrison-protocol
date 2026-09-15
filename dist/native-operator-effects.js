@@ -37,7 +37,8 @@ export function skillConfig(profile){
  const skill=profile?.skill,bb=blackboardValues(skill),description=skill?.description||'';
  const damageType=has(description,/真实伤害/)?'true':has(description,/法术伤害|变为法术|法术攻击/)?'arts':null;
  for(const [name,patterns] of Object.entries({atkScale:[/atk_scale(?:_[12])?$/,/damage_scale(?:_[12])?$/],maxTarget:[/max_target(?:_attack|_token)?$/],hits:[/(?:^|[.@_])times$/,/trig_cnt$/],stun:[/(?:^|[.@_])stun$/],sleep:[/(?:^|[.@_])sleep$/],fear:[/(?:^|[.@_])fear$/],terror:[/(?:^|[.@_])terror$/],tremble:[/(?:^|[.@_])tremble$/],sluggish:[/(?:^|[.@_])sluggish$/],silence:[/(?:^|[.@_])silence$/],root:[/(?:^|[.@_])root$/],healScale:[/heal_scale$/],attackSpeed:[/attack_speed$/]})){if(bb[name]==null){const value=suffixNumber(bb.raw,patterns);if(value!=null)bb[name]=value;}}
- return {bb,description,damageType,stopAttack:has(description,/停止攻击|无法普通攻击/),
+ const targetRule=has(description,/生命值最高/) ? 'maxHp' : has(description,/生命值最低/) ? 'minHp' : has(description,/未被阻挡|未阻挡/) ? 'unblocked' : has(description,/被阻挡|阻挡的/) ? 'blocked' : has(description,/远程武器/) ? 'ranged' : has(description,/空中单位|飞行单位/) ? 'air' : has(description,/随机攻击|随机目标/) ? 'random' : null;
+ return {bb,description,damageType,targetRule,canTargetSleep:has(description,/睡眠目标|沉睡目标|睡眠的敌人/),canSeeHidden:has(description,/隐匿失效|隐匿效果失效|无视隐匿/),stopAttack:has(description,/停止攻击|无法普通攻击/),
   resetAttack:has(description,/立即|瞬发|下次攻击|部署后/),
   multiTarget:bb.maxTarget??(has(description,/同时攻击|所有敌人/) ? Infinity : 1),
   hits:Math.max(1,Math.min(12,bb.hits??1)),atkScale:bb.atkScale??1};
@@ -78,6 +79,7 @@ export function operatorSkillStart(battle,u,ctx){
  const duration=profile.skill?.duration;
  if(has(text,/每秒.*受到|持续.*受到|周期.*造成/)&&Number.isFinite(periodicScale)&&has(text,/伤害|法术/)){ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:config.multiTarget===Infinity?2:1,interval:Math.max(.1,periodicInterval),nextAt:battle.s.time+Math.max(.1,periodicInterval),endsAt:battle.s.time+(duration>0?duration:5),values:{dot:true,atk_scale:periodicScale,type:config.damageType||'arts'},snapshot:{damage:battle.stats(u).atk*periodicScale},refKind:'owner',persistAfterSourceGone:false});}
  if(has(text,/每秒.*回复|持续.*回复/)&&Number.isFinite(config.healScale)){ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-heal-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:1,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+(duration>0?duration:5),values:{hot:battle.stats(u).atk*config.healScale},refKind:'owner',persistAfterSourceGone:false});}
+ if(has(text,/获得隐匿|进入隐匿|迷彩/)){const time=duration>0?duration:1e9;applyStatus(u,has(text,/迷彩/)?'camouflage':'invisible',time,{source:u.uid,resistible:false});}
  if(has(text,/对周围所有敌人|攻击范围内所有敌人/)&&Number.isFinite(config.atkScale)&&(bb.atkScale!=null||has(text,/造成.*伤害/))){for(const e of allTargets(battle,u,true))ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*config.atkScale,type:config.damageType||'physical',cause:'skill',skill:true});suppressDefault=true;}
  if(has(text,/立即.*治疗|立即.*恢复.*生命/)&&Number.isFinite(config.healScale)){for(const a of allAllies(battle,u,true))ctx.applyHeal(battle,{source:u,target:a,amount:battle.stats(u).atk*config.healScale});suppressDefault=true;}
  return suppressDefault;
@@ -91,9 +93,12 @@ export function onEvent(battle,type,payload,ctx){
    for(const [key,field] of [['atk','atk'],['max_hp','maxHp'],['def','def'],['attack_speed','attackSpeed']])if(Number.isFinite(Number(bb[key])))actor.talentMods[field]+=Number(bb[key]);
   }
  }
- if(type==='after-damage'&&source&&source.kind!=='summon'&&target&&payload.skill){
+  if(type==='after-damage'&&source&&source.kind!=='summon'&&target&&payload.skill){
   const config=skillConfig(battle.profile(source)),status=directStatus(config.description,config);
-  if(status&&has(config.description,/攻击|命中|目标/))applyStatus(target,status.kind,status.duration,{source:source.uid,resistible:false});
+   if(status&&has(config.description,/攻击|命中|目标/))applyStatus(target,status.kind,status.duration,{source:source.uid,resistible:false});
+   if(has(config.description,/浮空/))applyStatus(target,'levitate',Number(config.bb.floating??config.bb.duration??2),{source:source.uid,resistible:false});
+   if(has(config.description,/隐匿失效|隐匿效果失效/))target.revealed=true;
+   if(has(config.description,/推开|推动|拖拽|拉向|拉至|击退/)&&ctx.moveActor)ctx.moveActor(battle,target,source,config.description);
   const bb=config.bb;if(Number.isFinite(bb.value)&&has(config.description,/恢复自身|回复自身/))ctx.applyHeal(battle,{source,target:source,amount:bb.value});
   if(Number.isFinite(bb.defPenetrateFixed)&&has(config.description,/无视.*防御/))target.def=Math.max(0,(target.def||0)-bb.defPenetrateFixed);
  }
