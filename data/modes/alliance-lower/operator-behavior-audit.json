@@ -691,8 +691,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1近卫式普攻切换到充能治疗缺失；S2烹饪等待后转专注治疗缺失",
-      "talentGaps": "概率暴击与命中眩晕缺失",
+      "skillGaps": "S1攻击后充能治疗与S2烹饪等待后专注治疗已接入",
+      "talentGaps": "概率倍率与命中眩晕已接入",
       "prtsReference": "https://prts.wiki/w/%E5%8F%A4%E7%B1%B3",
       "sourceProfileIds": [
         "chess_char_1_10_a",
@@ -871,8 +871,8 @@
         }
       ],
       "category": "A",
-      "skillGaps": "S1/S2攻速可复用；S2延长天赋停顿未接入",
-      "talentGaps": "普攻停顿天赋未接入",
+      "skillGaps": "S1/S2攻速与S2延长天赋停顿已接入",
+      "talentGaps": "普攻停顿天赋已接入",
       "prtsReference": "https://prts.wiki/w/%E6%A0%BC%E9%9B%B7%E4%BC%8A",
       "sourceProfileIds": [
         "chess_char_1_14_a",
@@ -1652,8 +1652,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1防御可复用；S2嘲讽和以防御力计算受击反伤缺失",
-      "talentGaps": "受击给攻击者减攻缺失",
+      "skillGaps": "S1防御与S2嘲讽/防御力反伤已接入",
+      "talentGaps": "受击给攻击者减攻已接入",
       "prtsReference": "https://prts.wiki/w/%E6%B3%A1%E6%B3%A1",
       "sourceProfileIds": [
         "chess_char_2_08_a",
@@ -2217,8 +2217,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1抵抗未接入；S2战栗状态及对应索敌/攻击规则缺失",
-      "talentGaps": "技能结束百分比回血缺失",
+      "skillGaps": "S1抵抗、S2战栗状态及对应索敌/攻击规则已接入",
+      "talentGaps": "技能结束百分比回血已接入",
       "prtsReference": "https://prts.wiki/w/%E6%8A%98%E6%A1%A0",
       "sourceProfileIds": [
         "chess_char_2_17_a",

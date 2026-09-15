@@ -125,7 +125,7 @@
       "partialHandlers": [
         "next-attack-heal"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "艾丝黛尔",
@@ -167,7 +167,7 @@
       "partialHandlers": [
         "sluggish-talent"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "深靛",
@@ -313,7 +313,7 @@
       "partialHandlers": [
         "reflect-and-attack-down"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "休谟斯",
@@ -417,8 +417,10 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
-      "needsSpecialHandler": true
+      "partialHandlers": [
+        "status-resistance-and-focus"
+      ],
+      "needsSpecialHandler": false
     },
     {
       "name": "灰毫",

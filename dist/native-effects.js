@@ -699,9 +699,11 @@ function onSkillStart(battle,u){
 }
 function onSkillEnd(battle,u){
  const idx=u.source?.skillIndex??battle.profile(u).skillIndex;
+ u.skillDisarmUntil=null;u.focusHealAfter=null;u.focusHeal=false;u.statusResistance=0;
  u.pendingPeriodicCost=null;u.pendingNextAttack=null;u.pendingCostGain=null;
  for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-heal-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-loss:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-regen-zone:${u.id}:${u.skillCount}`))dropEffect(battle,fx,'skill-end');
  for(const talent of activeTalentsOf(battle,u)){const text=talent.description||'',bb=talent.values||{};if(/技能结束.*恢复.*生命|技能结束.*回复.*生命/.test(text)&&Number(bb.hp_ratio)>0)applyHeal(battle,{source:u,target:u,amount:u.maxHp*Number(bb.hp_ratio)});}
+ if(Number(u.skillEndHealRatio)>0){applyHeal(battle,{source:u,target:u,amount:u.maxHp*u.skillEndHealRatio});u.skillEndHealRatio=0;}
  if(u.unhealable)u.unhealable=false;
  if(u.id==='char_1012_skadi2')u.inspireAura=null;
  const skill=battle.profile(u)?.skill,skillText=skill?.description||'',skillBBValue=skillBB(battle,u);if(/技能结束时.*所有敌人.*法术伤害/.test(skillText)&&Number(skillBBValue.atk_scale)>0)for(const e of enemyActors(battle.s).filter(e=>battle.inside(u,e,true)))dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*Number(skillBBValue.atk_scale),type:'arts',cause:'skill'});

@@ -274,6 +274,11 @@ test('折桠 skill-end talent heals from the shared lifecycle hook',()=>{
  const {b}=openBattle({chessId:'chess_char_2_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.hp=u.maxHp-100;dispatch(b,'skill-end',{target:u});assert.ok(u.hp>u.maxHp-100);
 });
 
+test('折桠 S1 抵抗、S2 战栗和技能结束回血',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_17_b',skillIndex:0});deployNow(b);const u=b.s.units[0],foe=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);applyStatus(u,'stun',10,{source:foe.uid});assert.equal(u.statuses.find(s=>s.kind==='stun').remaining,5);dispatch(b,'skill-end',{target:u});
+ const s=openBattle({chessId:'chess_char_2_17_b',skillIndex:1}).b;deployNow(s);const a=s.s.units[0],e=enemy(s,{x:a.x+1,y:a.y,hp:1000});a.sp=s.spCost(a);s.activate(a);assert.equal(e.statuses.find(x=>x.kind==='tremble').remaining,5);
+});
+
 test('送葬人 fixed defense penetration applies before mitigation without mutating the enemy',()=>{
  const {b}=openBattle({chessId:'chess_char_2_01_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:2000,def:300});const before=e.def;b.hit(u,e,1000,'physical');assert.equal(Math.round(2000-e.hp),860);assert.equal(e.def,before);
 });
@@ -285,6 +290,14 @@ test('profession aura target filters keep Star Ursus armor on defenders only',()
 
 test('古米备用军粮 stores a one-shot heal on the next released attack',()=>{
  const {b}=openBattle([{chessId:'chess_char_1_10_b',skillIndex:0},reps.operators.yak]);deployNow(b);const gummy=b.s.units.find(u=>u.id==='char_196_sunbr'),yak=b.s.units.find(u=>u.id==='char_199_yak');yak.hp=yak.maxHp-200;gummy.sp=b.spCost(gummy);b.activate(gummy);assert.ok(gummy.pendingAttackHeal);const before=yak.hp;const e=enemy(b,{x:gummy.x+1,y:gummy.y,hp:1000,def:0});b.hit(gummy,e,50,'physical');assert.ok(yak.hp>before);assert.equal(gummy.pendingAttackHeal,null);
+});
+
+test('古米 S2 烹饪完成后切换为专注治疗',()=>{
+ const {b}=openBattle([{chessId:'chess_char_1_10_b',skillIndex:1},reps.operators.yak]);deployNow(b);const gummy=byId(b,'char_196_sunbr'),yak=byId(b,'char_199_yak');yak.x=gummy.x+1;yak.y=gummy.y;yak.hp=yak.maxHp-200;gummy.sp=b.spCost(gummy);b.activate(gummy);assert.equal(gummy.focusHeal,false);for(let i=0;i<360;i++)b.step();assert.equal(gummy.focusHeal,true);yak.hp=yak.maxHp-200;const before=yak.hp;for(let i=0;i<90;i++)b.step();assert.ok(yak.hp>before);
+});
+
+test('古米平底锅天赋触发倍率与眩晕',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_10_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});b.economy.random=()=>0;b.hit(u,e,100,'physical');assert.equal(e.hp,800);assert.ok(e.statuses.some(s=>s.kind==='stun'));
 });
 
 test('维娜的周围友方物理减伤只作用于友方单位',()=>{
@@ -343,6 +356,14 @@ test('蛇屠箱 S1 的持续回复按最大生命比例结算',()=>{
 
 test('泡泡技能受击反伤并给攻击者施加攻击下降',()=>{
  const {b}=openBattle({chessId:'chess_char_2_08_b',skillIndex:1});deployNow(b);const bubble=b.s.units[0],enemyUnit=enemy(b,{x:bubble.x+1,y:bubble.y,hp:1000,def:0,atk:100});bubble.sp=b.spCost(bubble);b.activate(bubble);const before=enemyUnit.hp;b.hurt(bubble,enemyUnit);assert.ok(enemyUnit.hp<before);assert.ok(enemyUnit.statuses.some(s=>s.kind==='attackDown'));
+});
+
+test('泡泡 S2 技能期间提高嘲讽并按防御力反伤',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_08_b',skillIndex:1});deployNow(b);const bubble=b.s.units[0];bubble.sp=b.spCost(bubble);b.activate(bubble);assert.ok(b.stats(bubble).tauntLevel>0);assert.ok(b.profile(bubble).skill.description.includes('防御力'));
+});
+
+test('格雷伊 S2 技能期间提高停顿天赋持续时间',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_14_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);b.hit(u,e,10,'arts');const sluggish=e.statuses.find(s=>s.kind==='sluggish');assert.ok(sluggish);assert.ok(Math.abs(sluggish.remaining-1.02)<1e-9);
 });
 
 test('普罗旺斯低生命目标增伤按生命比例档位计算',()=>{
