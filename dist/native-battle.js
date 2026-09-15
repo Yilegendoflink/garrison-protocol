@@ -36,8 +36,8 @@ export class NativeBattle {
  profile(u){if(u.kind==='summon')return {branch:'summon',profession:'TOKEN',position:'MELEE',attributes:{...u,magicResistance:u.res||0},garrisons:[],trait:null,talents:[]};const row=this.data.profiles[u.chessId];const selected=row?.skillChoices?.[u.source?.skillIndex??u.skillIndex];return selected?{...row,...selected}:row;}
  skillActive(u){return u.skillLeft>0||u.ammo>0;}
  behavior(u){return branchBehavior(this.profile(u),this.skillActive(u));}
- canHeal(target,source=null){
-  if(!target?.deployed||target.hp<=0||target.isolated||target.downed||target.healable===false)return false;
+  canHeal(target,source=null){
+  if(!target?.deployed||target.hp<=0||target.isolated||target.downed||target.healable===false||(target.unhealable&&source?.uid!==target.uid))return false;
   const noExternal=this.behavior(target).noExternalHealing,selfException=noExternal&&source?.uid===target.uid;
   return selfException||(!noExternal&&!target.unhealable&&!target.statuses?.some(s=>s.kind==='healingBlocked'));
  }

@@ -119,6 +119,18 @@ test('新约能天使 ammo contract gives the stronger Laterano aura only to amm
  const base=b.profile(inside).attributes.atk;assert.ok(b.stats(inside).atk>base);assert.ok(b.stats(inside).parts.some(p=>p.src==='新约能天使·拉特兰'&&p.stat==='atk'));
 });
 
+test('德克萨斯 roster talent grants battle deployment points once on first deployment',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_08_b',skillIndex:1});const before=b.economy.s.funds;deployNow(b);assert.equal(b.economy.s.funds-before,2);
+});
+
+test('艾丝黛尔 active skill excludes external healing and restores it at skill end',()=>{
+ const {b}=openBattle([{chessId:'chess_char_1_12_b',skillIndex:1},reps.operators.yak]);deployNow(b);const estelle=b.s.units.find(u=>u.id==='char_127_estell'),yak=b.s.units.find(u=>u.id==='char_199_yak');estelle.sp=b.spCost(estelle);b.activate(estelle);assert.equal(b.canHeal(estelle,yak),false);dispatch(b,'skill-end',{target:estelle});assert.equal(b.canHeal(estelle,yak),true);
+});
+
+test('折桠 skill-end talent heals from the shared lifecycle hook',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.hp=u.maxHp-100;dispatch(b,'skill-end',{target:u});assert.ok(u.hp>u.maxHp-100);
+});
+
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
  assert.equal(manifest.sourceCommit,source.source.commit);
  assert.equal(manifest.gameDataCommit,scope.gameDataCommit);

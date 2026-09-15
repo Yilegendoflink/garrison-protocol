@@ -108,6 +108,7 @@ export function operatorSkillStart(battle,u,ctx){
  if(has(text,/每秒流失.*生命/)&&Number.isFinite(Number(bb.lose_hp_scale))){const interval=1/30;ctx.addEffect(battle,{kind:'loss',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:u.uid,talentOrSkillId:'skill-loss:'+u.id+':'+u.skillCount,interval,nextAt:battle.s.time+interval,endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),values:{amount:u.maxHp*Number(bb.lose_hp_scale)*interval},refKind:'owner',persistAfterSourceGone:false});}
  if(has(text,/其余伤害延后至技能结束|伤害延后至技能结束/)){u.damageProtection={immediateRatio:Number.isFinite(Number(bb.damage_resistance))?Number(bb.damage_resistance):0,until:duration>0?battle.s.time+duration:battle.s.time,buffer:0,finalDuration:Number(bb.final_duration)||1,sourceUid:u.uid};}
  if(has(text,/生命值不会低于1|生命值始终不会低于1/)&&!u.lockHp)u.lockHp={min:1,endsAt:duration>0?battle.s.time+duration:null,onEnd:'none'};
+ if(has(text,/不再成为其他角色的治疗目标|无法成为其他角色的治疗目标/))u.unhealable=true;
  if(has(text,/对周围所有敌人|攻击范围内所有敌人/)&&Number.isFinite(config.atkScale)&&(bb.atkScale!=null||has(text,/造成.*伤害/))){for(const e of allTargets(battle,u,true))ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*config.atkScale,type:config.damageType||'physical',cause:'skill',skill:true});suppressDefault=true;}
  if(has(text,/立即.*治疗|立即.*恢复.*生命/)&&Number.isFinite(config.healScale)){for(const a of allAllies(battle,u,true))ctx.applyHeal(battle,{source:u,target:a,amount:battle.stats(u).atk*config.healScale});suppressDefault=true;}
  return suppressDefault;
@@ -120,6 +121,7 @@ export function onEvent(battle,type,payload,ctx){
    const text=talent.description||'',bb=talentValues(talent);if(!has(text,/部署后|置入战场/))continue;
    for(const [key,field] of [['atk','atk'],['max_hp','maxHp'],['def','def'],['attack_speed','attackSpeed']])if(Number.isFinite(Number(bb[key])))actor.talentMods[field]+=Number(bb[key]);
   }
+  if(!actor.initialCostGranted){for(const talent of activeTalents(battle,actor)){const text=talent.description||'',bb=talentValues(talent);if(has(text,/编入队伍后.*初始部署费用|额外获得.*初始部署费用/)&&Number(bb.cost)>0){battle.economy.s.funds+=Number(bb.cost);actor.initialCostGranted=true;break;}}}
  }
  if(type==='after-damage'&&source&&source.kind!=='summon'&&target&&payload.skill){
   const config=skillConfig(battle.profile(source)),status=directStatus(config.description,config);
@@ -147,7 +149,7 @@ export function onEvent(battle,type,payload,ctx){
    if(has(text,/攻击力[-−]/)&&Number(bb.atk)<0)applyStatus(target,'attackDown',Number(bb.duration)||5,{source:source.uid,value:Number(bb.atk),resistible:false});
    if(has(text,/防御力[-−]/)&&Number(bb.def)<0)applyStatus(target,'defDown',Number(bb.duration)||5,{source:source.uid,value:Number(bb.def),resistible:false});
    if(has(text,/法术抗性[-−]/)&&Number(bb.magic_resistance)<0)applyStatus(target,'resDown',Number(bb.duration)||5,{source:source.uid,value:Number(bb.magic_resistance),resistible:false});
-   if(type==='after-damage'){const talentStatus=directStatus(text,{bb}),statusProb=Number(bb.prob??bb.attack_prob??bb.buff_prob),statusAllowed=!has(text,/概率|几率/ )||!Number.isFinite(statusProb)||battle.economy.random()<statusProb;if(talentStatus&&statusAllowed&&has(text,/攻击|命中|伤害|附带/))applyStatus(target,talentStatus.kind,talentStatus.duration,{source:source.uid,resistible:false});
+   if(type==='after-damage'){const talentStatus=directStatus(text,{bb}),statusProb=Number(bb.prob??bb.attack_prob??bb.buff_prob),statusAllowed=!has(text,/概率|几率/ )||!Number.isFinite(statusProb)||battle.economy.random()<statusProb;let statusDuration=talentStatus?.duration;if(statusDuration&&battle.skillActive(source)&&Number(battle.profile(source)?.skill?.blackboard?.find?.(x=>x.key==='talent_scale')?.value))statusDuration*=Number(battle.profile(source).skill.blackboard.find(x=>x.key==='talent_scale').value);if(talentStatus&&statusAllowed&&has(text,/攻击|命中|伤害|附带/))applyStatus(target,talentStatus.kind,statusDuration,{source:source.uid,resistible:false});
    const talentElement=Number(bb.ep_damage_ratio??bb.element_damage_scale??bb.damage_scale??bb.elementScale);if(Number.isFinite(talentElement)&&has(text,/灼痕|灼燃|凋亡损伤|元素伤害|神经损伤/)&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*talentElement,type:has(text,/凋亡/)?'necrosis':has(text,/神经损伤/)?'neural':'burn',cause:'extra',parentEventId:payload.event?.eventId});}
   }
  }
@@ -161,7 +163,7 @@ export function onEvent(battle,type,payload,ctx){
    const probability=Number(bb.prob??bb.attack_prob),scale=Number(bb.aoe_atk_scale??bb.atkScale??bb.damageScale);if(Number.isFinite(probability)&&Number.isFinite(scale)&&battle.economy.random()<probability){for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&battle.inside(source,e,true)))ctx.dealDamage(battle,{source:owner,target:e,amount:battle.stats(owner).atk*scale,type:'physical',cause:'skill'});}
   }
  }
- if(type==='enemy-death'&&payload.target){
+  if(type==='enemy-death'&&payload.target){
   for(const u of battle.s.units.filter(x=>x.deployed&&x.hp>0))for(const talent of activeTalents(battle,u)){
    const text=talent.description||'',bb=talentValues(talent);if(!has(text,/敌人倒下|击倒.*恢复|击杀/))continue;
    if(Number(bb.hp_ratio)>0)ctx.applyHeal(battle,{source:u,target:u,amount:u.maxHp*bb.hp_ratio});
