@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {operatorRegistry,skillConfig,statMods} from '../dist/native-operator-effects.js';
 import {openBattle,deployNow,enemy,byId} from './effects-harness.mjs';
-import {dealDamage,applyElementDamage,operatorSkillConfig} from '../dist/native-effects.js';
+import {dealDamage,applyElementDamage,operatorSkillConfig,tickLogic} from '../dist/native-effects.js';
 import {moveActor} from '../dist/native-effects.js';
 import {applyStatus,tickStatuses} from '../dist/status.js';
 
@@ -87,4 +87,10 @@ test('runtime contains the pinned summon token catalogue for later per-operator 
 test('area skill adapters retain both enemy damage and ally regeneration channels',()=>{
  const {b}=openBattle({chessId:'chess_char_5_15_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);
  const zones=b.s.logicEffects.filter(f=>f.sourceUid===u.uid);assert.ok(zones.some(f=>f.values?.dot&&f.trackArea));assert.ok(zones.some(f=>f.values?.hot&&f.trackArea));assert.ok(zones.every(f=>f.endsAt===null));
+});
+
+test('timed ammo talents grant their bonus once and feed the next activation',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_01_b',skillIndex:1});deployNow(b);const u=b.s.units[0];
+ for(let i=1;i<=600;i++){b.s.time=i/30;tickLogic(b,1/30);}
+ assert.equal(u.talentAmmoBonus,3);u.sp=b.spCost(u);b.activate(u);assert.equal(u.ammo,17);
 });
