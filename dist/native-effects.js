@@ -2,7 +2,7 @@ import {applyDamage,recoverHP,damage} from './combat.js';
 import {applyStatus} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes} from './protocol.js';
 import {gainSp} from './native-sp.js';
-import {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor,talentValues} from './native-operator-effects.js';
+import {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor,talentValues,grantCoins,coinCapFor,coinGainAtSkillStart} from './native-operator-effects.js';
 
 export const BATTLE_SCHEMA_VERSION=1;
 export const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','attached','aura','guard','barrier','lock','stat']);
@@ -12,10 +12,11 @@ const QUEUE_CAP=256,ANCESTOR_CAP=32;
 export function emptySettle(){return {nextEventId:1,nextAttackId:1,nextEffectId:1,nextSeq:1,queue:[],consumed:[],byId:{},fault:null};}
 export function ensureBattleShape(s){
  s.battleSchemaVersion??=BATTLE_SCHEMA_VERSION;
+ s.cost??=20;s.costInitial??=20;s.costMin??=0;s.costMax??=99;s.costRecoveryInterval??=1;s.costRecoveryClock??=0;
  s.logicEffects??=[];s.summons??=[];s.logicLog??=[];
  s.settle={...emptySettle(),...s.settle,byId:s.settle?.byId||{}};
  s.settle.consumed=s.settle.consumed||[];s.settle.queue=s.settle.queue||[];
- for(const u of s.units||[]){u.deployGen??=0;u.shieldLayers??=[];u.barriers??=[];u.damageRedirects??=[];u.exitLife=u.exitLife||null;}
+ for(const u of s.units||[]){u.deployGen??=0;u.baseCost??=null;u.deploymentCost??=0;u.lastDeploymentCost??=0;u.redeployPenalty??=0;u.waitingCost??=false;u.shieldLayers??=[];u.barriers??=[];u.damageRedirects??=[];u.exitLife=u.exitLife||null;}
  for(const e of s.enemies||[]){e.shieldLayers??=[];e.barriers??=[];e.damageRedirects??=[];}
  return s;
 }
@@ -26,7 +27,7 @@ export function migrateBattle(saved){
  s.nextId=Math.max(s.nextId||100000,...[...s.units,...s.enemies,...s.summons].map(a=>a.uid+1));return s;
 }
 export function validateBattle(s,battle){
- if(!s||!Array.isArray(s.units)||!Array.isArray(s.enemies)||!Number.isFinite(s.time)||!Number.isFinite(s.frame))return 'invalid battle snapshot';
+ if(!s||!Array.isArray(s.units)||!Array.isArray(s.enemies)||!Number.isFinite(s.time)||!Number.isFinite(s.frame)||!Number.isFinite(s.cost)||!Number.isFinite(s.costInitial)||!Number.isFinite(s.costMin)||!Number.isFinite(s.costMax)||!Number.isFinite(s.costRecoveryInterval)||!Number.isFinite(s.costRecoveryClock)||s.costRecoveryInterval<=0||s.costMin>s.costMax||s.cost<s.costMin)return 'invalid battle snapshot';
  const ids=new Set();
  for(const actor of [...s.units,...s.enemies,...(s.summons||[])]){
  if(!Number.isInteger(actor.uid)||ids.has(actor.uid))return 'duplicate or invalid uid';
@@ -141,8 +142,11 @@ export function commitExit(battle,{target,reason='knockdown',killer=null,event=n
  }
  if(target.exitLife===lifeKey(target))return false;
  target.exitLife=lifeKey(target);
+ if(target.kind!=='summon'&&target.deployed)target.redeployPenalty=Math.min(2,(target.redeployPenalty||0)+1);
+ if(target.kind!=='summon'&&reason==='retreat'&&target.refundEligible&&target.deploymentCost>0){const profile=battle.profile(target),rate=profile.branch==='charger'?1:profile.branch==='merchant'?0:.5,cap=target.refundCap??target.deploymentCost,refund=Math.floor(Math.min(target.deploymentCost*rate,cap));if(refund>0)battle.gainCost?.(refund);target.refundEligible=false;}
  target.deployed=false;target.downed=false;target.action=null;target.skillLeft=0;target.ammo=0;
- if(reason==='forced'||reason==='skill'){target.hp=0;target.down=battle.stats(target).respawnTime;target.downMax=target.down;}
+ if(reason==='knockdown')target.hp=0;
+ if(reason==='forced'||reason==='skill'||reason==='merchant-fee'){target.hp=0;target.down=battle.stats(target).respawnTime;target.downMax=target.down;}
  else{
   target.down=battle.stats(target).respawnTime;
   if(battle.s.band==='band_emperor')target.down*=.5;
@@ -187,6 +191,10 @@ function runFatal(battle,target,wouldDie,event){
   target.surtrLock=true;target.hp=Math.max(1,target.hp);
   log(battle,'fatal-lock',{uid:target.uid,eventId:event.eventId,until:target.lockHp.endsAt});
   return true;
+ }
+ if(target.id==='char_1033_swire2'){
+  const t=activeTalentsOf(battle,target).find(x=>x.name==='破财消灾');
+  if(t){const base=Math.abs(Number(t.values.cost)||5),times=target.merchantRescueCount||0,cost=base*Math.pow(Number(t.values.cost_multi)||2,times);if(battle.spendCost?.(cost)){target.merchantRescueCount=times+1;target.hp=target.maxHp*(Number(t.values.hp_ratio)||.7);log(battle,'fatal-cost-save',{uid:target.uid,cost,hp:target.hp,eventId:event.eventId});return true;}}
  }
  if(typeof battle.fatalHook==='function')return battle.fatalHook(target,event);
  return false;
@@ -377,7 +385,7 @@ export function tickLogic(battle,dt){
  tickSummons(battle,dt);
 }
 
-function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,log:(b,t,p)=>log(b,t,p)};}
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,log:(b,t,p)=>log(b,t,p)};}
 
 function zoneActors(battle,fx,side){
  const cx=fx.x,cy=fx.y,r=fx.radius??1;
@@ -487,6 +495,9 @@ export function effectStatMods(battle,u){
    const t=talents.find(x=>x.name==='铳弹协约');if(t){const base=t.values.atk||.09,mult=t.values.mult||2;auras.push({key:'angel-ammo-atk',stat:'atk',layer:'maxSame',v:base,src:'新约能天使',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'});auras.push({key:'angel-ammo-laterano',stat:'atk',layer:'maxSame',v:base*mult,src:'新约能天使·拉特兰',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'&&battle.profile(v)?.bonds?.includes('lateranoShip')});}
   }
   if(src.id==='char_1012_skadi2'&&src.inspireAura&&battle.s.time<src.inspireAura.endsAt)auras.push({key:'skadi2-inspire',stat:'atkFlat',layer:'inspire',v:src.inspireAura.value,src:'浊心斯卡蒂',ok:v=>v.uid===src.uid||battle.inside(src,v,true)});
+  if(src.id==='char_237_gravel'){
+   const t=talents.find(x=>x.name==='小个子支援'),bb=t&&talentValues(t);if(t)auras.push({key:'gravel-low-cost-def',stat:'def',layer:'maxSame',v:Number(bb.def)||0,src:'砾',ok:v=>v.kind!=='summon'&&(Number(v.baseCost??battle.profile(v)?.attributes?.cost)||0)<=Number(bb['cond.cost']??10)});
+  }
   if(src.id==='char_358_lisa'){
    const t=talents.find(x=>x.name==='技力光环·辅助');if(t)auras.push({key:'sp_recovery_aura',stat:'spRecoveryPerSec',layer:'maxSame',v:t.values.sp_recovery_per_sec||.4,src:'铃兰',ok:v=>battle.profile(v).profession==='SUPPORT'||v.uid===src.uid});
   }
@@ -540,7 +551,7 @@ export function moveActor(battle,target,source,description=''){
 
 export function dispatch(battle,type,payload){
  const {source,target,event}=payload;
- const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,log:(b,t,p)=>log(b,t,p)};
+ const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,log:(b,t,p)=>log(b,t,p)};
  if(type==='skill-start')payload.genericSuppress=operatorSkillStart(battle,target,ctx);
  else onEvent(battle,type,payload,ctx);
  if(type==='after-damage'&&payload.cause!=='dot'&&payload.cause!=='reflect'){
@@ -618,6 +629,9 @@ function grantGuard(battle,target,spec){
 
 function onOperatorDeploy(battle,u){
  u.exitLife=null;u.revivedThisLife=false;u.surtrLock=false;u.lumenHotPending=false;
+ if(u.id==='char_1033_swire2'&&(u.source?.skillIndex??battle.profile(u).skillIndex)<2){u.coinCap=coinCapFor(battle.profile(u));u.coinSkillEnabled=true;const opening=coinGainAtSkillStart(battle,u);if(opening)grantCoins(u,opening,u.coinCap);}
+ if(u.id==='char_496_wildmn'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===0){const bb=skillBB(battle,u);u.wildmaneAspd=Number(bb.attack_speed)||100;u.wildmaneAspdUntil=battle.s.time+(Number(battle.profile(u).skill?.duration)||25);}
+ if(u.id==='char_237_gravel'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===0){const bb=skillBB(battle,u);u.gravelDefBuff={ratio:Number(bb.def)||0,duration:Number(bb.duration)||8,endsAt:battle.s.time+(Number(bb.duration)||8)};}
  if(u.id==='char_237_gravel'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===1){
   const bb=skillBB(battle,u),amount=battle.stats(u).maxHp*(bb.hp_ratio||1.8),dur=bb.duration||10;
   grantShield(battle,u,{amount,endsAt:battle.s.time+dur,decayPerSec:amount/dur,sourceUid:u.uid,id:'gravel-s2'});
@@ -637,12 +651,24 @@ function onOperatorDeploy(battle,u){
  if(u.id==='char_1023_ghost2'){spawnSummon(battle,u,{type:'ghost2-substitute',tokenId:'token_10024_ebnhlz_rcube',name:'旧日残影',targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:false});}
  u.duskFirstAttack=false;
 }
- function onSkillStart(battle,u){
+function onSkillStart(battle,u){
  const idx=u.source?.skillIndex??battle.profile(u).skillIndex;
+ if(u.id==='char_420_flamtl'&&idx===0){u.physicalEvadeOnce=true;}
+ if(u.id==='char_420_flamtl'&&idx===1){const bb=skillBB(battle,u),duration=Number(bb['flamtl_s_2.duration'])||10,prob=Number(bb['flamtl_s_2.prob'])||0;for(const a of alliedActors(battle.s).filter(v=>v.deployed&&v.hp>0&&chebyshev(u,v)<=1)){a.physicalEvadeUntil=battle.s.time+duration;a.physicalEvadeProb=prob;}}
+ if(u.id==='char_420_flamtl'&&idx===2){u.skillEvasionProb=Number(skillBB(battle,u).prob)||0;}
+ if(u.id==='char_4026_vulpis'&&idx===1){const cfg=skillConfig(battle.profile(u)),bb=cfg.bb,targets=enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable&&battle.inside(u,e,true)).slice(0,Number(bb.max_target)||6);for(const e of targets){const was=(e.statuses||[]).some(s=>s.kind==='sluggish');dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(cfg.atkScale)||1),type:'arts',cause:'skill',skill:true});applyStatus(e,was?'stun':'sluggish',Number(was?bb.stun:bb.sluggish)||1,{source:u.uid,resistible:false});}return true;}
+ if(u.id==='char_4026_vulpis'&&idx===2){u.vulpisKilled=false;u.vulpisMarks={};}
  if(u.id==='char_1012_skadi2'&&idx===2){const bb=skillBB(battle,u),duration=battle.profile(u).skill.duration;u.inspireAura={value:(battle.profile(u).attributes.atk||0)*Number(bb.atk||0),endsAt:battle.s.time+(duration>0?duration:1e9)};}
  if(u.id==='char_344_beewax'&&idx===1){const bb=skillBB(battle,u),token=spawnSummon(battle,u,{type:'beewax-obelisk',name:'沙之碑',targetable:true,canBlock:true,canAttack:false,occupiesTile:true,duration:u.skillLeft});if(token)for(const e of enemyActors(battle.s).filter(e=>chebyshev(token,e)<=1)){dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(bb.atk_scale||2),type:'arts',cause:'skill'});applyStatus(e,'stun',bb.stun||1,{source:u.uid,resistible:false});}return true;}
  if(u.id==='char_4016_kazema'&&idx===1){spawnSummon(battle,u,{type:'kazema-shadow',name:'纸偶',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});}
  if(u.id==='char_1019_siege2'&&idx===2){spawnSummon(battle,u,{type:'siege2-golden',name:'黄金盟誓',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});}
+ if(u.id==='char_1033_swire2'&&idx===1){
+  const target=battle.targets(u)[0],cfg=skillConfig(battle.profile(u)),range=battle.range(u,true),candidates=[...(target?[target]:[]),...range.map(p=>({x:p.x,y:p.y}))];
+  let token=null;
+  for(const point of candidates){const tile=battle.map.grid[point.y]?.[point.x];if(!tile||tile.buildableType==='NONE'||tile.obstacle||tile.heightType==='HIGHLAND')continue;token=spawnSummon(battle,u,{type:'swire2-trap',name:'香槟炸弹',targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,x:point.x,y:point.y});if(token)break;}
+  if(token){token.trapScale=Number(cfg.bb.atkScale)||1.4;token.trapSlow=Number(cfg.bb.sluggish)||2;token.trapTriggered=false;token.trapExtraAt=null;token.trapExtraUsed=false;}
+  return true;
+ }
  if(u.id==='char_249_mlyss'&&idx===2){const token=spawnSummon(battle,u,{type:'mlyss-fluid',name:'流形',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:25,persistAfterSourceGone:true});const copy=battle.s.units.find(v=>v.uid!==u.uid&&!v.deployed&&v.hp>0);if(token&&copy){const attrs=battle.profile(copy).attributes;token.copyOf=copy.uid;for(const [to,from] of [['maxHp','maxHp'],['hp','maxHp'],['atk','atk'],['def','def'],['res','magicResistance'],['blockCnt','blockCnt'],['interval','baseAttackTime'],['attackSpeed','attackSpeed']])if(Number.isFinite(attrs[from]))token[to]=attrs[from];token.canBlock=token.blockCnt>0;token.occupiesTile=token.canBlock;token.damageType=battle.behavior?.(copy)?.damageType||'physical';token.range=Math.max(1.1,Math.max(...(battle.profile(copy).range?.grids||[]).map(g=>Math.hypot(g.col,g.row)),1));} }
  if(u.id==='char_143_ghost'&&idx===1){u.lockHp={min:1,endsAt:null,onEnd:null};log(battle,'lock',{uid:u.uid,min:1});}
  if(u.id==='char_1023_ghost2'&&idx===1){u.lockHp={min:1,endsAt:null,onEnd:'forced'};log(battle,'lock',{uid:u.uid,min:1,operator:'归溟幽灵鲨'});}
@@ -672,11 +698,13 @@ function onOperatorDeploy(battle,u){
 }
 function onSkillEnd(battle,u){
  const idx=u.source?.skillIndex??battle.profile(u).skillIndex;
+ u.pendingPeriodicCost=null;u.pendingNextAttack=null;u.pendingCostGain=null;
  for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-heal-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-loss:${u.id}:${u.skillCount}`))dropEffect(battle,fx,'skill-end');
  for(const talent of activeTalentsOf(battle,u)){const text=talent.description||'',bb=talent.values||{};if(/技能结束.*恢复.*生命|技能结束.*回复.*生命/.test(text)&&Number(bb.hp_ratio)>0)applyHeal(battle,{source:u,target:u,amount:u.maxHp*Number(bb.hp_ratio)});}
  if(u.unhealable)u.unhealable=false;
  if(u.id==='char_1012_skadi2')u.inspireAura=null;
  const skill=battle.profile(u)?.skill,skillText=skill?.description||'',skillBBValue=skillBB(battle,u);if(/技能结束时.*所有敌人.*法术伤害/.test(skillText)&&Number(skillBBValue.atk_scale)>0)for(const e of enemyActors(battle.s).filter(e=>battle.inside(u,e,true)))dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*Number(skillBBValue.atk_scale),type:'arts',cause:'skill'});
+ if(u.id==='char_4026_vulpis'&&idx===2&&u.vulpisKilled){applyStatus(u,'camouflage',1e9,{source:u.uid,resistible:false});u.vulpisKilled=false;}
  if(u.floatUnits){const elapsed=Math.max(0,battle.s.time-(u.floatStartedAt??battle.s.time));if(u.floatOverdrive&&elapsed>0)applyStatus(u,'stun',elapsed,{source:u.uid,resistible:false});u.floatUnits=0;u.floatTarget=null;u.floatStartedAt=null;u.floatOverdrive=false;}
  if(u.damageProtection){
   const protection=u.damageProtection;u.damageProtection=null;
@@ -702,7 +730,7 @@ function onOperatorExit(battle,u,reason){
  }
 }
 
-const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman'};
+const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
 export function spawnSummon(battle,owner,spec){
  const tokenId=spec.tokenId||TOKEN_IDS[spec.type],entity=battle.data.tokens?.[tokenId];
  if(!entity)throw Error('缺少固定召唤物数据 '+spec.type);
@@ -723,6 +751,11 @@ function tickSummons(battle,dt){
   if(s.endsAt!=null&&battle.s.time>=s.endsAt){commitExit(battle,{target:s,reason:'forced'});continue;}
   if(s.canHeal&&battle.s.time+1e-9>=s.nextHealAt){for(const a of alliedActors(battle.s).filter(v=>v.deployed&&v.hp>0&&chebyshev(s,v)<=1&&v.healable!==false))applyHeal(battle,{source:s,target:a,amount:s.atk,origin:s});s.nextHealAt+=s.interval;}
   if(s.type==='ghost2-substitute'&&s.deployed&&s.hp>0){const owner=getActor(battle.s,s.ownerUid),talent=owner&&activeTalentsOf(battle,owner).find(t=>t.name==='拥抱自我'),bb=talent?.values||{};s.nextAuraAt??=battle.s.time+1;if(battle.s.time+1e-9>=s.nextAuraAt){s.nextAuraAt+=1;for(const e of enemyActors(battle.s).filter(e=>chebyshev(s,e)<=1)){applyStatus(e,'sluggish',1.1,{source:s.uid,resistible:false});dealDamage(battle,{source:owner||s,target:e,amount:(owner?battle.stats(owner).atk:s.atk)*(Number(bb.atk_scale)||.4),type:'arts',cause:'skill'});}}}
+  if(s.type==='swire2-trap'&&s.deployed&&s.hp>0){
+   const owner=getActor(battle.s,s.ownerUid),touching=enemyActors(battle.s).filter(e=>!e.hidden&&chebyshev(s,e)<=.5).sort((a,b)=>a.uid-b.uid)[0];
+   if(touching&&!s.trapTriggered){s.trapTriggered=true;s.trapTargetUid=touching.uid;s.trapExtraAt=battle.s.time+3;dealDamage(battle,{source:owner||s,target:touching,amount:(owner?battle.stats(owner).atk:s.atk)*(s.trapScale||1),type:'physical',cause:'skill',skill:true});applyStatus(touching,'sluggish',s.trapSlow||2,{source:owner?.uid||s.uid});log(battle,'trap-trigger',{uid:s.uid,targetUid:touching.uid,ownerUid:owner?.uid});}
+   if(s.trapTriggered&&s.trapExtraAt!=null&&battle.s.time+1e-9>=s.trapExtraAt&&!s.trapExtraUsed){s.trapExtraUsed=true;const target=getActor(battle.s,s.trapTargetUid);if(target?.hp>0)dealDamage(battle,{source:owner||s,target,amount:(owner?battle.stats(owner).atk:s.atk)*(s.trapScale||1),type:'physical',cause:'skill',skill:true});commitExit(battle,{target:s,reason:'forced'});}
+  }
   if(s.type==='vigil-wolf'&&battle.s.time>=s.nextLifeAt){s.lives=Math.min(3,(s.lives||0)+1);s.blockCnt=s.lives;s.nextLifeAt+=25;if(s.hp<=0){s.hp=s.maxHp;s.deployed=true;s.targetable=true;s.deployGen++;s.exitLife=null;}}
   if(s.canAttack&&s.deployed&&s.hp>0){s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){const e=enemyActors(battle.s).filter(x=>!x.hidden).sort((a,b)=>chebyshev(s,a)-chebyshev(s,b)||a.uid-b.uid)[0];if(e&&chebyshev(s,e)<=(s.range||1.1)){for(let i=0;i<(s.lives??1);i++)dealDamage(battle,{source:s,target:e,amount:s.atk,type:s.damageType||'physical',cause:'attack'});s.attackCooldown=s.interval||1;}}}
  }

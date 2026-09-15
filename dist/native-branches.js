@@ -22,7 +22,7 @@ export const BRANCH_POLICIES={
  tactician:{antiAir:true,pending:['战术点与援军']},summoner:{damageType:'arts',antiAir:true,pending:['召唤物生命周期']},soulcaster:{damageType:'arts',antiAir:true,pending:['击杀召唤与召唤物索敌']},
  duelist:{spRequiresBlock:true,pending:['模组解除阻回的例外']},dollkeeper:{pending:['替身切换与Buff清理']},skywalker:{pending:['起飞与空中阻挡']},skybreaker:{antiAir:true,airOnlyIdle:true,pending:['起飞／降落']},
  ritualist:{damageType:'arts',antiAir:true,pending:['元素损伤']},underminer:{damageType:'arts',antiAir:true},
- merchant:{pending:['部署费用持续消耗与自动撤退']},charger:{pending:['击杀回费与撤退费用返还']},traper:{antiAir:true,pending:['陷阱单位与部署条件']},alchemist:{pending:['炼金单元']},counsellor:{pending:['待部署区支援']},mercenary:{pending:['部署费用强化']}
+ merchant:{},charger:{pending:['击杀回费与撤退费用返还']},traper:{antiAir:true,pending:['陷阱单位与部署条件']},alchemist:{pending:['炼金单元']},counsellor:{pending:['待部署区支援']},mercenary:{pending:['部署费用强化']}
 };
 export function branchTrait(profile){
  const phase=profile.phase??Number(profile.status?.evolvePhase?.replace('PHASE_','')||0),level=profile.level??profile.status?.charLevel??1;

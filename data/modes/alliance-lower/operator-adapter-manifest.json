@@ -200,7 +200,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "cost-and-skill-lifecycle"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -359,7 +361,8 @@
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
       "partialHandlers": [
-        "decaying-shield"
+        "decaying-shield",
+        "cost-aura-and-s1"
       ],
       "needsSpecialHandler": true
     },
@@ -486,7 +489,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "merchant-cost-and-trap"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -642,7 +647,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "cost-and-vulpis-effects"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -724,7 +731,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "cost-and-next-attack"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -874,7 +883,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "cost-and-evasion"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -1136,7 +1147,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "cost-and-reserve-modifiers"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -1333,7 +1346,8 @@
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
       "partialHandlers": [
-        "fluid-token"
+        "fluid-token",
+        "cost-and-rhine-discount"
       ],
       "needsSpecialHandler": true
     },

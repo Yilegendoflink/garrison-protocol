@@ -114,7 +114,7 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
  if(!ok)notice(g.lastError||'当前资金、位置或阶段不允许此操作');save();render();if(g.s.phase==='finished')showResult();
 }
 function updateHud(){const g=state.game;if(!g||state.view!=='game')return;const b=g.battle?.s,rounds=buildPhasePlan(data,g.s.modeId).filter(r=>!r.isConditional).length,status=document.getElementById('native-status');
- if(status){const time=b&&g.s.phase==='battle'?`<div><small>剩余时间</small><b>${Math.max(0,Math.ceil(b.limit-b.time))}<i> 秒</i></b></div>`:`<div><small>剩余资金</small><b class="funds">${g.s.funds}<i> ◆</i></b></div>`;
+ if(status){const time=b&&g.s.phase==='battle'?`<div><small>剩余时间</small><b>${Math.max(0,Math.ceil(b.limit-b.time))}<i> 秒</i></b></div><div><small>费用</small><b class="funds">${Math.floor(b.cost??20)}<i> ◆</i></b></div>`:`<div><small>剩余资金</small><b class="funds">${g.s.funds}<i> ◆</i></b></div>`;
   const wave=b&&g.s.phase==='battle'?`<div><small>波次</small><b>${b.kills}<i> / ${b.total}</i></b></div>`:`<div><small>回合</small><b>${g.s.round}<i>/${rounds}</i></b></div>`;
   status.innerHTML=`<div><small>生命</small><b class="hp">${g.s.hp}<i>/${g.s.maxHp}</i></b></div>${time}${wave}`;}
  const progress=document.getElementById('native-wave-progress');if(progress)progress.textContent=g.s.phase==='battle'&&b?`击倒 ${b.kills} / ${b.total} · 漏失 ${b.leaks}`:`${g.s.units.filter(u=>u.position).length} / ${g.s.capacity} 部署`;

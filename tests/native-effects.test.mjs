@@ -120,8 +120,114 @@ test('新约能天使 ammo contract gives the stronger Laterano aura only to amm
  const base=b.profile(inside).attributes.atk;assert.ok(b.stats(inside).atk>base);assert.ok(b.stats(inside).parts.some(p=>p.src==='新约能天使·拉特兰'&&p.stat==='atk'));
 });
 
-test('德克萨斯 roster talent grants battle deployment points once on first deployment',()=>{
- const {b}=openBattle({chessId:'chess_char_1_08_b',skillIndex:1});const before=b.economy.s.funds;deployNow(b);assert.equal(b.economy.s.funds-before,2);
+test('德克萨斯 roster talent grants initial battle cost before automatic deployment',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_08_b',skillIndex:1});assert.equal(b.s.cost,22);deployNow(b);assert.equal(b.s.cost,22);
+});
+
+test('battle cost starts at 20 and stays separate from preparation funds',()=>{
+ const {b}=openBattle(reps.operators.yak);deployNow(b);
+ assert.equal(b.s.cost,20);assert.equal(b.economy.s.funds,0);
+ b.gainCost(3);assert.equal(b.s.cost,23);assert.equal(b.economy.s.funds,0);
+ assert.equal(b.spendCost(5),true);assert.equal(b.s.cost,18);assert.equal(b.economy.s.funds,0);
+ b.s.cost=98;b.s.costRecoveryClock=0;b.tickCost(2);assert.equal(b.s.cost,99);assert.equal(b.s.costRecoveryClock,1);
+});
+
+test('忍冬的在场天赋提高费用自然回复速度',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_18_b',skillIndex:0});deployNow(b);
+ b.s.cost=0;b.s.costRecoveryClock=0;b.tickCost(.9);assert.equal(b.s.cost,0);
+ b.tickCost(.02);assert.equal(b.s.cost,1);
+});
+
+test('费用回收技能按触发时机写入战斗费用',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_18_b',skillIndex:0});deployNow(b);
+ const u=byId(b,'char_4026_vulpis'),e=enemy(b,{x:u.x+1,y:u.y,hp:100000,def:0});u.sp=b.spCost(u);b.s.cost=0;b.s.costRecoveryInterval=999999;b.activate(u);assert.equal(b.s.cost,0);b.hit(u,e,10,'physical');assert.equal(b.s.cost,1);
+});
+
+test('伊内丝下次攻击的回费与附伤在命中时结算',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_04_b',skillIndex:0});deployNow(b);
+ const u=byId(b,'char_4087_ines'),e=enemy(b,{x:u.x+1,y:u.y,hp:100000,def:0});u.sp=b.spCost(u);b.s.cost=0;b.s.costRecoveryInterval=999999;b.activate(u);assert.equal(b.s.cost,0);const before=e.hp;b.hit(u,e,10,'physical');assert.ok(e.hp<before);assert.equal(b.s.cost,2);assert.ok(b.s.logicEffects.some(f=>f.kind==='dot'&&f.targetUid===e.uid));
+});
+
+test('冲锋手击杀回费使用战斗费用账本',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_07_b',skillIndex:0});deployNow(b);
+ const u=byId(b,'char_222_bpipe'),e=enemy(b,{x:u.x+1,y:u.y,hp:100,def:0});b.s.cost=0;b.s.costRecoveryInterval=999999;b.hit(u,e,1000,'physical');assert.equal(e.hp,0);assert.equal(b.s.cost,1);
+});
+
+test('再部署在冷却结束后按当前实例部署费用扣除战斗费用',()=>{
+ const {b}=openBattle(reps.operators.yak);deployNow(b);
+ const u=byId(b,'char_199_yak');b.s.cost=99;b.s.costRecoveryInterval=999999;commitExit(b,{target:u,reason:'knockdown'});u.down=0;b.step();
+ const expected=Math.floor(u.baseCost*1.5);assert.equal(u.deployed,true);assert.equal(b.s.cost,99-expected);assert.equal(u.lastDeploymentCost,expected);assert.equal(u.redeployPenalty,1);
+});
+
+test('砾的初始费用条件防御光环使用基础部署费用',()=>{
+ const {b}=openBattle([{chessId:'chess_char_2_12_b',skillIndex:0},reps.operators.yak]);deployNow(b);
+ const gravel=byId(b,'char_237_gravel');assert.ok(gravel);const base=b.profile(gravel).attributes.def;assert.ok(b.stats(gravel).def>=base*1.06);
+});
+
+test('缪尔赛思开源节流降低莱茵生命单位的再部署费用',()=>{
+ const {b}=openBattle([{chessId:'chess_char_6_11_b',skillIndex:0},{chessId:'chess_char_2_02_b',skillIndex:0}]);deployNow(b);
+ const m=byId(b,'char_249_mlyss'),silent=byId(b,'char_108_silent');assert.equal(b.profile(m).groupId,'rhine');assert.equal(b.profile(silent).groupId,'rhine');b.s.cost=99;b.s.costRecoveryInterval=999999;commitExit(b,{target:silent,reason:'knockdown'});silent.down=0;b.step();assert.equal(silent.lastDeploymentCost,Math.floor((silent.baseCost-2)*1.5));
+});
+
+test('撤退返费按实例部署费用、上限和分支倍率结算',()=>{
+ const normal=openBattle(reps.operators.yak).b;deployNow(normal);const y=byId(normal,'char_199_yak');normal.s.cost=0;y.deploymentCost=12;y.refundCap=10;y.refundEligible=true;commitExit(normal,{target:y,reason:'retreat'});assert.equal(normal.s.cost,6);
+ const charger=openBattle({chessId:'chess_char_4_07_b',skillIndex:0}).b;deployNow(charger);const p=byId(charger,'char_222_bpipe');charger.s.cost=0;p.deploymentCost=12;p.refundCap=8;p.refundEligible=true;commitExit(charger,{target:p,reason:'retreat'});assert.equal(charger.s.cost,8);
+});
+
+test('凛御银灰技能会修改尚未自动部署单位的费用属性',()=>{
+ const {b}=openBattle([{chessId:'chess_char_5_14_b',skillIndex:0},{chessId:'chess_char_3_03_b',skillIndex:0}]);
+ const svash=byId(b,'char_1045_svash2'),guard=byId(b,'char_308_swire');b.deploy(svash);svash.sp=b.spCost(svash);const base=guard.baseCost;b.activate(svash);assert.equal(guard.costRealtimeDelta,-5);assert.equal(b.deploymentCost(guard),Math.max(0,base-5));
+});
+
+test('野鬃 S1 与砾 S1 的部署增益按生命周期衰减',()=>{
+ const wild=openBattle({chessId:'chess_char_1_19_b',skillIndex:0}).b;deployNow(wild);const w=byId(wild,'char_496_wildmn'),wildBase=wild.profile(w).attributes.attackSpeed;assert.equal(wild.stats(w).attackSpeed,wildBase+100);wild.s.time=26;assert.equal(wild.stats(w).attackSpeed,wildBase);
+ const gravel=openBattle({chessId:'chess_char_2_12_b',skillIndex:0}).b;deployNow(gravel);const g=byId(gravel,'char_237_gravel'),base=gravel.profile(g).attributes.def;assert.equal(gravel.stats(g).def,base*(1+3.4+.06));gravel.s.time=4;assert.ok(gravel.stats(g).def<base*(1+3.4+.06)&&gravel.stats(g).def>base*(1+.06));gravel.s.time=9;assert.equal(gravel.stats(g).def,base*(1+.06));
+});
+
+test('忍冬 S2 先停顿后眩晕并造成法术伤害，S3 击杀后进入迷彩',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_18_b',skillIndex:1});deployNow(b);const u=byId(b,'char_4026_vulpis'),e=enemy(b,{x:u.x+1,y:u.y,hp:100000,def:0});u.sp=b.spCost(u);applyStatus(e,'sluggish',10,{source:'probe',resistible:false});const hp=e.hp;b.activate(u);assert.ok(e.hp<hp);assert.ok(e.statuses.some(s=>s.kind==='stun'));
+ const s=openBattle({chessId:'chess_char_3_18_b',skillIndex:2}).b;deployNow(s);const v=byId(s,'char_4026_vulpis'),f=enemy(s,{x:v.x+1,y:v.y,hp:10,def:0});v.sp=s.spCost(v);s.activate(v);const initialAspd=s.profile(v).attributes.attackSpeed;assert.ok(s.stats(v).attackSpeed>initialAspd);s.hit(v,f,1000,'physical');v.skillLeft=0;dispatch(s,'skill-end',{target:v});assert.ok(v.statuses.some(x=>x.kind==='camouflage'));
+});
+
+test('焰尾费用技能的闪避按一次性、范围和技能状态区分',()=>{
+ const one=openBattle({chessId:'chess_char_4_19_b',skillIndex:0}).b;deployNow(one);const a=byId(one,'char_420_flamtl'),foe={uid:991,atk:100,damageType:'physical'};a.sp=one.spCost(a);one.activate(a);one.hurt(a,foe);assert.equal(a.hp,a.maxHp);one.hurt(a,foe);assert.ok(a.hp<a.maxHp);
+ const group=openBattle([{chessId:'chess_char_4_19_b',skillIndex:1},reps.operators.yak]).b;deployNow(group);const f=byId(group,'char_420_flamtl'),ally=byId(group,'char_199_yak');ally.x=f.x;ally.y=f.y+1;group.economy.random=()=>0;f.sp=group.spCost(f);group.activate(f);const hp=ally.hp;group.hurt(ally,foe);assert.equal(ally.hp,hp);
+ const skill=openBattle({chessId:'chess_char_4_19_b',skillIndex:2}).b;deployNow(skill);const s=byId(skill,'char_420_flamtl');skill.economy.random=()=>0;s.sp=skill.spCost(s);skill.activate(s);const h=s.hp;skill.hurt(s,{uid:992,atk:100,damageType:'arts'});assert.equal(s.hp,h);
+});
+
+test('行商 fee drains battle cost and auto-withdraws when it is exhausted',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_04_b',skillIndex:0});deployNow(b);
+ const u=byId(b,'char_1033_swire2');b.s.cost=5;b.s.costRecoveryInterval=999999;
+ for(let i=0;i<100;i++)b.step();
+ assert.equal(b.s.cost,2);assert.equal(u.deployed,true);assert.equal(b.economy.s.funds,0);
+ for(let i=0;i<100;i++)b.step();
+ assert.equal(u.deployed,false);assert.equal(u.hp,0);assert.equal(b.s.cost,2);
+});
+
+test('诗怀雅见面礼 consumes a coin, plants a trap and pays the delayed hit',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_04_b',skillIndex:1});deployNow(b);
+ const u=byId(b,'char_1033_swire2'),e=enemy(b,{x:u.x+1,y:u.y,hp:10000,def:0});
+ b.activate(u);const trap=b.s.summons.find(s=>s.type==='swire2-trap');assert.ok(trap);assert.equal(u.coins,0);
+ tickLogic(b,1/30);assert.ok(e.hp<10000);assert.ok(e.statuses.some(s=>s.kind==='sluggish'));
+ const first=e.hp;b.s.time=3.1;tickLogic(b,3.1);assert.ok(e.hp<first);assert.equal(b.s.summons.some(s=>s.type==='swire2-trap'),false);
+});
+
+test('诗怀雅仗义疏财按部署时金币在下一次攻击替换为治疗',()=>{
+ const {b}=openBattle([{chessId:'chess_char_3_04_b',skillIndex:0},reps.operators.yak]);deployNow(b);
+ const u=byId(b,'char_1033_swire2'),ally=byId(b,'char_199_yak'),e=enemy(b,{x:u.x+1,y:u.y,hp:100000,def:0});ally.x=u.x;ally.y=u.y+1;ally.hp=ally.maxHp*.5;b.s.costRecoveryInterval=999999;const coins=u.coins;assert.equal(coins,1);for(let i=0;i<100;i++)b.step();assert.equal(u.coins,0);assert.ok(ally.hp>ally.maxHp*.5);
+});
+
+test('诗怀雅破财消灾 consumes battle cost before saving a lethal hit',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_04_b',skillIndex:2});deployNow(b);
+ const u=byId(b,'char_1033_swire2');b.s.cost=6;
+ dealDamage(b,{source:enemy(b,{x:u.x,y:u.y}),target:u,value:u.hp+1,type:'true'});
+ assert.equal(u.deployed,true);assert.equal(Math.round(u.hp),Math.round(u.maxHp*.7));assert.equal(b.s.cost,1);
+ dealDamage(b,{source:enemy(b,{x:u.x,y:u.y}),target:u,value:u.hp+1,type:'true'});
+ assert.equal(u.deployed,false);assert.equal(b.s.cost,1);
+});
+
+test('诗怀雅千金一掷关闭技能时逐枚消耗金币并攻击',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_04_b',skillIndex:2});deployNow(b);const u=byId(b,'char_1033_swire2'),e=enemy(b,{x:u.x+1,y:u.y,hp:100000,def:0});u.sp=b.spCost(u);b.activate(u);u.coins=3;assert.equal(b.deactivate(u),true);assert.equal(u.coins,0);assert.equal(u.skillLeft,0);assert.ok(e.hp<100000);
 });
 
 test('艾丝黛尔 active skill excludes external healing and restores it at skill end',()=>{

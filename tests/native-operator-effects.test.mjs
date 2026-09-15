@@ -28,9 +28,9 @@ test('generic talent stat extraction only applies direct stat text and exposes s
 
 test('individual skill adapters map namespaced values, status and battle resources',()=>{
  const {b}=openBattle({name:'德克萨斯',chessId:'chess_char_1_08_b',skillIndex:1});deployNow(b);
- const u=byId(b,'char_102_texas'),e=enemy(b,{x:u.x,y:u.y,hp:100000,res:0}),funds=b.economy.s.funds;
+ const u=byId(b,'char_102_texas'),e=enemy(b,{x:u.x,y:u.y,hp:100000,res:0}),funds=b.s.cost;
  u.sp=b.spCost(u);b.activate(u);
- assert.ok(e.hp<100000);assert.ok(e.statuses.some(s=>s.kind==='stun'));assert.ok(b.economy.s.funds>funds);
+ assert.ok(e.hp<100000);assert.ok(e.statuses.some(s=>s.kind==='stun'));assert.ok(b.s.cost>funds);
 });
 
 test('probability talent multiplier changes the current hit without recursive extra damage',()=>{
