@@ -26,7 +26,8 @@ const direct=(text,word)=>has(text,new RegExp('(?:^|[，。； ])'+word+'[+：]'
 export function targetFilter(text,source,target,battle){
  if(target.uid===source.uid)return true;
  const profile=battle.profile(target),profession=profile?.profession||'',position=profile?.position||'';
- const match=text.match(/所有【([^】]+)】(?:职业)?干员/);if(match){const professionMap={医疗:'MEDIC',辅助:'SUPPORT',术师:'CASTER',近卫:'WARRIOR',重装:'TANK',狙击:'SNIPER',先锋:'PIONEER',特种:'SPECIAL'};return profession===match[1]||profession===professionMap[match[1]]||battle.data.branchRules?.records?.find(r=>r.name===match[1])?.id===profile?.branch;}
+ const match=text.match(/所有(?:友方|我方)?【([^】]+)】(?:职业)?干员/);if(match){const professionMap={医疗:'MEDIC',辅助:'SUPPORT',术师:'CASTER',近卫:'WARRIOR',重装:'TANK',狙击:'SNIPER',先锋:'PIONEER',特种:'SPECIAL'};if(match[1]==='拉特兰')return profile?.bonds?.includes('lateranoShip');return profession===match[1]||profession===professionMap[match[1]]||battle.data.branchRules?.records?.find(r=>r.name===match[1])?.id===profile?.branch;}
+ const nearby=text.match(/周围(?:最多)?(\d+|一|两|二|四|八)格/);if(nearby){const radius={一:1,两:2,二:2,四:4,八:8}[nearby[1]]??Number(nearby[1]);if(Math.max(Math.abs((source.x??0)-(target.x??0)),Math.abs((source.y??0)-(target.y??0)))>radius)return false;}
  if(has(text,/所有友方单位|所有我方单位|全体友方单位/))return true;
  if(has(text,/近战友方|近战干员/))return position==='MELEE';
  if(has(text,/远程友方|远程干员/))return position==='RANGED';

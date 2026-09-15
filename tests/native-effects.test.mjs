@@ -139,6 +139,11 @@ test('送葬人 fixed defense penetration applies before mitigation without muta
  const {b}=openBattle({chessId:'chess_char_2_01_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:2000,def:300});const before=e.def;b.hit(u,e,1000,'physical');assert.equal(Math.round(2000-e.hp),860);assert.equal(e.def,before);
 });
 
+test('profession aura target filters keep Star Ursus armor on defenders only',()=>{
+ const {b}=openBattle([{chessId:'chess_char_4_17_b',skillIndex:1},reps.operators.yak,{chessId:'chess_char_1_01_b',skillIndex:1}]);deployNow(b);const yak=b.s.units.find(u=>u.id==='char_199_yak'),inside=b.s.units.find(u=>u.id==='char_498_inside');
+ assert.ok(b.stats(yak).def>b.profile(yak).attributes.def);assert.equal(b.stats(inside).parts.some(p=>p.src==='星熊'),false);
+});
+
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
  assert.equal(manifest.sourceCommit,source.source.commit);
  assert.equal(manifest.gameDataCommit,scope.gameDataCommit);
