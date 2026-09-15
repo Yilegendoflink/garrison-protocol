@@ -171,6 +171,10 @@ test('塞雷娅驻场叠层同时提升攻击与防御，并受最大层数限�
  const {b}=openBattle({chessId:'chess_char_5_11_b',skillIndex:1});deployNow(b);const u=b.s.units[0],base=b.profile(u).attributes;for(let i=1;i<=600;i++){b.s.time=i/30;tickLogic(b,1/30);}const stats=b.stats(u);assert.equal(u.talentStacks,1);assert.ok(stats.atk>base.atk);assert.ok(stats.def>base.def);
 });
 
+test('华法琳紧急包扎只在半血以下的下一次治疗追加生命比例',()=>{
+ const {b}=openBattle([{chessId:'chess_char_4_26_b',skillIndex:0},reps.operators.yak]);deployNow(b);const medic=b.s.units.find(u=>u.id==='char_171_bldsk'),ally=b.s.units.find(u=>u.id==='char_199_yak');ally.hp=ally.maxHp*.4;medic.sp=b.spCost(medic);b.activate(medic);assert.ok(medic.pendingHealBonus);const before=ally.hp;b.heal(medic,ally,10);assert.ok(ally.hp-before>ally.maxHp*.15);assert.equal(medic.pendingHealBonus,null);
+});
+
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
  assert.equal(manifest.sourceCommit,source.source.commit);
  assert.equal(manifest.gameDataCommit,scope.gameDataCommit);
