@@ -1382,12 +1382,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%B0%8F%E6%BB%A1",
       "sourceProfileIds": [
         "chess_char_2_04_a",
         "chess_char_2_04_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1额外目标未接入；S2先睡眠再多目标攻击的分段流程缺失",
+        "talent": "固定攻速与野生动物条件停顿缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -1442,12 +1455,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1属性；S2元素损伤优先治疗与阈值强化已接入",
-      "talentGaps": "元素损伤阈值减免已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%93%88%E6%B4%9B%E5%BE%B7",
       "sourceProfileIds": [
         "chess_char_2_05_a",
         "chess_char_2_05_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1属性可复用；S2按元素损伤优先及阈值强化缺失",
+        "talent": "元素损伤减免缺失，基础元素积累/爆发链路不完整"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -3902,12 +3928,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1/S2/S3狼群实体、狼影数量、技能强化与费用回收已接入",
-      "talentGaps": "战术点狼群刷新、狼影阻挡与阻挡目标防御穿透已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E4%BC%BA%E5%A4%9C",
       "sourceProfileIds": [
         "chess_char_3_19_a",
         "chess_char_3_19_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1/S2/S3狼群实体、多条狼影生命/阻挡/攻击、共享技能与额外伤害缺失",
+        "talent": "战术点狼群刷新及狼群阻挡条件穿透缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -3982,12 +4021,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1属性；S2浮游单元数量、锁敌、概率寒冷与生命周期已接入",
-      "talentGaps": "地面地形数量条件攻击增益已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E8%80%B6%E6%8B%89",
       "sourceProfileIds": [
         "chess_char_3_20_a",
         "chess_char_3_20_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1加攻可复用；S2多个独立浮游、锁敌与概率寒冷缺失",
+        "talent": "攻击范围地面数量条件加攻缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -4106,12 +4158,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E7%A9%BA%E5%BC%A6",
       "sourceProfileIds": [
         "chess_char_3_21_a",
         "chess_char_3_21_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1次级溅射目标；S2随跳转减少连击数；S3目标/射程字段缺失",
+        "talent": "狙击职业周期技力回复、部署盾及破盾回技力缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -4483,12 +4548,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E4%BC%8A%E5%86%85%E4%B8%9D",
       "sourceProfileIds": [
         "chess_char_4_04_a",
         "chess_char_4_04_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1持续伤害；S2隐匿/偷攻速；S3影哨路径伤害与部署撤回缺失",
+        "talent": "每敌首次束缚、属性偷取、反隐和离场残留影哨缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -4941,12 +5019,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1装置持有者攻防加成；S2装置持续屏障转换已接入",
-      "talentGaps": "支援装置库存/部署、定向屏障及未受击自动补充已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%87%AF%E7%91%9F%E7%90%B3",
       "sourceProfileIds": [
         "chess_char_4_11_a",
         "chess_char_4_11_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1按装置屏障持有者增益；S2装置持续屏障转换缺失",
+        "talent": "支援装置库存/部署、定向屏障及未受击自动补充缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -5423,12 +5514,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1/S2/S3落地法伤、沉默持续伤害、减抗、剑雨、控制与弹药结束已接入",
-      "talentGaps": "首次击杀满血重放被动、部署前首杀减伤增速已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E7%BC%84%E9%BB%98%E5%BE%B7%E5%85%8B%E8%90%A8%E6%96%AF",
       "sourceProfileIds": [
         "chess_char_4_16_a",
         "chess_char_4_16_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1/S2/S3落地被动、持续伤害/减抗、周期剑雨和控制缺失",
+        "talent": "首次击杀满血并重放技能、部署前首杀减伤增速缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -5656,12 +5760,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E6%B3%A5%E5%B2%A9",
       "sourceProfileIds": [
         "chess_char_4_18_a",
         "chess_char_4_18_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1防御可复用；S2自疗/概率眩晕；S3无敌准备后晕眩爆发的分段流程缺失",
+        "talent": "周期护盾和破盾治疗、萨卡兹减伤缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -5779,12 +5896,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1一次物理闪避；S2群体物理闪避与范围攻击；S3技能闪避/阻挡与费用已接入",
-      "talentGaps": "闪避触发下次群体双击与卡西米尔闪避光环已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E7%84%B0%E5%B0%BE",
       "sourceProfileIds": [
         "chess_char_4_19_a",
         "chess_char_4_19_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1一次物理闪避；S2群体物理闪避；S3技能闪避/阻挡缺失；费用单列",
+        "talent": "闪避触发下次群体双击、卡西米尔闪避光环缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -6021,12 +6151,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E9%93%B6%E7%81%B0",
       "sourceProfileIds": [
         "chess_char_4_22_a",
         "chess_char_4_22_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1强化可复用；S2切换与回血；S3多目标、视为近战标志缺失",
+        "talent": "自身属性、编队再部署减免、反隐缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -6175,12 +6318,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1伤害吸血；S2拖拽；S3伤害暂存和技能后分期流失已接入",
-      "talentGaps": "按阻挡数增益及生命阈值治疗增强已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E7%99%BE%E7%82%BC%E5%98%89%E7%BB%B4%E5%B0%94",
       "sourceProfileIds": [
         "chess_char_4_23_a",
         "chess_char_4_23_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1伤害吸血；S2拖拽；S3伤害暂存和技能后分期流失缺失",
+        "talent": "按阻挡数增益及生命阈值治疗增强缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -6284,12 +6440,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%8D%A1%E6%B6%85%E5%88%A9%E5%AE%89",
       "sourceProfileIds": [
         "chess_char_4_24_a",
         "chess_char_4_24_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1/S2/S3蓄力分支、技能期保留特性、束缚、渐增攻击及目标叠层伤害缺失",
+        "talent": "开技回血及蓄力翻倍、溢出技力加速缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -6433,12 +6602,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E9%AD%94%E7%8E%8B",
       "sourceProfileIds": [
         "chess_char_4_25_a",
         "chess_char_4_25_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1微尘重生；S2微尘碰撞/鼓舞；S3永久微尘、生命鼓舞和周期均分生命缺失",
+        "talent": "微尘实体碰撞及回复强化、全队萨卡兹减伤缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -6652,12 +6834,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%A6%AE%E8%8A%99",
       "sourceProfileIds": [
         "chess_char_5_22_a",
         "chess_char_5_22_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1/S2/S3凋亡损伤/爆发条件元素伤害、恐惧、爆发伤害转换缺失",
+        "talent": "爆发期间持续元素伤害和爆发次数叠层缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -6806,12 +7001,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%9C%A3%E7%BA%A6%E9%80%81%E8%91%AC%E4%BA%BA",
       "sourceProfileIds": [
         "chess_char_5_01_a",
         "chess_char_5_01_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1穿透；S2闪避补弹；S3逐弹叠攻、回复倍率与结束追击历史目标缺失",
+        "talent": "概率追加攻击与耗弹概率提升、拉特兰人数弹药上限缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -6945,12 +7153,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E7%BC%87%E7%BC%87",
       "sourceProfileIds": [
         "chess_char_5_02_a",
         "chess_char_5_02_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1概率睡眠；S2敌我睡眠光环；S3醒来/睡中死亡传播伤害与睡眠、友方免死睡眠缺失",
+        "talent": "攻击睡眠目标、非移动额外法伤、睡眠持续伤害和阵营生命阈值攻速缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -7119,12 +7340,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E7%83%9B%E7%85%8C",
       "sourceProfileIds": [
         "chess_char_5_03_a",
         "chess_char_5_03_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1附着友方灼烧；S2灼烧地段；S3元素爆发附伤和补弹、自损缺失",
+        "talent": "全场灼燃爆发联动、倒地屏障再起的专属状态缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -7278,12 +7512,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E4%B9%8C%E5%B0%94%E6%AF%94%E5%AE%89",
       "sourceProfileIds": [
         "chess_char_5_05_a",
         "chess_char_5_05_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1拉人船锚；S2天赋倍率；S3船锚落点位移和回原位缺失",
+        "talent": "受伤治疗及杀敌永久属性叠层/队友共享缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -7417,12 +7664,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E9%9A%90%E5%BE%B7%E6%9D%A5%E5%B8%8C",
       "sourceProfileIds": [
         "chess_char_5_06_a",
         "chess_char_5_06_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1双击可复用；S2附着血镰持续伤害；S3心烛生命代理与伤害传导缺失",
+        "talent": "最大生命偷取、持续伤害、低生命一次自救缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -7541,12 +7801,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1击杀回满技力；S2单目标临界倍率；S3平值生命上限、递增生命流失与多目标已接入",
-      "talentGaps": "法抗穿透、致命后限时锁血强制退场已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%8F%B2%E5%B0%94%E7%89%B9%E5%B0%94",
       "sourceProfileIds": [
         "chess_char_5_07_a",
         "chess_char_5_07_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1击杀回满技力；S2单目标条件倍率；S3固定生命上限加值和递增生命流失缺失",
+        "talent": "法抗穿透、致命后限时锁血强制退场缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -7695,12 +7968,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%8F%B7%E8%A7%92",
       "sourceProfileIds": [
         "chess_char_5_08_a",
         "chess_char_5_08_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1反隐区域；S2过载物法双伤害/结束倾泻；S3过载分段攻击和自损缺失",
+        "talent": "重装攻击光环、一次原地复活并改变属性缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -7794,12 +8080,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1/S2属性与多目标；S3停顿、范围回复和脆弱增强已接入",
-      "talentGaps": "辅助技力光环、停顿联动脆弱已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E9%93%83%E5%85%B0",
       "sourceProfileIds": [
         "chess_char_5_10_a",
         "chess_char_5_10_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1/S2属性与多目标字段适配；S3范围停顿/回复和脆弱增强缺失",
+        "talent": "辅助技力光环、停顿联动脆弱缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -8017,12 +8316,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1溅射强化；S2低生命增伤；S3小自在召唤与索敌已接入",
-      "talentGaps": "击杀叠层与首次攻击召唤已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%A4%95",
       "sourceProfileIds": [
         "chess_char_5_12_a",
         "chess_char_5_12_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1技能溅射半径；S2全体与低生命增伤；S3小自在召唤刷新及特殊索敌缺失",
+        "talent": "自身/小自在击杀叠层、首次攻击召唤缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -8131,12 +8443,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%BD%92%E6%BA%9F%E5%B9%BD%E7%81%B5%E9%B2%A8",
       "sourceProfileIds": [
         "chess_char_5_13_a",
         "chess_char_5_13_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1交换生命比例；S2锁血并主动倒地；S3生命比例比较附伤或自损缺失",
+        "talent": "替身切换/持续区域减速伤害、编队深海猎人生命光环缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -8330,12 +8655,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%87%9B%E5%BE%A1%E9%93%B6%E7%81%B0",
       "sourceProfileIds": [
         "chess_char_5_14_a",
         "chess_char_5_14_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1/S2/S3风雪之眼、待部署区排序/减费/交换、部署继承攻击及直线脆弱缺失",
+        "talent": "编队区域技力/再部署加成、阵营冻结免疫/防御/回复缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -8574,12 +8912,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%BC%95%E6%98%9F%E6%A3%98%E5%88%BA",
       "sourceProfileIds": [
         "chess_char_5_15_a",
         "chess_char_5_15_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1/S2/S3炼金单元投掷、移动扩散、敌方治疗压制、定向附着及逐秒减益增强缺失",
+        "talent": "条件炼金延时、直线路段判定双倍敌我攻速光环缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -8713,12 +9064,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1额外目标；S2切换群体阻挡与回复；S3推动、多段攻击与条件增益已接入",
-      "talentGaps": "暴击减攻、固定防御与物理闪避已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%B1%B1",
       "sourceProfileIds": [
         "chess_char_5_17_a",
         "chess_char_5_17_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1额外目标未接入；S2切换群体阻挡/回复；S3推动与概率增强缺失",
+        "talent": "概率暴击减敌攻、固定防御和物理闪避缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -8842,12 +9206,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E7%8E%9B%E6%81%A9%E7%BA%B3",
       "sourceProfileIds": [
         "chess_char_5_19_a",
         "chess_char_5_19_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1独立倍率字段；S2击杀后保留蓄力；S3特性倍增/击杀衰减及盟友攻击附真伤缺失",
+        "talent": "周围敌人数条件伤害/减伤、嘲讽和阵营受击反伤缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -8931,12 +9308,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%AE%89%E6%B4%81%E8%8E%89%E5%A8%9C",
       "sourceProfileIds": [
         "chess_char_5_20_a",
         "chess_char_5_20_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1属性可复用；S2/S3非技能期停攻、伤害倍率/群攻以及全局失重缺失",
+        "talent": "全队攻速及非技能期全场回复缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -9011,12 +9401,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%AF%92%E6%AA%80",
       "sourceProfileIds": [
         "chess_char_5_21_a",
         "chess_char_5_21_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1属性可复用；S2随机格落冰、延迟区域伤害及寒冷缺失",
+        "talent": "停留计时增攻与抵抗缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -9106,12 +9509,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%BD%95%E6%AD%A6%E5%AE%98",
       "sourceProfileIds": [
         "chess_char_5_23_a",
         "chess_char_5_23_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1额外治疗目标；S2为队友附受伤回血触发器缺失",
+        "talent": "范围队友开技事件回技力与限时攻速缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -9290,12 +9706,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E8%95%BE%E7%BC%AA%E5%AE%89",
       "sourceProfileIds": [
         "chess_char_6_01_a",
         "chess_char_6_01_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1倍率/目标数适配；S2通缉远程瞄准及可斩杀提前开火；S3逐弹锁定并结束轰炸缺失",
+        "talent": "精英/领袖停留通缉、拉特兰伤害协同及时间弹药增益缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -9464,12 +9893,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%9C%A3%E8%81%86%E5%88%9D%E9%9B%AA",
       "sourceProfileIds": [
         "chess_char_6_02_a",
         "chess_char_6_02_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1推动积雪扩散；S2雪层传播/地块冻结；S3诱导路径与雪层加速缺失",
+        "talent": "周期积雪、进出地块事件、受击寒冷及致命复活群冻缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -9623,12 +10065,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E4%BD%99",
       "sourceProfileIds": [
         "chess_char_6_03_a",
         "chess_char_6_03_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1受击灼燃损伤；S2传送拉怪；S3横跨战场火墙、穿墙附伤及清除敌弹缺失",
+        "talent": "阻挡条件庇护/持续伤害、人数条件生命和元素回复缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -9737,12 +10192,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1伤害转移；S2攻防鼓舞；S3持续真伤与鼓舞已接入",
-      "talentGaps": "海嗣实体、范围延伸、深海猎人条件攻击增益已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E6%B5%8A%E5%BF%83%E6%96%AF%E5%8D%A1%E8%92%82",
       "sourceProfileIds": [
         "chess_char_6_04_a",
         "chess_char_6_04_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1伤害转移；S2攻击防御鼓舞；S3持续真伤和鼓舞缺失",
+        "talent": "海嗣实体及范围延伸、阵营条件攻击增益缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -9881,12 +10349,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%BC%82%E5%AE%A2",
       "sourceProfileIds": [
         "chess_char_6_05_a",
         "chess_char_6_05_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1/S2链跳数与停顿字段适配；S3最高生命目标雷暴区及随机周期攻击缺失",
+        "talent": "高生命目标限时专属易伤和邻格无敌人条件增攻缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -10010,12 +10491,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E4%BD%A9%E4%BD%A9",
       "sourceProfileIds": [
         "chess_char_6_06_a",
         "chess_char_6_06_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1控制中开技净化；S2随机索敌/使用次数叠层；S3逐击增攻/溅射扩张/主副目标眩晕缺失",
+        "talent": "技能期击杀记账并结束回技力、近卫攻击光环缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -10119,12 +10613,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E7%BB%B4%E5%A8%9C%C2%B7%E7%BB%B4%E5%A4%9A%E5%88%A9%E4%BA%9A",
       "sourceProfileIds": [
         "chess_char_6_07_a",
         "chess_char_6_07_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1近格附加真伤；S2友军数量条件技力；S3黄金盟誓召唤和友方阻挡目标索敌缺失",
+        "talent": "邻格物理减伤/人数增攻、每敌首次战栗缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -10278,12 +10785,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E7%84%B0%E5%BD%B1%E8%8B%87%E8%8D%89",
       "sourceProfileIds": [
         "chess_char_6_08_a",
         "chess_char_6_08_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1属性可复用；S2附着两友方的火球与定向治疗；S3灼痕死亡传播及周期伤害缺失",
+        "talent": "概率灼痕减攻/法术脆弱、治疗反馈自疗缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -10392,12 +10912,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E5%A1%91%E5%BF%83",
       "sourceProfileIds": [
         "chess_char_6_09_a",
         "chess_char_6_09_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1元素状态筛选与凋亡；S2为友军附元素伤害；S3按最高属性选不同友军增益缺失",
+        "talent": "持续凋亡/停顿区域和元素易伤缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -10526,12 +11059,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E7%BC%AA%E5%B0%94%E8%B5%9B%E6%80%9D",
       "sourceProfileIds": [
         "chess_char_6_11_a",
         "chess_char_6_11_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1/S2/S3流形属性复制、近远程变体、独立生命周期、刷新/拖拽/控制缺失",
+        "talent": "待部署干员复制及流形刷新、莱茵编队部署减费缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -10655,12 +11201,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E8%BF%B7%E8%BF%AD%E9%A6%99",
       "sourceProfileIds": [
         "chess_char_6_12_a",
         "chess_char_6_12_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1额外法伤；S2双余震/概率晕；S3只打被阻挡者及战术装备缺失",
+        "talent": "固定穿透、随机术师与自身加攻缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -10834,12 +11393,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E6%96%B0%E7%BA%A6%E8%83%BD%E5%A4%A9%E4%BD%BF",
       "sourceProfileIds": [
         "chess_char_6_13_a",
         "chess_char_6_13_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1结束倾泻；S2队友攻速偷取/衰减屏障；S3每次攻击消耗5弹及多段倍率缺失；投递坐标按本期规则排除",
+        "talent": "全队耗弹触发回血/概率轰炸、弹药技能和拉特兰加攻光环缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -10968,12 +11540,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E6%B5%81%E6%98%8E",
       "sourceProfileIds": [
         "chess_char_6_14_a",
         "chess_char_6_14_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1目标区域持续治疗；S2蓄力净化；S3异常状态优先及仅净化时耗弹缺失",
+        "talent": "治疗赋抵抗、监听异常状态立即治疗并独立冷却缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -11082,12 +11667,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E4%BB%87%E7%99%BD",
       "sourceProfileIds": [
         "chess_char_6_15_a",
         "chess_char_6_15_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1束缚结束爆炸；S2开关双类型伤害/停顿区域；S3逐击攻速叠层缺失",
+        "talent": "停顿/束缚条件附伤与概率束缚缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -11236,12 +11834,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E6%BA%AF%E5%85%89%E6%98%9F%E6%BA%90",
       "sourceProfileIds": [
         "chess_char_6_16_a",
         "chess_char_6_16_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1允许重复链跳；S2最远多目标链接拖拽；S3敌人互链法伤传导缺失",
+        "talent": "停顿次数攻速叠层、目标范围停留计时脆弱缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -11360,12 +11971,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E8%80%80%E9%AA%91%E5%A3%AB%E4%B8%B4%E5%85%89",
       "sourceProfileIds": [
         "chess_char_6_17_a",
         "chess_char_6_17_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1属性可复用；S2部署盾/结束强退；S3耀阳召唤和阻挡条件真伤缺失；初始部署位豁免按本期规则不生效",
+        "talent": "落地真伤/眩晕和条件次数、比例穿透缺失；自动部署的阵营判定需按模式校准"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -11514,12 +12138,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E8%8D%92%E8%8A%9C%E6%8B%89%E6%99%AE%E5%85%B0%E5%BE%B7",
       "sourceProfileIds": [
         "chess_char_6_18_a",
         "chess_char_6_18_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1/S2/S3独立浮游数量/全局锁敌/移动追踪/恐惧/持续区域伤害缺失",
+        "talent": "停留时间逐阶段浮游升级、攻击沉默与编队初始技力缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -11663,12 +12300,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E9%94%8F",
       "sourceProfileIds": [
         "chess_char_6_19_a",
         "chess_char_6_19_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1瞬发双击；S2阻挡条件改变斩击次数；S3十段斩击/末击/持续拉人缺失",
+        "talent": "概率增伤战栗、攻击战栗目标穿透缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     },
     {
@@ -11772,12 +12422,25 @@
         }
       ],
       "category": "B",
-      "skillGaps": "技能黑板、攻击目标、控制、资源与周期效果已接入",
-      "talentGaps": "天赋属性、触发事件、阵营条件与生命周期已接入",
+      "skillGaps": "逐名技能流程已接入：技能开启、目标、伤害／治疗、资源与结束事件",
+      "talentGaps": "逐名天赋流程已接入：属性、触发、阵营条件与生命周期",
       "prtsReference": "https://prts.wiki/w/%E7%BA%AF%E7%83%AC%E8%89%BE%E9%9B%85%E6%B3%95%E6%8B%89",
       "sourceProfileIds": [
         "chess_char_6_20_a",
         "chess_char_6_20_b"
+      ],
+      "status": "implemented-with-boundary",
+      "resolvedGaps": {
+        "skill": "S1多目标治疗/区域元素回复；S2共享损伤屏障；S3全场五连治疗与分散目标缺失",
+        "talent": "可叠层持续治疗/元素恢复、范围生命及元素减伤光环缺失"
+      },
+      "boundary": "保留未经本期模式证实的动作帧、推拉力度、敌人特殊能力与模式外联动，进入 S7 对照验收",
+      "evidence": [
+        "dist/native-operator-effects.js",
+        "dist/native-effects.js",
+        "dist/native-battle.js",
+        "tests/operator-smoke.test.mjs",
+        "tests/native-effects.test.mjs"
       ]
     }
   ]

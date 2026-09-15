@@ -16,9 +16,9 @@
 
 ## 当前基线
 
-`descriptor-v1` 适配层已覆盖通用黑板参数、直接属性、光环、概率事件、基础状态、资源和持续效果入口。公共结算层现在提供 `queueDelayedDamage`、`addDamageRedirect`、`teleportActor`、区域进出事件和 `reviveActor`，并保留快照字段以支持暂停恢复；烛煌“绝处重燃”和归溟幽灵鲨 S1 已接入生命周期专属样例。`operator-adapter-manifest.json` 记录每名干员的适配状态；`needsSpecialHandler=true` 表示仍需专属逻辑。
+`descriptor-v1` 适配层已覆盖通用黑板参数、直接属性、光环、概率事件、基础状态、资源和持续效果入口。公共结算层现在提供 `queueDelayedDamage`、`addDamageRedirect`、`teleportActor`、区域进出事件和 `reviveActor`，并保留快照字段以支持暂停恢复；逐名处理器覆盖沉睡、元素损伤、弹药、炼金区域、浮游单元、召唤、位移、反伤、复活和费用联动。`operator-adapter-manifest.json` 记录每名干员的适配状态；`needsSpecialHandler=0` 表示 112 名均已进入逐名处理器，具体边界记录在审计条目的 `boundary` 字段。
 
-当前验证：`npm test` 300 项通过；`tests/native-effects.test.mjs` 176 项、`tests/native-operator-effects.test.mjs` 13 项定向测试通过，所有 112 名干员和 283 个技能完成无异常 smoke。适配清单记录 112 名干员均有局部专属处理器，`needsSpecialHandler` 为 0；仍需在 S7 用固定种子和录像做原作数值与动作帧对照。
+当前验证：`npm test` 301 项通过；`tests/native-effects.test.mjs` 177 项、`tests/native-operator-effects.test.mjs` 13 项定向测试通过，所有 112 名干员和 283 个技能完成无异常 smoke。适配清单记录 112 名干员均有局部专属处理器，`needsSpecialHandler` 为 0；仍需在 S7 用固定种子和录像做原作数值与动作帧对照。
 
 ## 执行规则
 

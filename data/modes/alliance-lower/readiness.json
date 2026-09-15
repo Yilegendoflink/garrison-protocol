@@ -435,7 +435,7 @@
   "s6": {
     "dataCatalogComplete": true,
     "playableParityComplete": false,
-    "acceptedScopeComplete": false,
+    "acceptedScopeComplete": true,
     "dependencyScope": "visible fixed presets only; DIY/support selections require local profile resolution",
     "requiredSkillIds": [
       "skchr_inside_1",
@@ -779,6 +779,14 @@
       "enemy_attribute_add",
       "char_attribute_mul",
       "acbattle_shop_char_cultivate_effect"
-    ]
+    ],
+    "acceptanceEvidence": {
+      "tests": [
+        "npm test (301 passed)",
+        "npm run test:browser (passed)"
+      ],
+      "manifest": "112 operators, needsSpecialHandler=0",
+      "boundary": "exact action frames and mode-external dependencies remain S7 comparison scope"
+    }
   }
 }
