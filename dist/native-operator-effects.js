@@ -128,6 +128,7 @@ export function operatorSkillStart(battle,u,ctx){
  const status=directStatus(text,config),statusAtStart=status&&!has(text,/技能结束|每次攻击|攻击时|受到攻击/)&&has(text,/立即|技能开启时|释放|对周围|对敌人造成/);if(statusAtStart)for(const e of allTargets(battle,u,true))if(applyStatus(e,status.kind,status.duration,{source:u.uid,resistible:false}))ctx.log?.(battle,'status',{uid:e.uid,kind:status.kind,sourceUid:u.uid});
  if(profile.charId==='char_213_mostma'&&profile.skillIndex===1)for(const e of allTargets(battle,u,true))applyStatus(e,'stun',1,{source:u.uid,resistible:false});
  if(has(text,/解除.*异常|清除.*异常/))for(const a of allAllies(battle,u,true))a.statuses=(a.statuses||[]).filter(s=>!['stun','frozen','sleep','fear','terror','tremble','root','silence','levitate'].includes(s.kind));
+ if(has(text,/防御力.*法术抗性/)&&Number(bb.def)<0)for(const e of allTargets(battle,u,true)){const debuffDuration=Number(profile.skill?.duration)>0?Number(profile.skill.duration):5;applyStatus(e,'defDown',debuffDuration,{source:u.uid,value:Number(bb.def),resistible:false});if(Number(bb.magic_resistance)<0)applyStatus(e,'resDown',debuffDuration,{source:u.uid,value:Number(bb.magic_resistance),resistible:false});}
  if(has(text,/下次攻击.*(?:恢复|回复)/)&&Number.isFinite(config.healScale)){u.pendingAttackHeal={scale:config.healScale,sourceUid:u.uid};suppressDefault=true;}
  if(has(text,/下次治疗.*(?:额外)?回复目标最大生命值/)&&Number.isFinite(Number(bb.hp_ratio))){u.pendingHealBonus={ratio:Number(bb.hp_ratio),requiresBelowHalf:has(text,/不满一半|低于一半/)};suppressDefault=true;}
  const periodicScale=Number(bb.magic_atk_scale??bb.damage_scale??bb.atk_scale??config.atkScale),periodicInterval=Number(bb.interval??bb.attack_interval??1);
@@ -167,6 +168,9 @@ export function onEvent(battle,type,payload,ctx){
  if(type==='after-damage'&&source&&target?.id==='char_381_bubble'&&target.deployed&&battle.skillActive(target)&&source!==target&&payload.cause!=='reflect'){
   const cfg=skillConfig(battle.profile(target)),scale=Number(cfg.bb.atkScale)||.4;ctx.dealDamage(battle,{source:target,target:source,amount:battle.stats(target).def*scale,type:'physical',cause:'reflect',parentEventId:payload.event?.eventId,effectId:'bubble-reflect:'+target.uid+':'+(payload.event?.eventId||0)});
   const talent=activeTalents(battle,target).find(t=>t.name==='尖刺盾');if(talent)applyStatus(source,'attackDown',Number(talentValues(talent).duration)||5,{source:target.uid,value:Number(talentValues(talent).atk)||-.05,resistible:false});
+ }
+ if(type==='after-damage'&&source&&target?.id==='char_4148_philae'&&target.deployed&&battle.skillActive(target)&&source!==target&&payload.cause!=='reflect'){
+  const cfg=skillConfig(battle.profile(target)),now=battle.s.time;if(now>=(target.philaeNextAt||-Infinity)){target.philaeNextAt=now+(Number(cfg.bb.aoe_cd)||2);for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&Math.max(Math.abs(e.x-target.x),Math.abs(e.y-target.y))<=1)){ctx.dealDamage(battle,{source:target,target:e,amount:battle.stats(target).atk*(Number(cfg.bb.atkScale)||1.1),type:'arts',cause:'skill'});if(ctx.applyElementDamage)ctx.applyElementDamage(battle,{source:target,target:e,amount:battle.stats(target).atk*(Number(cfg.bb.elementScale)||Number(cfg.bb.ep_damage_ratio)||.25),type:'necrosis',cause:'skill'});}}
  }
  if(type==='after-damage'&&source&&source.kind!=='summon'&&target&&payload.skill&&payload.cause!=='extra'){
   const config=skillConfig(battle.profile(source)),text=config.description,attackKey=payload.event?.attackId??payload.event?.eventId;

@@ -174,7 +174,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "root-zone"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -508,7 +510,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "retaliation-and-element"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -520,7 +524,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "pull-and-end-burst"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -582,7 +588,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "charged-double-hit"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -594,7 +602,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "range-debuff"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -672,7 +682,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "multi-hit-skill"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -810,7 +822,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "area-resistance-debuff"
+      ],
       "needsSpecialHandler": true
     },
     {

@@ -211,6 +211,18 @@ test('跃跃回旋投射物按技能黑板追加独立投射',()=>{
  const {b}=openBattle({chessId:'chess_char_1_09_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);const cfg=operatorSkillConfig(b,u);assert.equal(cfg.extraProjectiles,1);b.releaseNativeAttack(u,{kind:'damage',targets:[e.uid],amount:100,baseAmount:100,hits:1,type:'physical',extraProjectiles:cfg.extraProjectiles});assert.equal(b.s.strikes.length,2);
 });
 
+test('薄绿技能结束释放范围法术爆发并保留命中拖拽',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_08_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.ok(u.skillLeft>0);b.hit(u,e,10,'arts');u.skillLeft=0;dispatch(b,'skill-end',{target:u});assert.ok(e.hp<990);
+});
+
+test('菲莱技能受击反击造成法伤并积累凋亡损伤',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_06_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:5000,def:0});u.sp=b.spCost(u);b.activate(u);const before=e.hp;b.hurt(u,e);assert.ok(e.hp<before);assert.ok((e.elemental?.necrosis||0)>0);
+});
+
+test('初雪技能开始时给范围敌人施加防御与法抗削弱',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_14_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000});u.sp=b.spCost(u);b.activate(u);assert.ok(e.statuses.some(s=>s.kind==='defDown'));assert.ok(e.statuses.some(s=>s.kind==='resDown'));
+});
+
 test('惊蛰 S1 chain keeps full damage on subsequent jumps while active',()=>{
  const {b}=openBattle({chessId:'chess_char_1_03_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e1=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0}),e2=enemy(b,{x:u.x+2,y:u.y,hp:1000,def:0});u.skillLeft=10;b.impactNativeAttack(u,e1,{style:'chain',amount:100,type:'true',antiAir:true});assert.equal(e1.hp,880);assert.equal(e2.hp,880);
 });
