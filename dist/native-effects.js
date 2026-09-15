@@ -2,6 +2,7 @@ import {applyDamage,recoverHP,damage} from './combat.js';
 import {applyStatus} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes} from './protocol.js';
 import {gainSp} from './native-sp.js';
+import {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter} from './native-operator-effects.js';
 
 export const BATTLE_SCHEMA_VERSION=1;
 export const EFFECT_KINDS=new Set(['dot','hot','regen','loss','zone','attached','aura','guard','barrier','lock','stat']);
@@ -59,6 +60,7 @@ export function activeTalentsOf(battle,u){
  if(p?.activeTalents)return p.activeTalents.map(t=>({...t,values:blackboard(t.blackboard)}));
  return resolveActiveTalents({talents:p?.talents},p?.status,{modulePhase:p?.modulePhase}).map(t=>({...t,values:blackboard(t.blackboard)}));
 }
+export function operatorSkillConfig(battle,u){return skillConfig(battle.profile(u));}
 function skillBB(battle,u){return blackboard(battle.profile(u)?.skill?.blackboard);}
 function log(battle,type,payload){
  const rec={t:battle.s.time,type,...payload};
@@ -191,8 +193,10 @@ export function dealDamage(battle,opts){
   value=damage({amount,type,resistance:stats.res??stats.magicResistance??0,defense:stats.def||0});
   if(target.fragile)value*=target.fragile;
  }
- const type=opts.type||'physical';
- if(opts.cause!=='dot'&&opts.cause!=='extra'&&opts.cause!=='reflect')dispatch(battle,'before-damage',{source,target,value,type,event,cause:opts.cause});
+ let type=opts.type||'physical';
+ if(opts.cause!=='dot'&&opts.cause!=='extra'&&opts.cause!=='reflect'){
+  const before={source,target,value,type,event,cause:opts.cause};dispatch(battle,'before-damage',before);value=before.value;type=before.type;
+ }
  const floor=minHpOf(target);
  const result=applyDamage(target,value,{type,sourceId:source?.id,sourceUid:source?.uid,minHp:floor});
  if(result.consumedGuard){
@@ -303,8 +307,11 @@ export function tickLogic(battle,dt){
  }
  for(const fx of battle.s.logicEffects.slice())if(fx.endsAt!=null&&now>=fx.endsAt)dropEffect(battle,fx,'expired');
  tickAuras(battle);
+ for(const u of battle.s.units)periodicMods(battle,u,ctxFor(battle));
  tickSummons(battle,dt);
 }
+
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,gainSp,addEffect,log:(b,t,p)=>log(b,t,p)};}
 
 function zoneActors(battle,fx,side){
  const cx=fx.x,cy=fx.y,r=fx.radius??1;
@@ -376,6 +383,10 @@ export function effectStatMods(battle,u){
  const note=(stat,layer,v,src)=>{if(v)parts.push({stat,layer,v,src});};
  const auras=[];
  for(const src of battle.s.units.filter(v=>v.deployed&&v.hp>0)){
+  const generic=statMods(battle,src);
+  if(!['char_128_plosis','char_308_swire','char_108_silent','char_358_lisa'].includes(src.id))for(const aura of generic.auras){
+   auras.push({key:aura.stat+':'+aura.text,stat:aura.stat,layer:aura.layer,v:aura.value,src:aura.source.name,ok:v=>targetFilter(aura.text,src,v,battle)});
+  }
   const talents=activeTalentsOf(battle,src);
   if(src.id==='char_128_plosis'){
    const t=talents.find(x=>x.name==='技力光环');if(t)auras.push({key:'sp_recovery_aura',stat:'spRecoveryPerSec',layer:'maxSame',v:t.values.sp_recovery_per_sec||.3,src:'白面鸮',ok:()=>true});
@@ -395,26 +406,35 @@ export function effectStatMods(battle,u){
   }
  }
  if(u.deployed&&u.hp>0){
+  const genericSelf=statMods(battle,u);
+  add.atk+=genericSelf.add.atk;add.maxHp+=genericSelf.add.maxHp;add.def+=genericSelf.add.def;add.magicResistance+=genericSelf.add.magicResistance;
+  ratio.atk+=genericSelf.ratio.atk;ratio.maxHp+=genericSelf.ratio.maxHp;ratio.def+=genericSelf.ratio.def;attackSpeed+=genericSelf.attackSpeed;spRecoveryPerSec+=genericSelf.spRecoveryPerSec;parts.push(...genericSelf.parts);
   const talents=activeTalentsOf(battle,u);
-  if(u.id==='char_199_yak'){const t=talents.find(x=>x.name==='雪原卫士');if(t){magicResistance+=t.values.magic_resistance||0;note('magicResistance','add',t.values.magic_resistance,'角峰天赋');}}
-  if(u.id==='char_107_liskam'){const t=talents.find(x=>x.name==='雷抗');if(t){magicResistance+=t.values.magic_resistance||0;note('magicResistance','add',t.values.magic_resistance,'雷蛇天赋');}}
-  if(u.id==='char_143_ghost'){const t=talents.find(x=>x.name==='深海再生力');if(t){ratio.maxHp+=t.values.max_hp||0;note('maxHp','ratio',t.values.max_hp,'幽灵鲨天赋');}}
   if(u.hornBuff){ratio.maxHp+=-(1-(u.hornBuff.maxHpMul??.5));ratio.def+=u.hornBuff.def||0;attackSpeed+=u.hornBuff.attackSpeed||0;note('maxHp','ratio',-(1-(u.hornBuff.maxHpMul??.5)),'号角血战');}
+  if(u.talentMods){ratio.atk+=u.talentMods.atk||0;ratio.maxHp+=u.talentMods.maxHp||0;ratio.def+=u.talentMods.def||0;attackSpeed+=u.talentMods.attackSpeed||0;for(const [stat,v] of Object.entries(u.talentMods))if(v)note(stat,'deploy',v,(battle.profile(u)?.name||u.id)+'部署天赋');}
+  if((u.talentStacks||0)>0)for(const talent of talents){const text=talent.description||'',bb=talentValues(talent);if(has(text,/在场.*秒|停留.*秒/)&&Number(bb.atk))ratio.atk+=Number(bb.atk)*(u.talentStacks||0);}
  }
  const maxSame={};
- for(const a of auras){
+  for(const a of auras){
   if(!a.ok(u))continue;
   if(a.layer==='maxSame'){if(!maxSame[a.key]||a.v>maxSame[a.key].v)maxSame[a.key]=a;continue;}
   if(a.stat==='atk')ratio.atk+=a.v;
+  else if(a.stat==='maxHp')ratio.maxHp+=a.v;
+  else if(a.stat==='def')ratio.def+=a.v;
   else if(a.stat==='attackSpeed')attackSpeed+=a.v;
+  else if(a.stat==='magicResistance')magicResistance+=a.v;
+  else if(a.stat==='spRecoveryPerSec')spRecoveryPerSec+=a.v;
   note(a.stat,a.layer,a.v,a.src);
  }
- for(const a of Object.values(maxSame)){if(a.stat==='spRecoveryPerSec')spRecoveryPerSec+=a.v;else if(a.stat==='atk')ratio.atk+=a.v;else if(a.stat==='attackSpeed')attackSpeed+=a.v;note(a.stat,'maxSame',a.v,a.src);}
+  for(const a of Object.values(maxSame)){if(a.stat==='spRecoveryPerSec')spRecoveryPerSec+=a.v;else if(a.stat==='atk')ratio.atk+=a.v;else if(a.stat==='attackSpeed')attackSpeed+=a.v;else if(a.stat==='def')ratio.def+=a.v;note(a.stat,'maxSame',a.v,a.src);}
  return {add,ratio,finalAdd,attackSpeed,magicResistance,spRecoveryPerSec,parts};
 }
 
 export function dispatch(battle,type,payload){
  const {source,target,event}=payload;
+ const ctx={dealDamage,applyHeal,applyRegen,applyLoss,gainSp,addEffect,log:(b,t,p)=>log(b,t,p)};
+ if(type==='skill-start')payload.genericSuppress=operatorSkillStart(battle,target,ctx);
+ else onEvent(battle,type,payload,ctx);
  if(type==='after-damage'&&payload.cause!=='dot'&&payload.cause!=='reflect'){
   if(target&&battle.s.units.includes(target)&&target.id==='char_107_liskam'&&target.deployed){
    const t=activeTalentsOf(battle,target).find(x=>x.name==='战术防御');
@@ -468,7 +488,7 @@ export function dispatch(battle,type,payload){
   if(t)enqueue(battle,{kind:'heal',sourceUid:target.uid,targetUid:target.uid,amount:target.maxHp*(t.values.hp_ratio||.2),parentEventId:event?.eventId,effectId:'mudrok-t1-heal'});
  }
  if(type==='deploy')onOperatorDeploy(battle,payload.target);
- if(type==='skill-start')return onSkillStart(battle,payload.target);
+ if(type==='skill-start')return !!payload.genericSuppress||!!onSkillStart(battle,payload.target);
  if(type==='skill-end')onSkillEnd(battle,payload.target,payload.reason);
  if(type==='exit')onOperatorExit(battle,payload.target,payload.reason);
 }

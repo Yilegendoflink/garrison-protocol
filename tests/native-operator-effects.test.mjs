@@ -1,0 +1,48 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {NATIVE_DATA} from '../dist/runtime-data.js';
+import {operatorRegistry,skillConfig,statMods} from '../dist/native-operator-effects.js';
+import {openBattle,deployNow,enemy,byId} from './effects-harness.mjs';
+import {dealDamage} from '../dist/native-effects.js';
+
+test('every fixed operator has an adapter entry and every skill resolves a safe config',()=>{
+ const registry=operatorRegistry(NATIVE_DATA);
+ const fixed=NATIVE_DATA.operatorScope?.operators||[];
+ if(fixed.length)for(const op of fixed)assert.ok(registry[op.charId],op.name);
+ const profiles=Object.values(NATIVE_DATA.profiles).filter(p=>p?.charId);
+ assert.ok(registry&&Object.keys(registry).length>=112);
+ let skills=0;
+ for(const p of profiles)for(const choice of p.skillChoices||[]){const cfg=skillConfig({...p,skill:choice.skill});assert.ok(Number.isFinite(cfg.atkScale));assert.ok(Number.isFinite(cfg.hits));assert.ok(cfg.multiTarget!==undefined);skills++;}
+ assert.ok(skills>=283);
+});
+
+test('generic talent stat extraction only applies direct stat text and exposes sources',()=>{
+ const b={profile:u=>u.profile,data:NATIVE_DATA};
+ const u={id:'char_199_yak',deployed:true,hp:1,profile:{name:'角峰',activeTalents:[{name:'雪原卫士',description:'法术抗性+15',blackboard:[{key:'magic_resistance',value:15}]}]}};
+ const mods=statMods(b,u);assert.equal(mods.add.magicResistance,15);assert.equal(mods.parts[0].src,'角峰·雪原卫士');
+ const conditional={...u,profile:{name:'测试',activeTalents:[{name:'条件',description:'受到攻击时攻击力提升至150%',blackboard:[{key:'atk_scale',value:1.5}]}]}};
+ assert.equal(statMods(b,conditional).ratio.atk,0);
+});
+
+test('individual skill adapters map namespaced values, status and battle resources',()=>{
+ const {b}=openBattle({name:'德克萨斯',chessId:'chess_char_1_08_b',skillIndex:1});deployNow(b);
+ const u=byId(b,'char_102_texas'),e=enemy(b,{x:u.x,y:u.y,hp:100000,res:0}),funds=b.economy.s.funds;
+ u.sp=b.spCost(u);b.activate(u);
+ assert.ok(e.hp<100000);assert.ok(e.statuses.some(s=>s.kind==='stun'));assert.ok(b.economy.s.funds>funds);
+});
+
+test('probability talent multiplier changes the current hit without recursive extra damage',()=>{
+ const {b}=openBattle({name:'跃跃',chessId:'chess_char_1_09_b'});deployNow(b);
+ const u=byId(b,'char_4100_caper'),e=enemy(b,{hp:1000,def:0}),original=b.profile.bind(b);
+ b.profile=actor=>actor===u?{...original(actor),activeTalents:[{name:'戏耍随心',description:'攻击时，25%几率当次攻击的攻击力提升至150%',blackboard:[{key:'prob',value:.25},{key:'talent_scale',value:1.5}]}]}:original(actor);
+ b.economy.random=()=>0;
+ dealDamage(b,{source:u,target:e,amount:100,type:'true',cause:'attack'});
+ assert.equal(e.hp,850);assert.equal(b.s.logicLog.filter(x=>x.type==='damage').length,1);
+});
+
+test('duration skills with periodic damage create a timed logic zone',()=>{
+ const {b}=openBattle({name:'莫斯提马',chessId:'chess_char_4_02_b',skillIndex:1});deployNow(b);
+ const u=byId(b,'char_213_mostma'),e=enemy(b,{x:u.x+1,y:u.y,hp:10000,res:0});u.sp=b.spCost(u)+1;b.activate(u);
+ const zone=b.s.logicEffects.find(x=>x.talentOrSkillId.startsWith('skill-zone:'));
+ assert.ok(zone);assert.ok(e.statuses.some(s=>s.kind==='stun'));const hp=e.hp;for(let i=0;i<35;i++)b.step();assert.ok(e.hp<hp);
+});

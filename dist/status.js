@@ -1,5 +1,5 @@
 // Common status semantics; durations are simulation seconds, never render time.
-const CONTROL={stun:['attack','move','block','skill'],frozen:['attack','move','block','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],disarm:['attack'],root:['move'],silence:[]};
+const CONTROL={stun:['attack','move','block','skill'],frozen:['attack','move','block','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:['attack','move','block','skill'],terror:['attack','move','block','skill'],tremble:['attack','move','block','skill'],disarm:['attack'],root:['move'],silence:[]};
 export function applyStatus(target,kind,duration,{source=null,value=1,resistible=true}={}){
  if(!Number.isFinite(duration)||duration<=0||target.hp<=0)return false;if(target.immunities?.[kind])return false;
  if(['sleep','levitate'].includes(kind)&&Object.hasOwn(target,'block'))target.block=null;target.statuses??=[];
