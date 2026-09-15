@@ -208,7 +208,7 @@
       "partialHandlers": [
         "cost-and-skill-lifecycle"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "雷蛇",
@@ -327,8 +327,10 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
-      "needsSpecialHandler": true
+      "partialHandlers": [
+        "self-heal-peak-and-overflow"
+      ],
+      "needsSpecialHandler": false
     },
     {
       "name": "洛洛",

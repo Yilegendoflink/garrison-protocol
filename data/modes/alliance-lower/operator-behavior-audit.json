@@ -1101,8 +1101,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1部署即攻速增益；S2推动目标缺失",
-      "talentGaps": "待部署近卫费用减免与重置缺失",
+      "skillGaps": "S1部署即攻速增益、S2推动目标已接入",
+      "talentGaps": "待部署近卫费用减免、每名最多五费和部署后重置已接入",
       "prtsReference": "https://prts.wiki/w/%E9%87%8E%E9%AC%83",
       "sourceProfileIds": [
         "chess_char_1_19_a",
@@ -1737,8 +1737,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1额外自疗未接入；S2阻挡及按自身生命阈值分档增伤缺失",
-      "talentGaps": "溢出治疗转换屏障缺失",
+      "skillGaps": "S1额外自疗、S2阻挡及按自身生命阈值分档增伤已接入",
+      "talentGaps": "溢出治疗转换屏障已接入",
       "prtsReference": "https://prts.wiki/w/%E4%BC%91%E8%B0%9F%E6%96%AF",
       "sourceProfileIds": [
         "chess_char_2_09_a",

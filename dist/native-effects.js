@@ -607,7 +607,7 @@ export function dispatch(battle,type,payload){
   if(t)enqueue(battle,{kind:'heal',sourceUid:target.uid,targetUid:target.uid,amount:target.maxHp*(t.values.hp_ratio||.2),parentEventId:event?.eventId,effectId:'mudrok-t1-heal'});
  }
  if(type==='deploy')onOperatorDeploy(battle,payload.target);
- if(type==='skill-start')return !!payload.genericSuppress||!!onSkillStart(battle,payload.target);
+ if(type==='skill-start'){const specialSuppress=onSkillStart(battle,payload.target);return !!payload.genericSuppress||!!specialSuppress;}
  if(type==='skill-end')onSkillEnd(battle,payload.target,payload.reason);
  if(type==='exit')onOperatorExit(battle,payload.target,payload.reason);
 }
@@ -700,7 +700,7 @@ function onSkillStart(battle,u){
 function onSkillEnd(battle,u){
  const idx=u.source?.skillIndex??battle.profile(u).skillIndex;
  u.skillDisarmUntil=null;u.focusHealAfter=null;u.focusHeal=false;u.statusResistance=0;
- u.pendingPeriodicCost=null;u.pendingNextAttack=null;u.pendingCostGain=null;
+ u.pendingPeriodicCost=null;u.pendingNextAttack=null;u.pendingAttackSelfHeal=null;u.pendingCostGain=null;
  for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-heal-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-loss:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-regen-zone:${u.id}:${u.skillCount}`))dropEffect(battle,fx,'skill-end');
  for(const talent of activeTalentsOf(battle,u)){const text=talent.description||'',bb=talent.values||{};if(/技能结束.*恢复.*生命|技能结束.*回复.*生命/.test(text)&&Number(bb.hp_ratio)>0)applyHeal(battle,{source:u,target:u,amount:u.maxHp*Number(bb.hp_ratio)});}
  if(Number(u.skillEndHealRatio)>0){applyHeal(battle,{source:u,target:u,amount:u.maxHp*u.skillEndHealRatio});u.skillEndHealRatio=0;}

@@ -169,6 +169,10 @@ test('野鬃待部署近卫减费按每名干员最多五费累计',()=>{
  const {b}=openBattle([{chessId:'chess_char_1_19_b',skillIndex:1},reps.operators.swire]);const wild=byId(b,'char_496_wildmn'),guard=byId(b,'char_308_swire');for(let i=0;i<6;i++)dispatch(b,'deploy',{target:wild});assert.equal(guard.wildmaneCostDelta,-5);assert.equal(b.deploymentCost(guard),Math.max(0,guard.baseCost-5));
 });
 
+test('野鬃 S2 命中后按攻击方向推动目标',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_19_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);const before=e.x;b.hit(u,e,10,'physical');assert.ok(e.x>before);
+});
+
 test('缪尔赛思首名莱茵生命单位获得额外一费减免',()=>{
  const {b}=openBattle([{chessId:'chess_char_6_11_b',skillIndex:0},{chessId:'chess_char_2_02_b',skillIndex:0}]);const m=byId(b,'char_249_mlyss'),silent=byId(b,'char_108_silent');b.deploy(m);assert.equal(b.s.mlyssFirstRhineDiscountUsed,false);assert.equal(b.deploymentCost(silent),silent.baseCost-3);b.s.cost=99;b.deploy(silent,{reentry:true});assert.equal(b.s.mlyssFirstRhineDiscountUsed,true);commitExit(b,{target:silent,reason:'knockdown'});silent.down=0;assert.equal(b.deploymentCost(silent),Math.floor((silent.baseCost-2)*1.5));
 });
@@ -568,6 +572,14 @@ test('角峰 S1 的固定每秒回复走公共周期效果',()=>{
 
 test('普罗旺斯 S2 排除生命值高于八成的目标',()=>{
  const {b}=openBattle({chessId:'chess_char_1_07_b',skillIndex:1});deployNow(b);const u=b.s.units[0],high=enemy(b,{x:u.x+1,y:u.y,hp:900,maxHp:1000}),low=enemy(b,{x:u.x+2,y:u.y,hp:800,maxHp:1000});u.sp=b.spCost(u);b.activate(u);assert.equal(b.targets(u).includes(high),false);assert.equal(b.targets(u).includes(low),true);
+});
+
+test('休谟斯 S1 下一次攻击强化并回复自身生命',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_09_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000,def:0});u.hp=100;const before=u.hp;u.sp=b.spCost(u);b.activate(u);for(let i=0;i<60&&e.hp===100000;i++)b.step();assert.ok(e.hp<100000);assert.ok(u.hp>before);
+});
+
+test('休谟斯 S2 按生命阈值增攻并将溢出治疗转屏障',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_09_b',skillIndex:1});deployNow(b);const u=b.s.units[0],base=b.profile(u).attributes;u.sp=b.spCost(u);b.activate(u);assert.equal(b.stats(u).blockCnt,base.blockCnt+1);assert.ok(b.stats(u).atk>base.atk);applyHeal(b,{source:u,target:u,amount:u.maxHp*2});assert.ok(u.shield>0);assert.ok(u.shield<=u.maxHp);
 });
 
 test('隐现 S2 技能期间降低敌人选取仇恨',()=>{
