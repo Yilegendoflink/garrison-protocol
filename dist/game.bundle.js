@@ -3047,6 +3047,13 @@ function onEvent(battle,type,payload,ctx){
  if(type==='after-heal'&&source&&target){
   for(const talent of activeTalents(battle,source)){const text=talent.description||'',bb=talentValues(talent);if(has(text,/目标获得.*抵抗/))applyStatus(target,'resist',Number(bb.duration)||4,{source:source.uid,resistible:false});}
  }
+ if(type==='ammo'&&source){
+  for(const owner of battle.s.units.filter(u=>u.deployed&&u.hp>0))for(const talent of activeTalents(battle,owner)){
+   const text=talent.description||'',bb=talentValues(talent);if(!has(text,/弹药.*被消耗|消耗.*弹药/))continue;
+   const healRatio=Number(bb.hp_ratio);if(Number.isFinite(healRatio)&&healRatio>0)ctx.applyHeal(battle,{source:owner,target:owner,amount:owner.maxHp*healRatio});
+   const probability=Number(bb.prob??bb.attack_prob),scale=Number(bb.aoe_atk_scale??bb.atkScale??bb.damageScale);if(Number.isFinite(probability)&&Number.isFinite(scale)&&battle.economy.random()<probability){for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&battle.inside(source,e,true)))ctx.dealDamage(battle,{source:owner,target:e,amount:battle.stats(owner).atk*scale,type:'physical',cause:'skill'});}
+  }
+ }
  if(type==='enemy-death'&&payload.target){
   for(const u of battle.s.units.filter(x=>x.deployed&&x.hp>0))for(const talent of activeTalents(battle,u)){
    const text=talent.description||'',bb=talentValues(talent);if(!has(text,/敌人倒下|击倒.*恢复|击杀/))continue;
@@ -3556,6 +3563,9 @@ function effectStatMods(battle,u){
   if(src.id==='char_108_silent'){
    const t=talents.find(x=>x.name==='强化注射');if(t)auras.push({key:'silent-as',stat:'attackSpeed',layer:'maxSame',v:t.values.attack_speed||12,src:'赫默',ok:v=>battle.profile(v).profession==='MEDIC'});
   }
+  if(src.id==='char_1041_angel2'){
+   const t=talents.find(x=>x.name==='铳弹协约');if(t){const base=t.values.atk||.09,mult=t.values.mult||2;auras.push({key:'angel-ammo-atk',stat:'atk',layer:'maxSame',v:base,src:'新约能天使',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'});auras.push({key:'angel-ammo-laterano',stat:'atk',layer:'maxSame',v:base*mult,src:'新约能天使·拉特兰',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'&&battle.profile(v)?.bonds?.includes('lateranoShip')});}
+  }
   if(src.id==='char_358_lisa'){
    const t=talents.find(x=>x.name==='技力光环·辅助');if(t)auras.push({key:'sp_recovery_aura',stat:'spRecoveryPerSec',layer:'maxSame',v:t.values.sp_recovery_per_sec||.4,src:'铃兰',ok:v=>battle.profile(v).profession==='SUPPORT'||v.uid===src.uid});
   }
@@ -4034,7 +4044,7 @@ class NativeBattle {
    if(u.action&&--u.action.left<=0){const action=u.action;u.action=null;
     if(action.kind==='reload')u.magazine=Math.min(branchTrait(p).values.value??8,(u.magazine??0)+1);
     else if(action.kind==='charge')u.energy=Math.min(branchTrait(p).values.times??3,(u.energy||0)+1);
-    else{u.lastAttackId=newAttackId(this);const released=this.releaseNativeAttack(u,action);if(released>0){if(behavior.magazine)u.magazine=Math.max(0,u.magazine-1);if(behavior.storage)u.energy=Math.max(0,(u.energy||0)-(action.storedEnergy||0));}u.lastAttack=this.s.time;if(spTypeOf(skill)==='INCREASE_WHEN_ATTACK'&&!action.enhanced)gainSp(u,skill,undefined,cost);if(u.ammo>0){const used=Math.min(u.ammo,u.ammoPerAttack||1);u.ammo-=used;this.event(u,'ammo');this.emit('ammo',{uid:u.uid,x:u.x,y:u.y,ammo:u.ammo,used});if(u.ammo===0&&!u.skillLeft){this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'skill-end',{target:u});}}}
+   else{u.lastAttackId=newAttackId(this);const released=this.releaseNativeAttack(u,action);if(released>0){if(behavior.magazine)u.magazine=Math.max(0,u.magazine-1);if(behavior.storage)u.energy=Math.max(0,(u.energy||0)-(action.storedEnergy||0));}u.lastAttack=this.s.time;if(spTypeOf(skill)==='INCREASE_WHEN_ATTACK'&&!action.enhanced)gainSp(u,skill,undefined,cost);if(u.ammo>0){const used=Math.min(u.ammo,u.ammoPerAttack||1);u.ammo-=used;this.event(u,'ammo');dispatch(this,'ammo',{source:u,target:u,used});this.emit('ammo',{uid:u.uid,x:u.x,y:u.y,ammo:u.ammo,used});if(u.ammo===0&&!u.skillLeft){this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'skill-end',{target:u});}}}
    }
    if(u.action||u.attackCooldown>0||(behavior.returnProjectile&&u.pendingReturns>0))continue;
    const trait=branchTrait(p).values;

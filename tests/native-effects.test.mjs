@@ -110,6 +110,15 @@ test('归溟幽灵鲨 S1 locks lethal damage and exits exactly once at skill end
  dispatch(b,'skill-end',{target:u});assert.equal(u.deployed,false);assert.equal(logOf(b,'exit').length,1);
 });
 
+test('新约能天使 ammo event heals the owner and can trigger an in-range bombardment',()=>{
+ const {b}=openBattle({chessId:'chess_char_6_13_b',skillIndex:2});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:10000,def:0});u.hp=u.maxHp-100;const hp=u.hp,hpe=e.hp;b.economy.random=()=>0;dispatch(b,'ammo',{source:u,target:u,used:1});assert.ok(u.hp>hp);assert.ok(e.hp<hpe);
+});
+
+test('新约能天使 ammo contract gives the stronger Laterano aura only to ammo skills',()=>{
+ const {b}=openBattle([{chessId:'chess_char_6_13_b',skillIndex:2},{chessId:'chess_char_1_01_b',skillIndex:1}]);deployNow(b);const inside=b.s.units.find(u=>u.id==='char_498_inside');
+ const base=b.profile(inside).attributes.atk;assert.ok(b.stats(inside).atk>base);assert.ok(b.stats(inside).parts.some(p=>p.src==='新约能天使·拉特兰'&&p.stat==='atk'));
+});
+
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
  assert.equal(manifest.sourceCommit,source.source.commit);
  assert.equal(manifest.gameDataCommit,scope.gameDataCommit);

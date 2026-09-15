@@ -154,6 +154,13 @@ export function onEvent(battle,type,payload,ctx){
  if(type==='after-heal'&&source&&target){
   for(const talent of activeTalents(battle,source)){const text=talent.description||'',bb=talentValues(talent);if(has(text,/目标获得.*抵抗/))applyStatus(target,'resist',Number(bb.duration)||4,{source:source.uid,resistible:false});}
  }
+ if(type==='ammo'&&source){
+  for(const owner of battle.s.units.filter(u=>u.deployed&&u.hp>0))for(const talent of activeTalents(battle,owner)){
+   const text=talent.description||'',bb=talentValues(talent);if(!has(text,/弹药.*被消耗|消耗.*弹药/))continue;
+   const healRatio=Number(bb.hp_ratio);if(Number.isFinite(healRatio)&&healRatio>0)ctx.applyHeal(battle,{source:owner,target:owner,amount:owner.maxHp*healRatio});
+   const probability=Number(bb.prob??bb.attack_prob),scale=Number(bb.aoe_atk_scale??bb.atkScale??bb.damageScale);if(Number.isFinite(probability)&&Number.isFinite(scale)&&battle.economy.random()<probability){for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&battle.inside(source,e,true)))ctx.dealDamage(battle,{source:owner,target:e,amount:battle.stats(owner).atk*scale,type:'physical',cause:'skill'});}
+  }
+ }
  if(type==='enemy-death'&&payload.target){
   for(const u of battle.s.units.filter(x=>x.deployed&&x.hp>0))for(const talent of activeTalents(battle,u)){
    const text=talent.description||'',bb=talentValues(talent);if(!has(text,/敌人倒下|击倒.*恢复|击杀/))continue;

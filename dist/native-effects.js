@@ -482,6 +482,9 @@ export function effectStatMods(battle,u){
   if(src.id==='char_108_silent'){
    const t=talents.find(x=>x.name==='强化注射');if(t)auras.push({key:'silent-as',stat:'attackSpeed',layer:'maxSame',v:t.values.attack_speed||12,src:'赫默',ok:v=>battle.profile(v).profession==='MEDIC'});
   }
+  if(src.id==='char_1041_angel2'){
+   const t=talents.find(x=>x.name==='铳弹协约');if(t){const base=t.values.atk||.09,mult=t.values.mult||2;auras.push({key:'angel-ammo-atk',stat:'atk',layer:'maxSame',v:base,src:'新约能天使',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'});auras.push({key:'angel-ammo-laterano',stat:'atk',layer:'maxSame',v:base*mult,src:'新约能天使·拉特兰',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'&&battle.profile(v)?.bonds?.includes('lateranoShip')});}
+  }
   if(src.id==='char_358_lisa'){
    const t=talents.find(x=>x.name==='技力光环·辅助');if(t)auras.push({key:'sp_recovery_aura',stat:'spRecoveryPerSec',layer:'maxSame',v:t.values.sp_recovery_per_sec||.4,src:'铃兰',ok:v=>battle.profile(v).profession==='SUPPORT'||v.uid===src.uid});
   }
