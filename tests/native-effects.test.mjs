@@ -339,7 +339,7 @@ test('华法琳紧急包扎只在半血以下的下一次治疗追加生命比�
 });
 
 test('浮游单元技能按黑板数量生成多枚投射，并保留概率寒冷',()=>{
- const {b}=openBattle({chessId:'chess_char_3_20_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.equal(u.floatUnits,2);b.economy.random=()=>0;b.hit(u,e,10,'arts');assert.ok(e.statuses.some(s=>s.kind==='cold'||s.kind==='frozen'));
+ const {b}=openBattle({chessId:'chess_char_3_20_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.equal(u.floatUnits,2);assert.equal(u.floatTarget,e.uid);b.economy.random=()=>0;b.hit(u,e,10,'arts');assert.ok(e.statuses.some(s=>s.kind==='cold'||s.kind==='frozen'));assert.ok(b.stats(u).atk>b.profile(u).attributes.atk);
 });
 
 test('洛洛浮游过载在技能结束按实际持续时间眩晕自身',()=>{
@@ -688,6 +688,7 @@ test('流明 S1 HoT uses heal events after a real activate',()=>{
  const hp=ally.hp;steps(b,35);
  assert.ok(ally.hp>=hp);
  assert.ok(logOf(b,'heal').length>=1);
+ assert.ok(ally.statuses.some(s=>s.kind==='resist'));
 });
 
 test('波登可 S2 zone applies arts ticks and control',()=>{
@@ -858,6 +859,51 @@ test('水月 S2 额外目标束缚，S3 少目标自损与眩晕，天赋对最�
  const {b:b2}=openBattle({chessId:'chess_char_4_09_b',skillIndex:2});deployNow(b2);const v=b2.s.units[0],f=enemy(b2,{x:v.x+1,y:v.y,hp:100000});v.sp=b2.spCost(v);b2.activate(v);const hp=v.hp;b2.hit(v,f,b2.stats(v).atk,'physical',{skill:true});assert.ok(f.statuses.some(s=>s.kind==='stun'));assert.ok(v.hp<hp);
 });
 
+test('伺夜技能增狼、狼群强化与阻挡目标附加法伤',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_19_b',skillIndex:0});deployNow(b);const u=b.s.units[0],wolf=b.s.summons.find(s=>s.type==='vigil-wolf');assert.ok(wolf);u.sp=b.spCost(u);b.activate(u);assert.ok(wolf.lives>=3);
+ const {b:b2}=openBattle({chessId:'chess_char_3_19_b',skillIndex:1});deployNow(b2);const v=b2.s.units[0],w=b2.s.summons.find(s=>s.type==='vigil-wolf'),e=enemy(b2,{x:w.x+1,y:w.y,hp:100000,block:w.uid});v.sp=b2.spCost(v);b2.activate(v);const hp=e.hp;for(let i=0;i<40;i++)b2.step();assert.ok(e.hp<hp);assert.ok(w.vigilBuff===null||w.vigilBuff===undefined);
+});
+
+test('山 S2 获得阻挡与最大生命回复，S3 推动并触发物理闪避',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000});u.sp=b.spCost(u);b.activate(u);assert.ok(b.stats(u).blockCnt>b.profile(u).attributes.blockCnt);u.hp=u.maxHp-500;for(let i=0;i<35;i++)b.step();assert.ok(u.hp>u.maxHp-500);
+ const {b:b2}=openBattle({chessId:'chess_char_5_17_b',skillIndex:2});deployNow(b2);const v=b2.s.units[0],f=enemy(b2,{x:v.x+1,y:v.y,hp:100000,atk:100,damageType:'physical'});b2.economy.random=()=>0;v.sp=b2.spCost(v);b2.activate(v);const hp=v.hp;b2.hurt(v,f);assert.equal(v.hp,hp);
+});
+
+test('哈洛德优先治疗元素损伤目标并按条件降低元素损伤',()=>{
+ const {b}=openBattle([{chessId:'chess_char_2_05_b',skillIndex:1},reps.operators.yak]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_4114_harold'),ally=b.s.units.find(x=>x.id==='char_199_yak'),e=enemy(b,{x:ally.x,y:ally.y,hp:100000});ally.x=u.x+1;ally.y=u.y;ally.elemental={neural:ally.maxHp*.6};ally.hp=ally.maxHp-500;u.sp=b.spCost(u);b.activate(u);const hp=ally.hp;b.heal(u,ally,100);assert.ok(ally.hp>hp);const before=ally.elemental.neural;applyElementDamage(b,{source:e,target:ally,amount:100,type:'neural'});assert.ok(ally.elemental.neural-before<=85);
+});
+
+test('浊心斯卡蒂 S1 分摊伤害，S2 鼓舞友方攻防',()=>{
+ const {b}=openBattle([{chessId:'chess_char_6_04_b',skillIndex:0},reps.operators.yak]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_1012_skadi2'),ally=b.s.units.find(x=>x.id==='char_199_yak'),e=enemy(b,{atk:100,damageType:'physical'});assert.ok(b.s.summons.some(s=>s.type==='skadi2-seaborn'));ally.x=u.x+1;ally.y=u.y;u.sp=b.spCost(u);b.activate(u);const hp=u.hp;b.hurt(ally,e);assert.ok(u.hp<hp);
+ const {b:b2}=openBattle([{chessId:'chess_char_6_04_b',skillIndex:1},reps.operators.yak]);deployNow(b2);const v=b2.s.units.find(x=>x.id==='char_1012_skadi2'),a=b2.s.units.find(x=>x.id==='char_199_yak');a.x=v.x+1;a.y=v.y;v.sp=b2.spCost(v);b2.activate(v);assert.ok(b2.stats(a).atk>b2.profile(a).attributes.atk);assert.ok(b2.stats(a).def>b2.profile(a).attributes.def);
+});
+
+test('百炼嘉维尔 S1 伤害吸血与阻挡增益、S3 延后伤害',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_23_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000,def:0});u.hp=u.maxHp-500;u.sp=b.spCost(u);b.activate(u);const hp=u.hp;b.hit(u,e,100,'physical',{skill:true});assert.ok(u.hp>hp);e.block=u.uid;assert.ok(b.stats(u).atk>b.profile(u).attributes.atk);
+});
+
+test('耀骑士临光 S2 部署获得三层护盾并在技能结束自动撤退',()=>{
+ const {b}=openBattle({chessId:'chess_char_6_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0];assert.equal(u.skillLeft,25);assert.equal(u.barriers.reduce((n,x)=>n+x.charges,0),3);assert.ok(b.stats(u).atk>b.profile(u).attributes.atk);for(let i=0;i<760;i++)b.step();assert.equal(u.deployed,false);
+});
+
+test('夕 S2 对低生命目标增伤，击杀后获得化境叠层',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_12_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000,def:0});e.hp=e.maxHp*.4;u.sp=b.spCost(u);b.activate(u);const before=e.hp;b.hit(u,e,100,'arts',{skill:true});assert.ok(before-e.hp>100);e.hp=1;commitExit(b,{target:e,reason:'knockdown',killer:u});assert.equal(u.duskTalentStacks,1);assert.ok(b.stats(u).atk>b.profile(u).attributes.atk);
+});
+
+test('归溟幽灵鲨 S1 交换生命比例，S3 按目标生命比例附伤或自损',()=>{
+ const {b}=openBattle([{chessId:'chess_char_5_13_b',skillIndex:0},reps.operators.yak]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_1023_ghost2'),a=b.s.units.find(x=>x.id==='char_199_yak');u.hp=u.maxHp*.8;a.hp=a.maxHp*.2;u.sp=b.spCost(u);b.activate(u);assert.ok(u.hp/u.maxHp<.3);assert.ok(a.hp/a.maxHp>.7);
+ const {b:b2}=openBattle({chessId:'chess_char_5_13_b',skillIndex:2});deployNow(b2);const v=b2.s.units[0],e=enemy(b2,{x:v.x+1,y:v.y,hp:100000,def:0});v.sp=b2.spCost(v);b2.activate(v);const hp=e.hp;b2.hit(v,e,100,'physical',{skill:true});assert.ok(e.hp<hp);
+});
+
+test('缄默德克萨斯天赋提供首击前攻速减伤并在首杀后满血',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_16_b',skillIndex:0});const u=b.s.units[0];b.deploy(u);assert.ok(b.stats(u).attackSpeed>b.profile(u).attributes.attackSpeed);const e=enemy(b,{x:u.x+1,y:u.y,hp:1});u.hp=u.maxHp-200;b.hit(u,e,b.stats(u).atk,'physical');assert.equal(u.hp,u.maxHp);assert.equal(u.texas2Killed,true);
+});
+
+test('史尔特尔 S1 击倒目标回满技力，S2 单目标临界倍率',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_07_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1});u.sp=0;u.sp=b.spCost(u);b.activate(u);b.hit(u,e,100,'physical',{skill:true});assert.equal(u.sp,b.spCost(u));
+ const {b:b2}=openBattle({chessId:'chess_char_5_07_b',skillIndex:1});deployNow(b2);const v=b2.s.units[0],f=enemy(b2,{x:v.x+1,y:v.y,hp:100000,def:0});v.sp=b2.spCost(v);b2.activate(v);const before=f.hp;b2.hit(v,f,100,'physical',{skill:true});assert.ok(before-f.hp>100);
+});
+
 test('斯卡蒂深海猎人攻击光环、部署增益和再部署减免',()=>{
  const {b}=openBattle([{chessId:'chess_char_3_05_b',skillIndex:1},{chessId:'chess_char_2_07_b',skillIndex:0}]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_263_skadi'),ally=b.s.units.find(x=>x.id==='char_143_ghost');assert.ok(u.skillLeft>0);assert.ok(b.stats(u).atk>b.profile(u).attributes.atk);assert.ok(b.stats(ally).atk>b.profile(ally).attributes.atk);assert.equal(b.stats(u).respawnTime,b.profile(u).attributes.respawnTime-10);
 });
@@ -1011,4 +1057,11 @@ test('applyLoss lethal still goes through death, not armor',()=>{
  applyLoss(b,{target:e,amount:20});
  assert.equal(e.hp,0);
  assert.equal(logOf(b,'death').length,1);
+});
+
+test('remaining operator adapters expose element, link, summon and shield lifecycles',()=>{
+ const n=openBattle({chessId:'chess_char_5_22_a',skillIndex:1}).b;deployNow(n);const nu=n.s.units[0],ne=enemy(n,{x:nu.x+1,y:nu.y,hp:20000});nu.sp=n.spCost(nu);n.activate(nu);assert.ok(ne.elemental?.necrosis>0||ne.elementBurst>0);assert.ok(ne.statuses.some(s=>s.kind==='fear'));
+ const c=openBattle({chessId:'chess_char_4_25_a',skillIndex:1}).b;deployNow(c);assert.ok(c.s.summons.filter(s=>s.type==='cetsyr-dust').length>=1);
+ const h=openBattle({chessId:'chess_char_6_16_a',skillIndex:1}).b;deployNow(h);const hu=h.s.units[0],he=enemy(h,{x:hu.x+1,y:hu.y,hp:20000});hu.sp=h.spCost(hu);h.activate(hu);assert.ok(he.statuses.some(s=>s.kind==='sluggish')||he.hp<20000);
+ const a=openBattle({chessId:'chess_char_6_20_a',skillIndex:1}).b;deployNow(a);const au=a.s.units[0];au.sp=a.spCost(au);a.activate(au);assert.ok(au.shieldLayers.length>0);
 });
