@@ -51,18 +51,20 @@ export function skillConfig(profile){
 }
 function activeTalents(battle,u){return battle.activeTalentsOf?battle.activeTalentsOf(u):(battle.profile(u)?.activeTalents||[]);}
 export function statMods(battle,u){
- const out={add:{atk:0,maxHp:0,def:0,magicResistance:0},ratio:{atk:0,maxHp:0,def:0},attackSpeed:0,spRecoveryPerSec:0,parts:[],auras:[]};
+ const out={add:{atk:0,maxHp:0,def:0,magicResistance:0,blockCnt:0,tauntLevel:0},ratio:{atk:0,maxHp:0,def:0},attackSpeed:0,spRecoveryPerSec:0,parts:[],auras:[]};
  const note=(stat,layer,v,src)=>{if(v)out.parts.push({stat,layer,v,src});};
  if(!u?.deployed||u.hp<=0)return out;
  for(const talent of activeTalents(battle,u)){
   const text=talent.description||'',bb=talentValues(talent);
-  const atk=Number(bb.atk),hp=Number(bb.max_hp),def=Number(bb.def),mr=Number(bb.magic_resistance),as=Number(bb.attack_speed),sp=Number(bb.sp_recovery_per_sec);
+  const atk=Number(bb.atk),hp=Number(bb.max_hp),def=Number(bb.def),mr=Number(bb.magic_resistance),as=Number(bb.attack_speed),sp=Number(bb.sp_recovery_per_sec),blocks=Number(bb.block_cnt),taunt=Number(bb.taunt_level);
   if(Number.isFinite(atk)&&direct(text,'攻击力')){out.ratio.atk+=atk;note('atk','ratio',atk,talent.name||u.id);}
   if(Number.isFinite(hp)&&direct(text,'生命上限')){out.ratio.maxHp+=hp;note('maxHp','ratio',hp,talent.name||u.id);}
   if(Number.isFinite(def)&&direct(text,'防御力')){out.ratio.def+=def;note('def','ratio',def,talent.name||u.id);}
   const sourceName=(battle.profile(u)?.name||u.id)+'·'+(talent.name||'天赋');
   if(Number.isFinite(mr)&&direct(text,'法术抗性')){out.add.magicResistance+=mr;note('magicResistance','add',mr,sourceName);}
   if(Number.isFinite(as)&&direct(text,'攻击速度')){out.attackSpeed+=as;note('attackSpeed','add',as,sourceName);}
+  if(Number.isFinite(blocks)&&direct(text,'阻挡数')){out.add.blockCnt+=blocks;note('blockCnt','add',blocks,sourceName);}
+  if(Number.isFinite(taunt)&&direct(text,'嘲讽等级')){out.add.tauntLevel+=taunt;note('tauntLevel','add',taunt,sourceName);}
   if(Number.isFinite(sp)&&has(text,/技力自然回复速度/))out.auras.push({stat:'spRecoveryPerSec',layer:'maxSame',value:sp,text,source:u});
   if(Number.isFinite(atk)&&has(text,/所有友方|全体友方|所有【/))out.auras.push({stat:'atk',layer:'ratio',value:atk,text,source:u});
   if(Number.isFinite(def)&&has(text,/所有友方|全体友方|所有【/))out.auras.push({stat:'def',layer:'ratio',value:def,text,source:u});
@@ -174,9 +176,9 @@ export function onEvent(battle,type,payload,ctx){
    const probability=Number(bb.prob??bb.attack_prob),scale=Number(bb.aoe_atk_scale??bb.atkScale??bb.damageScale);if(Number.isFinite(probability)&&Number.isFinite(scale)&&battle.economy.random()<probability){for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&battle.inside(source,e,true)))ctx.dealDamage(battle,{source:owner,target:e,amount:battle.stats(owner).atk*scale,type:'physical',cause:'skill'});}
   }
  }
-  if(type==='enemy-death'&&payload.target){
+ if(type==='enemy-death'&&payload.target){
   for(const u of battle.s.units.filter(x=>x.deployed&&x.hp>0))for(const talent of activeTalents(battle,u)){
-   const text=talent.description||'',bb=talentValues(talent);if(!has(text,/敌人倒下|击倒.*恢复|击杀/))continue;
+   const text=talent.description||'',bb=talentValues(talent);if(!has(text,/敌人倒下|击倒.*恢复|击杀/))continue;if(has(text,/周围|范围内|攻击范围/)&&!battle.inside(u,payload.target))continue;
    if(Number(bb.hp_ratio)>0)ctx.applyHeal(battle,{source:u,target:u,amount:u.maxHp*bb.hp_ratio});
    if(Number(bb.cost)>0)battle.economy.s.funds+=bb.cost;
    if(Number(bb.sp)>0)ctx.gainSp(u,Number(bb.sp));

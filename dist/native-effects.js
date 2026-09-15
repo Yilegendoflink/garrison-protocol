@@ -459,7 +459,7 @@ function tickAuras(battle){
 }
 
 export function effectStatMods(battle,u){
- const parts=[],add={atk:0,maxHp:0,def:0,magicResistance:0},ratio={atk:0,maxHp:0,def:0},finalAdd={atk:0,maxHp:0,def:0};
+ const parts=[],add={atk:0,maxHp:0,def:0,magicResistance:0,blockCnt:0,tauntLevel:0},ratio={atk:0,maxHp:0,def:0},finalAdd={atk:0,maxHp:0,def:0};
  let attackSpeed=0,spRecoveryPerSec=0,magicResistance=0;
  const note=(stat,layer,v,src)=>{if(v)parts.push({stat,layer,v,src});};
  const auras=[];
@@ -491,7 +491,7 @@ export function effectStatMods(battle,u){
  }
  if(u.deployed&&u.hp>0){
   const genericSelf=statMods(battle,u);
-  add.atk+=genericSelf.add.atk;add.maxHp+=genericSelf.add.maxHp;add.def+=genericSelf.add.def;add.magicResistance+=genericSelf.add.magicResistance;
+  add.atk+=genericSelf.add.atk;add.maxHp+=genericSelf.add.maxHp;add.def+=genericSelf.add.def;add.magicResistance+=genericSelf.add.magicResistance;add.blockCnt+=genericSelf.add.blockCnt||0;add.tauntLevel+=genericSelf.add.tauntLevel||0;
   ratio.atk+=genericSelf.ratio.atk;ratio.maxHp+=genericSelf.ratio.maxHp;ratio.def+=genericSelf.ratio.def;attackSpeed+=genericSelf.attackSpeed;spRecoveryPerSec+=genericSelf.spRecoveryPerSec;parts.push(...genericSelf.parts);
   const talents=activeTalentsOf(battle,u);
   if(u.hornBuff){ratio.maxHp+=-(1-(u.hornBuff.maxHpMul??.5));ratio.def+=u.hornBuff.def||0;attackSpeed+=u.hornBuff.attackSpeed||0;note('maxHp','ratio',-(1-(u.hornBuff.maxHpMul??.5)),'号角血战');}

@@ -127,6 +127,10 @@ test('艾丝黛尔 active skill excludes external healing and restores it at ski
  const {b}=openBattle([{chessId:'chess_char_1_12_b',skillIndex:1},reps.operators.yak]);deployNow(b);const estelle=b.s.units.find(u=>u.id==='char_127_estell'),yak=b.s.units.find(u=>u.id==='char_199_yak');estelle.sp=b.spCost(estelle);b.activate(estelle);assert.equal(b.canHeal(estelle,yak),false);dispatch(b,'skill-end',{target:estelle});assert.equal(b.canHeal(estelle,yak),true);
 });
 
+test('skill block-count overrides reach the shared blocking attribute layer',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_12_b',skillIndex:1});deployNow(b);const u=b.s.units[0],base=b.profile(u).attributes.blockCnt;u.sp=b.spCost(u);b.activate(u);assert.equal(b.stats(u).blockCnt,0);u.skillLeft=0;dispatch(b,'skill-end',{target:u});assert.equal(b.stats(u).blockCnt,base);
+});
+
 test('折桠 skill-end talent heals from the shared lifecycle hook',()=>{
  const {b}=openBattle({chessId:'chess_char_2_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.hp=u.maxHp-100;dispatch(b,'skill-end',{target:u});assert.ok(u.hp>u.maxHp-100);
 });
