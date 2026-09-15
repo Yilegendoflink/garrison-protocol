@@ -5,8 +5,8 @@ import {gainSp} from './native-sp.js';
 import {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter} from './native-operator-effects.js';
 
 export const BATTLE_SCHEMA_VERSION=1;
-export const EFFECT_KINDS=new Set(['dot','hot','regen','loss','zone','attached','aura','guard','barrier','lock','stat']);
-export const ELEMENT_TYPES=new Set(['burn','necrosis','corrosion','elemental']);
+export const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','attached','aura','guard','barrier','lock','stat']);
+export const ELEMENT_TYPES=new Set(['neural','burn','necrosis','corrosion','elemental']);
 const QUEUE_CAP=256,ANCESTOR_CAP=32;
 
 export function emptySettle(){return {nextEventId:1,nextAttackId:1,nextEffectId:1,nextSeq:1,queue:[],consumed:[],byId:{},fault:null};}
@@ -15,8 +15,8 @@ export function ensureBattleShape(s){
  s.logicEffects??=[];s.summons??=[];s.logicLog??=[];
  s.settle={...emptySettle(),...s.settle,byId:s.settle?.byId||{}};
  s.settle.consumed=s.settle.consumed||[];s.settle.queue=s.settle.queue||[];
- for(const u of s.units||[]){u.deployGen??=0;u.shieldLayers??=[];u.barriers??=[];u.exitLife=u.exitLife||null;}
- for(const e of s.enemies||[]){e.shieldLayers??=[];e.barriers??=[];}
+ for(const u of s.units||[]){u.deployGen??=0;u.shieldLayers??=[];u.barriers??=[];u.damageRedirects??=[];u.exitLife=u.exitLife||null;}
+ for(const e of s.enemies||[]){e.shieldLayers??=[];e.barriers??=[];e.damageRedirects??=[];}
  return s;
 }
 export function migrateBattle(saved){
@@ -29,8 +29,9 @@ export function validateBattle(s,battle){
  if(!s||!Array.isArray(s.units)||!Array.isArray(s.enemies)||!Number.isFinite(s.time)||!Number.isFinite(s.frame))return 'invalid battle snapshot';
  const ids=new Set();
  for(const actor of [...s.units,...s.enemies,...(s.summons||[])]){
-  if(!Number.isInteger(actor.uid)||ids.has(actor.uid))return 'duplicate or invalid uid';
-  if(!Number.isFinite(actor.hp)||!Number.isFinite(actor.x)||!Number.isFinite(actor.y))return 'invalid actor values';
+ if(!Number.isInteger(actor.uid)||ids.has(actor.uid))return 'duplicate or invalid uid';
+ if(!Number.isFinite(actor.hp)||!Number.isFinite(actor.x)||!Number.isFinite(actor.y))return 'invalid actor values';
+  for(const row of actor.damageRedirects||[])if(row.targetUid==null||!Number.isFinite(row.ratio)||row.ratio<0||row.ratio>1)return 'invalid damage redirect';
   ids.add(actor.uid);
  }
  for(const fx of s.logicEffects||[]){
@@ -140,7 +141,7 @@ export function commitExit(battle,{target,reason='knockdown',killer=null,event=n
  }
  if(target.exitLife===lifeKey(target))return false;
  target.exitLife=lifeKey(target);
- target.deployed=false;target.action=null;target.skillLeft=0;target.ammo=0;
+ target.deployed=false;target.downed=false;target.action=null;target.skillLeft=0;target.ammo=0;
  if(reason==='forced'||reason==='skill'){target.hp=0;target.down=battle.stats(target).respawnTime;target.downMax=target.down;}
  else{
   target.down=battle.stats(target).respawnTime;
@@ -157,9 +158,21 @@ export function commitExit(battle,{target,reason='knockdown',killer=null,event=n
  return true;
 }
 
+export function reviveActor(battle,target,{hpRatio=1,stunDuration=0,source=null,reason='revive'}={}){
+ if(!target||target.kind==='summon'||target.exitLife===lifeKey(target)&&target.hp>0)return false;
+ target.deployed=true;target.downed=false;target.down=0;target.exitLife=null;target.action=null;target.skillLeft=0;target.ammo=0;target.shieldLayers=[];target.shield=0;if(target.blazeDownUsed){target.healable=target.blazeHealable!==false;target.blazeHealable=null;target.blazeRegen=0;target.blazeStun=0;}target.hp=Math.max(1,Math.min(target.maxHp,target.maxHp*Math.max(0,Math.min(1,hpRatio))));
+ log(battle,'revive',{uid:target.uid,sourceUid:source?.uid,reason,hp:target.hp});battle.emit('revive',{uid:target.uid,x:target.x,y:target.y,reason});dispatch(battle,'revive',{source,target,reason});
+ if(stunDuration>0)for(const e of enemyActors(battle.s).filter(e=>chebyshev(e,target)<=1))applyStatus(e,'stun',stunDuration,{source:target.uid,resistible:false});
+ return true;
+}
+
 function runFatal(battle,target,wouldDie,event){
  if(!wouldDie||target.exitLife===lifeKey(target))return false;
  if(target.type==='vigil-wolf'&&target.lives>1){target.lives--;target.blockCnt=target.lives;target.hp=target.maxHp;return true;}
+ const downTalent=target.kind!=='summon'&&activeTalentsOf(battle,target).find(t=>t.name==='绝处重燃'||/被击倒时倒地/.test(t.description||''));
+ if(downTalent&&!target.blazeDownUsed){
+  const bb=downTalent.values||{};target.blazeDownUsed=true;target.downed=true;target.deployed=true;target.action=null;target.skillLeft=0;target.ammo=0;target.blazeHealable=target.healable!==false;target.healable=false;target.blazeRegen=Number(bb.hp_recovery_per_sec_by_max_hp_ratio)||.03;target.blazeStun=Number(bb.stun)||5;target.hp=1;grantShield(battle,target,{id:'blaze-down-'+target.uid,amount:Number(bb.dynamic)||6000,sourceUid:target.uid});log(battle,'fatal-down',{uid:target.uid,eventId:event.eventId});return true;
+ }
  if(target.id==='char_4039_horn'&&!target.revivedThisLife){
   const t=activeTalentsOf(battle,target).find(x=>x.name==='血战');if(!t)return false;
   const bb=t.values;target.revivedThisLife=true;
@@ -195,8 +208,27 @@ export function dealDamage(battle,opts){
   if(target.fragile)value*=target.fragile;
  }
  let type=opts.type||'physical';
- if(opts.cause!=='dot'&&opts.cause!=='extra'&&opts.cause!=='reflect'){
+ if(!opts.skipHooks&&opts.cause!=='dot'&&opts.cause!=='extra'&&opts.cause!=='reflect'){
   const before={source,target,value,type,event,cause:opts.cause};dispatch(battle,'before-damage',before);value=before.value;type=before.type;
+ }
+ const protection=target.damageProtection;
+ if(!opts.skipProtection&&protection&&protection.until!=null&&battle.s.time<protection.until){
+  const immediateRatio=Math.max(0,Math.min(1,Number(protection.immediateRatio??1)));
+  const delayed=Math.max(0,value*(1-immediateRatio));
+  if(delayed>0){protection.buffer=(protection.buffer||0)+delayed;log(battle,'damage-delayed',{eventId:event.eventId,targetUid:target.uid,amount:delayed,until:protection.until});}
+  value*=immediateRatio;
+ }
+ const redirect=!opts.skipRedirect&&value>0?activeRedirect(battle,target,type):null;
+ if(redirect){
+  const receiver=getActor(battle.s,redirect.targetUid),ratio=Math.max(0,Math.min(1,Number(redirect.ratio??1)));
+  if(receiver&&receiver!==target&&receiver.hp>0){
+   const shared=value*ratio,own=redirect.mode==='redirect'?0:value-shared;
+   const common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,parentEventId:event.eventId,skipRedirect:true,skipProtection:true,skipHooks:true};
+   const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;
+   const sharedResult=shared>0?dealDamage(battle,{...common,target:receiver,value:shared}):null;
+   log(battle,'damage-redirect',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,redirectUid:receiver.uid,amount:value,shared,mode:redirect.mode||'share'});
+   return {total:(ownResult?.total||0)+(sharedResult?.total||0),hp:(ownResult?.hp||0)+(sharedResult?.hp||0),shield:(ownResult?.shield||0)+(sharedResult?.shield||0),blocked:!!(ownResult?.blocked&&sharedResult?.blocked),potentialHpDamage:(ownResult?.potentialHpDamage||0)+(sharedResult?.potentialHpDamage||0),redirected:true,event};
+  }
  }
  const floor=minHpOf(target);
  const result=applyDamage(target,value,{type,sourceId:source?.id,sourceUid:source?.uid,minHp:floor});
@@ -217,7 +249,7 @@ export function dealDamage(battle,opts){
  if(result.blocked)battle.s.effects.push({x:target.x,y:target.y,text:'抵消',life:.5,type:'block'});
  log(battle,'damage',{eventId:event.eventId,parentEventId:event.parentEventId,attackId:event.attackId,cause:event.cause,sourceUid:source?.uid,targetUid:target.uid,hp:result.hp,shield:result.shield,blocked:!!result.blocked});
  if(target.hp<=0)commitExit(battle,{target,reason:opts.exitReason||'knockdown',killer:source,event});
- dispatch(battle,'after-damage',{source,target,result,type,event,cause:opts.cause||'attack',skill:!!opts.skill,effectId:opts.effectId});
+ if(!opts.skipHooks)dispatch(battle,'after-damage',{source,target,result,type,event,cause:opts.cause||'attack',skill:!!opts.skill,effectId:opts.effectId});
  drainQueue(battle);
  return result;
 }
@@ -271,6 +303,26 @@ export function applyElementDamage(battle,{source,target,amount,type='elemental'
  return {added,burst};
 }
 
+function activeRedirect(battle,target,type){
+ const now=battle.s.time;
+ target.damageRedirects??=[];
+ target.damageRedirects=target.damageRedirects.filter(row=>row.endsAt==null||row.endsAt>now);
+ return target.damageRedirects.find(row=>!row.types||row.types.includes(type)||row.types.includes('all'));
+}
+
+export function addDamageRedirect(battle,target,spec={}){
+ if(!target||spec.targetUid==null||target.uid===spec.targetUid)return null;
+ target.damageRedirects??=[];
+ const row={id:spec.id||('redirect-'+battle.s.settle.nextEffectId++),targetUid:spec.targetUid,ratio:Math.max(0,Math.min(1,Number(spec.ratio??1))),mode:spec.mode==='redirect'?'redirect':'share',types:spec.types||null,endsAt:spec.endsAt??null,sourceUid:spec.sourceUid??null};
+ target.damageRedirects=target.damageRedirects.filter(x=>x.id!==row.id);target.damageRedirects.push(row);log(battle,'damage-redirect-add',{uid:target.uid,redirectUid:row.targetUid,id:row.id,ratio:row.ratio,mode:row.mode,endsAt:row.endsAt});return row;
+}
+
+export function queueDelayedDamage(battle,spec={}){
+ if(!Number.isFinite(Number(spec.amount))||Number(spec.amount)<=0)return null;
+ const delay=Math.max(0,Number(spec.delay??0));
+ return addEffect(battle,{kind:'delayed',sourceUid:spec.source?.uid??spec.sourceUid??null,sourceDeployGen:spec.source?.deployGen,talentOrSkillId:spec.talentOrSkillId||'delayed-damage',stackRule:'stack',targetUid:spec.target?.uid??spec.targetUid,interval:null,nextAt:battle.s.time+delay,endsAt:battle.s.time+delay,values:{amount:spec.amount,type:spec.type||'physical'},snapshot:{damage:spec.amount},refKind:spec.refKind||'owner',persistAfterSourceGone:!!spec.persistAfterSourceGone,parentEventId:spec.parentEventId??null});
+}
+
 export function addEffect(battle,fx){
  const id=battle.s.settle.nextEffectId++;
  const row={id,startedAt:battle.s.time,stacks:1,stackRule:'refresh',refKind:'owner',...fx};
@@ -302,7 +354,9 @@ export function tickLogic(battle,dt){
    if(layer.endsAt!=null&&now>=layer.endsAt){layer.remaining=0;log(battle,'expired',{uid:u.uid,layerId:layer.id});}
   }
   if(u.shieldLayers){u.shieldLayers=u.shieldLayers.filter(l=>l.remaining>1e-9);u.shield=u.shieldLayers.reduce((n,l)=>n+l.remaining,0);}
+  if(u.damageRedirects)u.damageRedirects=u.damageRedirects.filter(row=>row.endsAt==null||row.endsAt>now);
  }
+ for(const e of battle.s.enemies||[])if(e.damageRedirects)e.damageRedirects=e.damageRedirects.filter(row=>row.endsAt==null||row.endsAt>now);
  for(const fx of battle.s.logicEffects.slice()){
   if(fx.refKind==='live'&&!aliveSource(battle,fx)&&!fx.persistAfterSourceGone){dropEffect(battle,fx,'source');continue;}
   if(fx.refKind==='anchor'&&fx.anchorUid!=null&&!getActor(battle.s,fx.anchorUid)){dropEffect(battle,fx,'anchor');continue;}
@@ -316,12 +370,13 @@ export function tickLogic(battle,dt){
   battle.s.time=at;try{settlePeriodic(battle,due);}finally{battle.s.time=now;}
  }
  for(const fx of battle.s.logicEffects.slice())if(fx.endsAt!=null&&now>=fx.endsAt)dropEffect(battle,fx,'expired');
+ updateAreas(battle);
  tickAuras(battle);
  for(const u of battle.s.units)periodicMods(battle,u,ctxFor(battle));
  tickSummons(battle,dt);
 }
 
-function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};}
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,log:(b,t,p)=>log(b,t,p)};}
 
 function zoneActors(battle,fx,side){
  const cx=fx.x,cy=fx.y,r=fx.radius??1;
@@ -330,7 +385,9 @@ function zoneActors(battle,fx,side){
 }
 function settlePeriodic(battle,fx){
  const source=getActor(battle.s,fx.sourceUid);
- if(fx.kind==='dot'){
+ if(fx.kind==='delayed'){
+  const t=getActor(battle.s,fx.targetUid);if(t&&t.hp>0)dealDamage(battle,{source,target:t,amount:fx.snapshot?.damage??fx.values?.amount??0,type:fx.values?.type||'physical',cause:'delayed',effectId:fx.id,parentEventId:fx.parentEventId});
+ }else if(fx.kind==='dot'){
   const t=getActor(battle.s,fx.targetUid);if(!t||t.hp<=0)return;
   const amount=fx.snapshot?.damage??fx.values?.damage??0;
   dealDamage(battle,{source,target:t,amount,type:fx.values?.type||'arts',cause:'dot',effectId:fx.id,parentEventId:null});
@@ -360,6 +417,20 @@ function settlePeriodic(battle,fx){
   const u=source;u.barriers??=[];
   const n=(u.barriers.filter(b=>b.charges>0).reduce((s,b)=>s+b.charges,0));
   if(n<(fx.values?.max_times||3))u.barriers.push({id:'mudrok-'+fx.id+'-'+battle.s.time,charges:fx.values?.times||1,types:null,sourceUid:u.uid,listen:'guardLayerConsumed'});
+ }
+}
+
+function updateAreas(battle){
+ const now=battle.s.time;
+ for(const fx of battle.s.logicEffects||[]){
+  if(fx.kind!=='zone'||!fx.trackArea)continue;
+ const side=fx.trackSide||'enemy',actors=side==='all'?([...enemyActors(battle.s),...attackableAllies(battle.s)]):zoneActors(battle,fx,side);
+  const source=getActor(battle.s,fx.sourceUid);
+  const current=new Set(actors.filter(a=>a.hp>0&&a.deployed!==false&&chebyshev({x:fx.x,y:fx.y},a)<=((fx.radius??1))).map(a=>a.uid));
+  const previous=new Set(fx.insideUids||[]);
+  for(const uid of current)if(!previous.has(uid)){const actor=getActor(battle.s,uid);const event=nextEvent(battle,{cause:'area-enter',type:'area',effectId:fx.id});log(battle,'area-enter',{eventId:event.eventId,effectId:fx.id,uid,sourceUid:fx.sourceUid,t:now});dispatch(battle,'area-enter',{source,target:actor,event,effect:fx});}
+  for(const uid of previous)if(!current.has(uid)){const actor=getActor(battle.s,uid);const event=nextEvent(battle,{cause:'area-exit',type:'area',effectId:fx.id});log(battle,'area-exit',{eventId:event.eventId,effectId:fx.id,uid,sourceUid:fx.sourceUid,t:now});dispatch(battle,'area-exit',{source,target:actor,event,effect:fx});}
+  fx.insideUids=[...current];
  }
 }
 
@@ -440,18 +511,29 @@ export function effectStatMods(battle,u){
  return {add,ratio,finalAdd,attackSpeed,magicResistance,spRecoveryPerSec,parts};
 }
 
+function validMoveTile(battle,target,x,y,{allowOccupied=false,allowFlyOnly=false}={}){
+ const tile=battle.map.grid[y]?.[x];if(!tile||tile.passableMask==='NONE'||(!allowFlyOnly&&tile.passableMask==='FLY_ONLY')||tile.obstacle)return false;
+ if(allowOccupied)return true;
+ const alliedTarget=battle.s.units.includes(target)||(battle.s.summons||[]).includes(target);
+ const occupants=alliedTarget?enemyActors(battle.s):alliedActors(battle.s);
+ const occupied=new Set(occupants.filter(a=>a!==target&&a.deployed!==false&&a.occupiesTile!==false).map(a=>a.x+','+a.y));return !occupied.has(x+','+y);
+}
+export function teleportActor(battle,target,{x,y,source=null,mode='teleport',allowOccupied=false}={}){
+ if(!target||target.hp<=0||target.hidden||x==null||y==null)return false;
+ const nx=Math.round(x),ny=Math.round(y);if(!validMoveTile(battle,target,nx,ny,{allowOccupied,allowFlyOnly:true}))return false;
+ target.x=nx;target.y=ny;target.block=null;target.action=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode});battle.emit('move',{uid:target.uid,x:nx,y:ny,mode});return true;
+}
 export function moveActor(battle,target,source,description=''){
  if(!target||target.hp<=0||target.hidden||target.levitated)return false;
  const away=/推开|推动|击退/.test(description),toward=/拖拽|拉向|拉至/.test(description);if(!away&&!toward)return false;
  const dx=target.x-source.x,dy=target.y-source.y,len=Math.hypot(dx,dy)||1,step=away?1:-1,nx=Math.round(target.x+(dx/len)*step),ny=Math.round(target.y+(dy/len)*step);
- const tile=battle.map.grid[ny]?.[nx];if(!tile||tile.passableMask==='NONE'||tile.passableMask==='FLY_ONLY'||tile.obstacle)return false;
- const occupied=new Set(alliedActors(battle.s).filter(a=>a!==target&&a.deployed&&a.occupiesTile).map(a=>a.x+','+a.y));if(occupied.has(nx+','+ny))return false;
- target.x=nx;target.y=ny;target.block=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode:away?'push':'pull'});battle.emit('move',{uid:target.uid,x:nx,y:ny,mode:away?'push':'pull'});return true;
+ if(!validMoveTile(battle,target,nx,ny))return false;
+ return teleportActor(battle,target,{x:nx,y:ny,source,mode:away?'push':'pull'});
 }
 
 export function dispatch(battle,type,payload){
  const {source,target,event}=payload;
- const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};
+ const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,log:(b,t,p)=>log(b,t,p)};
  if(type==='skill-start')payload.genericSuppress=operatorSkillStart(battle,target,ctx);
  else onEvent(battle,type,payload,ctx);
  if(type==='after-damage'&&payload.cause!=='dot'&&payload.cause!=='reflect'){
@@ -576,9 +658,19 @@ function onSkillStart(battle,u){
 }
 function onSkillEnd(battle,u){
  const idx=u.source?.skillIndex??battle.profile(u).skillIndex;
+ for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-heal-zone:${u.id}:${u.skillCount}`))dropEffect(battle,fx,'skill-end');
+ if(u.damageProtection){
+  const protection=u.damageProtection;u.damageProtection=null;
+  if(protection.buffer>0){
+   const duration=Math.max(.1,protection.finalDuration||1),interval=Math.min(.1,duration),rate=protection.buffer/duration;
+   addEffect(battle,{kind:'loss',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:u.uid,talentOrSkillId:'delayed-loss:'+u.id+':'+u.skillCount,interval,nextAt:battle.s.time+interval,endsAt:battle.s.time+duration,values:{amount:rate*interval},snapshot:{amount:rate*interval},refKind:'owner',persistAfterSourceGone:false});
+   log(battle,'damage-buffer-release',{uid:u.uid,amount:protection.buffer,duration});
+  }
+ }
  if(u.id==='char_143_ghost'&&idx===1){
   u.lockHp=null;applyStatus(u,'stun',skillBB(battle,u).stun||10,{source:u.uid,resistible:false});
  }
+ if(u.id==='char_4145_ulpia'&&u.returnPosition){const pos=u.returnPosition;u.returnPosition=null;teleportActor(battle,u,{...pos,source:u,mode:'return'});}
 }
 function onOperatorExit(battle,u,reason){
  for(const fx of battle.s.logicEffects.slice()){

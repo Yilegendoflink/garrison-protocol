@@ -64,7 +64,8 @@ test('status flags and bounded push/pull share the simulation state',()=>{
 test('element damage accumulates independently and emits a burst at the target threshold',()=>{
  const {b}=openBattle({name:'焰影苇草',chessId:'chess_char_6_08_b'});deployNow(b);const u=b.s.units[0],e=enemy(b,{hp:1000});
  const a=applyElementDamage(b,{source:u,target:e,amount:400,type:'burn'});assert.equal(a.burst,false);assert.equal(e.elemental.burn,400);
- const c=applyElementDamage(b,{source:u,target:e,amount:600,type:'burn'});assert.equal(c.burst,true);assert.equal(e.elemental.burn,0);assert.equal(e.elementBurst,1);assert.equal(b.s.logicLog.filter(x=>x.type==='element').length,2);
+ const neural=applyElementDamage(b,{source:u,target:e,amount:120,type:'neural'});assert.equal(neural.burst,false);assert.equal(e.elemental.neural,120);assert.equal(e.elemental.burn,400);
+ const c=applyElementDamage(b,{source:u,target:e,amount:600,type:'burn'});assert.equal(c.burst,true);assert.equal(e.elemental.burn,0);assert.equal(e.elementBurst,1);assert.equal(b.s.logicLog.filter(x=>x.type==='element').length,3);
 });
 
 test('shield and lock fields are discoverable from skill blackboards',()=>{
@@ -81,4 +82,9 @@ test('resource adapter preserves named ammo consumption instead of assuming one 
 test('runtime contains the pinned summon token catalogue for later per-operator adapters',()=>{
  assert.ok(Object.keys(NATIVE_DATA.tokens||{}).length>=60);
  for(const token of ['token_10000_silent_healrb','token_10015_dusk_drgn','token_10019_nearl2_sword','token_10028_vigil_wolf','token_10041_cathy_catsld'])assert.equal(NATIVE_DATA.tokens[token].kind,'summon');
+});
+
+test('area skill adapters retain both enemy damage and ally regeneration channels',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_15_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);
+ const zones=b.s.logicEffects.filter(f=>f.sourceUid===u.uid);assert.ok(zones.some(f=>f.values?.dot&&f.trackArea));assert.ok(zones.some(f=>f.values?.hot&&f.trackArea));assert.ok(zones.every(f=>f.endsAt===null));
 });

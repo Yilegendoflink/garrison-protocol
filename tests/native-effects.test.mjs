@@ -5,7 +5,7 @@ import {applyStatus} from '../dist/status.js';
 import {blackboard,resolveActiveTalents,resolveChess} from '../dist/protocol.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
-import {dealDamage,enqueue,newAttackId,applyHeal,applyRegen,applyLoss,commitExit,tickLogic,addEffect,BATTLE_SCHEMA_VERSION,validateBattle,migrateBattle,getActor,attackableAllies} from '../dist/native-effects.js';
+import {dealDamage,enqueue,newAttackId,applyHeal,applyRegen,applyLoss,commitExit,reviveActor,dispatch,tickLogic,addEffect,addDamageRedirect,queueDelayedDamage,teleportActor,BATTLE_SCHEMA_VERSION,validateBattle,migrateBattle,getActor,attackableAllies} from '../dist/native-effects.js';
 import {openBattle,deployNow,enemy,byId,talentBB,logOf,steps,reps} from './effects-harness.mjs';
 
 const source=JSON.parse(fs.readFileSync('data/modes/alliance-lower/source.json','utf8'));
@@ -39,6 +39,64 @@ test('old shields migrate and future schemas are rejected',()=>{
  const {b}=openBattle(reps.operators.yak);const save=structuredClone(b.s);save.units[0].shield=123;delete save.units[0].shieldLayers;delete save.battleSchemaVersion;
  const migrated=migrateBattle(save);assert.equal(migrated.units[0].shieldLayers[0].remaining,123);
  assert.equal(migrateBattle({...save,battleSchemaVersion:999}),null);
+});
+
+test('delayed damage is serialized as a due effect and settles once',()=>{
+ const {b}=openBattle(reps.operators.yak);deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});
+ const effect=queueDelayedDamage(b,{source:u,target:e,amount:120,type:'true',delay:2,talentOrSkillId:'test-delay'});
+ assert.equal(effect.kind,'delayed');b.s.time=1;tickLogic(b,1);assert.equal(e.hp,1000);
+ b.s.time=2;tickLogic(b,1);assert.equal(e.hp,880);assert.equal(b.s.logicEffects.some(x=>x.id===effect.id),false);
+ assert.equal(logOf(b,'damage').at(-1).cause,'delayed');
+});
+
+test('damage sharing splits one hit across a live protection target',()=>{
+ const {b}=openBattle([reps.operators.yak,reps.operators.yak]);deployNow(b);
+ const [front,ally]=b.s.units,e=enemy(b,{x:front.x+1,y:front.y,hp:1000,def:0});
+ const hp0=front.hp,hp1=ally.hp;addDamageRedirect(b,front,{id:'share',targetUid:ally.uid,ratio:.4,mode:'share',types:['true'],endsAt:5});
+ const result=dealDamage(b,{source:e,target:front,amount:100,type:'true'});
+ assert.equal(result.redirected,true);assert.equal(Math.round(hp0-front.hp),60);assert.equal(Math.round(hp1-ally.hp),40);
+ assert.equal(logOf(b,'damage-redirect').at(-1).redirectUid,ally.uid);
+});
+
+test('teleport only lands on a valid unoccupied map cell and clears blocking',()=>{
+ const {b}=openBattle(reps.operators.yak);deployNow(b);const u=b.s.units[0],before={x:u.x,y:u.y};
+ u.block=999;assert.equal(teleportActor(b,u,{x:before.x+1,y:before.y,source:u}),true);assert.equal(u.block,null);
+ assert.equal(teleportActor(b,u,{x:-1,y:-1,source:u}),false);assert.equal(u.x,before.x+1);
+});
+
+test('tracked zones emit serializable enter and exit events',()=>{
+ const {b}=openBattle(reps.operators.yak);deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x,y:u.y,hp:100});
+ addEffect(b,{kind:'zone',sourceUid:u.uid,x:u.x,y:u.y,radius:1,trackArea:true,trackSide:'enemy',interval:2,nextAt:99,endsAt:5,talentOrSkillId:'test-area'});
+ tickLogic(b,0);assert.equal(logOf(b,'area-enter').length,1);
+ e.x+=3;b.s.time=1;tickLogic(b,1);assert.equal(logOf(b,'area-exit').length,1);
+ const save=structuredClone(b.s);assert.equal(save.logicEffects[0].insideUids.length,0);
+});
+
+test('damage protection buffers the deferred portion without changing damage type',()=>{
+ const {b}=openBattle(reps.operators.yak);deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,def:0});
+ u.damageProtection={immediateRatio:.5,until:10,buffer:0,finalDuration:2};const hp=u.hp;const result=dealDamage(b,{source:e,target:u,amount:100,type:'true'});
+ assert.equal(result.hp,50);assert.equal(u.hp,hp-50);assert.equal(u.damageProtection.buffer,50);assert.equal(logOf(b,'damage-delayed').at(-1).amount,50);
+});
+
+test('reviveActor restores a defeated operator lifecycle and emits a combat event',()=>{
+ const {b}=openBattle(reps.operators.yak);deployNow(b);const u=b.s.units[0];u.hp=0;commitExit(b,{target:u,reason:'knockdown'});assert.equal(u.deployed,false);
+ assert.equal(reviveActor(b,u,{hpRatio:.4,reason:'test'}),true);assert.equal(u.deployed,true);assert.equal(u.hp,u.maxHp*.4);assert.equal(logOf(b,'revive').length,1);
+});
+
+test('Gavial S3 uses the shared delayed damage protection path',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_23_b',skillIndex:2});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,def:0});
+ u.sp=b.spCost(u);b.activate(u);assert.equal(u.damageProtection.immediateRatio,.5);const hp=u.hp;dealDamage(b,{source:e,target:u,amount:100,type:'true'});assert.equal(u.hp,hp-50);assert.equal(u.damageProtection.buffer,50);
+ dispatch(b,'skill-end',{target:u});assert.equal(u.damageProtection,null);assert.ok(b.s.logicEffects.some(f=>f.kind==='loss'&&f.targetUid===u.uid));
+});
+
+test('Ulpian S2 uses a legal anchor move and returns to its start cell',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_05_b',skillIndex:2});deployNow(b);const u=b.s.units[0],start={x:u.x,y:u.y};u.sp=b.spCost(u);b.activate(u);assert.ok(u.returnPosition);assert.notDeepEqual({x:u.x,y:u.y},start);dispatch(b,'skill-end',{target:u});assert.deepEqual({x:u.x,y:u.y},start);
+});
+
+test('Blaze revival talent enters a downed state, blocks healing, then revives once',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_03_b',skillIndex:2});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,def:0});
+ dealDamage(b,{source:e,target:u,amount:u.maxHp+100,type:'true'});assert.equal(u.downed,true);assert.equal(u.hp,1);assert.equal(u.healable,false);assert.equal(applyHeal(b,{source:u,target:u,amount:10}),0);assert.ok(u.shieldLayers.some(l=>l.remaining===6000));
+ u.hp=u.maxHp-1;b.step();assert.equal(u.downed,false);assert.equal(u.healable,true);assert.equal(b.s.logicLog.some(x=>x.type==='revive'&&x.uid===u.uid),true);
 });
 
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
