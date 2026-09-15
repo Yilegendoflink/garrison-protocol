@@ -286,9 +286,10 @@
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
       "partialHandlers": [
-        "heal-shield"
+        "heal-shield",
+        "chain-target-and-scale"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "幽灵鲨",
@@ -566,8 +567,10 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
-      "needsSpecialHandler": true
+      "partialHandlers": [
+        "penetration-and-stacks"
+      ],
+      "needsSpecialHandler": false
     },
     {
       "name": "雪猎",

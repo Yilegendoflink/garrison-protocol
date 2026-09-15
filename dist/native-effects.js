@@ -581,7 +581,7 @@ export function dispatch(battle,type,payload){
   }
   if(type==='after-heal'&&source?.id==='char_4139_papyrs'){
   const t=activeTalentsOf(battle,source).find(x=>x.name==='博览古卷');
-   if(t)grantShield(battle,payload.target,{amount:battle.stats(source).atk*(t.values['attack@scale']||.2),endsAt:battle.s.time+(t.values['attack@shield_duration']||8),sourceUid:source.uid,id:'papyrs-'+source.uid+'-'+payload.target.uid});
+   if(t){const skillScale=Number(source.papyrsShieldScale)|| (battle.skillActive(source)?Number(skillBB(battle,source).shield_scale_skill)||1:1);source.papyrsShieldScale=null;grantShield(battle,payload.target,{amount:battle.stats(source).atk*(t.values['attack@scale']||.2)*skillScale,endsAt:battle.s.time+(t.values['attack@shield_duration']||8),sourceUid:source.uid,id:'papyrs-'+source.uid+'-'+payload.target.uid});}
  }
  if(type==='after-heal'&&source?.id==='char_4042_lumen'&&source.lumenHotPending){
   const bb=skillBB(battle,source);source.lumenHotPending=false;
@@ -627,8 +627,9 @@ function grantGuard(battle,target,spec){
  target.barriers.push(g);log(battle,'guard-add',{uid:target.uid,id:g.id,charges:g.charges});return g;
 }
 
-function onOperatorDeploy(battle,u){
- u.exitLife=null;u.revivedThisLife=false;u.surtrLock=false;u.lumenHotPending=false;
+ function onOperatorDeploy(battle,u){
+  u.exitLife=null;u.revivedThisLife=false;u.surtrLock=false;u.lumenHotPending=false;u.papyrsTargetUid=null;
+ for(const talent of activeTalentsOf(battle,u)){const text=talent.description||'',bb=talent.values||{};if(/部署后.*秒内技力自然回复速度/.test(text)&&Number(bb.sp_recovery_per_sec)>0&&Number(bb.duration)>0){u.talentSpRecovery=Number(bb.sp_recovery_per_sec);u.talentSpRecoveryUntil=battle.s.time+Number(bb.duration);}}
  if(u.id==='char_1033_swire2'&&(u.source?.skillIndex??battle.profile(u).skillIndex)<2){u.coinCap=coinCapFor(battle.profile(u));u.coinSkillEnabled=true;const opening=coinGainAtSkillStart(battle,u);if(opening)grantCoins(u,opening,u.coinCap);}
  if(u.id==='char_496_wildmn'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===0){const bb=skillBB(battle,u);u.wildmaneAspd=Number(bb.attack_speed)||100;u.wildmaneAspdUntil=battle.s.time+(Number(battle.profile(u).skill?.duration)||25);}
  if(u.id==='char_496_wildmn'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===1){for(const target of battle.reserveUnits?.(v=>battle.profile(v)?.profession==='WARRIOR')||[]){target.wildmaneCostDelta=Math.max(-5,(target.wildmaneCostDelta||0)-1);}}
@@ -681,6 +682,7 @@ function onSkillStart(battle,u){
   addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'podego-s2',x:(battle.targets(u)[0]||u).x,y:(battle.targets(u)[0]||u).y,radius:1,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+(bb.projectile_delay_time||5),values:{dot:true,sluggish:true,silence:true,atk_scale:bb.atk_scale||.6},snapshot:{damage:battle.stats(u).atk*(bb.atk_scale||.6)},refKind:'owner',persistAfterSourceGone:true});return true;
  }
  if(u.id==='char_4042_lumen'&&idx===0){u.lumenHotPending=true;return true;}
+ if(u.id==='char_4139_papyrs'&&idx===1){const target=alliedActors(battle.s).filter(v=>v.uid!==u.uid&&v.kind!=='summon'&&v.deployed&&v.hp>0&&battle.canHeal(v,u)&&battle.inside(u,v,true)).sort((a,b)=>b.maxHp-a.maxHp||a.uid-b.uid)[0];u.papyrsTargetUid=target?.uid??null;}
  if(u.id==='char_1020_reed2'&&idx===1){
   const bb=skillBB(battle,u),grounds=battle.s.units.filter(v=>v.deployed&&v.hp>0&&battle.profile(v).position==='MELEE').slice(0,bb.max_target||2);
   for(const a of grounds)for(let ball=0;ball<3;ball++)addEffect(battle,{kind:'attached',sourceUid:u.uid,sourceDeployGen:u.deployGen,anchorUid:a.uid,talentOrSkillId:'reed2-s2-'+ball,radius:.8,interval:bb.cooldown||1.5,nextAt:battle.s.time+(ball+1)*(bb.cooldown||1.5)/3,endsAt:battle.s.time+(bb.projectile_life_time||20),values:{atk_scale:bb.atk_scale||1.9,heal_ratio:.5},refKind:'anchor',persistAfterSourceGone:true});
@@ -697,10 +699,10 @@ function onSkillStart(battle,u){
   addEffect(battle,{kind:'loss',sourceUid:u.uid,targetUid:u.uid,interval:bb.interval||1,nextAt:battle.s.time+1,endsAt:battle.s.time+(bb.duration||15),values:{amount:u.maxHp*(bb.hp_ratio||.03)},refKind:'owner'});
  }
 }
-function onSkillEnd(battle,u){
+ function onSkillEnd(battle,u){
  const idx=u.source?.skillIndex??battle.profile(u).skillIndex;
- u.skillDisarmUntil=null;u.focusHealAfter=null;u.focusHeal=false;u.statusResistance=0;
- u.pendingPeriodicCost=null;u.pendingNextAttack=null;u.pendingAttackSelfHeal=null;u.pendingCostGain=null;
+  u.skillDisarmUntil=null;u.focusHealAfter=null;u.focusHeal=false;u.statusResistance=0;u.papyrsTargetUid=null;
+ u.pendingPeriodicCost=null;u.pendingNextAttack=null;u.pendingAttackSelfHeal=null;u.pendingHealScale=null;u.papyrsShieldScale=null;u.pendingCostGain=null;
  for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-heal-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-loss:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-regen-zone:${u.id}:${u.skillCount}`))dropEffect(battle,fx,'skill-end');
  for(const talent of activeTalentsOf(battle,u)){const text=talent.description||'',bb=talent.values||{};if(/技能结束.*恢复.*生命|技能结束.*回复.*生命/.test(text)&&Number(bb.hp_ratio)>0)applyHeal(battle,{source:u,target:u,amount:u.maxHp*Number(bb.hp_ratio)});}
  if(Number(u.skillEndHealRatio)>0){applyHeal(battle,{source:u,target:u,amount:u.maxHp*u.skillEndHealRatio});u.skillEndHealRatio=0;}

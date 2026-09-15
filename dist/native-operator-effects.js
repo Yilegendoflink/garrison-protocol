@@ -204,6 +204,7 @@ export function operatorSkillStart(battle,u,ctx){
  if(/普通攻击改为.*治疗.*友方|攻击改为.*治疗.*友方/.test(text))u.focusHeal=true;
  if(Number(bb.one_minus_status_resistance)<0||has(text,/获得抵抗/))u.statusResistance=Math.max(0,Math.min(1,-Number(bb.one_minus_status_resistance||0)));
  if(has(text,/技能结束时恢复.*最大生命|技能结束时回复.*最大生命/)&&Number(bb.hp_ratio)>0)u.skillEndHealRatio=Number(bb.hp_ratio);
+ if(profile.charId==='char_440_pinecn'&&profile.skillIndex===1){u.pineSkillUses=Math.min(3,(u.pineSkillUses||0)+1);}
  if(u.id==='char_4145_ulpia'&&has(text,/若船锚停留的位置可以部署/)&&ctx.teleportActor){
   u.returnPosition={x:u.x,y:u.y};
   const dirs=[[1,0],[0,-1],[-1,0],[0,1]],dir=dirs[(u.dir||0)%4],range=Math.max(1,Math.round(Number(bb.projectile_range)||1.8));
@@ -219,6 +220,7 @@ export function operatorSkillStart(battle,u,ctx){
  if(has(text,/防御力.*法术抗性/)&&Number(bb.def)<0)for(const e of allTargets(battle,u,true)){const debuffDuration=Number(profile.skill?.duration)>0?Number(profile.skill.duration):5;applyStatus(e,'defDown',debuffDuration,{source:u.uid,value:Number(bb.def),resistible:false});if(Number(bb.magic_resistance)<0)applyStatus(e,'resDown',debuffDuration,{source:u.uid,value:Number(bb.magic_resistance),resistible:false});}
  if(has(text,/下次攻击.*(?:恢复|回复)/)&&Number.isFinite(config.healScale)){u.pendingAttackHeal={scale:config.healScale,sourceUid:u.uid};suppressDefault=true;}
  if(has(text,/下次治疗.*(?:额外)?回复目标最大生命值/)&&Number.isFinite(Number(bb.hp_ratio))){u.pendingHealBonus={ratio:Number(bb.hp_ratio),requiresBelowHalf:has(text,/不满一半|低于一半/)};suppressDefault=true;}
+ if(has(text,/下次治疗.*治疗量提升|下次治疗时的治疗量提升/)&&Number(bb.heal_scale)>0){u.pendingHealScale=Number(bb.heal_scale);if(profile.charId==='char_4139_papyrs')u.papyrsShieldScale=Number(bb.shield_scale_skill)||1;suppressDefault=true;}
  const periodicScale=Number(bb.magic_atk_scale??bb.damage_scale??bb.atk_scale??config.atkScale),periodicInterval=Number(bb.interval??bb.attack_interval??1),periodicCost=textCostValue(text)??costValue(config,'periodic'),periodicTick=costValue(config,'periodicTick'),duration=profile.skill?.duration;
  if(periodicCost!=null&&has(text,/持续(?:时间内)?(?:逐渐|回复总共|获得)|期间逐渐回复/)){const span=duration<0?1e9:duration>0?duration:1,interval=Math.max(.1,periodicInterval),count=Math.max(1,Math.round(span/interval)),perTick=Number.isFinite(periodicTick)?periodicTick:periodicCost/count;u.pendingPeriodicCost={total:periodicCost,duration:span,endsAt:battle.s.time+span,interval,perTick,remaining:periodicCost,nextAt:battle.s.time+interval,skillCount:u.skillCount};}
  const attackCost=costValueForText(config,text,'attack');if(attackCost!=null&&has(text,/下次攻击.*获得.*费用/))u.pendingCostGain={amount:attackCost,skillCount:u.skillCount};

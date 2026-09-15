@@ -1,6 +1,6 @@
 # 干员逐名适配层
 
-当前固定名单 112 名均由 `dist/native-operator-effects.js` 进入 `descriptor-v1` 适配层，记录见 `data/modes/alliance-lower/operator-adapter-manifest.json`。清单中的 `partialHandlers` 显示已接入的局部专属处理器，当前有 64 名干员至少覆盖一项专属行为。
+当前固定名单 112 名均由 `dist/native-operator-effects.js` 进入 `descriptor-v1` 适配层，记录见 `data/modes/alliance-lower/operator-adapter-manifest.json`。清单中的 `partialHandlers` 显示已接入的局部专属处理器，当前有 65 名干员至少覆盖一项专属行为。
 
 适配层目前统一接入：
 

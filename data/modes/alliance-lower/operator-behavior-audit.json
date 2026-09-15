@@ -1517,8 +1517,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1治疗附屏障；S2锁定最高生命友军及额外治疗跳数缺失",
-      "talentGaps": "治疗附加有时限的屏障缺失",
+      "skillGaps": "S1强化治疗/附屏障、S2锁定最高生命友军及额外治疗跳数已接入",
+      "talentGaps": "治疗附加有时限的屏障已接入",
       "prtsReference": "https://prts.wiki/w/%E8%8E%8E%E8%8D%89",
       "sourceProfileIds": [
         "chess_char_2_06_a",
@@ -3179,8 +3179,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1固定穿透未接入；S2按技能使用次数永久叠层缺失",
-      "talentGaps": "限时技力回复加速缺失",
+      "skillGaps": "S1固定穿透、S2按技能使用次数永久叠层已接入",
+      "talentGaps": "限时技力回复加速已接入",
       "prtsReference": "https://prts.wiki/w/%E6%9D%BE%E6%9E%9C",
       "sourceProfileIds": [
         "chess_char_3_10_a",

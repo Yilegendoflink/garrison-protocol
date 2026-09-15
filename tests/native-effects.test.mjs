@@ -582,6 +582,16 @@ test('休谟斯 S2 按生命阈值增攻并将溢出治疗转屏障',()=>{
  const {b}=openBattle({chessId:'chess_char_2_09_b',skillIndex:1});deployNow(b);const u=b.s.units[0],base=b.profile(u).attributes;u.sp=b.spCost(u);b.activate(u);assert.equal(b.stats(u).blockCnt,base.blockCnt+1);assert.ok(b.stats(u).atk>base.atk);applyHeal(b,{source:u,target:u,amount:u.maxHp*2});assert.ok(u.shield>0);assert.ok(u.shield<=u.maxHp);
 });
 
+test('莎草 S1 强化下一次治疗屏障，S2 锁定最高生命友军',()=>{
+ const {b}=openBattle([{chessId:'chess_char_2_06_b',skillIndex:0},reps.operators.yak]);deployNow(b);const medic=byId(b,'char_4139_papyrs'),ally=byId(b,'char_199_yak');ally.hp=ally.maxHp-100;medic.sp=b.spCost(medic);b.activate(medic);b.heal(medic,ally,10);assert.ok(ally.shield>0);
+ const s=openBattle([{chessId:'chess_char_2_06_b',skillIndex:1},reps.operators.yak]).b;deployNow(s);const m=byId(s,'char_4139_papyrs'),a=byId(s,'char_199_yak');a.x=m.x+1;a.y=m.y;a.hp=a.maxHp-100;m.sp=s.spCost(m);s.activate(m);assert.equal(m.papyrsTargetUid,a.uid);assert.deepEqual(s.healingTargets(m).map(x=>x.uid),[a.uid]);
+});
+
+test('松果 S1 固定穿透，S2 按使用次数叠加攻击且部署天赋加速技力',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_10_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:10000,def:1000});assert.ok(b.stats(u).spRecoveryPerSec>.99);u.sp=b.spCost(u);b.activate(u);assert.ok(e.hp<10000);
+ const s=openBattle({chessId:'chess_char_3_10_b',skillIndex:1}).b;deployNow(s);const p=s.s.units[0],base=s.profile(p).attributes;p.sp=s.spCost(p);s.activate(p);const first=s.stats(p).atk;p.skillLeft=0;dispatch(s,'skill-end',{target:p});s.s.time=3;p.sp=s.spCost(p);s.activate(p);assert.ok(s.stats(p).atk>first);assert.ok(s.stats(p).spRecoveryPerSec>.99);
+});
+
 test('隐现 S2 技能期间降低敌人选取仇恨',()=>{
  const {b}=openBattle({chessId:'chess_char_1_01_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);assert.equal(b.stats(u).tauntLevel,-1);
 });
