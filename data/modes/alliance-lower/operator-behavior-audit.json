@@ -246,8 +246,8 @@
         }
       ],
       "category": "A",
-      "skillGaps": "S1加攻可复用；S2取消链跳伤害衰减未实现",
-      "talentGaps": "未阻挡目标伤害倍率未接入",
+      "skillGaps": "S1加攻与S2取消链跳伤害衰减已接入",
+      "talentGaps": "未阻挡目标伤害倍率已接入",
       "prtsReference": "https://prts.wiki/w/%E6%83%8A%E8%9B%B0",
       "sourceProfileIds": [
         "chess_char_1_03_a",
@@ -751,8 +751,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1加攻可复用；S2技能期间拒绝外部治疗未接入",
-      "talentGaps": "附近敌人死亡触发回血缺失",
+      "skillGaps": "S1加攻与S2技能期间拒绝外部治疗已接入",
+      "talentGaps": "附近敌人死亡触发回血已接入",
       "prtsReference": "https://prts.wiki/w/%E8%89%BE%E4%B8%9D%E9%BB%9B%E5%B0%94",
       "sourceProfileIds": [
         "chess_char_1_12_a",
@@ -951,8 +951,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1独立倍率字段及间隔适配；S2束缚目标周期伤害缺失",
-      "talentGaps": "概率束缚与排除已束缚目标缺失",
+      "skillGaps": "S1独立倍率字段及间隔、S2束缚目标周期伤害已接入",
+      "talentGaps": "概率束缚与排除已束缚目标已接入",
       "prtsReference": "https://prts.wiki/w/%E6%B7%B1%E9%9D%9B",
       "sourceProfileIds": [
         "chess_char_1_17_a",
@@ -1307,8 +1307,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1治疗属性可复用；S2医疗无人机库存、部署、持续治疗和销毁缺失",
-      "talentGaps": "医疗职业攻速光环缺失",
+      "skillGaps": "S1治疗属性、S2医疗无人机库存/部署/持续治疗/销毁已接入",
+      "talentGaps": "医疗职业攻速光环已接入",
       "prtsReference": "https://prts.wiki/w/%E8%B5%AB%E9%BB%98",
       "sourceProfileIds": [
         "chess_char_2_02_a",
@@ -2087,8 +2087,8 @@
         }
       ],
       "category": "A",
-      "skillGaps": "S1/S2属性可复用",
-      "talentGaps": "全场持续回复的天赋挂接缺失，可复用regenerate",
+      "skillGaps": "S1/S2属性已接入",
+      "talentGaps": "全场持续回复天赋已接入",
       "prtsReference": "https://prts.wiki/w/%E8%B0%83%E9%A6%99%E5%B8%88",
       "sourceProfileIds": [
         "chess_char_2_14_a",

@@ -262,6 +262,10 @@ test('艾丝黛尔 active skill excludes external healing and restores it at ski
  const {b}=openBattle([{chessId:'chess_char_1_12_b',skillIndex:1},reps.operators.yak]);deployNow(b);const estelle=b.s.units.find(u=>u.id==='char_127_estell'),yak=b.s.units.find(u=>u.id==='char_199_yak');estelle.sp=b.spCost(estelle);b.activate(estelle);assert.equal(b.canHeal(estelle,yak),false);dispatch(b,'skill-end',{target:estelle});assert.equal(b.canHeal(estelle,yak),true);
 });
 
+test('艾丝黛尔周围八格敌人倒下时恢复自身生命',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_12_b',skillIndex:0});deployNow(b);const u=byId(b,'char_127_estell'),e=enemy(b,{x:u.x+2,y:u.y,hp:10,def:0});u.hp=100;b.hit(u,e,100,'physical');assert.ok(u.hp>100);assert.equal(logOf(b,'heal').some(x=>x.targetUid===u.uid),true);
+});
+
 test('skill block-count overrides reach the shared blocking attribute layer',()=>{
  const {b}=openBattle({chessId:'chess_char_1_12_b',skillIndex:1});deployNow(b);const u=b.s.units[0],base=b.profile(u).attributes.blockCnt;u.sp=b.spCost(u);b.activate(u);assert.equal(b.stats(u).blockCnt,0);u.skillLeft=0;dispatch(b,'skill-end',{target:u});assert.equal(b.stats(u).blockCnt,base);
 });
@@ -329,6 +333,10 @@ test('深靛 S2 只对束缚目标按黑板间隔造成周期法伤',()=>{
  const {b}=openBattle({chessId:'chess_char_1_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);applyStatus(e,'root',5,{source:u.uid,resistible:false});const before=e.hp;b.s.time=.5;tickLogic(b,.5);assert.equal(e.hp<before,true);const e2=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});b.s.time=1;tickLogic(b,.5);assert.equal(e2.hp,1000);
 });
 
+test('深靛天赋在技能期间按倍率施加束缚并排除未束缚目标',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});b.economy.random=()=>0;u.sp=b.spCost(u);b.activate(u);b.hit(u,e,10,'arts');const root=e.statuses.find(s=>s.kind==='root');assert.ok(root);assert.equal(root.remaining,10);const e2=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});assert.equal(b.targets(u).includes(e),true);assert.equal(b.targets(u).includes(e2),false);
+});
+
 test('蛇屠箱 S1 的持续回复按最大生命比例结算',()=>{
  const {b}=openBattle({chessId:'chess_char_3_16_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.hp=u.maxHp-100;u.sp=b.spCost(u);b.activate(u);const before=u.hp;b.s.time=1;tickLogic(b,1);assert.equal(u.hp,before+u.maxHp*.02);
 });
@@ -359,6 +367,10 @@ test('初雪技能开始时给范围敌人施加防御与法抗削弱',()=>{
 
 test('惊蛰 S1 chain keeps full damage on subsequent jumps while active',()=>{
  const {b}=openBattle({chessId:'chess_char_1_03_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e1=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0}),e2=enemy(b,{x:u.x+2,y:u.y,hp:1000,def:0});u.skillLeft=10;b.impactNativeAttack(u,e1,{style:'chain',amount:100,type:'true',antiAir:true});assert.equal(e1.hp,880);assert.equal(e2.hp,880);
+});
+
+test('惊蛰未阻挡目标天赋提高当前攻击倍率',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_03_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});b.hit(u,e,100,'true');assert.equal(e.hp,880);
 });
 
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
@@ -732,6 +744,10 @@ test('赫默 drone survives owner knockdown and two owners do not cross summons'
  assert.equal(drone.targetable,false);
  assert.ok(!attackableAllies(b.s).includes(drone));
  assert.equal(getActor(b.s,drone.uid),drone);
+});
+
+test('赫默强化注射为医疗职业提供攻速光环',()=>{
+ const {b}=openBattle([{...reps.operators.silent,skillIndex:1},{...reps.operators.silent,skillIndex:1}]);deployNow(b);const medics=b.s.units.filter(u=>u.id==='char_108_silent'),base=b.profile(medics[0]).attributes.attackSpeed;assert.equal(b.stats(medics[0]).attackSpeed,base+12);assert.ok(b.stats(medics[1]).parts.some(p=>p.src==='赫默'));
 });
 
 test('summons require their real triggers and use pinned entity attributes',()=>{

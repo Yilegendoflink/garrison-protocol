@@ -44,7 +44,7 @@
       "partialHandlers": [
         "chain-no-decay"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "深巡",
@@ -139,7 +139,7 @@
       "partialHandlers": [
         "external-heal-lock"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "波登可",
@@ -181,7 +181,7 @@
       "partialHandlers": [
         "root-zone"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "宴",
@@ -247,7 +247,7 @@
       "partialHandlers": [
         "drone-token"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "小满",
@@ -394,7 +394,7 @@
       "partialHandlers": [
         "global-regen"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "拉普兰德",
