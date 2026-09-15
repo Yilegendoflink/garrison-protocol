@@ -6,6 +6,7 @@ import {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilte
 
 export const BATTLE_SCHEMA_VERSION=1;
 export const EFFECT_KINDS=new Set(['dot','hot','regen','loss','zone','attached','aura','guard','barrier','lock','stat']);
+export const ELEMENT_TYPES=new Set(['burn','necrosis','corrosion','elemental']);
 const QUEUE_CAP=256,ANCESTOR_CAP=32;
 
 export function emptySettle(){return {nextEventId:1,nextAttackId:1,nextEffectId:1,nextSeq:1,queue:[],consumed:[],byId:{},fault:null};}
@@ -261,6 +262,15 @@ export function applyLoss(battle,opts){
  return hp;
 }
 
+export function applyElementDamage(battle,{source,target,amount,type='elemental',cause='element',parentEventId=null}={}){
+ if(!target||target.hp<=0||!Number.isFinite(amount)||amount<=0||!ELEMENT_TYPES.has(type))return {added:0,burst:false};
+ target.elemental??={};target.elementalMax??=target.maxHp;
+ const before=target.elemental[type]||0,limit=target.elementalMax,added=Math.min(amount,Math.max(0,limit-before));target.elemental[type]=before+added;
+ const event=nextEvent(battle,{cause,parentEventId,type:'element',sourceUid:source?.uid,targetUid:target.uid});log(battle,'element',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,element:type,amount:added,current:target.elemental[type],max:limit});
+ let burst=false;if(target.elemental[type]>=limit){target.elemental[type]=0;target.elementBurst=(target.elementBurst||0)+1;burst=true;dispatch(battle,'element-burst',{source,target,element:type,event});}
+ return {added,burst};
+}
+
 export function addEffect(battle,fx){
  const id=battle.s.settle.nextEffectId++;
  const row={id,startedAt:battle.s.time,stacks:1,stackRule:'refresh',refKind:'owner',...fx};
@@ -311,7 +321,7 @@ export function tickLogic(battle,dt){
  tickSummons(battle,dt);
 }
 
-function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};}
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};}
 
 function zoneActors(battle,fx,side){
  const cx=fx.x,cy=fx.y,r=fx.radius??1;
@@ -441,7 +451,7 @@ export function moveActor(battle,target,source,description=''){
 
 export function dispatch(battle,type,payload){
  const {source,target,event}=payload;
- const ctx={dealDamage,applyHeal,applyRegen,applyLoss,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};
+ const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};
  if(type==='skill-start')payload.genericSuppress=operatorSkillStart(battle,target,ctx);
  else onEvent(battle,type,payload,ctx);
  if(type==='after-damage'&&payload.cause!=='dot'&&payload.cause!=='reflect'){
@@ -502,7 +512,7 @@ export function dispatch(battle,type,payload){
  if(type==='exit')onOperatorExit(battle,payload.target,payload.reason);
 }
 
-function grantShield(battle,target,spec){
+export function grantShield(battle,target,spec){
  target.shieldLayers??=[];
  if(spec.id)target.shieldLayers=target.shieldLayers.filter(l=>{if(l.id!==spec.id)return true;log(battle,'replaced',{uid:target.uid,layerId:l.id});return false;});
  const layer={id:spec.id||('sh-'+battle.s.settle.nextEffectId++),remaining:spec.amount,max:spec.amount,endsAt:spec.endsAt,decayPerSec:spec.decayPerSec||0,sourceUid:spec.sourceUid};

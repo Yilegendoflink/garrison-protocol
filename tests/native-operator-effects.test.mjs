@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {operatorRegistry,skillConfig,statMods} from '../dist/native-operator-effects.js';
 import {openBattle,deployNow,enemy,byId} from './effects-harness.mjs';
-import {dealDamage} from '../dist/native-effects.js';
+import {dealDamage,applyElementDamage,operatorSkillConfig} from '../dist/native-effects.js';
 import {moveActor} from '../dist/native-effects.js';
 import {applyStatus,tickStatuses} from '../dist/status.js';
 
@@ -59,4 +59,21 @@ test('status flags and bounded push/pull share the simulation state',()=>{
  const {b}=openBattle({name:'隐现',chessId:'chess_char_1_01_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y});
  applyStatus(e,'invisible',1e3,{source:u.uid,resistible:false});assert.equal(e.invisible,true);assert.equal(b.targets(u).length,0);e.revealed=true;e.block=u.uid;assert.equal(b.targets(u).length,1);tickStatuses(e,1e3);assert.equal(e.invisible,false);
  const before=e.x;assert.equal(moveActor(b,e,u,'推开'),true);assert.equal(e.x,before+1);assert.equal(moveActor(b,e,u,'拉向'),true);assert.equal(e.x,before);
+});
+
+test('element damage accumulates independently and emits a burst at the target threshold',()=>{
+ const {b}=openBattle({name:'焰影苇草',chessId:'chess_char_6_08_b'});deployNow(b);const u=b.s.units[0],e=enemy(b,{hp:1000});
+ const a=applyElementDamage(b,{source:u,target:e,amount:400,type:'burn'});assert.equal(a.burst,false);assert.equal(e.elemental.burn,400);
+ const c=applyElementDamage(b,{source:u,target:e,amount:600,type:'burn'});assert.equal(c.burst,true);assert.equal(e.elemental.burn,0);assert.equal(e.elementBurst,1);assert.equal(b.s.logicLog.filter(x=>x.type==='element').length,2);
+});
+
+test('shield and lock fields are discoverable from skill blackboards',()=>{
+ const {b}=openBattle({name:'新约能天使',chessId:'chess_char_6_13_b',skillIndex:1});deployNow(b);const u=b.s.units[0];
+ const cfg=operatorSkillConfig(b,u);assert.ok(cfg.description.includes('屏障'));assert.equal(cfg.bb.shield_max_hp_ratio,2);
+});
+
+test('resource adapter preserves named ammo consumption instead of assuming one shot',()=>{
+ const {b}=openBattle({name:'新约能天使',chessId:'chess_char_6_13_b',skillIndex:2});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);
+ assert.equal(u.ammo,50);assert.equal(u.ammoPerAttack,5);
+ const cfg=operatorSkillConfig(b,u);assert.equal(cfg.ammoPerAttack,5);
 });

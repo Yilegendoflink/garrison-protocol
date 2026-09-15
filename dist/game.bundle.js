@@ -2902,7 +2902,7 @@ const NUMERIC_KEYS={
  hits:['attack@times','times','hit_count','attack@hit_count'],
  stun:['stun','attack@stun'],sleep:['sleep','attack@sleep'],fear:['fear','attack@fear'],terror:['terror','attack@terror'],tremble:['tremble','attack@tremble'],sluggish:['sluggish','attack@sluggish'],
  silence:['silence','attack@silence'],root:['root','attack@root'],
- healScale:['heal_scale','attack@heal_scale','attack@atk_to_hp_recovery_ratio'],
+ healScale:['heal_scale','attack@heal_scale','attack@atk_to_hp_recovery_ratio'],elementScale:['ep_damage_ratio','element_damage_scale','element_multiplier','magic_atk_scale'],
  cost:['cost','attack@cost'],ammo:['attack@trigger_time'],attackSpeed:['attack_speed'],value:['value'],hpRatio:['hp_ratio'],
  maxHp:['max_hp'],def:['def'],atk:['atk'],blockCnt:['block_cnt'],defPenetrateFixed:['def_penetrate_fixed'],damageScale:['damage_scale']
 };
@@ -2931,7 +2931,8 @@ function skillConfig(profile){
  const damageType=has(description,/真实伤害/)?'true':has(description,/法术伤害|变为法术|法术攻击/)?'arts':null;
  for(const [name,patterns] of Object.entries({atkScale:[/atk_scale(?:_[12])?$/,/damage_scale(?:_[12])?$/],maxTarget:[/max_target(?:_attack|_token)?$/],hits:[/(?:^|[.@_])times$/,/trig_cnt$/],stun:[/(?:^|[.@_])stun$/],sleep:[/(?:^|[.@_])sleep$/],fear:[/(?:^|[.@_])fear$/],terror:[/(?:^|[.@_])terror$/],tremble:[/(?:^|[.@_])tremble$/],sluggish:[/(?:^|[.@_])sluggish$/],silence:[/(?:^|[.@_])silence$/],root:[/(?:^|[.@_])root$/],healScale:[/heal_scale$/],attackSpeed:[/attack_speed$/]})){if(bb[name]==null){const value=suffixNumber(bb.raw,patterns);if(value!=null)bb[name]=value;}}
  const targetRule=has(description,/生命值最高/) ? 'maxHp' : has(description,/生命值最低/) ? 'minHp' : has(description,/未被阻挡|未阻挡/) ? 'unblocked' : has(description,/被阻挡|阻挡的/) ? 'blocked' : has(description,/远程武器/) ? 'ranged' : has(description,/空中单位|飞行单位/) ? 'air' : has(description,/随机攻击|随机目标/) ? 'random' : null;
- return {bb,description,damageType,targetRule,canTargetSleep:has(description,/睡眠目标|沉睡目标|睡眠的敌人/),canSeeHidden:has(description,/隐匿失效|隐匿效果失效|无视隐匿/),stopAttack:has(description,/停止攻击|无法普通攻击/),
+ const ammoPerAttack=suffixNumber(bb.raw,[/consume.*ammo/,/ammo_cost/])??Number(description.match(/消耗(\d+)发/)?.[1]||1),ammoBonus=suffixNumber(bb.raw,[/additional.*ammo/,/addtional.*ammo/])??0,coinCost=Number(description.match(/消耗(\d+)枚金币/)?.[1]||(/消耗一枚金币/.test(description)?1:0));
+ return {bb,description,damageType,targetRule,canTargetSleep:has(description,/睡眠目标|沉睡目标|睡眠的敌人/),canSeeHidden:has(description,/隐匿失效|隐匿效果失效|无视隐匿/),ammoPerAttack,ammoBonus,coinCost,resource:coinCost?'coins':null,stopAttack:has(description,/停止攻击|无法普通攻击/),
   resetAttack:has(description,/立即|瞬发|下次攻击|部署后/),
   multiTarget:bb.maxTarget??(has(description,/同时攻击|所有敌人/) ? Infinity : 1),
   hits:Math.max(1,Math.min(12,bb.hits??1)),atkScale:bb.atkScale??1};
@@ -2965,14 +2966,17 @@ function allAllies(battle,source,skill=false){return battle.s.units.filter(u=>u.
 function operatorSkillStart(battle,u,ctx){
  const profile=battle.profile(u),config=skillConfig(profile),text=config.description,bb=config.bb;
  let suppressDefault=false;
- const cost=bb.cost;if(Number.isFinite(cost)&&has(text,/获得.*费用|获得.*部署费用|获得.*金币/))battle.economy.s.funds+=cost;
+ const cost=bb.cost;if(Number.isFinite(cost)&&has(text,/获得.*费用|获得.*部署费用/))battle.economy.s.funds+=cost;if(Number.isFinite(cost)&&has(text,/获得.*金币/))u.coins=(u.coins||0)+cost;
  if(Number.isFinite(bb.hp_ratio)&&has(text,/生命/)&&has(text,/流失|损失/))ctx.applyLoss(battle,{target:u,source:u,amount:u.maxHp*Math.abs(bb.hp_ratio),minHp:1,cause:'loss'});
  const status=directStatus(text,config);if(status)for(const e of allTargets(battle,u,true))if(applyStatus(e,status.kind,status.duration,{source:u.uid,resistible:false}))ctx.log?.(battle,'status',{uid:e.uid,kind:status.kind,sourceUid:u.uid});
+ if(has(text,/解除.*异常|清除.*异常/))for(const a of allAllies(battle,u,true))a.statuses=(a.statuses||[]).filter(s=>!['stun','frozen','sleep','fear','terror','tremble','root','silence','levitate'].includes(s.kind));
  const periodicScale=Number(bb.magic_atk_scale??bb.damage_scale??bb.atk_scale),periodicInterval=Number(bb.interval??bb.attack_interval??1);
  const duration=profile.skill?.duration;
  if(has(text,/每秒.*受到|持续.*受到|周期.*造成/)&&Number.isFinite(periodicScale)&&has(text,/伤害|法术/)){ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:config.multiTarget===Infinity?2:1,interval:Math.max(.1,periodicInterval),nextAt:battle.s.time+Math.max(.1,periodicInterval),endsAt:battle.s.time+(duration>0?duration:5),values:{dot:true,atk_scale:periodicScale,type:config.damageType||'arts'},snapshot:{damage:battle.stats(u).atk*periodicScale},refKind:'owner',persistAfterSourceGone:false});}
  if(has(text,/每秒.*回复|持续.*回复/)&&Number.isFinite(config.healScale)){ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-heal-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:1,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+(duration>0?duration:5),values:{hot:battle.stats(u).atk*config.healScale},refKind:'owner',persistAfterSourceGone:false});}
  if(has(text,/获得隐匿|进入隐匿|迷彩/)){const time=duration>0?duration:1e9;applyStatus(u,has(text,/迷彩/)?'camouflage':'invisible',time,{source:u.uid,resistible:false});}
+ if(has(text,/屏障|护盾/)&&ctx.grantShield){const ratio=Number(bb.shield_max_hp_ratio),amount=Number(bb.shield_value)||(Number.isFinite(ratio)?u.maxHp*ratio:0);if(Number.isFinite(amount)&&amount>0)ctx.grantShield(battle,u,{amount,endsAt:duration>0?battle.s.time+duration:null,sourceUid:u.uid,id:'skill-shield:'+u.id+':'+u.skillCount});}
+ if(has(text,/生命值不会低于1|生命值始终不会低于1/)&&!u.lockHp)u.lockHp={min:1,endsAt:duration>0?battle.s.time+duration:null,onEnd:'none'};
  if(has(text,/对周围所有敌人|攻击范围内所有敌人/)&&Number.isFinite(config.atkScale)&&(bb.atkScale!=null||has(text,/造成.*伤害/))){for(const e of allTargets(battle,u,true))ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*config.atkScale,type:config.damageType||'physical',cause:'skill',skill:true});suppressDefault=true;}
  if(has(text,/立即.*治疗|立即.*恢复.*生命/)&&Number.isFinite(config.healScale)){for(const a of allAllies(battle,u,true))ctx.applyHeal(battle,{source:u,target:a,amount:battle.stats(u).atk*config.healScale});suppressDefault=true;}
  return suppressDefault;
@@ -2986,12 +2990,13 @@ function onEvent(battle,type,payload,ctx){
    for(const [key,field] of [['atk','atk'],['max_hp','maxHp'],['def','def'],['attack_speed','attackSpeed']])if(Number.isFinite(Number(bb[key])))actor.talentMods[field]+=Number(bb[key]);
   }
  }
-  if(type==='after-damage'&&source&&source.kind!=='summon'&&target&&payload.skill){
+ if(type==='after-damage'&&source&&source.kind!=='summon'&&target&&payload.skill){
   const config=skillConfig(battle.profile(source)),status=directStatus(config.description,config);
    if(status&&has(config.description,/攻击|命中|目标/))applyStatus(target,status.kind,status.duration,{source:source.uid,resistible:false});
    if(has(config.description,/浮空/))applyStatus(target,'levitate',Number(config.bb.floating??config.bb.duration??2),{source:source.uid,resistible:false});
    if(has(config.description,/隐匿失效|隐匿效果失效/))target.revealed=true;
    if(has(config.description,/推开|推动|拖拽|拉向|拉至|击退/)&&ctx.moveActor)ctx.moveActor(battle,target,source,config.description);
+   const elementScale=Number(config.bb.elementScale);if(Number.isFinite(elementScale)&&has(config.description,/灼燃|凋亡|元素损伤|元素伤害/)&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*elementScale,type:has(config.description,/凋亡/)?'necrosis':has(config.description,/灼燃/)?'burn':'elemental',cause:'skill',parentEventId:payload.event?.eventId});
   const bb=config.bb;if(Number.isFinite(bb.value)&&has(config.description,/恢复自身|回复自身/))ctx.applyHeal(battle,{source,target:source,amount:bb.value});
   if(Number.isFinite(bb.defPenetrateFixed)&&has(config.description,/无视.*防御/))target.def=Math.max(0,(target.def||0)-bb.defPenetrateFixed);
  }
@@ -3004,6 +3009,10 @@ function onEvent(battle,type,payload,ctx){
     ctx.dealDamage(battle,{source,target,amount:battle.stats(source).atk*scale,type:has(text,/法术/)?'arts':'physical',cause:'extra',parentEventId:payload.event?.eventId,effectId:'talent:'+source.id+':'+(talent.name||'attack')});
    }
    if(has(text,/攻击使目标.*特殊能力失效|攻击使命中目标失去特殊能力/))target.specialDisabledUntil=Math.max(target.specialDisabledUntil||0,battle.s.time+(Number(bb.duration)||5));
+   if(has(text,/脆弱/)&&Number.isFinite(Number(bb.damage_scale)))applyStatus(target,'fragile',Number(bb.duration)||5,{source:source.uid,value:Number(bb.damage_scale),resistible:false});
+   if(has(text,/攻击力[-−]/)&&Number(bb.atk)<0)applyStatus(target,'attackDown',Number(bb.duration)||5,{source:source.uid,value:Number(bb.atk),resistible:false});
+   if(has(text,/防御力[-−]/)&&Number(bb.def)<0)applyStatus(target,'defDown',Number(bb.duration)||5,{source:source.uid,value:Number(bb.def),resistible:false});
+   if(has(text,/法术抗性[-−]/)&&Number(bb.magic_resistance)<0)applyStatus(target,'resDown',Number(bb.duration)||5,{source:source.uid,value:Number(bb.magic_resistance),resistible:false});
   }
  }
  if(type==='after-heal'&&source&&target){
@@ -3040,6 +3049,7 @@ const {gainSp} = load("native-sp.js");
 const {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter} = load("native-operator-effects.js");
 const BATTLE_SCHEMA_VERSION=1;
 const EFFECT_KINDS=new Set(['dot','hot','regen','loss','zone','attached','aura','guard','barrier','lock','stat']);
+const ELEMENT_TYPES=new Set(['burn','necrosis','corrosion','elemental']);
 const QUEUE_CAP=256,ANCESTOR_CAP=32;
 
 function emptySettle(){return {nextEventId:1,nextAttackId:1,nextEffectId:1,nextSeq:1,queue:[],consumed:[],byId:{},fault:null};}
@@ -3295,6 +3305,15 @@ function applyLoss(battle,opts){
  return hp;
 }
 
+function applyElementDamage(battle,{source,target,amount,type='elemental',cause='element',parentEventId=null}={}){
+ if(!target||target.hp<=0||!Number.isFinite(amount)||amount<=0||!ELEMENT_TYPES.has(type))return {added:0,burst:false};
+ target.elemental??={};target.elementalMax??=target.maxHp;
+ const before=target.elemental[type]||0,limit=target.elementalMax,added=Math.min(amount,Math.max(0,limit-before));target.elemental[type]=before+added;
+ const event=nextEvent(battle,{cause,parentEventId,type:'element',sourceUid:source?.uid,targetUid:target.uid});log(battle,'element',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,element:type,amount:added,current:target.elemental[type],max:limit});
+ let burst=false;if(target.elemental[type]>=limit){target.elemental[type]=0;target.elementBurst=(target.elementBurst||0)+1;burst=true;dispatch(battle,'element-burst',{source,target,element:type,event});}
+ return {added,burst};
+}
+
 function addEffect(battle,fx){
  const id=battle.s.settle.nextEffectId++;
  const row={id,startedAt:battle.s.time,stacks:1,stackRule:'refresh',refKind:'owner',...fx};
@@ -3345,7 +3364,7 @@ function tickLogic(battle,dt){
  tickSummons(battle,dt);
 }
 
-function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};}
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};}
 
 function zoneActors(battle,fx,side){
  const cx=fx.x,cy=fx.y,r=fx.radius??1;
@@ -3475,7 +3494,7 @@ function moveActor(battle,target,source,description=''){
 
 function dispatch(battle,type,payload){
  const {source,target,event}=payload;
- const ctx={dealDamage,applyHeal,applyRegen,applyLoss,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};
+ const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,gainSp,addEffect,moveActor,log:(b,t,p)=>log(b,t,p)};
  if(type==='skill-start')payload.genericSuppress=operatorSkillStart(battle,target,ctx);
  else onEvent(battle,type,payload,ctx);
  if(type==='after-damage'&&payload.cause!=='dot'&&payload.cause!=='reflect'){
@@ -3650,7 +3669,7 @@ function blockingActors(battle){
  return attackableAllies(battle.s).filter(u=>u.canBlock!==false&&(u.kind!=='summon'||u.canBlock));
 }
 
-return {BATTLE_SCHEMA_VERSION,EFFECT_KINDS,emptySettle,ensureBattleShape,migrateBattle,validateBattle,getActor,operators,alliedActors,enemyActors,attackableAllies,lifeKey,chebyshev,activeTalentsOf,operatorSkillConfig,enqueue,drainQueue,commitExit,dealDamage,applyHeal,applyRegen,applyLoss,addEffect,tickLogic,effectStatMods,moveActor,dispatch,spawnSummon,newAttackId,blockingActors};
+return {BATTLE_SCHEMA_VERSION,EFFECT_KINDS,ELEMENT_TYPES,emptySettle,ensureBattleShape,migrateBattle,validateBattle,getActor,operators,alliedActors,enemyActors,attackableAllies,lifeKey,chebyshev,activeTalentsOf,operatorSkillConfig,enqueue,drainQueue,commitExit,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,tickLogic,effectStatMods,moveActor,dispatch,grantShield,spawnSummon,newAttackId,blockingActors};
 },
 "native-battle.js": function(load) {
 const {branchBehavior,branchTrait} = load("native-branches.js");
@@ -3672,7 +3691,7 @@ class NativeBattle {
   this.s={frame:0,time:0,units:[],enemies:[],projectiles:[],queue:[],damage:{},leaks:0,kills:0,finished:false,benchmark:!!turn.isBossTurn,limit:turn.isBossTurn?turn.bossTurnHpReduceTime:turn.normalPhaseTime,effects:[],events:[],strikes:[],banner:null,nextId:100000};
   this.s.band=economy.s.bandId;this.s.banner={text:'作战开始',life:1.6};
   const sources=economy.s.units.filter(u=>u.position).sort((a,b)=>a.position.y-b.position.y||a.position.x-b.position.x);
-  this.s.units=sources.map((u,i)=>{const p=this.profile(u),a=p.attributes,skill=p.skill;return {uid:u.uid,id:u.charId,chessId:u.chessId,source:u,x:u.position.x,y:u.position.y,dir:u.dir,hp:a.maxHp,maxHp:a.maxHp,sp:initSpOf(skill),spCd:0,spLock:0,deployed:false,deployAt:3+i*.18,down:0,skillLeft:0,skillCount:0,ammo:0,ammoMax:0,attackCooldown:0,action:null,statuses:[],shield:0,barriers:[],shieldLayers:[],damage:0,healing:0,lastAttack:0,lastSkill:-999,counters:{},buffs:[],deployGen:0,exitLife:null};});
+  this.s.units=sources.map((u,i)=>{const p=this.profile(u),a=p.attributes,skill=p.skill;return {uid:u.uid,id:u.charId,chessId:u.chessId,source:u,x:u.position.x,y:u.position.y,dir:u.dir,hp:a.maxHp,maxHp:a.maxHp,sp:initSpOf(skill),spCd:0,spLock:0,coins:0,deployed:false,deployAt:3+i*.18,down:0,skillLeft:0,skillCount:0,ammo:0,ammoMax:0,attackCooldown:0,action:null,statuses:[],shield:0,barriers:[],shieldLayers:[],damage:0,healing:0,lastAttack:0,lastSkill:-999,counters:{},buffs:[],deployGen:0,exitLife:null};});
   ensureBattleShape(this.s);
   if(this.s.benchmark){this.s.enemies=[createTrainingDummy(this.s.nextId++,5,3)];this.s.total=1;}else this.prepareWaves(turn);
   for(const u of this.s.units){const stats=this.stats(u);u.hp=u.maxHp=stats.maxHp;}
@@ -3695,7 +3714,7 @@ class NativeBattle {
   const noExternal=this.behavior(target).noExternalHealing,selfException=noExternal&&source?.uid===target.uid;
   return selfException||(!noExternal&&!target.unhealable&&!target.statuses?.some(s=>s.kind==='healingBlocked'));
  }
- elementInjury(target){const value=target.elementInjury;return typeof value==='number'?Math.max(0,value):Object.values(value||{}).reduce((sum,n)=>sum+Math.max(0,n||0),0);}
+ elementInjury(target){const value=target.elemental??target.elementInjury;return typeof value==='number'?Math.max(0,value):Object.values(value||{}).reduce((sum,n)=>sum+Math.max(0,n||0),0);}
  healingTargets(u,allowFull=false){const element=this.behavior(u).elementHealing;return alliedActors(this.s).filter(v=>this.canHeal(v,u)&&this.inside(u,v)&&(allowFull||v.hp<v.maxHp||(element&&this.elementInjury(v)>0))).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||(element?this.elementInjury(b)-this.elementInjury(a):0)||a.uid-b.uid);}
  inNamedRange(center,target,id){const range=this.data.ranges[id];return (range?.grids||[]).some(g=>{let x=g.col,y=-g.row;for(let i=0;i<(center.dir||0);i++)[x,y]=[-y,x];return Math.abs(center.x+x-target.x)<=.5&&Math.abs(center.y+y-target.y)<=.5;});}
  heal(source,target,amount,origin=source){
@@ -3704,7 +3723,7 @@ class NativeBattle {
   return applyHeal(this,{source,target,amount,origin});
  }
  healElements(source,target,amount){
-  if(!this.canHeal(target,source)||amount<=0)return;let restored=0;if(typeof target.elementInjury==='number'){restored=Math.min(target.elementInjury,amount);target.elementInjury-=restored;}else if(target.elementInjury){for(const key of Object.keys(target.elementInjury)){const n=Math.min(Math.max(0,target.elementInjury[key]),amount);target.elementInjury[key]-=n;restored+=n;}}source.elementHealing=(source.elementHealing||0)+restored;
+  if(!this.canHeal(target,source)||amount<=0)return;let restored=0;const injury=target.elemental??target.elementInjury;if(typeof injury==='number'){restored=Math.min(injury,amount);target.elemental=injury-restored;}else if(injury){for(const key of Object.keys(injury)){const n=Math.min(Math.max(0,injury[key]),amount);injury[key]-=n;restored+=n;}}source.elementHealing=(source.elementHealing||0)+restored;
  }
  regenerate(source,target,amount){return applyRegen(this,{source,target,amount});}
  updateBranch(u,dt){
@@ -3814,7 +3833,7 @@ class NativeBattle {
   ratio('atk',u.deathBuff||0,'击倒加攻');ratio('atk',u.deploymentBuff||0,'部署加攻');
   if(u.skillLeft>0||u.ammo>0){const b=blackboard(p.skill?.blackboard),cfg=operatorSkillConfig(this,u);ratio('atk',b.atk??cfg.bb.atk??0,'技能');ratio('maxHp',b.max_hp??cfg.bb.maxHp??0,'技能');ratio('def',b.def??cfg.bb.def??0,'技能');as+=b.attack_speed??cfg.bb.attackSpeed??0;base.baseAttackTime=Math.max(.1,base.baseAttackTime+(b.base_attack_time||0));}
   const branch=branchBehavior(p,this.skillActive(u)),trait=branchTrait(p).values;if(p.branch==='phalanx'&&!this.skillActive(u)){ratio('def',trait.def??2,'法阵');base.magicResistance+=trait.magic_resistance??20;}if(p.branch==='librator'){ratio('atk',(trait.atk??2)*Math.min(1,Math.floor(u.branchCharge||0)/(trait.max_stack_cnt??40)),'解放者');if(!this.skillActive(u))base.blockCnt=0;}if(branch.blockZeroDuringSkill&&this.skillActive(u))base.blockCnt=0;if(branch.taunt!==undefined)base.tauntLevel=Math.min(base.tauntLevel??0,branch.taunt);
-  const status=statusAttributeChanges(u);as+=status.attackSpeed;base.magicResistance+=status.resistance;
+  const status=statusAttributeChanges(u);as+=status.attackSpeed;ratio('atk',status.attack||0,'状态');ratio('def',status.defense||0,'状态');base.magicResistance+=(status.resistance||0)+(status.magicResistance||0);
   for(const e of this.economy.s.operatorModifiers||[])for(const[k,v]of Object.entries(blackboard(e.blackboard))){const key={max_hp:'maxHp',atk:'atk',def:'def'}[k];if(key)mul(key,v,'全局修正');}
   const extra=effectStatMods(this,u);atk+=extra.ratio.atk||0;hp+=extra.ratio.maxHp||0;def+=extra.ratio.def||0;as+=extra.attackSpeed;base.magicResistance+=(extra.magicResistance||0)+(extra.add.magicResistance||0);base.spRecoveryPerSec+=extra.spRecoveryPerSec;parts.push(...extra.parts);
   const a={...base,atk:combineStat(base.atk,extra.add.atk||0,atk,muls.atk,extra.finalAdd.atk||0),maxHp:combineStat(base.maxHp,extra.add.maxHp||0,hp,muls.maxHp,extra.finalAdd.maxHp||0),def:combineStat(base.def,extra.add.def||0,def,muls.def,extra.finalAdd.def||0),attackSpeed:Math.max(10,Math.min(600,base.attackSpeed+as)),parts};
@@ -3845,7 +3864,7 @@ class NativeBattle {
   const p=this.profile(u);for(const g of p.garrisons){if(g.eventType!=='IN_BATTLE'||g.effectType!=='ADD_BOND')continue;const b=blackboard(g.blackboard),key=b.key||'',match=event==='kill'?/selfkillenemy/.test(key):event==='skill'?/skill/.test(key):event==='deploy'?/born|deploy/.test(key):event==='ammo'?/consume_ammo/.test(key):false;if(!match)continue;const id=g.id+':'+event;u.counters[id]=(u.counters[id]||0)+1;const threshold=b.check_cnt||b.consume_count||1;if(u.counters[id]%threshold)continue;const limit=b.max_cnt||b.max_count||b.max_trigger_count||Infinity;if(u.counters[id]/threshold>limit)continue;const bonds=b.bond_id?String(b.bond_id).split(','):this.economy.ownBonds(u.source);for(const bond of bonds)this.economy.addLayers(bond,b.bond_add_type==='by_charlevel'?p.rank:(b.bond_add_count??1));}
  }
  deploy(u){u.hornBuff=null;u.lockHp=null;u.shield=0;u.shieldLayers=[];u.barriers=[];u.deployed=true;u.deployGen=(u.deployGen||0)+1;u.exitLife=null;u.branchCharge=0;u.branchSkillActive=false;u.pendingReturns=0;u.energy=0;u.magazine=branchTrait(this.profile(u)).values.value??8;u.pendingSelfHeals=[];u.droneTarget=null;u.droneScale=0;u.reaperWindowStart=-999;u.reaperWindowCount=0;u.nextSelfHealAt=0;u.hp=u.maxHp=this.stats(u).maxHp;u.sp=initSpOf(this.profile(u).skill);u.spCd=0;u.spLock=0;u.ammo=0;u.ammoMax=0;u.lockId=null;if(this.on('soloShip')&&this.owns(u,'soloShip'))u.sp+=15;u.deployAt=this.s.time;this.event(u,'deploy');this.emit('deploy',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'deploy',{target:u});if(this.on('kazimierzShip'))for(const v of this.s.units)if(this.owns(v,'kazimierzShip'))v.deploymentBuff=Math.min(.5+.01*(this.layers.kazimierzShip||0),(v.deploymentBuff||0)+.2);}
- activate(u){const p=this.profile(u),sk=p.skill;if(!sk||!permissions(u).skill||!usesSp(sk))return;const b=blackboard(sk.blackboard),cfg=operatorSkillConfig(this,u),cost=this.spCost(u),kind=skillKind(sk),flow=skillFlow(sk);if(u.sp<cost||(sk.skillType!=='AUTO'&&this.s.time-u.lastSkill<3))return;if(kind==='instant'&&sk.skillType==='AUTO'&&(u.action||u.attackCooldown>0))return;if(flow.resetAttack){u.action=null;u.attackCooldown=0;}u.sp=Math.max(0,Math.trunc(u.sp)-cost);u.lastSkill=this.s.time;u.skillCount++;u.ammo=kind==='ammo'?ammoCount(sk):0;u.ammoMax=u.ammo;u.skillLeft=kind==='duration'?(sk.duration<0?1e9:sk.duration):0;if(kind==='instant'){const t=attackTiming(this.stats(u).baseAttackTime,this.stats(u).attackSpeed,windupSeconds(this.stats(u).baseAttackTime,p.attackWindup));u.spLock=t.seconds;}this.event(u,'skill');this.emit('skill-start',{uid:u.uid,kind,name:sk.name,x:u.x,y:u.y});if(dispatch(this,'skill-start',{target:u}))return;if(kind==='instant'&&sk.skillType==='AUTO'&&spTypeOf(sk)==='INCREASE_WHEN_ATTACK'){u.enhanced=true;return;}if(kind==='instant'){const targets=this.targets(u);if(p.branch!=='incantationmedic'&&/回复.*生命|治疗/.test(sk.description||'')){for(const v of this.healingTargets(u))this.heal(u,v,this.stats(u).atk*(cfg.bb.healScale??b.heal_scale??b.atk_scale??1));}else if(cfg.atkScale!=null||b.atk_scale){for(const e of targets.slice(0,cfg.multiTarget===Infinity?targets.length:(cfg.multiTarget??b.max_target??999)))this.hit(u,e,this.stats(u).atk*(cfg.atkScale??b.atk_scale??1),this.baseDamageType(u));}if(b.stun||cfg.bb.stun)for(const e of targets){if(applyStatus(e,'stun',b.stun??cfg.bb.stun,{source:u.uid}))this.emit('control',{uid:e.uid,kind:'stun',x:e.x,y:e.y});}}}
+  activate(u){const p=this.profile(u),sk=p.skill;if(!sk||!permissions(u).skill||!usesSp(sk))return;const b=blackboard(sk.blackboard),cfg=operatorSkillConfig(this,u),cost=this.spCost(u),kind=skillKind(sk),flow=skillFlow(sk);if(cfg.coinCost&&(u.coins||0)<cfg.coinCost)return;if(u.sp<cost||(sk.skillType!=='AUTO'&&this.s.time-u.lastSkill<3))return;if(kind==='instant'&&sk.skillType==='AUTO'&&(u.action||u.attackCooldown>0))return;if(flow.resetAttack){u.action=null;u.attackCooldown=0;}if(cfg.coinCost)u.coins-=cfg.coinCost;u.sp=Math.max(0,Math.trunc(u.sp)-cost);u.lastSkill=this.s.time;u.skillCount++;u.ammo=kind==='ammo'?ammoCount(sk)+cfg.ammoBonus:0;u.ammoMax=u.ammo;u.ammoPerAttack=cfg.ammoPerAttack;u.skillLeft=kind==='duration'?(sk.duration<0?1e9:sk.duration):0;if(kind==='instant'){const t=attackTiming(this.stats(u).baseAttackTime,this.stats(u).attackSpeed,windupSeconds(this.stats(u).baseAttackTime,p.attackWindup));u.spLock=t.seconds;}this.event(u,'skill');this.emit('skill-start',{uid:u.uid,kind,name:sk.name,x:u.x,y:u.y});if(dispatch(this,'skill-start',{target:u}))return;if(kind==='instant'&&sk.skillType==='AUTO'&&spTypeOf(sk)==='INCREASE_WHEN_ATTACK'){u.enhanced=true;return;}if(kind==='instant'){const targets=this.targets(u);if(p.branch!=='incantationmedic'&&/回复.*生命|治疗/.test(sk.description||'')){for(const v of this.healingTargets(u))this.heal(u,v,this.stats(u).atk*(cfg.bb.healScale??b.heal_scale??b.atk_scale??1));}else if(cfg.atkScale!=null||b.atk_scale){for(const e of targets.slice(0,cfg.multiTarget===Infinity?targets.length:(cfg.multiTarget??b.max_target??999)))this.hit(u,e,this.stats(u).atk*(cfg.atkScale??b.atk_scale??1),this.baseDamageType(u));}if(b.stun||cfg.bb.stun)for(const e of targets){if(applyStatus(e,'stun',b.stun??cfg.bb.stun,{source:u.uid}))this.emit('control',{uid:e.uid,kind:'stun',x:e.x,y:e.y});}}}
  spCost(u){const p=this.profile(u),base=p.skill?.spData.spCost||0;return this.on('suntShip')&&this.rows.suntShip.count>=5&&p.isGolden?Math.floor(base*.7):base;}
  baseDamageType(u){const p=this.profile(u),description=p.skill?.description||'',configured=operatorSkillConfig(this,u).damageType;if((u.skillLeft>0||u.ammo>0)&&configured)return configured;if((u.skillLeft>0||u.ammo>0)&&description.includes('真实伤害'))return 'true';if((u.skillLeft>0||u.ammo>0)&&/变为.*法术|造成法术/.test(description))return 'arts';return this.behavior(u).damageType;}
  hit(u,e,amount,type){if(e.hp<=0||e.hidden||e.invulnerable||permissions(e).sleeping)return;const p=this.profile(u);let penetrationRatio=this.on('preciShip')&&this.rows.preciShip.count>=3&&(this.owns(u,'preciShip')||p.position==='RANGED')?.3:0;const physical=damage({amount,type:'physical',defense:e.def,penetrationRatio}),arts=damage({amount,type:'arts',resistance:Math.max(0,e.res+statusAttributeChanges(e).resistance),penetrationRatio});if(type!=='true'&&(this.s.band==='band_chen'||p.garrisons.some(g=>blackboard(g.blackboard).key==='act1autochess_gar_eff_chaos')))type=physical>=arts?'physical':'arts';let value=type==='physical'?physical:type==='arts'?arts:amount;
@@ -3885,7 +3904,7 @@ class NativeBattle {
    if(u.action&&--u.action.left<=0){const action=u.action;u.action=null;
     if(action.kind==='reload')u.magazine=Math.min(branchTrait(p).values.value??8,(u.magazine??0)+1);
     else if(action.kind==='charge')u.energy=Math.min(branchTrait(p).values.times??3,(u.energy||0)+1);
-    else{u.lastAttackId=newAttackId(this);const released=this.releaseNativeAttack(u,action);if(released>0){if(behavior.magazine)u.magazine=Math.max(0,u.magazine-1);if(behavior.storage)u.energy=Math.max(0,(u.energy||0)-(action.storedEnergy||0));}u.lastAttack=this.s.time;if(spTypeOf(skill)==='INCREASE_WHEN_ATTACK'&&!action.enhanced)gainSp(u,skill,undefined,cost);if(u.ammo>0){u.ammo--;this.event(u,'ammo');this.emit('ammo',{uid:u.uid,x:u.x,y:u.y,ammo:u.ammo});if(u.ammo===0&&!u.skillLeft){this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'skill-end',{target:u});}}}
+    else{u.lastAttackId=newAttackId(this);const released=this.releaseNativeAttack(u,action);if(released>0){if(behavior.magazine)u.magazine=Math.max(0,u.magazine-1);if(behavior.storage)u.energy=Math.max(0,(u.energy||0)-(action.storedEnergy||0));}u.lastAttack=this.s.time;if(spTypeOf(skill)==='INCREASE_WHEN_ATTACK'&&!action.enhanced)gainSp(u,skill,undefined,cost);if(u.ammo>0){const used=Math.min(u.ammo,u.ammoPerAttack||1);u.ammo-=used;this.event(u,'ammo');this.emit('ammo',{uid:u.uid,x:u.x,y:u.y,ammo:u.ammo,used});if(u.ammo===0&&!u.skillLeft){this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'skill-end',{target:u});}}}
    }
    if(u.action||u.attackCooldown>0||(behavior.returnProjectile&&u.pendingReturns>0))continue;
    const trait=branchTrait(p).values;
