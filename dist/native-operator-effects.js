@@ -46,7 +46,7 @@ export function skillConfig(profile){
  const ammoPerAttack=suffixNumber(bb.raw,[/consume.*ammo/,/ammo_cost/])??Number(description.match(/消耗(\d+)发/)?.[1]||1),ammoBonus=suffixNumber(bb.raw,[/additional.*ammo/,/addtional.*ammo/])??0,coinCost=Number(description.match(/消耗(\d+)枚金币/)?.[1]||(/消耗一枚金币/.test(description)?1:0));
  return {bb,description,damageType,targetRule,canTargetSleep:has(description,/睡眠目标|沉睡目标|睡眠的敌人/),canSeeHidden:has(description,/隐匿失效|隐匿效果失效|无视隐匿/),ammoPerAttack,ammoBonus,coinCost,resource:coinCost?'coins':null,stopAttack:has(description,/停止攻击|无法普通攻击/),
   resetAttack:has(description,/立即|瞬发|下次攻击|部署后/),
-  regenScale:bb.regenScale??null,
+  healScale:bb.healScale??null,regenScale:bb.regenScale??null,
   multiTarget:bb.maxTarget??(has(description,/同时攻击|所有敌人/) ? Infinity : 1),
   hits:Math.max(1,Math.min(12,bb.hits??1)),atkScale:bb.atkScale??1};
 }
@@ -113,6 +113,7 @@ export function operatorSkillStart(battle,u,ctx){
  if(Number.isFinite(bb.hp_ratio)&&has(text,/生命/)&&has(text,/流失|损失/))ctx.applyLoss(battle,{target:u,source:u,amount:u.maxHp*Math.abs(bb.hp_ratio),minHp:1,cause:'loss'});
  const status=directStatus(text,config);if(status)for(const e of allTargets(battle,u,true))if(applyStatus(e,status.kind,status.duration,{source:u.uid,resistible:false}))ctx.log?.(battle,'status',{uid:e.uid,kind:status.kind,sourceUid:u.uid});
  if(has(text,/解除.*异常|清除.*异常/))for(const a of allAllies(battle,u,true))a.statuses=(a.statuses||[]).filter(s=>!['stun','frozen','sleep','fear','terror','tremble','root','silence','levitate'].includes(s.kind));
+ if(has(text,/下次攻击.*(?:恢复|回复)/)&&Number.isFinite(config.healScale)){u.pendingAttackHeal={scale:config.healScale,sourceUid:u.uid};suppressDefault=true;}
  const periodicScale=Number(bb.magic_atk_scale??bb.damage_scale??bb.atk_scale),periodicInterval=Number(bb.interval??bb.attack_interval??1);
  const duration=profile.skill?.duration;
  if(has(text,/每秒.*受到|持续.*受到|周期.*造成|每秒.*攻击|每秒.*额外攻击/)&&Number.isFinite(periodicScale)&&has(text,/伤害|法术|攻击/)){ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:Number(bb.projectile_range)|| (config.multiTarget===Infinity?2:1),interval:Math.max(.1,periodicInterval),nextAt:battle.s.time+Math.max(.1,periodicInterval),endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),trackArea:has(text,/区域|影响范围|火墙/),trackSide:has(text,/友方单位|友方干员/)?'all':'enemy',values:{dot:true,atk_scale:periodicScale,type:config.damageType||'arts'},snapshot:{damage:battle.stats(u).atk*periodicScale},refKind:'owner',persistAfterSourceGone:false});}
