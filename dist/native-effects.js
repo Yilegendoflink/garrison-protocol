@@ -12,7 +12,7 @@ const QUEUE_CAP=256,ANCESTOR_CAP=32;
 export function emptySettle(){return {nextEventId:1,nextAttackId:1,nextEffectId:1,nextSeq:1,queue:[],consumed:[],byId:{},fault:null};}
 export function ensureBattleShape(s){
  s.battleSchemaVersion??=BATTLE_SCHEMA_VERSION;
- s.cost??=20;s.costInitial??=20;s.costMin??=0;s.costMax??=99;s.costRecoveryInterval??=1;s.costRecoveryClock??=0;s.enemyCostRecoveryMultiplier??=1;s.enemyRespawnTimeMultiplier??=1;
+ s.cost??=20;s.costInitial??=20;s.costMin??=0;s.costMax??=99;s.costRecoveryInterval??=1;s.costRecoveryClock??=0;s.enemyCostRecoveryMultiplier??=1;s.enemyRespawnTimeMultiplier??=1;s.mlyssFirstRhineDiscountUsed??=false;
  s.logicEffects??=[];s.summons??=[];s.logicLog??=[];
  s.settle={...emptySettle(),...s.settle,byId:s.settle?.byId||{}};
  s.settle.consumed=s.settle.consumed||[];s.settle.queue=s.settle.queue||[];
@@ -631,6 +631,7 @@ function onOperatorDeploy(battle,u){
  u.exitLife=null;u.revivedThisLife=false;u.surtrLock=false;u.lumenHotPending=false;
  if(u.id==='char_1033_swire2'&&(u.source?.skillIndex??battle.profile(u).skillIndex)<2){u.coinCap=coinCapFor(battle.profile(u));u.coinSkillEnabled=true;const opening=coinGainAtSkillStart(battle,u);if(opening)grantCoins(u,opening,u.coinCap);}
  if(u.id==='char_496_wildmn'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===0){const bb=skillBB(battle,u);u.wildmaneAspd=Number(bb.attack_speed)||100;u.wildmaneAspdUntil=battle.s.time+(Number(battle.profile(u).skill?.duration)||25);}
+ if(u.id==='char_496_wildmn'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===1){for(const target of battle.reserveUnits?.(v=>battle.profile(v)?.profession==='WARRIOR')||[]){target.wildmaneCostDelta=Math.max(-5,(target.wildmaneCostDelta||0)-1);}}
  if(u.id==='char_237_gravel'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===0){const bb=skillBB(battle,u);u.gravelDefBuff={ratio:Number(bb.def)||0,duration:Number(bb.duration)||8,endsAt:battle.s.time+(Number(bb.duration)||8)};}
  if(u.id==='char_237_gravel'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===1){
   const bb=skillBB(battle,u),amount=battle.stats(u).maxHp*(bb.hp_ratio||1.8),dur=bb.duration||10;

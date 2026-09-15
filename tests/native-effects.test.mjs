@@ -165,6 +165,14 @@ test('模组费用字段参与首次部署、冲锋手回费和返费上限',()=
  const gravel=openBattle({chessId:'chess_char_2_12_b',skillIndex:0}).b;deployNow(gravel);const g=byId(gravel,'char_237_gravel');gravel.s.cost=0;g.deploymentCost=12;g.refundCap=10;g.refundEligible=true;commitExit(gravel,{target:g,reason:'retreat'});assert.equal(gravel.s.cost,9);
 });
 
+test('野鬃待部署近卫减费按每名干员最多五费累计',()=>{
+ const {b}=openBattle([{chessId:'chess_char_1_19_b',skillIndex:1},reps.operators.swire]);const wild=byId(b,'char_496_wildmn'),guard=byId(b,'char_308_swire');for(let i=0;i<6;i++)dispatch(b,'deploy',{target:wild});assert.equal(guard.wildmaneCostDelta,-5);assert.equal(b.deploymentCost(guard),Math.max(0,guard.baseCost-5));
+});
+
+test('缪尔赛思首名莱茵生命单位获得额外一费减免',()=>{
+ const {b}=openBattle([{chessId:'chess_char_6_11_b',skillIndex:0},{chessId:'chess_char_2_02_b',skillIndex:0}]);const m=byId(b,'char_249_mlyss'),silent=byId(b,'char_108_silent');b.deploy(m);assert.equal(b.s.mlyssFirstRhineDiscountUsed,false);assert.equal(b.deploymentCost(silent),silent.baseCost-3);b.s.cost=99;b.deploy(silent,{reentry:true});assert.equal(b.s.mlyssFirstRhineDiscountUsed,true);commitExit(b,{target:silent,reason:'knockdown'});silent.down=0;assert.equal(b.deploymentCost(silent),Math.floor((silent.baseCost-2)*1.5));
+});
+
 test('再部署在冷却结束后按当前实例部署费用扣除战斗费用',()=>{
  const {b}=openBattle(reps.operators.yak);deployNow(b);
  const u=byId(b,'char_199_yak');b.s.cost=99;b.s.costRecoveryInterval=999999;commitExit(b,{target:u,reason:'knockdown'});u.down=0;b.step();
