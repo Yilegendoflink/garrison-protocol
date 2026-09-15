@@ -386,6 +386,14 @@ test('跃跃回旋投射物按技能黑板追加独立投射',()=>{
  const {b}=openBattle({chessId:'chess_char_1_09_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);const cfg=operatorSkillConfig(b,u);assert.equal(cfg.extraProjectiles,1);b.releaseNativeAttack(u,{kind:'damage',targets:[e.uid],amount:100,baseAmount:100,hits:1,type:'physical',extraProjectiles:cfg.extraProjectiles});assert.equal(b.s.strikes.length,2);
 });
 
+test('至简 S2 下次攻击执行法术双击',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_13_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:10000,def:0,res:0});u.sp=b.spCost(u);b.activate(u);for(let i=0;i<60&&e.hp===10000;i++)b.step();const hits=b.s.logicLog.filter(x=>x.type==='damage'&&x.sourceUid===u.uid&&x.targetUid===e.uid);assert.equal(hits.length,2);assert.ok(hits.every(x=>x.cause==='skill'));
+});
+
+test('流星 S2 立即范围攻击并施加防御削弱，空射天赋提高对空伤害',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0],ground=enemy(b,{x:u.x+1,y:u.y,hp:10000,def:1000,res:0}),air=enemy(b,{x:u.x+2,y:u.y,hp:10000,def:0,res:0,flying:true});u.sp=b.spCost(u);b.activate(u);assert.ok(ground.hp<10000);assert.ok(ground.statuses.some(s=>s.kind==='defDown'));assert.ok(air.hp<10000);
+});
+
 test('薄绿技能结束释放范围法术爆发并保留命中拖拽',()=>{
  const {b}=openBattle({chessId:'chess_char_3_08_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+2,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.ok(u.skillLeft>0);assert.equal(b.stats(u).tauntLevel,-1);const beforeX=e.x;b.hit(u,e,10,'arts');assert.ok(e.x<beforeX);u.skillLeft=0;dispatch(b,'skill-end',{target:u});assert.ok(e.hp<990);
 });

@@ -94,11 +94,11 @@ export function skillConfig(profile){
  const damageType=has(description,/真实伤害|真实/)?'true':has(description,/法术伤害|变为法术|法术攻击/)?'arts':null;
  for(const [name,patterns] of Object.entries({atkScale:[/atk_scale(?:_[12])?$/,/damage_scale(?:_[12])?$/],maxTarget:[/max_target(?:_attack|_token)?$/],hits:[/(?:^|[.@_])times$/,/trig_cnt$/],stun:[/(?:^|[.@_])stun$/],sleep:[/(?:^|[.@_])sleep$/],fear:[/(?:^|[.@_])fear$/],terror:[/(?:^|[.@_])terror$/],tremble:[/(?:^|[.@_])tremble$/],sluggish:[/(?:^|[.@_])sluggish$/],silence:[/(?:^|[.@_])silence$/],root:[/(?:^|[.@_])root$/],healScale:[/heal_scale$/],interval:[/interval$/],attackSpeed:[/attack_speed$/]})){if(bb[name]==null){const value=suffixNumber(bb.raw,patterns);if(value!=null)bb[name]=value;}}
  const targetRule=has(description,/生命值最高/) ? 'maxHp' : has(description,/生命值最低/) ? 'minHp' : has(description,/生命值高于.*80%/) ? 'lowHp' : has(description,/未被阻挡|未阻挡/) ? 'unblocked' : has(description,/被阻挡|阻挡的/) ? 'blocked' : has(description,/远程武器/) ? 'ranged' : has(description,/空中单位|飞行单位/) ? 'air' : has(description,/随机攻击|随机目标/) ? 'random' : null;
- const plainDescription=description.replace(/<[^>]+>/g,''),ammoPerAttack=suffixNumber(bb.raw,[/consume.*ammo/,/ammo_cost/])??Number(plainDescription.match(/消耗(\d+)发/)?.[1]||1),ammoBonus=suffixNumber(bb.raw,[/additional.*ammo/,/addtional.*ammo/])??0,leadingCoin=plainDescription.match(/^\s*消耗(?:(\d+)枚|一枚)金币/),coinCost=leadingCoin?(Number(leadingCoin[1])||1):0,coinCap=coinCapFor(profile);
+ const plainDescription=description.replace(/<[^>]+>/g,''),textTarget=Number(plainDescription.match(/至多(\d+)(?:名|个)?敌人/)?.[1]||0),ammoPerAttack=suffixNumber(bb.raw,[/consume.*ammo/,/ammo_cost/])??Number(plainDescription.match(/消耗(\d+)发/)?.[1]||1),ammoBonus=suffixNumber(bb.raw,[/additional.*ammo/,/addtional.*ammo/])??0,leadingCoin=plainDescription.match(/^\s*消耗(?:(\d+)枚|一枚)金币/),coinCost=leadingCoin?(Number(leadingCoin[1])||1):0,coinCap=coinCapFor(profile);
  return {bb,description,damageType,targetRule,canTargetSleep:has(description,/睡眠目标|沉睡目标|睡眠的敌人/),canSeeHidden:has(description,/隐匿失效|隐匿效果失效|无视隐匿/),ammoPerAttack,ammoBonus,coinCost,coinCap,resource:coinCost?'coins':null,stopAttack:has(description,/停止攻击|无法普通攻击/),
   resetAttack:has(description,/立即|瞬发|下次攻击|部署后/),
   healScale:bb.healScale??null,regenScale:bb.regenScale??null,maxHpRegenScale:bb.maxHpRegenScale??null,extraProjectiles:has(description,/额外发射.*回旋|回旋投射物/)?Math.max(0,(Number(bb.cnt)||1)-1):0,
-  multiTarget:bb.maxTarget??(has(description,/同时攻击|所有敌人/) ? Infinity : 1),
+  multiTarget:bb.maxTarget??(textTarget|| (has(description,/同时攻击|所有敌人/) ? Infinity : 1)),
   hits:Math.max(1,Math.min(12,bb.hits??(has(description,/两次|二连击/)?2:1))),atkScale:bb.atkScale??1};
 }
 function positiveNumber(value){return Number.isFinite(Number(value))&&Number(value)>0?Number(value):null;}
@@ -163,6 +163,7 @@ export function attackModifier(battle,source,target,value){
   if(!Number.isFinite(scale))continue;
   if(has(text,/未被阻挡|未阻挡/)&&target.block==null)out*=scale;
   else if(has(text,/被阻挡|阻挡的/)&&target.block!=null)out*=scale;
+  if(has(text,/攻击空中目标|攻击飞行目标/)&&target.flying)out*=scale;
   const drop=Number(bb.hp_ratio_drop),up=Number(bb.atk_scale_up);if(Number.isFinite(drop)&&drop>0&&Number.isFinite(up)&&/生命.*每降低|每降低.*生命/.test(text)&&target.maxHp>0){const steps=Math.max(0,Math.floor((1-target.hp/target.maxHp+1e-9)/drop));out*=1+steps*up;}
   const hpMatch=text.match(/生命值(?:低于|不高于|少于)\s*(\d+)%/);
   if(hpMatch&&target.maxHp>0&&target.hp/target.maxHp<=Number(hpMatch[1])/100)out*=scale;
@@ -231,7 +232,7 @@ export function operatorSkillStart(battle,u,ctx){
  if(has(text,/其余伤害延后至技能结束|伤害延后至技能结束/)){u.damageProtection={immediateRatio:Number.isFinite(Number(bb.damage_resistance))?Number(bb.damage_resistance):0,until:duration>0?battle.s.time+duration:battle.s.time,buffer:0,finalDuration:Number(bb.final_duration)||1,sourceUid:u.uid};}
  if(has(text,/生命值不会低于1|生命值始终不会低于1/)&&!u.lockHp)u.lockHp={min:1,endsAt:duration>0?battle.s.time+duration:null,onEnd:'none'};
  if(has(text,/不再成为其他角色的治疗目标|无法成为其他角色的治疗目标/))u.unhealable=true;
- if(!has(text,/技能结束/)&&has(text,/对周围所有敌人|攻击范围内所有敌人/)&&Number.isFinite(config.atkScale)&&(bb.atkScale!=null||has(text,/造成.*伤害/))){for(const e of allTargets(battle,u,true))ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*config.atkScale,type:config.damageType||'physical',cause:'skill',skill:true});suppressDefault=true;}
+ if(!has(text,/技能结束/)&&has(text,/对周围所有敌人|攻击范围内所有敌人|立即对攻击范围内至多/)&&Number.isFinite(config.atkScale)&&(bb.atkScale!=null||has(text,/造成.*伤害/))){for(const e of allTargets(battle,u,true).slice(0,config.multiTarget===Infinity?Infinity:(config.multiTarget||999)))ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*config.atkScale,type:config.damageType||'physical',cause:'skill',skill:true});suppressDefault=true;}
  if(has(text,/立即.*治疗|立即.*恢复.*生命/)&&Number.isFinite(config.healScale)){for(const a of allAllies(battle,u,true))ctx.applyHeal(battle,{source:u,target:a,amount:battle.stats(u).atk*config.healScale});suppressDefault=true;}
  return suppressDefault;
 }
@@ -253,6 +254,8 @@ export function onEvent(battle,type,payload,ctx){
    if(attackCost!=null&&has(config.description,/每次攻击(?:时)?获得.*费用|每次攻击时获得.*费用|每对一个敌人造成伤害就获得.*费用/)&&payload.cause!=='extra')battle.gainCost?.(attackCost);
    const statusProb=Number(config.bb['attack@prob']??config.bb.prob),statusAllowed=!has(config.description,/寒冷/)||!Number.isFinite(statusProb)||battle.economy.random()<statusProb;if(status&&statusAllowed&&has(config.description,/攻击|命中|目标/))applyStatus(target,status.kind,Number(config.bb['attack@cold']??status.duration),{source:source.uid,resistible:false});
    if(has(config.description,/浮空/))applyStatus(target,'levitate',Number(config.bb.floating??config.bb.duration??2),{source:source.uid,resistible:false});
+   if(Number(config.bb.def)<0&&has(config.description,/防御力/))applyStatus(target,'defDown',Number(config.bb.duration)||5,{source:source.uid,value:Number(config.bb.def),resistible:false});
+   if(Number(config.bb.magic_resistance)<0&&has(config.description,/法术抗性/))applyStatus(target,'resDown',Number(config.bb.duration)||5,{source:source.uid,value:Number(config.bb.magic_resistance),resistible:false});
    if(has(config.description,/隐匿失效|隐匿效果失效/))target.revealed=true;
    if(has(config.description,/推开|推动|拖拽|拉向|拉至|击退/)&&ctx.moveActor)ctx.moveActor(battle,target,source,config.description);
    const elementScale=Number(config.bb.elementScale??(has(config.description,/灼燃|凋亡|元素损伤|元素伤害|神经损伤/)?config.atkScale:NaN));if(Number.isFinite(elementScale)&&has(config.description,/灼燃|凋亡|元素损伤|元素伤害|神经损伤/)&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*elementScale,type:has(config.description,/凋亡/)?'necrosis':has(config.description,/灼燃/)?'burn':has(config.description,/神经损伤/)?'neural':'elemental',cause:'skill',parentEventId:payload.event?.eventId});

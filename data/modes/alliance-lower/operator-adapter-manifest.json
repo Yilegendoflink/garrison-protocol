@@ -109,9 +109,10 @@
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
       "partialHandlers": [
-        "extra-projectile"
+        "extra-projectile",
+        "probability-talent"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "古米",
@@ -232,8 +233,10 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
-      "needsSpecialHandler": true
+      "partialHandlers": [
+        "reaper-range-and-penetration"
+      ],
+      "needsSpecialHandler": false
     },
     {
       "name": "赫默",
@@ -600,9 +603,10 @@
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
       "partialHandlers": [
-        "charged-double-hit"
+        "charged-double-hit",
+        "probability-talent"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "初雪",
@@ -641,8 +645,10 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
-      "needsSpecialHandler": true
+      "partialHandlers": [
+        "def-down-and-antiair"
+      ],
+      "needsSpecialHandler": false
     },
     {
       "name": "忍冬",

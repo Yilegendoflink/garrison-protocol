@@ -606,8 +606,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1强化攻击可复用；S2额外回旋弹体数量未接入",
-      "talentGaps": "概率暴击缺失",
+      "skillGaps": "S1强化攻击与S2额外回旋弹体数量已接入",
+      "talentGaps": "概率暴击已接入",
       "prtsReference": "https://prts.wiki/w/%E8%B7%83%E8%B7%83",
       "sourceProfileIds": [
         "chess_char_1_09_a",
@@ -1252,8 +1252,8 @@
         }
       ],
       "category": "A",
-      "skillGaps": "S1全范围应用近格倍率；S2双击字段适配需补齐",
-      "talentGaps": "固定防御穿透未接入",
+      "skillGaps": "S1全范围近格倍率与S2双击字段已接入",
+      "talentGaps": "固定防御穿透已接入",
       "prtsReference": "https://prts.wiki/w/%E9%80%81%E8%91%AC%E4%BA%BA",
       "sourceProfileIds": [
         "chess_char_2_01_a",
@@ -3428,8 +3428,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1属性可复用；S2瞬发双击须独立执行",
-      "talentGaps": "概率暴击天赋缺失",
+      "skillGaps": "S1属性与S2瞬发双击已接入",
+      "talentGaps": "概率暴击天赋已接入",
       "prtsReference": "https://prts.wiki/w/%E8%87%B3%E7%AE%80",
       "sourceProfileIds": [
         "chess_char_3_13_a",
@@ -3649,8 +3649,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1/S2命中减防未接入；S2即时多目标可复用",
-      "talentGaps": "对空倍率天赋未接入",
+      "skillGaps": "S1/S2命中减防与S2即时多目标已接入",
+      "talentGaps": "对空倍率天赋已接入",
       "prtsReference": "https://prts.wiki/w/%E6%B5%81%E6%98%9F",
       "sourceProfileIds": [
         "chess_char_3_17_a",
