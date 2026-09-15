@@ -2,7 +2,7 @@ import {applyDamage,recoverHP,damage} from './combat.js';
 import {applyStatus} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes} from './protocol.js';
 import {gainSp} from './native-sp.js';
-import {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter} from './native-operator-effects.js';
+import {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor} from './native-operator-effects.js';
 
 export const BATTLE_SCHEMA_VERSION=1;
 export const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','attached','aura','guard','barrier','lock','stat']);
@@ -218,6 +218,7 @@ export function dealDamage(battle,opts){
   if(delayed>0){protection.buffer=(protection.buffer||0)+delayed;log(battle,'damage-delayed',{eventId:event.eventId,targetUid:target.uid,amount:delayed,until:protection.until});}
   value*=immediateRatio;
  }
+ const reduction=damageReductionFor(battle,target,type);if(reduction>0)value*=1-reduction;
  const redirect=!opts.skipRedirect&&value>0?activeRedirect(battle,target,type):null;
  if(redirect){
   const receiver=getActor(battle.s,redirect.targetUid),ratio=Math.max(0,Math.min(1,Number(redirect.ratio??1)));

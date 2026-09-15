@@ -2990,6 +2990,17 @@ function attackPenetration(battle,source,target){
  const skill=skillConfig(battle.profile(source));if(battle.skillActive?.(source)&&Number.isFinite(Number(skill.bb.defPenetrateFixed)))fixed=Math.max(fixed,Number(skill.bb.defPenetrateFixed));if(battle.skillActive?.(source)&&Number.isFinite(Number(skill.bb.defPenetrateRatio)))ratio=Math.max(ratio,Number(skill.bb.defPenetrateRatio));
  return {fixed,ratio};
 }
+function damageReductionFor(battle,target,type){
+ let reduction=0;
+ for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0))for(const talent of activeTalents(battle,source)){
+  const text=talent.description||'',bb=talentValues(talent);if(type==='physical'&&!/物理伤害减少|受到的物理伤害/.test(text))continue;
+  const value=Number(bb.damage_resistance);if(!Number.isFinite(value)||value<=0)continue;
+  if(/友方|我方/.test(text)&&!battle.s.units.includes(target)&&!(battle.s.summons||[]).includes(target))continue;
+  const radius=text.match(/周围(?:最多)?(\d+|一|两|二|四|八)格/);const limit=radius?({一:1,两:2,二:2,四:4,八:8}[radius[1]]??Number(radius[1])):0;
+  if(source.uid===target.uid||(limit&&Math.max(Math.abs((source.x??0)-(target.x??0)),Math.abs((source.y??0)-(target.y??0)))<=limit))reduction=Math.max(reduction,Math.min(1,value));
+ }
+ return reduction;
+}
 function inRange(battle,source,target,skill=false){return battle.inside(source,target,skill);}
 function allTargets(battle,source,skill=false){return battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.untargetable&&inRange(battle,source,e,skill));}
 function allAllies(battle,source,skill=false){return battle.s.units.filter(u=>u.deployed&&u.hp>0&&inRange(battle,source,u,skill));}
@@ -3094,14 +3105,14 @@ function periodicMods(battle,u,ctx){
  }
 }
 
-return {blackboardValues,talentValues,targetFilter,operatorRegistry,skillConfig,statMods,attackModifier,attackPenetration,operatorSkillStart,onEvent,periodicMods};
+return {blackboardValues,talentValues,targetFilter,operatorRegistry,skillConfig,statMods,attackModifier,attackPenetration,damageReductionFor,operatorSkillStart,onEvent,periodicMods};
 },
 "native-effects.js": function(load) {
 const {applyDamage,recoverHP,damage} = load("combat.js");
 const {applyStatus} = load("status.js");
 const {blackboard,resolveActiveTalents,nativeAttributes} = load("protocol.js");
 const {gainSp} = load("native-sp.js");
-const {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter} = load("native-operator-effects.js");
+const {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor} = load("native-operator-effects.js");
 const BATTLE_SCHEMA_VERSION=1;
 const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','attached','aura','guard','barrier','lock','stat']);
 const ELEMENT_TYPES=new Set(['neural','burn','necrosis','corrosion','elemental']);
@@ -3316,6 +3327,7 @@ function dealDamage(battle,opts){
   if(delayed>0){protection.buffer=(protection.buffer||0)+delayed;log(battle,'damage-delayed',{eventId:event.eventId,targetUid:target.uid,amount:delayed,until:protection.until});}
   value*=immediateRatio;
  }
+ const reduction=damageReductionFor(battle,target,type);if(reduction>0)value*=1-reduction;
  const redirect=!opts.skipRedirect&&value>0?activeRedirect(battle,target,type):null;
  if(redirect){
   const receiver=getActor(battle.s,redirect.targetUid),ratio=Math.max(0,Math.min(1,Number(redirect.ratio??1)));

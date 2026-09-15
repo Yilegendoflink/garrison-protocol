@@ -148,6 +148,11 @@ test('古米备用军粮 stores a one-shot heal on the next released attack',()=
  const {b}=openBattle([{chessId:'chess_char_1_10_b',skillIndex:0},reps.operators.yak]);deployNow(b);const gummy=b.s.units.find(u=>u.id==='char_196_sunbr'),yak=b.s.units.find(u=>u.id==='char_199_yak');yak.hp=yak.maxHp-200;gummy.sp=b.spCost(gummy);b.activate(gummy);assert.ok(gummy.pendingAttackHeal);const before=yak.hp;const e=enemy(b,{x:gummy.x+1,y:gummy.y,hp:1000,def:0});b.hit(gummy,e,50,'physical');assert.ok(yak.hp>before);assert.equal(gummy.pendingAttackHeal,null);
 });
 
+test('维娜的周围友方物理减伤只作用于友方单位',()=>{
+ const {b}=openBattle([{chessId:'chess_char_6_07_b',skillIndex:2},reps.operators.yak]);deployNow(b);const vina=b.s.units.find(u=>u.id==='char_1019_siege2'),yak=b.s.units.find(u=>u.id==='char_199_yak'),e=enemy(b,{x:yak.x,y:yak.y,def:0});
+ const before=yak.hp;const result=dealDamage(b,{source:e,target:yak,value:100,type:'physical'});assert.equal(result.hp,74);assert.equal(yak.hp,before-74);const foeHp=e.hp;assert.equal(dealDamage(b,{source:vina,target:e,value:100,type:'physical'}).hp,100);assert.equal(e.hp,foeHp-100);
+});
+
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
  assert.equal(manifest.sourceCommit,source.source.commit);
  assert.equal(manifest.gameDataCommit,scope.gameDataCommit);
