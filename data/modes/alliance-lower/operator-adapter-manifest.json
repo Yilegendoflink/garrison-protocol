@@ -38,7 +38,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "chain-no-decay"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -126,7 +128,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "external-heal-lock"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -1060,7 +1064,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "stay-stack"
+      ],
       "needsSpecialHandler": true
     },
     {
