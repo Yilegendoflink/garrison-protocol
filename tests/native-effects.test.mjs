@@ -108,7 +108,7 @@ test('four summon skills resolve through the shared token lifecycle',()=>{
 test('归溟幽灵鲨 S1 locks lethal damage and exits exactly once at skill end',()=>{
  const {b}=openBattle({chessId:'chess_char_5_13_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,def:0});u.sp=b.spCost(u);b.activate(u);
  dealDamage(b,{source:e,target:u,amount:u.maxHp+100,type:'true'});assert.equal(u.hp,1);assert.equal(u.deployed,true);assert.equal(u.lockHp.min,1);
- dispatch(b,'skill-end',{target:u});assert.equal(u.deployed,false);assert.equal(logOf(b,'exit').length,1);
+ dispatch(b,'skill-end',{target:u});assert.equal(u.deployed,false);assert.equal(logOf(b,'exit').filter(x=>x.uid===u.uid).length,1);
 });
 
 test('新约能天使 ammo event heals the owner and can trigger an in-range bombardment',()=>{
@@ -181,6 +181,14 @@ test('浮游单元技能按黑板数量生成多枚投射，并保留概率寒�
 
 test('洛洛浮游过载在技能结束按实际持续时间眩晕自身',()=>{
  const {b}=openBattle({chessId:'chess_char_2_10_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);assert.equal(u.floatUnits,1);b.s.time=3;dispatch(b,'skill-end',{target:u});assert.ok(u.statuses.some(s=>s.kind==='stun'));
+});
+
+test('缪尔赛思技能复制待部署干员属性并保存 copyOf 关系',()=>{
+ const {b}=openBattle([{chessId:'chess_char_6_11_b',skillIndex:2},reps.operators.yak]);deployNow(b);const mlyss=b.s.units.find(u=>u.id==='char_249_mlyss'),copy=b.s.units.find(u=>u.id==='char_199_yak');copy.deployed=false;mlyss.sp=b.spCost(mlyss);b.activate(mlyss);const token=b.s.summons.find(s=>s.type==='mlyss-fluid');assert.ok(token);assert.equal(token.copyOf,copy.uid);assert.equal(token.maxHp,b.profile(copy).attributes.maxHp);assert.equal(token.atk,b.profile(copy).attributes.atk);assert.equal(token.blockCnt,b.profile(copy).attributes.blockCnt);
+});
+
+test('归溟幽灵鲨替身固定实体提供范围减速与周期法伤',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_13_b',skillIndex:1});deployNow(b);const u=b.s.units[0],sub=b.s.summons.find(s=>s.type==='ghost2-substitute');assert.ok(sub);const e=enemy(b,{x:sub.x+1,y:sub.y,hp:5000,def:0});b.s.time=1;tickLogic(b,1);assert.ok(e.hp<5000);assert.ok(e.statuses.some(s=>s.kind==='sluggish'));
 });
 
 test('惊蛰 S1 chain keeps full damage on subsequent jumps while active',()=>{
