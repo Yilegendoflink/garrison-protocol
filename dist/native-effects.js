@@ -499,6 +499,7 @@ export function effectStatMods(battle,u){
   if(u.hornBuff){ratio.maxHp+=-(1-(u.hornBuff.maxHpMul??.5));ratio.def+=u.hornBuff.def||0;attackSpeed+=u.hornBuff.attackSpeed||0;note('maxHp','ratio',-(1-(u.hornBuff.maxHpMul??.5)),'号角血战');}
   if(u.talentMods){ratio.atk+=u.talentMods.atk||0;ratio.maxHp+=u.talentMods.maxHp||0;ratio.def+=u.talentMods.def||0;attackSpeed+=u.talentMods.attackSpeed||0;for(const [stat,v] of Object.entries(u.talentMods))if(v)note(stat,'deploy',v,(battle.profile(u)?.name||u.id)+'部署天赋');}
   if((u.talentStacks||0)>0)for(const talent of talents){const text=talent.description||'',bb=talentValues(talent);if(has(text,/在场.*秒|停留.*秒/)&&Number(bb.atk))ratio.atk+=Number(bb.atk)*(u.talentStacks||0);}
+  if(u.id==='char_4194_rmixer'){const t=talents.find(x=>x.name==='扫射迎宾仪礼');if(t){u.rmixerStacks=(u.rmixerStacks||[]).filter(at=>battle.s.time-at<(Number(t.values.duration)||10));const stacks=Math.min(Number(t.values.max_stack_cnt)||3,u.rmixerStacks.length);add.def+=Number(t.values.def||0)*stacks;attackSpeed+=Number(t.values.attack_speed||0)*stacks;}}
  }
  const maxSame={};
   for(const a of auras){

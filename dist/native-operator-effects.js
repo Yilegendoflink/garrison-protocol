@@ -159,6 +159,12 @@ export function onEvent(battle,type,payload,ctx){
   const bb=config.bb;if(Number.isFinite(bb.value)&&has(config.description,/恢复自身|回复自身/))ctx.applyHeal(battle,{source,target:source,amount:bb.value});
   // Defense penetration is applied before mitigation by NativeBattle.hit; do not mutate the target.
  }
+ if(type==='after-damage'&&source&&source.kind!=='summon'&&target&&payload.skill&&payload.cause!=='extra'){
+  const config=skillConfig(battle.profile(source)),text=config.description,attackKey=payload.event?.attackId??payload.event?.eventId;
+  if(source.id==='char_294_ayer'&&has(text,/额外对周围8格友方单位阻挡的所有敌人/)&&source.ayerAttackKey!==attackKey){source.ayerAttackKey=attackKey;const allyBlocked=battle.s.enemies.filter(e=>e.hp>0&&e.block!=null&&battle.s.units.some(a=>a.uid===e.block&&a.deployed&&Math.max(Math.abs(a.x-source.x),Math.abs(a.y-source.y))<=1));for(const e of allyBlocked)ctx.dealDamage(battle,{source,target:e,amount:battle.stats(source).atk*(config.bb.atkScale||1),type:'arts',cause:'extra',parentEventId:payload.event?.eventId,effectId:'ayer-extra:'+source.uid+':'+attackKey});}
+  if(source.id==='char_423_blemsh'&&has(text,/每次攻击额外造成.*法术伤害/)){const scale=Number(config.bb.atkScale);if(Number.isFinite(scale))ctx.dealDamage(battle,{source,target,amount:battle.stats(source).atk*scale,type:'arts',cause:'extra',parentEventId:payload.event?.eventId,effectId:'blemsh-extra:'+source.uid+':'+(payload.event?.eventId||0)});if(Number.isFinite(config.healScale)){const ally=battle.s.units.filter(a=>a.uid!==source.uid&&a.deployed&&a.hp>0&&battle.canHeal(a,source)&&Math.max(Math.abs(a.x-source.x),Math.abs(a.y-source.y))<=1).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.uid-b.uid)[0];if(ally)ctx.applyHeal(battle,{source,target:ally,amount:battle.stats(source).atk*config.healScale});}}
+  if(source.id==='char_4194_rmixer'){const talent=activeTalents(battle,source).find(t=>t.name==='扫射迎宾仪礼');if(talent){source.rmixerStacks=(source.rmixerStacks||[]).filter(at=>battle.s.time-at<(Number(talentValues(talent).duration)||10));const max=Number(talentValues(talent).max_stack_cnt)||3;if(source.rmixerStacks.length<max)source.rmixerStacks.push(battle.s.time);}}
+ }
  if((type==='before-damage'||type==='after-damage')&&source&&source.kind!=='summon'&&target&&payload.cause!=='dot'&&payload.cause!=='reflect'){
   for(const talent of activeTalents(battle,source)){
    const text=talent.description||'',bb=talentValues(talent);

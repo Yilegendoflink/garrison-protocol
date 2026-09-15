@@ -157,6 +157,15 @@ test('浊心斯卡蒂 S3 applies flat inspire, true-damage field and self drain'
  const {b}=openBattle([{chessId:'chess_char_6_04_b',skillIndex:2},reps.operators.yak]);deployNow(b);const skadi=b.s.units.find(u=>u.id==='char_1012_skadi2'),yak=b.s.units.find(u=>u.id==='char_199_yak'),e=enemy(b,{x:skadi.x+1,y:skadi.y,hp:10000,def:9999,res:999});yak.x=skadi.x+1;yak.y=skadi.y;skadi.sp=b.spCost(skadi);b.activate(skadi);const base=b.profile(yak).attributes.atk;assert.ok(b.stats(yak).atk>base);const hp=skadi.hp;b.s.time=1;tickLogic(b,1);assert.ok(e.hp<10000);assert.ok(skadi.hp<hp);
 });
 
+test('断崖 S2 adds one nearby blocker follow-up and瑕光 S3 adds arts plus ally heal',()=>{
+ const a=openBattle([{chessId:'chess_char_3_02_b',skillIndex:1},reps.operators.yak]);deployNow(a.b);const ayer=a.b.s.units.find(u=>u.id==='char_294_ayer'),blocker=a.b.s.units.find(u=>u.id==='char_199_yak'),foe=enemy(a.b,{x:ayer.x+1,y:ayer.y,hp:5000,def:0});foe.block=blocker.uid;ayer.sp=a.b.spCost(ayer);a.b.activate(ayer);const before=foe.hp;a.b.hit(ayer,foe,20,'arts');assert.ok(foe.hp<before-20);
+ const l=openBattle([{chessId:'chess_char_3_12_b',skillIndex:2},reps.operators.yak]);deployNow(l.b);const blem=l.b.s.units.find(u=>u.id==='char_423_blemsh'),ally=l.b.s.units.find(u=>u.id==='char_199_yak'),victim=enemy(l.b,{x:blem.x+1,y:blem.y,hp:5000,def:0});ally.hp=ally.maxHp-100;blem.sp=l.b.spCost(blem);l.b.activate(blem);const h0=ally.hp,v0=victim.hp;l.b.hit(blem,victim,20,'physical');assert.ok(victim.hp<v0-20);assert.ok(ally.hp>h0);
+});
+
+test('信仰搅拌机 damage stacks refresh finite defense and attack-speed bonuses',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_01_b',skillIndex:2});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:10000,def:0});u.sp=b.spCost(u);b.activate(u);const d0=b.stats(u).def;b.hit(u,e,10,'physical');const d1=b.stats(u).def;b.hit(u,e,10,'physical');assert.ok(d1>d0);assert.ok(b.stats(u).attackSpeed>b.profile(u).attributes.attackSpeed);b.s.time=11;tickLogic(b,11);assert.equal(b.stats(u).def,d0);
+});
+
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
  assert.equal(manifest.sourceCommit,source.source.commit);
  assert.equal(manifest.gameDataCommit,scope.gameDataCommit);
