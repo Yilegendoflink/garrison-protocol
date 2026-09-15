@@ -78,7 +78,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "hp-scaling-and-crit"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -102,7 +104,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "extra-projectile"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -156,7 +160,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "sluggish-talent"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -296,7 +302,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "reflect-and-attack-down"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -598,7 +606,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "max-hp-regen"
+      ],
       "needsSpecialHandler": true
     },
     {

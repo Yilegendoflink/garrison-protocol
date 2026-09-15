@@ -5,7 +5,7 @@ import {applyStatus} from '../dist/status.js';
 import {blackboard,resolveActiveTalents,resolveChess} from '../dist/protocol.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
-import {dealDamage,enqueue,newAttackId,applyHeal,applyRegen,applyLoss,commitExit,reviveActor,dispatch,tickLogic,addEffect,addDamageRedirect,queueDelayedDamage,teleportActor,BATTLE_SCHEMA_VERSION,validateBattle,migrateBattle,getActor,attackableAllies} from '../dist/native-effects.js';
+import {dealDamage,enqueue,newAttackId,applyHeal,applyRegen,applyLoss,commitExit,reviveActor,dispatch,tickLogic,addEffect,addDamageRedirect,queueDelayedDamage,teleportActor,operatorSkillConfig,BATTLE_SCHEMA_VERSION,validateBattle,migrateBattle,getActor,attackableAllies} from '../dist/native-effects.js';
 import {openBattle,deployNow,enemy,byId,talentBB,logOf,steps,reps} from './effects-harness.mjs';
 
 const source=JSON.parse(fs.readFileSync('data/modes/alliance-lower/source.json','utf8'));
@@ -189,6 +189,26 @@ test('缪尔赛思技能复制待部署干员属性并保存 copyOf 关系',()=>
 
 test('归溟幽灵鲨替身固定实体提供范围减速与周期法伤',()=>{
  const {b}=openBattle({chessId:'chess_char_5_13_b',skillIndex:1});deployNow(b);const u=b.s.units[0],sub=b.s.summons.find(s=>s.type==='ghost2-substitute');assert.ok(sub);const e=enemy(b,{x:sub.x+1,y:sub.y,hp:5000,def:0});b.s.time=1;tickLogic(b,1);assert.ok(e.hp<5000);assert.ok(e.statuses.some(s=>s.kind==='sluggish'));
+});
+
+test('深靛 S2 只对束缚目标按黑板间隔造成周期法伤',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);applyStatus(e,'root',5,{source:u.uid,resistible:false});const before=e.hp;b.s.time=.5;tickLogic(b,.5);assert.equal(e.hp<before,true);const e2=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});b.s.time=1;tickLogic(b,.5);assert.equal(e2.hp,1000);
+});
+
+test('蛇屠箱 S1 的持续回复按最大生命比例结算',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_16_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.hp=u.maxHp-100;u.sp=b.spCost(u);b.activate(u);const before=u.hp;b.s.time=1;tickLogic(b,1);assert.equal(u.hp,before+u.maxHp*.02);
+});
+
+test('泡泡技能受击反伤并给攻击者施加攻击下降',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_08_b',skillIndex:1});deployNow(b);const bubble=b.s.units[0],enemyUnit=enemy(b,{x:bubble.x+1,y:bubble.y,hp:1000,def:0,atk:100});bubble.sp=b.spCost(bubble);b.activate(bubble);const before=enemyUnit.hp;b.hurt(bubble,enemyUnit);assert.ok(enemyUnit.hp<before);assert.ok(enemyUnit.statuses.some(s=>s.kind==='attackDown'));
+});
+
+test('普罗旺斯低生命目标增伤按生命比例档位计算',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_07_a',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:600,maxHp:1000,def:0});b.economy.random=()=>1;u.skillLeft=10;b.hit(u,e,100,'physical');assert.equal(e.hp,476);
+});
+
+test('跃跃回旋投射物按技能黑板追加独立投射',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_09_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);const cfg=operatorSkillConfig(b,u);assert.equal(cfg.extraProjectiles,1);b.releaseNativeAttack(u,{kind:'damage',targets:[e.uid],amount:100,baseAmount:100,hits:1,type:'physical',extraProjectiles:cfg.extraProjectiles});assert.equal(b.s.strikes.length,2);
 });
 
 test('惊蛰 S1 chain keeps full damage on subsequent jumps while active',()=>{
