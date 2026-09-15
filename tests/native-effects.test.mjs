@@ -153,6 +153,10 @@ test('维娜的周围友方物理减伤只作用于友方单位',()=>{
  const before=yak.hp;const result=dealDamage(b,{source:e,target:yak,value:100,type:'physical'});assert.equal(result.hp,74);assert.equal(yak.hp,before-74);const foeHp=e.hp;assert.equal(dealDamage(b,{source:vina,target:e,value:100,type:'physical'}).hp,100);assert.equal(e.hp,foeHp-100);
 });
 
+test('浊心斯卡蒂 S3 applies flat inspire, true-damage field and self drain',()=>{
+ const {b}=openBattle([{chessId:'chess_char_6_04_b',skillIndex:2},reps.operators.yak]);deployNow(b);const skadi=b.s.units.find(u=>u.id==='char_1012_skadi2'),yak=b.s.units.find(u=>u.id==='char_199_yak'),e=enemy(b,{x:skadi.x+1,y:skadi.y,hp:10000,def:9999,res:999});yak.x=skadi.x+1;yak.y=skadi.y;skadi.sp=b.spCost(skadi);b.activate(skadi);const base=b.profile(yak).attributes.atk;assert.ok(b.stats(yak).atk>base);const hp=skadi.hp;b.s.time=1;tickLogic(b,1);assert.ok(e.hp<10000);assert.ok(skadi.hp<hp);
+});
+
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
  assert.equal(manifest.sourceCommit,source.source.commit);
  assert.equal(manifest.gameDataCommit,scope.gameDataCommit);

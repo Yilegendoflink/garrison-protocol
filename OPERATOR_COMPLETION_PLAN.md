@@ -18,7 +18,7 @@
 
 `descriptor-v1` 适配层已覆盖通用黑板参数、直接属性、光环、概率事件、基础状态、资源和持续效果入口。公共结算层现在提供 `queueDelayedDamage`、`addDamageRedirect`、`teleportActor`、区域进出事件和 `reviveActor`，并保留快照字段以支持暂停恢复；烛煌“绝处重燃”和归溟幽灵鲨 S1 已接入生命周期专属样例。`operator-adapter-manifest.json` 记录每名干员的适配状态；`needsSpecialHandler=true` 表示仍需专属逻辑。
 
-当前验证：`npm test` 184 项通过；公共效果定向测试 73 项通过；所有 112 名干员和 283 个技能已完成无异常 smoke。该结果只证明入口和公共适配可运行，不代表干员行为已经完成。
+当前验证：`npm test` 185 项通过；公共效果定向测试 74 项通过；所有 112 名干员和 283 个技能已完成无异常 smoke。该结果只证明入口和公共适配可运行，不代表干员行为已经完成。
 
 ## 执行规则
 

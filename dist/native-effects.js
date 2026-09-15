@@ -402,7 +402,7 @@ function settlePeriodic(battle,fx){
  }else if(fx.kind==='loss'){
   const t=getActor(battle.s,fx.targetUid);if(t)applyLoss(battle,{target:t,amount:fx.values?.amount||0,source,effectId:fx.id});
  }else if(fx.kind==='zone'){
-  if(fx.values?.dot)for(const e of zoneActors(battle,fx,'enemy'))dealDamage(battle,{source,target:e,amount:fx.snapshot?.damage??(source?battle.stats(source).atk:0)*(fx.values.atk_scale||1),type:'arts',cause:'dot',effectId:fx.id});
+  if(fx.values?.dot)for(const e of zoneActors(battle,fx,'enemy'))dealDamage(battle,{source,target:e,amount:fx.snapshot?.damage??(source?battle.stats(source).atk:0)*(fx.values.atk_scale||1),type:fx.values?.type||'arts',cause:'dot',effectId:fx.id});
   if(fx.values?.sluggish)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'sluggish',fx.interval||1,{source:source?.uid,resistible:false});
   if(fx.values?.silence)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'silence',fx.interval||1,{source:source?.uid,resistible:false});
   if(fx.values?.hot)for(const a of zoneActors(battle,fx,'ally'))applyHeal(battle,{source,target:a,amount:fx.values.hot,effectId:fx.id});
@@ -486,6 +486,7 @@ export function effectStatMods(battle,u){
   if(src.id==='char_1041_angel2'){
    const t=talents.find(x=>x.name==='铳弹协约');if(t){const base=t.values.atk||.09,mult=t.values.mult||2;auras.push({key:'angel-ammo-atk',stat:'atk',layer:'maxSame',v:base,src:'新约能天使',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'});auras.push({key:'angel-ammo-laterano',stat:'atk',layer:'maxSame',v:base*mult,src:'新约能天使·拉特兰',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'&&battle.profile(v)?.bonds?.includes('lateranoShip')});}
   }
+  if(src.id==='char_1012_skadi2'&&src.inspireAura&&battle.s.time<src.inspireAura.endsAt)auras.push({key:'skadi2-inspire',stat:'atkFlat',layer:'inspire',v:src.inspireAura.value,src:'浊心斯卡蒂',ok:v=>v.uid===src.uid||battle.inside(src,v,true)});
   if(src.id==='char_358_lisa'){
    const t=talents.find(x=>x.name==='技力光环·辅助');if(t)auras.push({key:'sp_recovery_aura',stat:'spRecoveryPerSec',layer:'maxSame',v:t.values.sp_recovery_per_sec||.4,src:'铃兰',ok:v=>battle.profile(v).profession==='SUPPORT'||v.uid===src.uid});
   }
@@ -504,6 +505,7 @@ export function effectStatMods(battle,u){
   if(!a.ok(u))continue;
   if(a.layer==='maxSame'){if(!maxSame[a.key]||a.v>maxSame[a.key].v)maxSame[a.key]=a;continue;}
   if(a.stat==='atk')ratio.atk+=a.v;
+  else if(a.stat==='atkFlat')add.atk+=a.v;
   else if(a.stat==='maxHp')ratio.maxHp+=a.v;
   else if(a.stat==='def')ratio.def+=a.v;
   else if(a.stat==='attackSpeed')attackSpeed+=a.v;
@@ -633,8 +635,9 @@ function onOperatorDeploy(battle,u){
  if(u.id==='char_108_silent'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===1){u.summonCtrl.stock=1;spawnSummon(battle,u,{type:'silent-drone',name:'医疗探机',targetable:false,healable:false,canHeal:true,duration:10,persistAfterSourceGone:true});}
  u.duskFirstAttack=false;
 }
-function onSkillStart(battle,u){
+ function onSkillStart(battle,u){
  const idx=u.source?.skillIndex??battle.profile(u).skillIndex;
+ if(u.id==='char_1012_skadi2'&&idx===2){const bb=skillBB(battle,u),duration=battle.profile(u).skill.duration;u.inspireAura={value:(battle.profile(u).attributes.atk||0)*Number(bb.atk||0),endsAt:battle.s.time+(duration>0?duration:1e9)};}
  if(u.id==='char_344_beewax'&&idx===1){const bb=skillBB(battle,u),token=spawnSummon(battle,u,{type:'beewax-obelisk',name:'沙之碑',targetable:true,canBlock:true,canAttack:false,occupiesTile:true,duration:u.skillLeft});if(token)for(const e of enemyActors(battle.s).filter(e=>chebyshev(token,e)<=1)){dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(bb.atk_scale||2),type:'arts',cause:'skill'});applyStatus(e,'stun',bb.stun||1,{source:u.uid,resistible:false});}return true;}
  if(u.id==='char_4016_kazema'&&idx===1){spawnSummon(battle,u,{type:'kazema-shadow',name:'纸偶',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});}
  if(u.id==='char_1019_siege2'&&idx===2){spawnSummon(battle,u,{type:'siege2-golden',name:'黄金盟誓',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});}
@@ -670,6 +673,7 @@ function onSkillEnd(battle,u){
  for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-heal-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-loss:${u.id}:${u.skillCount}`))dropEffect(battle,fx,'skill-end');
  for(const talent of activeTalentsOf(battle,u)){const text=talent.description||'',bb=talent.values||{};if(/技能结束.*恢复.*生命|技能结束.*回复.*生命/.test(text)&&Number(bb.hp_ratio)>0)applyHeal(battle,{source:u,target:u,amount:u.maxHp*Number(bb.hp_ratio)});}
  if(u.unhealable)u.unhealable=false;
+ if(u.id==='char_1012_skadi2')u.inspireAura=null;
  if(u.damageProtection){
   const protection=u.damageProtection;u.damageProtection=null;
   if(protection.buffer>0){
