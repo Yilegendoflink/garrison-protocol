@@ -132,6 +132,12 @@ test('battle cost starts at 20 and stays separate from preparation funds',()=>{
  b.s.cost=98;b.s.costRecoveryClock=0;b.tickCost(2);assert.equal(b.s.cost,99);assert.equal(b.s.costRecoveryClock,1);
 });
 
+test('负费用下限支持透支并在归零前减半回复',()=>{
+ const {b}=openBattle(reps.operators.yak);deployNow(b);b.s.costMin=-6;b.s.cost=4;b.s.costRecoveryClock=0;
+ assert.equal(b.spendCost(6),false);assert.equal(b.spendCost(6,{considerNegativeCost:true}),true);assert.equal(b.s.cost,-2);
+ b.tickCost(1);assert.equal(b.s.cost,-1.5);b.tickCost(3);assert.equal(b.s.cost,0);
+});
+
 test('忍冬的在场天赋提高费用自然回复速度',()=>{
  const {b}=openBattle({chessId:'chess_char_3_18_b',skillIndex:0});deployNow(b);
  b.s.cost=0;b.s.costRecoveryClock=0;b.tickCost(.9);assert.equal(b.s.cost,0);
