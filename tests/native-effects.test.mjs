@@ -12,6 +12,7 @@ const source=JSON.parse(fs.readFileSync('data/modes/alliance-lower/source.json',
 const scope=JSON.parse(fs.readFileSync('data/modes/alliance-lower/operator-scope.json','utf8'));
 const audit=JSON.parse(fs.readFileSync('data/modes/alliance-lower/operator-behavior-audit.json','utf8'));
 const manifest=JSON.parse(fs.readFileSync('data/modes/alliance-lower/unlock-manifest.json','utf8'));
+const adapterManifest=JSON.parse(fs.readFileSync('data/modes/alliance-lower/operator-adapter-manifest.json','utf8'));
 const capStatus=JSON.parse(fs.readFileSync('data/modes/alliance-lower/operator-capability-status.json','utf8'));
 
 test('periodic effects settle exact due timestamps including the final tick',()=>{
@@ -185,6 +186,7 @@ test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
   assert.ok(Array.isArray(row.elite.activeTalents));
   assert.ok(Array.isArray(row.elite.skillUnlockCond));
   assert.equal(typeof row.elite.equipLevel,'number');
+  assert.ok(Array.isArray(adapterManifest.operators.find(x=>x.charId===op.charId).partialHandlers));
  }
 });
 

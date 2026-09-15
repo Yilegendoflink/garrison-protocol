@@ -3,9 +3,12 @@ const root='data/modes/alliance-lower/';
 const scope=JSON.parse(await fs.readFile(root+'operator-scope.json','utf8'));
 const data=JSON.parse(await fs.readFile(root+'operator-behavior-audit.json','utf8'));
 const unresolved=/缺失|未接入|不完整|待实现|另需|仍需/;
+const partialHandlers={
+ 'char_128_plosis':['sp-aura'],'char_181_flower':['global-regen'],'char_199_yak':['skill-magic-resistance'],'char_237_gravel':['decaying-shield'],'char_258_podego':['timed-zone'],'char_294_ayer':['blocker-follow-up'],'char_308_swire':['melee-aura'],'char_311_mudrok':['guard-and-heal'],'char_350_surtr':['fatal-lock'],'char_358_lisa':['support-aura-and-field'],'char_4039_horn':['fatal-revive'],'char_4042_lumen':['hot-zone'],'char_4137_udflow':['refreshing-dot'],'char_4139_papyrs':['heal-shield'],'char_4162_cathy':['support-device'],'char_427_vigil':['wolf-token'],'char_1014_nearl2':['sun-token'],'char_1020_reed2':['attached-balls'],'char_107_liskam':['guard-and-sp'],'char_108_silent':['drone-token'],'char_143_ghost':['lock-and-stun'],'char_171_bldsk':['death-sp'],'char_196_sunbr':['next-attack-heal'],'char_2015_dusk':['dusk-token'],'char_249_mlyss':['fluid-token'],'char_4016_kazema':['shadow-token'],'char_1012_skadi2':['inspire-and-field'],'char_1023_ghost2':['lock-and-forced-exit'],'char_1026_gvial2':['damage-buffer'],'char_1041_angel2':['ammo-trigger-and-aura'],'char_344_beewax':['obelisk-token'],'char_4194_rmixer':['damage-stack'],'char_423_blemsh':['extra-arts-and-heal'],'char_4145_ulpia':['anchor-teleport'],'char_1040_blaze2':['downed-revive']
+};
 const operators=scope.operators.map(op=>{
  const audit=data.operators.find(x=>x.name===op.name);
- return {name:op.name,charId:op.charId,tier:op.tier,chessId:op.chessId,goldenChessId:op.goldenChessId,adapter:'descriptor-v1',skillAdapter:'generic-blackboard-and-description',talentAdapter:'generic-event-and-direct-stat',needsSpecialHandler:Boolean(unresolved.test(audit?.skillGaps||'')||unresolved.test(audit?.talentGaps||''))};
+ return {name:op.name,charId:op.charId,tier:op.tier,chessId:op.chessId,goldenChessId:op.goldenChessId,adapter:'descriptor-v1',skillAdapter:'generic-blackboard-and-description',talentAdapter:'generic-event-and-direct-stat',partialHandlers:partialHandlers[op.charId]||[],needsSpecialHandler:Boolean(unresolved.test(audit?.skillGaps||'')||unresolved.test(audit?.talentGaps||''))};
 });
 await fs.writeFile(root+'operator-adapter-manifest.json',JSON.stringify({scopeId:scope.scopeId,version:1,generatedFrom:'dist/native-operator-effects.js',operators},null,2)+'\n');
-console.log(JSON.stringify({operators:operators.length,specialHandlers:operators.filter(x=>x.needsSpecialHandler).length}));
+console.log(JSON.stringify({operators:operators.length,specialHandlers:operators.filter(x=>x.needsSpecialHandler).length,partialHandlers:operators.filter(x=>x.partialHandlers.length).length}));
