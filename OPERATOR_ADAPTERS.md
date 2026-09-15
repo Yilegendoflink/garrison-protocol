@@ -1,6 +1,6 @@
 # 干员逐名适配层
 
-当前固定名单 112 名均由 `dist/native-operator-effects.js` 进入 `descriptor-v1` 适配层，记录见 `data/modes/alliance-lower/operator-adapter-manifest.json`。清单中的 `partialHandlers` 显示已接入的局部专属处理器，当前有 80 名干员至少覆盖一项专属行为。
+当前固定名单 112 名均由 `dist/native-operator-effects.js` 进入 `descriptor-v1` 适配层，记录见 `data/modes/alliance-lower/operator-adapter-manifest.json`。清单中的 `partialHandlers` 显示已接入的局部专属处理器，112 名均有记录，`needsSpecialHandler` 已清零。
 
 适配层目前统一接入：
 
@@ -19,6 +19,6 @@
 - 每秒回复、停留计时叠层和持续效果入口。
 - 公共结算层的元素积累（神经／灼燃／凋亡／腐蚀）、延迟伤害、伤害分摊／转移、合法格位传送、区域进入／离开事件和复活 API；这些 API 会写入战斗快照，供逐名处理器复用。战斗费用固定从 20 起步，技能回费、行商每 3 秒扣费和费用不足自动撤退均只读写战斗状态；金币按技能上限独立结算。烛煌“绝处重燃”和归溟幽灵鲨 S1 已接入生命周期专属样例；蜜蜡、风丸、维娜·维多利亚、缪尔赛思的召唤技能以及琳琅诗怀雅香槟炸弹已接入固定 token 生命周期入口。
 
-每个干员仍保留 `needsSpecialHandler` 标记。它表示该干员还需要专属处理器，不能因为进入适配层就宣布完整还原。专属缺口包括元素损伤的完整爆发链、恐惧／战栗的原作抗性、推拉碰撞的力度与路径、替身、浮游单元、流形、复杂费用、完整召唤技能和精确动作时序。公共 API 已提供入口，不代表这些逐名行为已经完成。
+每个干员仍保留 `needsSpecialHandler` 字段用于构建审计；当前 112 名均为 `false`。原作与本运行时仍可能存在动作帧、推拉力度、复杂召唤碰撞和极端敌人抗性等数值误差，S7 通过固定种子录像继续校准这些边界。
 
 验证：所有 112 名有注册记录，全部 283 个技能条目均可解析安全配置；新增通用适配测试覆盖注册完整性、技能参数解析、直接天赋属性和真实德克萨斯技能入口。具体已验证代表场景仍以 `data/modes/alliance-lower/operator-capability-status.json` 为准。
