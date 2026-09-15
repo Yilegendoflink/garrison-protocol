@@ -121,8 +121,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1弹药与倍率可复用但attack@atk_scale未映射；S2远程武器优先级和降仇恨缺失",
-      "talentGaps": "停留计时、随机友方及自身弹药上限增益缺失",
+      "skillGaps": "技能倍率、弹药、远程武器优先级和技能期间低仇恨已接入",
+      "talentGaps": "停留计时及自身/随机拉特兰弹药上限增益已接入",
       "prtsReference": "https://prts.wiki/w/%E9%9A%90%E7%8E%B0",
       "sourceProfileIds": [
         "chess_char_1_01_a",
@@ -191,8 +191,8 @@
         }
       ],
       "category": "A",
-      "skillGaps": "S1每秒固定回血未接入；S2技能法抗未接入；其余属性可复用",
-      "talentGaps": "固定法抗天赋未应用",
+      "skillGaps": "S1固定回复、S2技能属性和法抗已接入",
+      "talentGaps": "固定法抗天赋已接入",
       "prtsReference": "https://prts.wiki/w/%E8%A7%92%E5%B3%B0",
       "sourceProfileIds": [
         "chess_char_1_02_a",
@@ -476,8 +476,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1按敌方失血比例增伤；S2排除高生命目标均缺失",
-      "talentGaps": "概率暴击及正前方条件概率缺失",
+      "skillGaps": "S1按敌方失血比例增伤、S2排除高生命目标已接入",
+      "talentGaps": "概率暴击及正前方条件概率已接入",
       "prtsReference": "https://prts.wiki/w/%E6%99%AE%E7%BD%97%E6%97%BA%E6%96%AF",
       "sourceProfileIds": [
         "chess_char_1_07_a",

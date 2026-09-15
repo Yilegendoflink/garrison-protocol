@@ -12,8 +12,10 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
-      "needsSpecialHandler": true
+      "partialHandlers": [
+        "ammo-talent-and-aggro"
+      ],
+      "needsSpecialHandler": false
     },
     {
       "name": "角峰",
@@ -25,9 +27,10 @@
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
       "partialHandlers": [
-        "skill-magic-resistance"
+        "skill-magic-resistance",
+        "regen-skill"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "惊蛰",
@@ -79,9 +82,10 @@
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
       "partialHandlers": [
-        "hp-scaling-and-crit"
+        "hp-scaling-and-crit",
+        "low-hp-target"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "德克萨斯",

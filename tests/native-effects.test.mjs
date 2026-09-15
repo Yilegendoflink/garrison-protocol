@@ -509,6 +509,22 @@ test('角峰 skill blackboard contributes its magic resistance while active',()=
  const {b}=openBattle(reps.operators.yak);deployNow(b);const u=b.s.units[0],before=b.stats(u).magicResistance;u.sp=b.spCost(u);b.activate(u);assert.ok(b.stats(u).magicResistance>before);
 });
 
+test('角峰 S1 的固定每秒回复走公共周期效果',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_02_b',skillIndex:0});deployNow(b);const u=b.s.units[0];u.hp=100;u.sp=b.spCost(u);b.activate(u);b.s.time=1;tickLogic(b,1);assert.ok(u.hp>100);assert.ok(b.s.logicLog.some(x=>x.type==='regen'&&x.targetUid===u.uid));
+});
+
+test('普罗旺斯 S2 排除生命值高于八成的目标',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_07_b',skillIndex:1});deployNow(b);const u=b.s.units[0],high=enemy(b,{x:u.x+1,y:u.y,hp:900,maxHp:1000}),low=enemy(b,{x:u.x+2,y:u.y,hp:800,maxHp:1000});u.sp=b.spCost(u);b.activate(u);assert.equal(b.targets(u).includes(high),false);assert.equal(b.targets(u).includes(low),true);
+});
+
+test('隐现 S2 技能期间降低敌人选取仇恨',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_01_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);assert.equal(b.stats(u).tauntLevel,-1);
+});
+
+test('隐现停留二十秒后同时补充自身与随机拉特兰弹药',()=>{
+ const {b}=openBattle([{chessId:'chess_char_1_01_b',skillIndex:1},{chessId:'chess_char_6_13_b',skillIndex:2}]);deployNow(b);const inside=byId(b,'char_498_inside'),angel=byId(b,'char_1041_angel2');for(let i=0;i<610;i++)tickLogic(b,1/30);assert.equal(inside.talentAmmoBonus,3);assert.equal(angel.talentAmmoBonus,1);
+});
+
 test('白面鸮 SP aura uses maxSame and does not stack',()=>{
  const {b}=openBattle([reps.operators.plosis,reps.operators.plosis,reps.operators.yak]);deployNow(b);
  const ally=byId(b,'char_199_yak'),base=b.profile(ally).attributes.spRecoveryPerSec??1;
