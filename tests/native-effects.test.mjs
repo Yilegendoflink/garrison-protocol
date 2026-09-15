@@ -175,6 +175,14 @@ test('华法琳紧急包扎只在半血以下的下一次治疗追加生命比�
  const {b}=openBattle([{chessId:'chess_char_4_26_b',skillIndex:0},reps.operators.yak]);deployNow(b);const medic=b.s.units.find(u=>u.id==='char_171_bldsk'),ally=b.s.units.find(u=>u.id==='char_199_yak');ally.hp=ally.maxHp*.4;medic.sp=b.spCost(medic);b.activate(medic);assert.ok(medic.pendingHealBonus);const before=ally.hp;b.heal(medic,ally,10);assert.ok(ally.hp-before>ally.maxHp*.15);assert.equal(medic.pendingHealBonus,null);
 });
 
+test('浮游单元技能按黑板数量生成多枚投射，并保留概率寒冷',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_20_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.equal(u.floatUnits,2);b.economy.random=()=>0;b.hit(u,e,10,'arts');assert.ok(e.statuses.some(s=>s.kind==='cold'||s.kind==='frozen'));
+});
+
+test('洛洛浮游过载在技能结束按实际持续时间眩晕自身',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_10_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);assert.equal(u.floatUnits,1);b.s.time=3;dispatch(b,'skill-end',{target:u});assert.ok(u.statuses.some(s=>s.kind==='stun'));
+});
+
 test('惊蛰 S1 chain keeps full damage on subsequent jumps while active',()=>{
  const {b}=openBattle({chessId:'chess_char_1_03_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e1=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0}),e2=enemy(b,{x:u.x+2,y:u.y,hp:1000,def:0});u.skillLeft=10;b.impactNativeAttack(u,e1,{style:'chain',amount:100,type:'true',antiAir:true});assert.equal(e1.hp,880);assert.equal(e2.hp,880);
 });

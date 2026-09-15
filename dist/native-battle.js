@@ -106,7 +106,7 @@ export class NativeBattle {
   if(packet.ranged){this.s.projectiles.push(shot);if(packet.returns)u.pendingReturns=(u.pendingReturns||0)+1;}
   else this.impactNativeAttack(u,target,shot);
   if(packet.hit===0&&packet.storedEnergy)for(let n=0;n<packet.storedEnergy;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.baseAmount??packet.amount,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'mystic',antiAir:true,ownerDeployment:u.deployAt});
-  if(packet.drone&&packet.hit===0){const trait=branchTrait(this.profile(u)).values;u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.amount*u.droneScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'funnel',antiAir:true,ownerDeployment:u.deployAt});}
+  if(packet.drone&&packet.hit===0){const trait=branchTrait(this.profile(u)).values;u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;const count=Math.max(1,u.floatUnits||1);for(let n=0;n<count;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.amount*u.droneScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'funnel',antiAir:true,ownerDeployment:u.deployAt});}
  }
  impactNativeAttack(u,target,packet){
   const p=this.profile(u),trait=branchTrait(p).values,eligible=e=>e.hp>0&&!e.invulnerable&&!permissions(e).sleeping&&(packet.antiAir||!e.flying||e.uid===target.uid);

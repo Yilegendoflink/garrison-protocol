@@ -3013,9 +3013,11 @@ function operatorSkillStart(battle,u,ctx){
   const dirs=[[1,0],[0,-1],[-1,0],[0,1]],dir=dirs[(u.dir||0)%4],range=Math.max(1,Math.round(Number(bb.projectile_range)||1.8));
   for(let n=range;n>=1;n--)if(ctx.teleportActor(battle,u,{x:u.x+dir[0]*n,y:u.y+dir[1]*n,source:u,mode:'anchor-move'}))break;
  }
+ if(profile.branch==='funnel'&&has(text,/浮游单元/)){const count=Number(bb['attack@cnt']??bb.attack_cnt??0);u.floatUnits=Math.max(1,1+(Number.isFinite(count)?count:0));u.floatTarget=null;u.floatStartedAt=battle.s.time;u.floatOverdrive=has(text,/过载/);}
  const cost=bb.cost;if(Number.isFinite(cost)&&has(text,/获得.*费用|获得.*部署费用/))battle.economy.s.funds+=cost;if(Number.isFinite(cost)&&has(text,/获得.*金币/))u.coins=(u.coins||0)+cost;
  if(Number.isFinite(bb.hp_ratio)&&has(text,/生命/)&&has(text,/流失|损失/))ctx.applyLoss(battle,{target:u,source:u,amount:u.maxHp*Math.abs(bb.hp_ratio),minHp:1,cause:'loss'});
- const status=directStatus(text,config);if(status)for(const e of allTargets(battle,u,true))if(applyStatus(e,status.kind,status.duration,{source:u.uid,resistible:false}))ctx.log?.(battle,'status',{uid:e.uid,kind:status.kind,sourceUid:u.uid});
+ const status=directStatus(text,config),statusAtStart=status&&!has(text,/技能结束|每次攻击|攻击时|受到攻击/)&&has(text,/立即|技能开启时|释放|对周围|对敌人造成/);if(statusAtStart)for(const e of allTargets(battle,u,true))if(applyStatus(e,status.kind,status.duration,{source:u.uid,resistible:false}))ctx.log?.(battle,'status',{uid:e.uid,kind:status.kind,sourceUid:u.uid});
+ if(profile.charId==='char_213_mostma'&&profile.skillIndex===1)for(const e of allTargets(battle,u,true))applyStatus(e,'stun',1,{source:u.uid,resistible:false});
  if(has(text,/解除.*异常|清除.*异常/))for(const a of allAllies(battle,u,true))a.statuses=(a.statuses||[]).filter(s=>!['stun','frozen','sleep','fear','terror','tremble','root','silence','levitate'].includes(s.kind));
  if(has(text,/下次攻击.*(?:恢复|回复)/)&&Number.isFinite(config.healScale)){u.pendingAttackHeal={scale:config.healScale,sourceUid:u.uid};suppressDefault=true;}
  if(has(text,/下次治疗.*(?:额外)?回复目标最大生命值/)&&Number.isFinite(Number(bb.hp_ratio))){u.pendingHealBonus={ratio:Number(bb.hp_ratio),requiresBelowHalf:has(text,/不满一半|低于一半/)};suppressDefault=true;}
@@ -3045,7 +3047,7 @@ function onEvent(battle,type,payload,ctx){
  }
  if(type==='after-damage'&&source&&source.kind!=='summon'&&target&&payload.skill){
   const config=skillConfig(battle.profile(source)),status=directStatus(config.description,config);
-   if(status&&has(config.description,/攻击|命中|目标/))applyStatus(target,status.kind,status.duration,{source:source.uid,resistible:false});
+   const statusProb=Number(config.bb['attack@prob']??config.bb.prob),statusAllowed=!has(config.description,/寒冷/)||!Number.isFinite(statusProb)||battle.economy.random()<statusProb;if(status&&statusAllowed&&has(config.description,/攻击|命中|目标/))applyStatus(target,status.kind,Number(config.bb['attack@cold']??status.duration),{source:source.uid,resistible:false});
    if(has(config.description,/浮空/))applyStatus(target,'levitate',Number(config.bb.floating??config.bb.duration??2),{source:source.uid,resistible:false});
    if(has(config.description,/隐匿失效|隐匿效果失效/))target.revealed=true;
    if(has(config.description,/推开|推动|拖拽|拉向|拉至|击退/)&&ctx.moveActor)ctx.moveActor(battle,target,source,config.description);
@@ -3791,6 +3793,7 @@ function onSkillEnd(battle,u){
  for(const talent of activeTalentsOf(battle,u)){const text=talent.description||'',bb=talent.values||{};if(/技能结束.*恢复.*生命|技能结束.*回复.*生命/.test(text)&&Number(bb.hp_ratio)>0)applyHeal(battle,{source:u,target:u,amount:u.maxHp*Number(bb.hp_ratio)});}
  if(u.unhealable)u.unhealable=false;
  if(u.id==='char_1012_skadi2')u.inspireAura=null;
+ if(u.floatUnits){const elapsed=Math.max(0,battle.s.time-(u.floatStartedAt??battle.s.time));if(u.floatOverdrive&&elapsed>0)applyStatus(u,'stun',elapsed,{source:u.uid,resistible:false});u.floatUnits=0;u.floatTarget=null;u.floatStartedAt=null;u.floatOverdrive=false;}
  if(u.damageProtection){
   const protection=u.damageProtection;u.damageProtection=null;
   if(protection.buffer>0){
@@ -3961,7 +3964,7 @@ class NativeBattle {
   if(packet.ranged){this.s.projectiles.push(shot);if(packet.returns)u.pendingReturns=(u.pendingReturns||0)+1;}
   else this.impactNativeAttack(u,target,shot);
   if(packet.hit===0&&packet.storedEnergy)for(let n=0;n<packet.storedEnergy;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.baseAmount??packet.amount,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'mystic',antiAir:true,ownerDeployment:u.deployAt});
-  if(packet.drone&&packet.hit===0){const trait=branchTrait(this.profile(u)).values;u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.amount*u.droneScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'funnel',antiAir:true,ownerDeployment:u.deployAt});}
+  if(packet.drone&&packet.hit===0){const trait=branchTrait(this.profile(u)).values;u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;const count=Math.max(1,u.floatUnits||1);for(let n=0;n<count;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.amount*u.droneScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'funnel',antiAir:true,ownerDeployment:u.deployAt});}
  }
  impactNativeAttack(u,target,packet){
   const p=this.profile(u),trait=branchTrait(p).values,eligible=e=>e.hp>0&&!e.invulnerable&&!permissions(e).sleeping&&(packet.antiAir||!e.flying||e.uid===target.uid);

@@ -320,7 +320,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "float-unit-and-overdrive"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -646,7 +648,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "float-unit-and-cold"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -684,7 +688,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "skill-stun"
+      ],
       "needsSpecialHandler": true
     },
     {
@@ -1394,7 +1400,9 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
+      "partialHandlers": [
+        "float-unit-count"
+      ],
       "needsSpecialHandler": true
     },
     {
