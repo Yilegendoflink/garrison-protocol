@@ -149,8 +149,14 @@ test('伊内丝下次攻击的回费与附伤在命中时结算',()=>{
 });
 
 test('冲锋手击杀回费使用战斗费用账本',()=>{
- const {b}=openBattle({chessId:'chess_char_4_07_b',skillIndex:0});deployNow(b);
+ const {b}=openBattle({chessId:'chess_char_4_07_a',skillIndex:0});deployNow(b);
  const u=byId(b,'char_222_bpipe'),e=enemy(b,{x:u.x+1,y:u.y,hp:100,def:0});b.s.cost=0;b.s.costRecoveryInterval=999999;b.hit(u,e,1000,'physical');assert.equal(e.hp,0);assert.equal(b.s.cost,1);
+});
+
+test('模组费用字段参与首次部署、冲锋手回费和返费上限',()=>{
+ const texas=openBattle({chessId:'chess_char_1_08_b',skillIndex:1}).b,tx=texas.s.units[0];assert.equal(texas.deploymentCost(tx),tx.baseCost-4);deployNow(texas);assert.equal(tx.runtimeCostUsed,true);
+ const pipe=openBattle({chessId:'chess_char_4_07_b',skillIndex:0}).b;deployNow(pipe);const p=byId(pipe,'char_222_bpipe'),e=enemy(pipe,{x:p.x+1,y:p.y,hp:100,def:0});pipe.s.cost=0;pipe.hit(p,e,1000,'physical');assert.equal(pipe.s.cost,2);pipe.s.cost=0;p.deploymentCost=12;p.refundCap=8;p.refundEligible=true;commitExit(pipe,{target:p,reason:'retreat'});assert.equal(pipe.s.cost,12);
+ const gravel=openBattle({chessId:'chess_char_2_12_b',skillIndex:0}).b;deployNow(gravel);const g=byId(gravel,'char_237_gravel');gravel.s.cost=0;g.deploymentCost=12;g.refundCap=10;g.refundEligible=true;commitExit(gravel,{target:g,reason:'retreat'});assert.equal(gravel.s.cost,9);
 });
 
 test('再部署在冷却结束后按当前实例部署费用扣除战斗费用',()=>{
@@ -171,7 +177,7 @@ test('缪尔赛思开源节流降低莱茵生命单位的再部署费用',()=>{
 
 test('撤退返费按实例部署费用、上限和分支倍率结算',()=>{
  const normal=openBattle(reps.operators.yak).b;deployNow(normal);const y=byId(normal,'char_199_yak');normal.s.cost=0;y.deploymentCost=12;y.refundCap=10;y.refundEligible=true;commitExit(normal,{target:y,reason:'retreat'});assert.equal(normal.s.cost,6);
- const charger=openBattle({chessId:'chess_char_4_07_b',skillIndex:0}).b;deployNow(charger);const p=byId(charger,'char_222_bpipe');charger.s.cost=0;p.deploymentCost=12;p.refundCap=8;p.refundEligible=true;commitExit(charger,{target:p,reason:'retreat'});assert.equal(charger.s.cost,8);
+ const charger=openBattle({chessId:'chess_char_4_07_a',skillIndex:0}).b;deployNow(charger);const p=byId(charger,'char_222_bpipe');charger.s.cost=0;p.deploymentCost=12;p.refundCap=8;p.refundEligible=true;commitExit(charger,{target:p,reason:'retreat'});assert.equal(charger.s.cost,8);
 });
 
 test('凛御银灰技能会修改尚未自动部署单位的费用属性',()=>{
@@ -197,11 +203,19 @@ test('焰尾费用技能的闪避按一次性、范围和技能状态区分',()=
 
 test('行商 fee drains battle cost and auto-withdraws when it is exhausted',()=>{
  const {b}=openBattle({chessId:'chess_char_3_04_b',skillIndex:0});deployNow(b);
- const u=byId(b,'char_1033_swire2');b.s.cost=5;b.s.costRecoveryInterval=999999;
- for(let i=0;i<100;i++)b.step();
- assert.equal(b.s.cost,2);assert.equal(u.deployed,true);assert.equal(b.economy.s.funds,0);
- for(let i=0;i<100;i++)b.step();
- assert.equal(u.deployed,false);assert.equal(u.hp,0);assert.equal(b.s.cost,2);
+ const u=byId(b,'char_1033_swire2');b.s.cost=2;b.s.costRecoveryInterval=999999;
+ for(let i=0;i<200;i++)b.step();
+ assert.equal(b.s.cost,0);assert.equal(u.deployed,false);assert.equal(u.hp,0);assert.equal(b.economy.s.funds,0);
+});
+
+test('凯瑟琳模组费用字段写入支援装置 token',()=>{
+ const {b}=openBattle([{chessId:'chess_char_4_11_b',skillIndex:0},reps.operators.yak]);deployNow(b);b.step();const device=b.s.summons.find(s=>s.type==='cathy-device');assert.ok(device);assert.equal(device.cost,3);
+});
+
+test('墓碑敌方费用效果会减缓回复并延长再部署',()=>{
+ const {b}=openBattle(reps.operators.yak);deployNow(b);const u=b.s.units[0],e=enemy(b,{id:'enemy_2008_flking',costEffects:[{costRecoveryMultiplier:.5,respawnTimeMultiplier:2}]});
+ assert.ok(NATIVE_DATA.enemies.enemy_2008_flking.costEffects.some(x=>x.costRecoveryMultiplier===.5));b.s.cost=0;b.s.costRecoveryClock=0;b.refreshEnemyCostEffects();b.tickCost(1);assert.equal(b.s.cost,0);b.tickCost(1);assert.equal(b.s.cost,1);
+ commitExit(b,{target:u,reason:'knockdown'});assert.equal(u.down,b.stats(u).respawnTime*2);assert.equal(e.hp>0,true);
 });
 
 test('诗怀雅见面礼 consumes a coin, plants a trap and pays the delayed hit',()=>{

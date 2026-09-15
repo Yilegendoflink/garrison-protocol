@@ -44,6 +44,36 @@ export function coinGainAtSkillStart(battle,u){
  }
  return amount;
 }
+function moduleRows(profile){
+ const rows=[];
+ const add=(value,fromModule=false)=>{
+  if(!value||typeof value!=='object')return;
+  const values=blackboardValues({blackboard:value.blackboard}),description=[value.description,value.overrideDescripton,value.additionalDescription].filter(Boolean).join(' ');
+  if(fromModule||value.fromModule||Object.keys(values).some(key=>/cost|withdraw/i.test(key)))rows.push({values,description});
+ };
+ for(const talent of profile?.activeTalents||[])if(talent.fromModule||!talent.name||['10','20_root','-1'].includes(String(talent.prefabKey)))add(talent,true);
+ for(const part of profile?.modulePhase?.parts||[]){
+  for(const candidate of part.overrideTraitDataBundle?.candidates||[])add(candidate,true);
+  for(const candidate of part.addOrOverrideTalentDataBundle?.candidates||[])add(candidate,true);
+ }
+ return rows;
+}
+export function moduleCostData(profile){
+ let runtimeCost=0,runtimeCostActive=false,refundRatio=null,refundIgnoresCap=false,chargerKillCost=null,merchantCost=null,merchantInterval=null;
+ for(const row of moduleRows(profile)){
+  const bb=row.values,description=row.description;
+  if(Number.isFinite(Number(bb.runtime_cost))){runtimeCost=Math.min(runtimeCost,Number(bb.runtime_cost));runtimeCostActive=true;}
+  if(Number.isFinite(Number(bb.withdraw_cost_recover_ratio))){refundRatio=Number(bb.withdraw_cost_recover_ratio);if(refundRatio>=1)refundIgnoresCap=true;}
+  if(/击杀敌人后获得.*费用/.test(description)&&Number(bb.cost)>0)chargerKillCost=Number(bb.cost);
+  if(/消耗.*费用/.test(description)&&Number(bb.cost)<0){merchantCost=Math.abs(Number(bb.cost));if(Number(bb.interval)>0)merchantInterval=Number(bb.interval);}
+ }
+ return {runtimeCost:runtimeCostActive?runtimeCost:0,runtimeCostActive,refundRatio,refundIgnoresCap,chargerKillCost,merchantCost,merchantInterval};
+}
+export function tokenCostFor(profile,tokenId,fallback){
+ const values=profile?.modulePhase?.tokenAttributeBlackboard?.[tokenId];
+ const delta=values?.find?.(entry=>entry.key==='cost');
+ return Number.isFinite(Number(delta?.value))?Math.max(0,(Number(fallback)||0)+Number(delta.value)):fallback;
+}
 export function targetFilter(text,source,target,battle){
  if(target.uid===source.uid)return true;
  const profile=battle.profile(target),profession=profile?.profession||'',position=profile?.position||'';
@@ -271,7 +301,7 @@ export function onEvent(battle,type,payload,ctx){
   const killer=payload.killer?.kind==='summon'?battle.s.units.find(u=>u.uid===payload.killer.ownerUid):payload.killer;
   if(killer?.id==='char_1033_swire2'&&battle.skillActive?.(killer)&&/击倒敌人时获得.*金币/.test(battle.profile(killer)?.skill?.description||''))grantCoins(killer,1,skillConfig(battle.profile(killer)).coinCap);
   if(killer?.id==='char_4026_vulpis'&&battle.skillActive?.(killer)&&(battle.profile(killer)?.skillIndex??killer.source?.skillIndex)===2)killer.vulpisKilled=true;
-  if(killer?.kind!=='summon'&&killer?.deployed&&killer.hp>0&&battle.profile(killer)?.branch==='charger')battle.gainCost?.(1);
+  if(killer?.kind!=='summon'&&killer?.deployed&&killer.hp>0&&battle.profile(killer)?.branch==='charger')battle.gainCost?.(Number(killer.chargerKillCost)||1);
   if(killer?.kind!=='summon'&&killer?.deployed&&killer.hp>0){const skill=battle.profile(killer)?.skill,config=skillConfig(battle.profile(killer)),text=skill?.description||'';if(battle.skillActive?.(killer)&&has(text,/击杀|击倒|击败/)&&has(text,/获得.*费用|回复.*费用/)){const amount=costValueForText(config,text,'kill');if(amount>0)battle.gainCost?.(amount);}}
   if(killer?.kind!=='summon'&&killer?.deployed&&killer.hp>0)for(const talent of activeTalents(battle,killer)){const text=talent.description||'',bb=talentValues(talent);if(has(text,/击杀|击倒|击败/)&&has(text,/获得.*费用|回复.*费用/)){const amount=costValue({bb},'kill')??textCostValue(text);if(amount>0)battle.gainCost?.(amount);}}
   for(const u of battle.s.units.filter(x=>x.deployed&&x.hp>0))for(const talent of activeTalents(battle,u)){
