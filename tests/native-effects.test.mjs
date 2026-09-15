@@ -166,6 +166,10 @@ test('信仰搅拌机 damage stacks refresh finite defense and attack-speed bonu
  const {b}=openBattle({chessId:'chess_char_4_01_b',skillIndex:2});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:10000,def:0});u.sp=b.spCost(u);b.activate(u);const d0=b.stats(u).def;b.hit(u,e,10,'physical');const d1=b.stats(u).def;b.hit(u,e,10,'physical');assert.ok(d1>d0);assert.ok(b.stats(u).attackSpeed>b.profile(u).attributes.attackSpeed);b.s.time=11;tickLogic(b,11);assert.equal(b.stats(u).def,d0);
 });
 
+test('塞雷娅驻场叠层同时提升攻击与防御，并受最大层数限制',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_11_b',skillIndex:1});deployNow(b);const u=b.s.units[0],base=b.profile(u).attributes;for(let i=1;i<=600;i++){b.s.time=i/30;tickLogic(b,1/30);}const stats=b.stats(u);assert.equal(u.talentStacks,1);assert.ok(stats.atk>base.atk);assert.ok(stats.def>base.def);
+});
+
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
  assert.equal(manifest.sourceCommit,source.source.commit);
  assert.equal(manifest.gameDataCommit,scope.gameDataCommit);
