@@ -2904,7 +2904,7 @@ const NUMERIC_KEYS={
  silence:['silence','attack@silence'],root:['root','attack@root'],
  healScale:['heal_scale','attack@heal_scale','attack@atk_to_hp_recovery_ratio'],regenScale:['hp_recovery_per_sec_ratio_chr','hp_recovery_per_sec_ratio','hp_recovery_per_sec_by_max_hp_ratio','atk_to_hp_recovery_ratio'],elementScale:['ep_damage_ratio','element_damage_scale','element_multiplier','magic_atk_scale'],
  cost:['cost','attack@cost'],ammo:['attack@trigger_time'],attackSpeed:['attack_speed'],value:['value'],hpRatio:['hp_ratio'],
- maxHp:['max_hp'],def:['def'],atk:['atk'],magicResistance:['magic_resistance'],blockCnt:['block_cnt'],defPenetrateFixed:['def_penetrate_fixed'],damageScale:['damage_scale']
+ maxHp:['max_hp'],def:['def'],atk:['atk'],magicResistance:['magic_resistance'],blockCnt:['block_cnt'],defPenetrateFixed:['def_penetrate_fixed'],defPenetrateRatio:['def_penetrate'],damageScale:['damage_scale']
 };
 const firstNumber=(bb,keys)=>{for(const key of keys){const value=bb[key];if(Number.isFinite(Number(value)))return Number(value);}return null;};
 function blackboardValues(skill){const bb=Object.fromEntries((skill?.blackboard||[]).map(x=>[x.key,x.valueStr??x.value]));const out={...bb,raw:bb};for(const [name,keys] of Object.entries(NUMERIC_KEYS)){const value=firstNumber(bb,keys);if(value!=null)out[name]=value;}return out;}
@@ -2976,6 +2976,17 @@ function attackModifier(battle,source,target,value){
  }
  return out;
 }
+function attackPenetration(battle,source,target){
+ let fixed=0,ratio=0;
+ for(const talent of activeTalents(battle,source)){
+  const text=talent.description||'',bb=talentValues(talent);
+  const weight=text.match(/重量大于等于\s*(\d+)/);if(weight&&Number(target.weight||0)<Number(weight[1]))continue;
+  if(/被狼群阻挡/.test(text)&&target.block==null)continue;
+  if(/无视.*防御/.test(text)){if(Number.isFinite(Number(bb.defPenetrateFixed)))fixed=Math.max(fixed,Number(bb.defPenetrateFixed));if(Number.isFinite(Number(bb.defPenetrateRatio)))ratio=Math.max(ratio,Number(bb.defPenetrateRatio));}
+ }
+ const skill=skillConfig(battle.profile(source));if(battle.skillActive?.(source)&&Number.isFinite(Number(skill.bb.defPenetrateFixed)))fixed=Math.max(fixed,Number(skill.bb.defPenetrateFixed));if(battle.skillActive?.(source)&&Number.isFinite(Number(skill.bb.defPenetrateRatio)))ratio=Math.max(ratio,Number(skill.bb.defPenetrateRatio));
+ return {fixed,ratio};
+}
 function inRange(battle,source,target,skill=false){return battle.inside(source,target,skill);}
 function allTargets(battle,source,skill=false){return battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.untargetable&&inRange(battle,source,e,skill));}
 function allAllies(battle,source,skill=false){return battle.s.units.filter(u=>u.deployed&&u.hp>0&&inRange(battle,source,u,skill));}
@@ -3024,7 +3035,7 @@ function onEvent(battle,type,payload,ctx){
    if(has(config.description,/推开|推动|拖拽|拉向|拉至|击退/)&&ctx.moveActor)ctx.moveActor(battle,target,source,config.description);
    const elementScale=Number(config.bb.elementScale??(has(config.description,/灼燃|凋亡|元素损伤|元素伤害|神经损伤/)?config.atkScale:NaN));if(Number.isFinite(elementScale)&&has(config.description,/灼燃|凋亡|元素损伤|元素伤害|神经损伤/)&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*elementScale,type:has(config.description,/凋亡/)?'necrosis':has(config.description,/灼燃/)?'burn':has(config.description,/神经损伤/)?'neural':'elemental',cause:'skill',parentEventId:payload.event?.eventId});
   const bb=config.bb;if(Number.isFinite(bb.value)&&has(config.description,/恢复自身|回复自身/))ctx.applyHeal(battle,{source,target:source,amount:bb.value});
-  if(Number.isFinite(bb.defPenetrateFixed)&&has(config.description,/无视.*防御/))target.def=Math.max(0,(target.def||0)-bb.defPenetrateFixed);
+  // Defense penetration is applied before mitigation by NativeBattle.hit; do not mutate the target.
  }
  if((type==='before-damage'||type==='after-damage')&&source&&source.kind!=='summon'&&target&&payload.cause!=='dot'&&payload.cause!=='reflect'){
   for(const talent of activeTalents(battle,source)){
@@ -3079,7 +3090,7 @@ function periodicMods(battle,u,ctx){
  }
 }
 
-return {blackboardValues,talentValues,targetFilter,operatorRegistry,skillConfig,statMods,attackModifier,operatorSkillStart,onEvent,periodicMods};
+return {blackboardValues,talentValues,targetFilter,operatorRegistry,skillConfig,statMods,attackModifier,attackPenetration,operatorSkillStart,onEvent,periodicMods};
 },
 "native-effects.js": function(load) {
 const {applyDamage,recoverHP,damage} = load("combat.js");
@@ -3824,7 +3835,7 @@ const {createTrainingDummy,dummySummary} = load("benchmark.js");
 const {usesSp,spTypeOf,skillKind,ammoCount,initSpOf,gainSp,tickTimeSp} = load("native-sp.js");
 const {containsTarget} = load("targeting.js");
 const {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds,TENTATIVE_PROJECTILE_SPEED} = load("native-combat.js");
-const {operatorRegistry,attackModifier} = load("native-operator-effects.js");
+const {operatorRegistry,attackModifier,attackPenetration} = load("native-operator-effects.js");
 const {ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,commitExit,reviveActor,tickLogic,effectStatMods,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig} = load("native-effects.js");
 class NativeBattle {
  constructor(data,economy,map,turn,{restore=false}={}){
@@ -4010,7 +4021,7 @@ class NativeBattle {
   activate(u){const p=this.profile(u),sk=p.skill;if(!sk||!permissions(u).skill||!usesSp(sk))return;const b=blackboard(sk.blackboard),cfg=operatorSkillConfig(this,u),cost=this.spCost(u),kind=skillKind(sk),flow=skillFlow(sk);if(cfg.coinCost&&(u.coins||0)<cfg.coinCost)return;if(u.sp<cost||(sk.skillType!=='AUTO'&&this.s.time-u.lastSkill<3))return;if(kind==='instant'&&sk.skillType==='AUTO'&&(u.action||u.attackCooldown>0))return;if(flow.resetAttack){u.action=null;u.attackCooldown=0;}if(cfg.coinCost)u.coins-=cfg.coinCost;u.sp=Math.max(0,Math.trunc(u.sp)-cost);u.lastSkill=this.s.time;u.skillCount++;u.ammo=kind==='ammo'?ammoCount(sk)+cfg.ammoBonus+(u.talentAmmoBonus||0):0;u.ammoMax=u.ammo;u.ammoPerAttack=cfg.ammoPerAttack;u.skillLeft=kind==='duration'?(sk.duration<0?1e9:sk.duration):0;if(kind==='instant'){const t=attackTiming(this.stats(u).baseAttackTime,this.stats(u).attackSpeed,windupSeconds(this.stats(u).baseAttackTime,p.attackWindup));u.spLock=t.seconds;}this.event(u,'skill');this.emit('skill-start',{uid:u.uid,kind,name:sk.name,x:u.x,y:u.y});if(dispatch(this,'skill-start',{target:u}))return;if(kind==='instant'&&sk.skillType==='AUTO'&&spTypeOf(sk)==='INCREASE_WHEN_ATTACK'){u.enhanced=true;return;}if(kind==='instant'){const targets=this.targets(u);if(p.branch!=='incantationmedic'&&/回复.*生命|治疗/.test(sk.description||'')){for(const v of this.healingTargets(u))this.heal(u,v,this.stats(u).atk*(cfg.bb.healScale??b.heal_scale??b.atk_scale??1));}else if(cfg.atkScale!=null||b.atk_scale){for(const e of targets.slice(0,cfg.multiTarget===Infinity?targets.length:(cfg.multiTarget??b.max_target??999)))this.hit(u,e,this.stats(u).atk*(cfg.atkScale??b.atk_scale??1),this.baseDamageType(u));}if(b.stun||cfg.bb.stun)for(const e of targets){if(applyStatus(e,'stun',b.stun??cfg.bb.stun,{source:u.uid}))this.emit('control',{uid:e.uid,kind:'stun',x:e.x,y:e.y});}}}
  spCost(u){const p=this.profile(u),base=p.skill?.spData.spCost||0;return this.on('suntShip')&&this.rows.suntShip.count>=5&&p.isGolden?Math.floor(base*.7):base;}
  baseDamageType(u){const p=this.profile(u),description=p.skill?.description||'',configured=operatorSkillConfig(this,u).damageType;if((u.skillLeft>0||u.ammo>0)&&configured)return configured;if((u.skillLeft>0||u.ammo>0)&&description.includes('真实伤害'))return 'true';if((u.skillLeft>0||u.ammo>0)&&/变为.*法术|造成法术/.test(description))return 'arts';return this.behavior(u).damageType;}
- hit(u,e,amount,type){if(e.hp<=0||e.hidden||e.invulnerable||permissions(e).sleeping)return;const p=this.profile(u);let penetrationRatio=this.on('preciShip')&&this.rows.preciShip.count>=3&&(this.owns(u,'preciShip')||p.position==='RANGED')?.3:0;const physical=damage({amount,type:'physical',defense:e.def,penetrationRatio}),arts=damage({amount,type:'arts',resistance:Math.max(0,e.res+statusAttributeChanges(e).resistance),penetrationRatio});if(type!=='true'&&(this.s.band==='band_chen'||p.garrisons.some(g=>blackboard(g.blackboard).key==='act1autochess_gar_eff_chaos')))type=physical>=arts?'physical':'arts';let value=type==='physical'?physical:type==='arts'?arts:amount;
+ hit(u,e,amount,type){if(e.hp<=0||e.hidden||e.invulnerable||permissions(e).sleeping)return;const p=this.profile(u),pen=attackPenetration(this,u,e);let penetrationRatio=this.on('preciShip')&&this.rows.preciShip.count>=3&&(this.owns(u,'preciShip')||p.position==='RANGED')?.3:0;penetrationRatio=Math.max(penetrationRatio,pen.ratio);const physical=damage({amount,type:'physical',defense:Math.max(0,e.def-pen.fixed),penetrationRatio}),arts=damage({amount,type:'arts',resistance:Math.max(0,e.res+statusAttributeChanges(e).resistance),penetrationRatio});if(type!=='true'&&(this.s.band==='band_chen'||p.garrisons.some(g=>blackboard(g.blackboard).key==='act1autochess_gar_eff_chaos')))type=physical>=arts?'physical':'arts';let value=type==='physical'?physical:type==='arts'?arts:amount;
   if(this.on('victoriaShip')&&this.owns(u,'victoriaShip')&&u.source.equipment.length)value*=1.25+.008*(this.layers.victoriaShip||0);
   if(this.on('kjeragShip')&&this.owns(u,'kjeragShip'))value*=e.statuses.some(s=>s.kind==='cold'||s.kind==='frozen')?1.35+.01*(this.layers.kjeragShip||0):1.25;
   if(this.on('emptyShip')&&this.owns(u,'emptyShip'))value*=p.isGolden?1.4:1.2;

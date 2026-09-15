@@ -11,7 +11,7 @@ const NUMERIC_KEYS={
  silence:['silence','attack@silence'],root:['root','attack@root'],
  healScale:['heal_scale','attack@heal_scale','attack@atk_to_hp_recovery_ratio'],regenScale:['hp_recovery_per_sec_ratio_chr','hp_recovery_per_sec_ratio','hp_recovery_per_sec_by_max_hp_ratio','atk_to_hp_recovery_ratio'],elementScale:['ep_damage_ratio','element_damage_scale','element_multiplier','magic_atk_scale'],
  cost:['cost','attack@cost'],ammo:['attack@trigger_time'],attackSpeed:['attack_speed'],value:['value'],hpRatio:['hp_ratio'],
- maxHp:['max_hp'],def:['def'],atk:['atk'],magicResistance:['magic_resistance'],blockCnt:['block_cnt'],defPenetrateFixed:['def_penetrate_fixed'],damageScale:['damage_scale']
+ maxHp:['max_hp'],def:['def'],atk:['atk'],magicResistance:['magic_resistance'],blockCnt:['block_cnt'],defPenetrateFixed:['def_penetrate_fixed'],defPenetrateRatio:['def_penetrate'],damageScale:['damage_scale']
 };
 const firstNumber=(bb,keys)=>{for(const key of keys){const value=bb[key];if(Number.isFinite(Number(value)))return Number(value);}return null;};
 export function blackboardValues(skill){const bb=Object.fromEntries((skill?.blackboard||[]).map(x=>[x.key,x.valueStr??x.value]));const out={...bb,raw:bb};for(const [name,keys] of Object.entries(NUMERIC_KEYS)){const value=firstNumber(bb,keys);if(value!=null)out[name]=value;}return out;}
@@ -83,6 +83,17 @@ export function attackModifier(battle,source,target,value){
  }
  return out;
 }
+export function attackPenetration(battle,source,target){
+ let fixed=0,ratio=0;
+ for(const talent of activeTalents(battle,source)){
+  const text=talent.description||'',bb=talentValues(talent);
+  const weight=text.match(/重量大于等于\s*(\d+)/);if(weight&&Number(target.weight||0)<Number(weight[1]))continue;
+  if(/被狼群阻挡/.test(text)&&target.block==null)continue;
+  if(/无视.*防御/.test(text)){if(Number.isFinite(Number(bb.defPenetrateFixed)))fixed=Math.max(fixed,Number(bb.defPenetrateFixed));if(Number.isFinite(Number(bb.defPenetrateRatio)))ratio=Math.max(ratio,Number(bb.defPenetrateRatio));}
+ }
+ const skill=skillConfig(battle.profile(source));if(battle.skillActive?.(source)&&Number.isFinite(Number(skill.bb.defPenetrateFixed)))fixed=Math.max(fixed,Number(skill.bb.defPenetrateFixed));if(battle.skillActive?.(source)&&Number.isFinite(Number(skill.bb.defPenetrateRatio)))ratio=Math.max(ratio,Number(skill.bb.defPenetrateRatio));
+ return {fixed,ratio};
+}
 function inRange(battle,source,target,skill=false){return battle.inside(source,target,skill);}
 function allTargets(battle,source,skill=false){return battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.untargetable&&inRange(battle,source,e,skill));}
 function allAllies(battle,source,skill=false){return battle.s.units.filter(u=>u.deployed&&u.hp>0&&inRange(battle,source,u,skill));}
@@ -131,7 +142,7 @@ export function onEvent(battle,type,payload,ctx){
    if(has(config.description,/推开|推动|拖拽|拉向|拉至|击退/)&&ctx.moveActor)ctx.moveActor(battle,target,source,config.description);
    const elementScale=Number(config.bb.elementScale??(has(config.description,/灼燃|凋亡|元素损伤|元素伤害|神经损伤/)?config.atkScale:NaN));if(Number.isFinite(elementScale)&&has(config.description,/灼燃|凋亡|元素损伤|元素伤害|神经损伤/)&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*elementScale,type:has(config.description,/凋亡/)?'necrosis':has(config.description,/灼燃/)?'burn':has(config.description,/神经损伤/)?'neural':'elemental',cause:'skill',parentEventId:payload.event?.eventId});
   const bb=config.bb;if(Number.isFinite(bb.value)&&has(config.description,/恢复自身|回复自身/))ctx.applyHeal(battle,{source,target:source,amount:bb.value});
-  if(Number.isFinite(bb.defPenetrateFixed)&&has(config.description,/无视.*防御/))target.def=Math.max(0,(target.def||0)-bb.defPenetrateFixed);
+  // Defense penetration is applied before mitigation by NativeBattle.hit; do not mutate the target.
  }
  if((type==='before-damage'||type==='after-damage')&&source&&source.kind!=='summon'&&target&&payload.cause!=='dot'&&payload.cause!=='reflect'){
   for(const talent of activeTalents(battle,source)){

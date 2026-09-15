@@ -131,6 +131,10 @@ test('折桠 skill-end talent heals from the shared lifecycle hook',()=>{
  const {b}=openBattle({chessId:'chess_char_2_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.hp=u.maxHp-100;dispatch(b,'skill-end',{target:u});assert.ok(u.hp>u.maxHp-100);
 });
 
+test('送葬人 fixed defense penetration applies before mitigation without mutating the enemy',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_01_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:2000,def:300});const before=e.def;b.hit(u,e,1000,'physical');assert.equal(Math.round(2000-e.hp),860);assert.equal(e.def,before);
+});
+
 test('unlock-manifest matches pinned commits and 112-operator scope',()=>{
  assert.equal(manifest.sourceCommit,source.source.commit);
  assert.equal(manifest.gameDataCommit,scope.gameDataCommit);
