@@ -352,7 +352,7 @@
       "partialHandlers": [
         "float-unit-and-overdrive"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "风丸",
@@ -366,7 +366,7 @@
       "partialHandlers": [
         "shadow-token"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "砾",
@@ -517,7 +517,7 @@
       "partialHandlers": [
         "merchant-cost-and-trap"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "斯卡蒂",
@@ -545,7 +545,7 @@
       "partialHandlers": [
         "retaliation-and-element"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "薄绿",
@@ -596,8 +596,10 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
-      "needsSpecialHandler": true
+      "partialHandlers": [
+        "special-bullet-and-cold"
+      ],
+      "needsSpecialHandler": false
     },
     {
       "name": "瑕光",
@@ -611,7 +613,7 @@
       "partialHandlers": [
         "extra-arts-and-heal"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "至简",
@@ -640,7 +642,7 @@
       "partialHandlers": [
         "range-debuff"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "蛇屠箱",
@@ -738,7 +740,7 @@
       "partialHandlers": [
         "damage-stack"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "莫斯提马",
@@ -777,8 +779,10 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
-      "needsSpecialHandler": true
+      "partialHandlers": [
+        "camouflage-and-hit-threshold"
+      ],
+      "needsSpecialHandler": false
     },
     {
       "name": "风笛",
@@ -804,7 +808,7 @@
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
       "partialHandlers": [],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "阿罗玛",
@@ -815,8 +819,10 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
-      "needsSpecialHandler": true
+      "partialHandlers": [
+        "air-bonus-and-levitate-end"
+      ],
+      "needsSpecialHandler": false
     },
     {
       "name": "凯瑟琳",
@@ -855,8 +861,10 @@
       "adapter": "descriptor-v1",
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
-      "partialHandlers": [],
-      "needsSpecialHandler": true
+      "partialHandlers": [
+        "freeze-burst-and-fragile"
+      ],
+      "needsSpecialHandler": false
     },
     {
       "name": "莱恩哈特",
@@ -870,7 +878,7 @@
       "partialHandlers": [
         "area-resistance-debuff"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "缄默德克萨斯",
@@ -896,7 +904,7 @@
       "partialHandlers": [
         "guard-and-reflect"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "泥岩",

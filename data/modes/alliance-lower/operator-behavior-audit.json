@@ -1817,8 +1817,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1攻速可复用；S2浮游独立锁敌、过载、结束等长自晕缺失",
-      "talentGaps": "停留时间叠层加攻缺失",
+      "skillGaps": "S1攻速；S2浮游单元、独立锁敌与过载结束自晕已接入",
+      "talentGaps": "停留时间叠层加攻已接入",
       "prtsReference": "https://prts.wiki/w/%E6%B4%9B%E6%B4%9B",
       "sourceProfileIds": [
         "chess_char_2_10_a",
@@ -1882,8 +1882,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1攻击后掉血；S2纸偶与替身生命周期缺失",
-      "talentGaps": "替身出现时范围伤害缺失",
+      "skillGaps": "S1下次攻击倍率与当前生命流失；S2纸偶召唤与生命周期已接入",
+      "talentGaps": "纸偶出现时范围法术伤害已接入",
       "prtsReference": "https://prts.wiki/w/%E9%A3%8E%E4%B8%B8",
       "sourceProfileIds": [
         "chess_char_2_11_a",
@@ -2755,8 +2755,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1/S2/S3金币独立资源、治疗消耗、陷阱、结束时倾泻金币及推动缺失",
-      "talentGaps": "特性耗费转金币、叠层增攻、花费部署费用免死缺失",
+      "skillGaps": "S1/S2/S3金币独立资源、治疗消耗、陷阱、结束倾泻金币及推动已接入",
+      "talentGaps": "特性耗费转金币、叠层增攻、花费部署费用免死已接入",
       "prtsReference": "https://prts.wiki/w/%E7%90%B3%E7%90%85%E8%AF%97%E6%80%80%E9%9B%85",
       "sourceProfileIds": [
         "chess_char_3_04_a",
@@ -2939,8 +2939,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1清除元素损伤/损伤屏障；S2受击范围反击、凋亡损伤与冷却缺失",
-      "talentGaps": "元素减伤及受到凋亡回技力缺失",
+      "skillGaps": "S1清除元素并获损伤屏障；S2受击范围反击、凋亡损伤、冷却与元素触发已接入",
+      "talentGaps": "元素损伤减免及受到凋亡回技力已接入",
       "prtsReference": "https://prts.wiki/w/%E8%8F%B2%E8%8E%B1",
       "sourceProfileIds": [
         "chess_char_3_06_a",
@@ -3509,8 +3509,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1多目标及敌方攻速减益；S2敌方防御/法抗减益缺失",
-      "talentGaps": "低生命脆弱、常态双目标缺失",
+      "skillGaps": "S1双目标与敌方攻速减益；S2范围防御/法抗减益已接入",
+      "talentGaps": "低生命脆弱与常态双目标已接入",
       "prtsReference": "https://prts.wiki/w/%E5%88%9D%E9%9B%AA",
       "sourceProfileIds": [
         "chess_char_3_14_a",
@@ -4255,8 +4255,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1为队友补弹；S2耗弹免死；S3全队补弹、受击反击及攻击间隔比例冷却缺失",
-      "talentGaps": "命中限时叠层、防御/攻速叠层、未主动攻击计时屏障缺失",
+      "skillGaps": "S1补弹/三连击；S2耗弹保命；S3全队补弹、受击反击与弹药结束已接入",
+      "talentGaps": "命中限时叠层、防御/攻速叠层、未主动攻击计时屏障已接入",
       "prtsReference": "https://prts.wiki/w/%E4%BF%A1%E4%BB%B0%E6%90%85%E6%8B%8C%E6%9C%BA",
       "sourceProfileIds": [
         "chess_char_4_01_a",
@@ -4553,8 +4553,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1迷彩；S2命中计数后四连击缺失",
-      "talentGaps": "概率暴击及微眩晕缺失",
+      "skillGaps": "S1迷彩；S2命中计数后四连击已接入",
+      "talentGaps": "概率暴击与微眩晕已接入",
       "prtsReference": "https://prts.wiki/w/%E5%AF%92%E8%8A%92%E5%85%8B%E6%B4%9B%E4%B8%9D",
       "sourceProfileIds": [
         "chess_char_4_06_a",
@@ -4791,8 +4791,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1天赋倍率；S2/S3天赋额外目标、控制及少目标自损缺失",
-      "talentGaps": "最低生命目标附加法伤、范围低生命条件增攻缺失",
+      "skillGaps": "S1下次攻击强化；S2额外目标束缚；S3多目标眩晕与少目标自损已接入",
+      "talentGaps": "最低生命目标附加法伤与范围低生命增攻已接入",
       "prtsReference": "https://prts.wiki/w/%E6%B0%B4%E6%9C%88",
       "sourceProfileIds": [
         "chess_char_4_09_a",
@@ -4866,8 +4866,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1对空额外法伤；S2监听浮空落地事件缺失",
-      "talentGaps": "每敌首次攻击加伤及浮空缺失",
+      "skillGaps": "S1对空额外法伤；S2浮空结束追加法伤已接入",
+      "talentGaps": "每敌首次攻击加伤并使目标浮空已接入",
       "prtsReference": "https://prts.wiki/w/%E9%98%BF%E7%BD%97%E7%8E%9B",
       "sourceProfileIds": [
         "chess_char_4_10_a",
@@ -5194,8 +5194,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1双击可复用；S2蓄力双层寒冷；S3冻结延长、排除冻结目标和结束爆发缺失",
-      "talentGaps": "攻击寒冷/冻结脆弱、延时赋予阵营抵抗缺失",
+      "skillGaps": "S1双击；S2寒冷与法术伤害；S3冻结延长、未冻结优先与结束爆发已接入",
+      "talentGaps": "攻击寒冷/冻结脆弱及部署后谢拉格抵抗事件已接入",
       "prtsReference": "https://prts.wiki/w/%E7%81%B5%E7%9F%A5",
       "sourceProfileIds": [
         "chess_char_4_13_a",
@@ -5274,8 +5274,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1加攻可复用；S2范围法抗削减缺失",
-      "talentGaps": "范围敌人数叠层攻击缺失",
+      "skillGaps": "S1加攻；S2范围法伤削减法抗已接入",
+      "talentGaps": "范围敌人数叠层攻击已接入",
       "prtsReference": "https://prts.wiki/w/%E8%8E%B1%E6%81%A9%E5%93%88%E7%89%B9",
       "sourceProfileIds": [
         "chess_char_4_14_a",
@@ -5517,8 +5517,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1属性可复用；S2受击反伤；S3前方格持续切割攻击模式缺失",
-      "talentGaps": "概率伤害抵挡、重装防御光环缺失",
+      "skillGaps": "S1属性；S2受击反伤；S3前方一格盾牌切割模式已接入",
+      "talentGaps": "概率伤害抵挡与重装防御光环已接入",
       "prtsReference": "https://prts.wiki/w/%E6%98%9F%E7%86%8A",
       "sourceProfileIds": [
         "chess_char_4_17_a",

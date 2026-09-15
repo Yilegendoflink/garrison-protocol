@@ -305,9 +305,11 @@ export function applyLoss(battle,opts){
 
 export function applyElementDamage(battle,{source,target,amount,type='elemental',cause='element',parentEventId=null}={}){
  if(!target||target.hp<=0||!Number.isFinite(amount)||amount<=0||!ELEMENT_TYPES.has(type))return {added:0,burst:false};
+ amount*=1-Math.max(0,Math.min(1,Number(target.elementDamageResistance)||0));
  target.elemental??={};target.elementalMax??=target.maxHp;
  const before=target.elemental[type]||0,limit=target.elementalMax,added=Math.min(amount,Math.max(0,limit-before));target.elemental[type]=before+added;
  const event=nextEvent(battle,{cause,parentEventId,type:'element',sourceUid:source?.uid,targetUid:target.uid});log(battle,'element',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,element:type,amount:added,current:target.elemental[type],max:limit});
+ if(target.id==='char_4148_philae'&&type==='necrosis'){gainSp(target,battle.profile(target).skill,2,battle.spCost(target));if(battle.skillActive?.(target)&&(target.source?.skillIndex??battle.profile(target).skillIndex)===1)target.philaeElementBoost=true;}
  let burst=false;if(target.elemental[type]>=limit){target.elemental[type]=0;target.elementBurst=(target.elementBurst||0)+1;burst=true;dispatch(battle,'element-burst',{source,target,element:type,event});}
  return {added,burst};
 }
@@ -471,6 +473,7 @@ function tickAuras(battle){
   }
   if(id==='char_213_mostma')for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&battle.inside(u,e,true)))applyStatus(e,'sluggish',1/15,{source:u.uid,resistible:false});
   if(id==='char_332_archet'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='兰登战术');if(talent){u.landenNextAt??=battle.s.time+(Number(talent.values?.interval)||2.5);while(battle.s.time+1e-9>=u.landenNextAt){for(const ally of battle.s.units.filter(v=>v.deployed&&v.hp>0&&battle.profile(v)?.profession==='SNIPER'))ctx.gainSp(ally,battle.profile(ally).skill,Number(talent.values?.sp)||1,battle.spCost(ally));u.landenNextAt+=Number(talent.values?.interval)||2.5;}}}
+  if(id==='char_206_gnosis'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='坚冰'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&battle.inside(u,e,true))){const frozen=e.statuses?.some(s=>s.kind==='frozen'),cold=e.statuses?.some(s=>s.kind==='cold');if(cold||frozen)e.fragile=Math.max(e.fragile||1,Number(frozen?bb.damage_scale_freeze:bb.damage_scale_cold)||1.25);}const resist=activeTalentsOf(battle,u).find(t=>t.name==='殊途同归'),rbb=resist?.values||{};if(resist&&!u.gnosisResistanceApplied&&battle.s.time-(u.deployAt??0)>=Number(rbb.interval||10)){for(const ally of battle.s.units.filter(v=>v.deployed&&v.hp>0&&battle.profile(v)?.groupId==='karlan'))ally.statusResistance=Math.max(ally.statusResistance||0,Math.max(0,Math.min(1,-Number(rbb.one_minus_status_resistance)||.5)));u.gnosisResistanceApplied=true;}}
  }
 }
 
@@ -501,6 +504,7 @@ export function effectStatMods(battle,u){
   if(src.id==='char_1041_angel2'){
    const t=talents.find(x=>x.name==='铳弹协约');if(t){const base=t.values.atk||.09,mult=t.values.mult||2;auras.push({key:'angel-ammo-atk',stat:'atk',layer:'maxSame',v:base,src:'新约能天使',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'});auras.push({key:'angel-ammo-laterano',stat:'atk',layer:'maxSame',v:base*mult,src:'新约能天使·拉特兰',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'&&battle.profile(v)?.bonds?.includes('lateranoShip')});}
   }
+  if(src.id==='char_4162_cathy'&&(src.source?.skillIndex??battle.profile(src).skillIndex)===0){const bb=skillBB(battle,src),devices=battle.s.summons.filter(s=>s.ownerUid===src.uid&&s.type==='cathy-device');auras.push({key:'cathy-device-atk',stat:'atk',layer:'maxSame',v:Number(bb.s1_atk)||.11,src:'凯瑟琳',ok:v=>devices.some(d=>d.anchorUid===v.uid)});auras.push({key:'cathy-device-def',stat:'def',layer:'maxSame',v:Number(bb.s1_def)||.11,src:'凯瑟琳',ok:v=>devices.some(d=>d.anchorUid===v.uid)});}
   if(src.id==='char_1012_skadi2'&&src.inspireAura&&battle.s.time<src.inspireAura.endsAt)auras.push({key:'skadi2-inspire',stat:'atkFlat',layer:'inspire',v:src.inspireAura.value,src:'浊心斯卡蒂',ok:v=>v.uid===src.uid||battle.inside(src,v,true)});
   if(src.id==='char_237_gravel'){
    const t=talents.find(x=>x.name==='小个子支援'),bb=t&&talentValues(t);if(t)auras.push({key:'gravel-low-cost-def',stat:'def',layer:'maxSame',v:Number(bb.def)||0,src:'砾',ok:v=>v.kind!=='summon'&&(Number(v.baseCost??battle.profile(v)?.attributes?.cost)||0)<=Number(bb['cond.cost']??10)});
@@ -573,6 +577,8 @@ export function dispatch(battle,type,payload){
    }
   }
   if(source&&source.kind!=='summon'&&source.deployed){for(const mentor of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_423_blemsh')){const talent=activeTalentsOf(battle,mentor).find(t=>t.name==='剑盾骑士'),spType=battle.profile(source).skill?.spData?.spType;if(talent&&(spType===8||spType==='INCREASE_WHEN_TAKEN_DAMAGE'))gainSp(source,battle.profile(source).skill,Number(talent.values?.sp)||1,battle.spCost(source));}}
+  if(source?.id==='char_4194_rmixer'&&source.kind!=='summon'&&(source.source?.skillIndex??battle.profile(source).skillIndex)===0&&payload.cause!=='extra'){const allies=battle.s.units.filter(v=>v!==source&&v.deployed&&v.hp>0&&battle.profile(v)?.skill?.durationType==='AMMO'&&battle.profile(v)?.bonds?.includes('lateranoShip')&&chebyshev(v,source)<=1),ally=allies[0];if(ally)ally.ammo=Math.min(ally.ammoMax||Infinity,(ally.ammo||0)+Number(skillBB(battle,source).charge||1));}
+  if(target?.id==='char_4194_rmixer'&&target.deployed&&battle.skillActive?.(target)&&(target.source?.skillIndex??battle.profile(target).skillIndex)===2&&source&&source.kind!=='summon'&&payload.cause!=='reflect'){const bb=skillBB(battle,target),now=battle.s.time;if(now>=(target.rmixerCounterNextAt||-Infinity)){target.rmixerCounterNextAt=now+(Number(bb.base_attack_time)||.3);for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&battle.inside(target,e,true)).slice(0,Number(bb['attack@max_target'])||3))ctx.dealDamage(battle,{source:target,target:e,amount:battle.stats(target).atk,type:'physical',cause:'reflect',effectId:'rmixer-counter:'+target.uid+':'+now});}}
   if(target?.id==='char_136_hsguma'&&target.deployed&&((target.source?.skillIndex??battle.profile(target).skillIndex)===1)&&source&&source.kind!=='summon'&&payload.cause!=='reflect'){const cfg=skillConfig(battle.profile(target)),scale=Number(cfg.bb.atkScale)||.8;ctx.dealDamage(battle,{source:target,target:source,amount:battle.stats(target).atk*scale,type:'physical',cause:'reflect',parentEventId:payload.event?.eventId,effectId:'hsguma-reflect:'+target.uid+':'+(payload.event?.eventId||0)});}
   if(source&&source.id==='char_4137_udflow'&&(payload.cause==='attack'||payload.cause==='skill')&&target){
    const t=activeTalentsOf(battle,source).find(x=>x.name==='细胞活性抑制剂');
@@ -665,6 +671,7 @@ function onOperatorDeploy(battle,u){
  if(u.id==='char_1023_ghost2'){spawnSummon(battle,u,{type:'ghost2-substitute',tokenId:'token_10024_ebnhlz_rcube',name:'旧日残影',targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:false});}
  if(u.id==='char_103_angel'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='天使的祝福');if(talent){const values=talent.values||{},candidates=battle.s.units.filter(v=>v.uid!==u.uid&&v.deployed&&v.hp>0);if(candidates.length){const target=candidates[Math.floor(battle.economy.random()*candidates.length)];target.angelBlessing={atk:Number(values.atk)||.06,maxHp:Number(values.max_hp)||.1,sourceUid:u.uid};}}}
  if(u.id==='char_332_archet'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='铁弦');if(talent)grantShield(battle,u,{amount:Number(talent.values?.shield_value)||500,sourceUid:u.uid,id:'archet-deploy-shield'});}
+ if(u.id==='char_4148_philae'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='神河谕使');u.elementDamageResistance=Number(talent?.values?.damage_resistance)||.1;}
  if(u.initialSpBonus){u.sp+=u.initialSpBonus;u.initialSpBonus=0;}
  u.duskFirstAttack=false;
 }
@@ -677,7 +684,7 @@ function onSkillStart(battle,u){
  if(u.id==='char_4026_vulpis'&&idx===2){u.vulpisKilled=false;u.vulpisMarks={};}
  if(u.id==='char_1012_skadi2'&&idx===2){const bb=skillBB(battle,u),duration=battle.profile(u).skill.duration;u.inspireAura={value:(battle.profile(u).attributes.atk||0)*Number(bb.atk||0),endsAt:battle.s.time+(duration>0?duration:1e9)};}
  if(u.id==='char_344_beewax'&&idx===1){const bb=skillBB(battle,u),token=spawnSummon(battle,u,{type:'beewax-obelisk',name:'沙之碑',targetable:true,canBlock:true,canAttack:false,occupiesTile:true,duration:u.skillLeft});if(token)for(const e of enemyActors(battle.s).filter(e=>chebyshev(token,e)<=1)){dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(bb.atk_scale||2),type:'arts',cause:'skill'});applyStatus(e,'stun',bb.stun||1,{source:u.uid,resistible:false});}return true;}
- if(u.id==='char_4016_kazema'&&idx===1){spawnSummon(battle,u,{type:'kazema-shadow',name:'纸偶',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});}
+ if(u.id==='char_4016_kazema'&&idx===1){const token=spawnSummon(battle,u,{type:'kazema-shadow',name:'纸偶',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});if(token)for(const e of enemyActors(battle.s).filter(e=>chebyshev(token,e)<=1))dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(activeTalentsOf(battle,u).find(t=>t.name==='折纸生花')?.values?.damage_scale)||2.7),type:'arts',cause:'skill'});}
  if(u.id==='char_1019_siege2'&&idx===2){spawnSummon(battle,u,{type:'siege2-golden',name:'黄金盟誓',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:u.skillLeft});}
  if(u.id==='char_1033_swire2'&&idx===1){
   const target=battle.targets(u)[0],cfg=skillConfig(battle.profile(u)),range=battle.range(u,true),candidates=[...(target?[target]:[]),...range.map(p=>({x:p.x,y:p.y}))];
@@ -743,6 +750,9 @@ function onSkillStart(battle,u){
  }
  if(u.id==='char_474_glady'&&u.gladyVortex){const center=u.gladyVortex;for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&chebyshev(e,center)<=2))moveActor(battle,e,{x:center.x,y:center.y,uid:u.uid},'拖拽');u.gladyVortex=null;}
  if(u.id==='char_4191_tippi')u.flying=false;
+ if(u.id==='char_206_gnosis'&&u.gnosisFrozenUids?.length){const bb=skillBB(battle,u);for(const uid of u.gnosisFrozenUids){const target=battle.s.enemies.find(e=>e.uid===uid&&e.hp>0);if(target)dealDamage(battle,{source:u,target,amount:battle.stats(u).atk*(Number(bb.atk_scale)||4),type:'arts',cause:'skill'});}u.gnosisFrozenUids=[];}
+ if(u.id==='char_4122_grabds')u.grabdsSleepUntil=null;
+ if(u.id==='char_174_slbell'){for(const e of enemyActors(battle.s).filter(e=>(e.statuses||[]).some(s=>s.kind==='attackSpeedDown'&&s.source===u.uid)))e.attackSpeedMod=0;}
  if(u.id==='char_1023_ghost2'&&idx===1){u.lockHp=null;if(u.hp>0)commitExit(battle,{target:u,reason:'forced'});}
  if(u.id==='char_4145_ulpia'&&u.returnPosition){const pos=u.returnPosition;u.returnPosition=null;teleportActor(battle,u,{...pos,source:u,mode:'return'});}
 }
