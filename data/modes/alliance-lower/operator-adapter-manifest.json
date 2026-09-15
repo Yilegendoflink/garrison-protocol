@@ -301,9 +301,10 @@
       "skillAdapter": "generic-blackboard-and-description",
       "talentAdapter": "generic-event-and-direct-stat",
       "partialHandlers": [
-        "lock-and-stun"
+        "lock-and-stun",
+        "regen-and-maxhp"
       ],
-      "needsSpecialHandler": true
+      "needsSpecialHandler": false
     },
     {
       "name": "泡泡",

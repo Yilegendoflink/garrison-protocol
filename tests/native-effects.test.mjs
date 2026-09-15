@@ -764,6 +764,10 @@ test('幽灵鲨 S2 locks HP then stuns on skill end',()=>{
  assert.ok(u.statuses.some(s=>s.kind==='stun'));
 });
 
+test('幽灵鲨天赋提高生命上限并持续自愈',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_07_b',skillIndex:0});deployNow(b);const u=b.s.units[0];assert.ok(b.stats(u).maxHp>b.profile(u).attributes.maxHp);u.hp=u.maxHp-100;const before=u.hp;for(let i=0;i<30;i++)b.step();assert.ok(Math.abs((u.hp-before)-u.maxHp*.02)<1e-6);
+});
+
 test('史尔特尔 lock then force exit keeps one lifecycle',()=>{
  const {b}=openBattle(reps.operators.surtr);deployNow(b);
  const u=byId(b,'char_350_surtr');

@@ -1582,8 +1582,8 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1加攻可复用；S2技能期锁血及结束自晕缺失",
-      "talentGaps": "生命上限与百分比回复天赋未接入",
+      "skillGaps": "S1加攻可复用；S2技能期锁血及结束自晕已接入",
+      "talentGaps": "生命上限与百分比回复天赋已接入",
       "prtsReference": "https://prts.wiki/w/%E5%B9%BD%E7%81%B5%E9%B2%A8",
       "sourceProfileIds": [
         "chess_char_2_07_a",
