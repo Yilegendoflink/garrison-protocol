@@ -16,16 +16,17 @@ export const DEFAULT_BUDGETS={1:10,2:16,3:24};
 function cleanPool(pool){return [...new Set((pool||[]).filter(id=>typeof id==='string'&&id))];}
 
 export function emptyTemplate(tier=1){
- return {name:'',budget:DEFAULT_BUDGETS[tier]||10,pool:[]};
+ return {name:'',budget:DEFAULT_BUDGETS[tier]||10,maxCost:null,pool:[]};
 }
 
 export function normalizeTemplate(row,tier=1){
- const budget=Number(row?.budget);
+ const budget=Number(row?.budget),maxCost=Number(row?.maxCost);
  const count=Number.isInteger(row?.minCount)&&Number.isInteger(row?.maxCount)&&row.minCount>0&&row.maxCount>=row.minCount?{minCount:Math.min(80,row.minCount),maxCount:Math.min(80,row.maxCount)}:{};
  return {
   ...count,
   name:typeof row?.name==='string'?row.name.slice(0,24):'',
   budget:Number.isFinite(budget)&&budget>=0?budget:DEFAULT_BUDGETS[tier]||10,
+  maxCost:Number.isFinite(maxCost)&&maxCost>0?maxCost:null,
   pool:cleanPool(row?.pool)
  };
 }

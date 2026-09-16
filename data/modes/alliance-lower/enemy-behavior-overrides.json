@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "逐关卡或 PRTS 行为确认后的敌人覆盖；未确认项目保持解析器默认策略。",
+  "description": "逐关卡或 PRTS 行为确认后的敌人覆盖；未确认远程单位默认只在攻击动作期间停留。",
   "overrides": {
     "enemy_10122_uacann_2": {
       "movementPolicy": "stop-while-attacking",

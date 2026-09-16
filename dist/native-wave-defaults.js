@@ -1,4 +1,4 @@
-// 默认测试波次 v1：本期词条池，数量为前期6–8、中期15–20、后期35–40；非原作出怪表。
+// 默认测试波次 v2：本期词条池，数量为前期6–8、中期15–20、后期35–40；低档模板限制最高敌人成本；非原作出怪表。
 export const DEFAULT_WAVE_TABLE = {
   "version": 2,
   "defaultCost": 1,
@@ -127,6 +127,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨推进",
             "budget": 40,
+            "maxCost": 4,
             "pool": [
               "enemy_1000_gopro_2",
               "enemy_1043_zomsbr",
@@ -138,9 +139,7 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1325_cbgpro",
               "enemy_1325_cbgpro_2",
               "enemy_1381_winman",
-              "enemy_1422_lrsldr_2",
-              "enemy_1072_dlancer",
-              "enemy_1116_liprr_2"
+              "enemy_1422_lrsldr_2"
             ],
             "minCount": 6,
             "maxCount": 8
@@ -148,6 +147,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨增援",
             "budget": 40,
+            "maxCost": 4,
             "pool": [
               "enemy_1116_liprr",
               "enemy_1251_lysyta",
@@ -155,9 +155,7 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1325_cbgpro",
               "enemy_1325_cbgpro_2",
               "enemy_1381_winman",
-              "enemy_1422_lrsldr_2",
-              "enemy_1072_dlancer",
-              "enemy_1116_liprr_2"
+              "enemy_1422_lrsldr_2"
             ],
             "minCount": 6,
             "maxCount": 8
@@ -309,6 +307,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨推进",
             "budget": 24,
+            "maxCost": 4,
             "pool": [
               "enemy_1005_yokai",
               "enemy_10083_hlbird",
@@ -322,6 +321,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨增援",
             "budget": 24,
+            "maxCost": 4,
             "pool": [
               "enemy_10083_hlbird",
               "enemy_1005_yokai_2",
@@ -421,6 +421,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨推进",
             "budget": 24,
+            "maxCost": 4,
             "pool": [
               "enemy_1195_sfyin",
               "enemy_1197_sfshu",
@@ -433,6 +434,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨增援",
             "budget": 24,
+            "maxCost": 4,
             "pool": [
               "enemy_1197_sfshu",
               "enemy_1195_sfyin_2",
@@ -519,6 +521,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨推进",
             "budget": 24,
+            "maxCost": 4,
             "pool": [
               "enemy_1305_mhslim",
               "enemy_1305_mhslim_2",
@@ -534,6 +537,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨增援",
             "budget": 24,
+            "maxCost": 4,
             "pool": [
               "enemy_10065_ftzlc",
               "enemy_1148_dssbr",
@@ -643,12 +647,12 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨推进",
             "budget": 48,
+            "maxCost": 4,
             "pool": [
               "enemy_1433_dsbasi",
               "enemy_1267_nhpbr",
               "enemy_1267_nhpbr_2",
-              "enemy_1433_dsbasi_2",
-              "enemy_10122_uacann_2"
+              "enemy_1433_dsbasi_2"
             ],
             "minCount": 6,
             "maxCount": 8
@@ -656,11 +660,11 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨增援",
             "budget": 48,
+            "maxCost": 4,
             "pool": [
               "enemy_1267_nhpbr",
               "enemy_1267_nhpbr_2",
-              "enemy_1433_dsbasi_2",
-              "enemy_10122_uacann_2"
+              "enemy_1433_dsbasi_2"
             ],
             "minCount": 6,
             "maxCount": 8
@@ -748,6 +752,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨推进",
             "budget": 32,
+            "maxCost": 4,
             "pool": [
               "enemy_1009_lurker",
               "enemy_1019_jshoot",
@@ -762,6 +767,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨增援",
             "budget": 32,
+            "maxCost": 4,
             "pool": [
               "enemy_10031_cnvsld",
               "enemy_1019_jshoot_2",
@@ -869,6 +875,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨推进",
             "budget": 24,
+            "maxCost": 4,
             "pool": [
               "enemy_1165_duhond",
               "enemy_1166_dusbr",
@@ -882,6 +889,7 @@ export const DEFAULT_WAVE_TABLE = {
           {
             "name": "前哨增援",
             "budget": 24,
+            "maxCost": 4,
             "pool": [
               "enemy_1166_dusbr",
               "enemy_1166_dusbr_2",

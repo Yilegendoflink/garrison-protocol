@@ -69,7 +69,7 @@ export function renderWaveEditor(data,table,ui){
   <nav class="wave-ed-types">${TRAINING_TYPES.map(t=>`<button data-act="ed-type" data-id="${t.id}" class="${t.id===type.id?'chosen':''}">${esc(t.name)}<small>${esc(t.id)}</small></button>`).join('')}</nav>
   <div class="wave-ed-toolbar">
    <div class="wave-ed-tiers">${[1,2,3].map(n=>`<button data-act="ed-tier" data-tier="${n}" class="${ui.tier===n?'chosen':''}">${'I'.repeat(n)}</button>`).join('')}</div>
-   <nav class="wave-ed-temps">${pack.templates.map((row,i)=>`<button data-act="ed-temp" data-index="${i}" class="${i===ui.template?'chosen':''}">${esc(templateLabel(row,i))}<small>${row.pool.length} 种 · ${row.minCount?row.minCount+'–'+row.maxCount+'只 · ':''}预算 ${row.budget}</small></button>`).join('')}<button data-act="ed-add-temp">＋ 新模板</button><button data-act="ed-copy-temp">复制本套</button><button data-act="ed-del-temp" ${pack.templates.length<=1?'disabled':''}>删除本套</button></nav>
+   <nav class="wave-ed-temps">${pack.templates.map((row,i)=>`<button data-act="ed-temp" data-index="${i}" class="${i===ui.template?'chosen':''}">${esc(templateLabel(row,i))}<small>${row.pool.length} 种 · ${row.minCount?row.minCount+'–'+row.maxCount+'只 · ':''}预算 ${row.budget}${row.maxCost?` · ≤${row.maxCost}成本`:''}</small></button>`).join('')}<button data-act="ed-add-temp">＋ 新模板</button><button data-act="ed-copy-temp">复制本套</button><button data-act="ed-del-temp" ${pack.templates.length<=1?'disabled':''}>删除本套</button></nav>
   </div>
   <div class="wave-ed-toolbar">
    <label>名称 <input id="ed-temp-name" data-act="ed-temp-name" value="${esc(slot.name)}" placeholder="模板 ${ui.template+1}" maxlength="24"></label>
@@ -129,7 +129,7 @@ export function applyEditorAction(act,dataset,table,ui,data){
  if(act==='ed-tier'){ui.tier=Number(dataset.tier);ui.template=0;ui.sample=null;return 'render';}
  if(act==='ed-temp'){ui.template=Number(dataset.index)||0;ui.sample=null;return 'render';}
  if(act==='ed-add-temp'){const list=tierPack(table,ui.type,ui.tier).templates;list.push(emptyTemplate(ui.tier));ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
- if(act==='ed-copy-temp'){const list=tierPack(table,ui.type,ui.tier).templates,src=currentTemplate(table,ui.type,ui.tier,ui.template);list.push({name:(src.name||templateLabel(src,ui.template))+' 副本',budget:src.budget,pool:src.pool.slice(),...(src.minCount?{minCount:src.minCount,maxCount:src.maxCount}:{})});ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
+ if(act==='ed-copy-temp'){const list=tierPack(table,ui.type,ui.tier).templates,src=currentTemplate(table,ui.type,ui.tier,ui.template);list.push({name:(src.name||templateLabel(src,ui.template))+' 副本',budget:src.budget,maxCost:src.maxCost,pool:src.pool.slice(),...(src.minCount?{minCount:src.minCount,maxCount:src.maxCount}:{})});ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-del-temp'){const list=tierPack(table,ui.type,ui.tier).templates;if(list.length<=1){list[0]=emptyTemplate(ui.tier);ui.template=0;}else{list.splice(ui.template,1);if(ui.template>=list.length)ui.template=list.length-1;}ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-select'){ui.selected=dataset.id;return 'render';}
  if(act==='ed-add'){const pool=currentTemplate(table,ui.type,ui.tier,ui.template).pool;if(!pool.includes(dataset.id))pool.push(dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}

@@ -83,7 +83,7 @@ export function waveRng(seed){let x=(seed||1)>>>0;const next=()=>{x^=x<<13;x^=x>
 export function fillBudgetWave(random,table,type,tier){
  const list=tierPack(table,type,tier).templates;
  const templateIndex=list.length<=1?0:Math.floor(random()*list.length);
- const slot=list[templateIndex]||list[0],budget=Math.max(0,Number(slot.budget)||0),pool=(slot.pool||[]).filter(Boolean);
+ const slot=list[templateIndex]||list[0],budget=Math.max(0,Number(slot.budget)||0),maxCost=Number(slot.maxCost),pool=(slot.pool||[]).filter(Boolean).filter(id=>!(Number.isFinite(maxCost)&&maxCost>0)||enemyCost(table,id)<=maxCost);
  const meta={templateIndex,templateName:templateLabel(slot,templateIndex),budget};
  if(!pool.length)return {ids:[PLACEHOLDER_ENEMY],spent:0,leftover:budget,unfilled:true,...meta};
  const targetCount=slot.minCount?slot.minCount+Math.floor(random()*(slot.maxCount-slot.minCount+1)):80;

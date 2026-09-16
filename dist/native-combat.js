@@ -40,12 +40,14 @@ function enemySkill(raw={}){
  return {prefab:skill.prefabKey,cooldown:Number(skill.cooldown),initCooldown:Number(skill.initCooldown),spCost:Number(skill.spCost)||0,bb};
 }
 
-// Infer only safe, explicitly documented policies.  Ambiguous enemies retain
-// the historical stop-on-target behavior until a page/level supplies a policy.
+// Infer only safe, explicitly documented policies.  Ambiguous ranged enemies
+// use attack-only stopping; explicit page/level policies still take priority.
 export function enemyBehaviorProfile(raw={}){
+ const normalized=raw.enemyBehavior;
+ if(normalized?.movementPolicy&&normalized.attackWhileMoving!==undefined&&normalized.stallTimeout!==undefined)return {...normalized};
  const explicit=raw.movementPolicy||raw.enemyBehavior?.movementPolicy||raw.behavior?.movementPolicy;
  const text=enemyText(raw);
- let movementPolicy=explicit||ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET;
+ let movementPolicy=explicit||(raw.applyWay==='RANGED'?ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING:ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET);
  if(!explicit){
   if(/不停止移动|持续攻击.*移动|移动中.*攻击/.test(text))movementPolicy=ENEMY_MOVEMENT_POLICIES.ALWAYS_MOVE_ATTACK;
   else if(/周期性停止移动/.test(text))movementPolicy=ENEMY_MOVEMENT_POLICIES.SCHEDULED_STOP;
@@ -56,7 +58,7 @@ export function enemyBehaviorProfile(raw={}){
  const bb=enemyBlackboard(raw),talentBb=enemyTalentBlackboard(raw);
  const specialSkill=enemySkill(raw);
  const burstFromText=/三连击|攻击3次/.test(text)?3:/二连击|攻击2次/.test(text)?2:0;
- if(!explicit&&burstFromText>0&&movementPolicy===ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET&&raw.applyWay==='RANGED')movementPolicy=ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE;
+ if(!explicit&&burstFromText>0&&[ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET,ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING].includes(movementPolicy)&&raw.applyWay==='RANGED')movementPolicy=ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE;
  const burstShots=Number(behavior.burstShots??raw.burstShots??burstFromText);
  const burstDuration=Number(behavior.burstDuration??raw.burstDuration);
  const burstCooldown=Number(behavior.burstCooldown??raw.burstCooldown);

@@ -29,13 +29,14 @@ test('healing and aftershock effects originate from actual combat events',()=>{
  assert.equal(b.s.events.some(e=>e.type==='aftershock'),false);b.s.time+=2/30;for(const packet of dueStrikes(b.s))b.deliverStrike(packet);
  assert.equal(b.s.events.filter(e=>e.type==='aftershock').length,1);
 });
-test('native spawn uses route origin and ranged attacks hold position',()=>{
+test('native spawn uses route origin and target-lock ranged attacks hold position',()=>{
  const b=liveBattle(),u=b.s.units[0];const origin={col:b.map.origin.col+u.x+1,row:b.map.origin.row-u.y};
- b.level={routes:[{motionMode:'FLY',startPosition:origin,endPosition:{col:origin.col+2,row:origin.row},checkpoints:[]}],enemyProfiles:{probe:{name:'probe',motion:'FLY',applyWay:'RANGED',rangeRadius:3,attributes:{maxHp:100000,atk:1,moveSpeed:1,baseAttackTime:1,def:0,magicResistance:0}}}};
+ b.level={routes:[{motionMode:'FLY',startPosition:origin,endPosition:{col:origin.col+2,row:origin.row},checkpoints:[]}],enemyProfiles:{probe:{name:'probe',motion:'FLY',applyWay:'RANGED',rangeRadius:3,attributes:{maxHp:100000,atk:1,moveSpeed:1,baseAttackTime:1,def:0,magicResistance:0},enemyBehavior:{movementPolicy:ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET}}}};
  b.spawn({id:'probe',route:0});const enemy=b.s.enemies[0],x=enemy.x;assert.equal(x,u.x+1);
  for(let i=0;i<30;i++)b.step();assert.equal(enemy.x,x);assert.ok(b.s.events.some(e=>e.type==='hit'));
  enemy.hidden=true;enemy.action={left:1,target:u.uid};const hp=u.hp;b.step();assert.equal(enemy.action,null);assert.equal(u.hp,hp);
  b.s.enemies=[];b.level={routes:[{motionMode:'FLY',startPosition:origin,endPosition:{col:origin.col+4,row:origin.row},checkpoints:[]}],enemyProfiles:{runner:{name:'runner',motion:'FLY',applyWay:'RANGED',rangeRadius:3,attributes:{maxHp:1e12,atk:1,moveSpeed:1,baseAttackTime:1,def:0,magicResistance:0},enemyBehavior:{movementPolicy:ENEMY_MOVEMENT_POLICIES.ALWAYS_MOVE_ATTACK}}}};b.spawn({id:'runner',route:0});const runner=b.s.enemies[0],runnerX=runner.x;for(let i=0;i<6;i++)b.step();assert.ok(runner.x>runnerX,'移动中攻击敌人不能因目标存在而站桩');
+ b.s.enemies=[];b.level={routes:[{motionMode:'FLY',startPosition:origin,endPosition:{col:origin.col+8,row:origin.row},checkpoints:[]}],enemyProfiles:{defaultRanged:{name:'defaultRanged',motion:'FLY',applyWay:'RANGED',rangeRadius:3,attributes:{maxHp:1e12,atk:1,moveSpeed:1,baseAttackTime:1,def:0,magicResistance:0}}}};b.spawn({id:'defaultRanged',route:0});const defaultRanged=b.s.enemies[0],defaultX=defaultRanged.x;for(let i=0;i<30;i++)b.step();assert.equal(defaultRanged.movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING);assert.ok(defaultRanged.x>defaultX,'普通远程敌人应在攻击完成后继续前进');
 });
 test('enemy movement policies distinguish target acquisition from attack movement',()=>{
  const target={uid:9,x:2,y:0,hp:100,maxHp:100};
@@ -54,7 +55,8 @@ test('enemy behavior profiles infer documented move-and-attack and scheduled sta
  assert.equal(enemyBehaviorProfile({ability:[{text:'攻击数次后进行蓄力攻击'}]}).movementPolicy,ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE);
  assert.equal(enemyBehaviorProfile({applyWay:'RANGED',description:'攻击为三连击'}).movementPolicy,ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE);
  assert.equal(enemyBehaviorProfile({applyWay:'RANGED',description:'攻击为三连击'}).burstShots,3);
- assert.equal(enemyBehaviorProfile({description:'普通远程攻击'}).movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET);
+ assert.equal(enemyBehaviorProfile({applyWay:'RANGED',description:'普通远程攻击'}).movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING);
+ assert.equal(enemyBehaviorProfile({applyWay:'RANGED',description:'需要锁定目标后停留',enemyBehavior:{movementPolicy:ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET}}).movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET);
 });
 test('集团军重型火炮只在开火动作期间停留',()=>{
  const profile=enemyBehaviorProfile(NATIVE_DATA.enemies.enemy_10122_uacann_2);assert.equal(profile.movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING);assert.equal(profile.attackWhileMoving,false);
