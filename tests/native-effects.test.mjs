@@ -948,6 +948,19 @@ test('雪猎 S2 对静止目标强化双击并附加寒冷，空弦触发范围�
  const {b:b2}=openBattle([{chessId:'chess_char_3_21_b',skillIndex:0},{chessId:'chess_char_3_11_b',skillIndex:0}]);deployNow(b2);const ar=b2.s.units.find(x=>x.id==='char_332_archet'),target=enemy(b2,{x:ar.x+1,y:ar.y,hp:100000}),splash=enemy(b2,{x:target.x+1,y:target.y,hp:100000});ar.sp=b2.spCost(ar);b2.activate(ar);b2.hit(ar,target,b2.stats(ar).atk,'physical',{skill:true});assert.ok(splash.hp<100000);const sn=b2.s.units.find(x=>x.id==='char_4211_snhunt');b2.step();assert.equal(typeof ar.landenNextAt,'number');
 });
 
+test('空弦兰登战术跨过周期后正常给狙击干员回复技力',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_21_b',skillIndex:2});deployNow(b);const ar=b.s.units.find(x=>x.id==='char_332_archet'),before=ar.sp;
+ for(let i=0;i<76;i++)b.step();
+ assert.equal(ar.sp,before+1);assert.equal(b.s.settle.fault,null);
+});
+
+test('空弦 S1 多个溅射目标使用独立结算效果',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_21_b',skillIndex:0});deployNow(b);const ar=b.s.units.find(x=>x.id==='char_332_archet'),target=enemy(b,{x:ar.x+1,y:ar.y,hp:100000}),splashA=enemy(b,{x:target.x+1,y:target.y,hp:100000}),splashB=enemy(b,{x:target.x,y:target.y+1,hp:100000});
+ ar.sp=b.spCost(ar);b.activate(ar);
+ assert.doesNotThrow(()=>{for(let i=0;i<30;i++)b.step();});
+ assert.equal(b.s.settle.fault,null);assert.ok(splashA.hp<100000);assert.ok(splashB.hp<100000);
+});
+
 test('缄默德克萨斯三种部署被动分别触发沉默持续伤害、落地法伤与剑雨',()=>{
  const {b}=openBattle({chessId:'chess_char_4_16_b',skillIndex:0});const u=b.s.units[0];b.deploy(u);const e=enemy(b,{x:u.x+1,y:u.y,hp:100000});b.hit(u,e,b.stats(u).atk,'physical');assert.ok(e.statuses.some(s=>s.kind==='silence'));for(let i=0;i<31;i++)b.step();assert.ok(e.hp<100000);
  const {b:b2}=openBattle({chessId:'chess_char_4_16_b',skillIndex:1}),v=b2.s.units[0],e2=enemy(b2,{x:v.x+1,y:v.y,hp:100000});b2.deploy(v);assert.ok(e2.hp<100000);assert.ok(e2.statuses.some(s=>s.kind==='resDown'));
