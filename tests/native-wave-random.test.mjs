@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
 import {TRAINING_TYPES,PLACEHOLDER_ENEMY,emptyWaveTable,normalizeWaveTable} from '../dist/native-wave-fill.js';
-import {createWaveRoster,enemyCombatScale,buildWavePlan,pressureTier,fillBudgetWave,waveRng} from '../dist/native-wave-random.js';
+import {createWaveRoster,enemyCombatScale,buildWavePlan,pressureTier,fillBudgetWave,waveRng,filterRandomPoolTable} from '../dist/native-wave-random.js';
 import {buildPhasePlan} from '../dist/protocol.js';
 
 const data=JSON.parse(fs.readFileSync('data/modes/alliance-lower/source.json','utf8'));
@@ -73,6 +73,14 @@ test('empty pool uses one placeholder; over-budget pool yields nothing',()=>{
  const pack=fillBudgetWave(waveRng(1),table,'SPECIAL',1);
  assert.deepEqual(pack.ids,[]);
  assert.equal(pack.leftover,4);
+});
+
+test('complex enemy behaviors are filtered from random pools without mutating the editable table',()=>{
+ const table=emptyWaveTable();table.types.SPECIAL[1]={templates:[{budget:8,pool:['enemy_a','enemy_b']}]};
+ const source={enemies:{enemy_a:{enemyBehavior:{randomPoolEligible:true}},enemy_b:{enemyBehavior:{randomPoolEligible:false}}}};
+ const filtered=filterRandomPoolTable(table,source);
+ assert.deepEqual(table.types.SPECIAL[1].templates[0].pool,['enemy_a','enemy_b']);
+ assert.deepEqual(filtered.types.SPECIAL[1].templates[0].pool,['enemy_a']);
 });
 
 test('legacy single pool migrates to one template; a wave draws from only one of several templates',()=>{

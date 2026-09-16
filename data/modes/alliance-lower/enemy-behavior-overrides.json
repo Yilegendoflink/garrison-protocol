@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "description": "逐关卡或 PRTS 行为确认后的敌人覆盖；未确认项目保持解析器默认策略。",
+  "overrides": {
+    "enemy_10162_mnctpt": {
+      "movementPolicy": "burst-then-move",
+      "burstShots": 3,
+      "randomPoolEligible": false,
+      "reason": "自制投石机的三连击先固定波次验证"
+    }
+  }
+}

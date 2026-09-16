@@ -401,10 +401,12 @@
       "mode-skill-operation-policy"
     ],
     "pending": [
-      "per-unit animation release timelines",
-      "all native skill prefabs",
       "all enemy abilities",
       "all module/talent side effects"
+    ],
+    "deferred": [
+      "per-unit animation release timelines",
+      "all native skill visual prefabs and exact action frames"
     ]
   },
   "s5": {

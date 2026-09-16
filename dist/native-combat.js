@@ -7,6 +7,148 @@ export const TENTATIVE_WINDUP_RATIO=.3;
 export const TENTATIVE_PROJECTILE_SPEED=6;
 export const TENTATIVE_HIT_GAP=2/FPS;
 
+// Enemy movement and attack are intentionally separate.  The original game has
+// enemies that fire while moving, enemies that hold after acquiring a target,
+// and enemies that only hold during a burst or a scripted stance.
+export const ENEMY_MOVEMENT_POLICIES=Object.freeze({
+ ALWAYS_MOVE_ATTACK:'always-move-attack',
+ STOP_ON_TARGET:'stop-on-target',
+ STOP_WHILE_ATTACKING:'stop-while-attacking',
+ BURST_THEN_MOVE:'burst-then-move',
+ SCHEDULED_STOP:'scheduled-stop',
+ SKILL_CONTROLLED:'skill-controlled'
+});
+
+function enemyText(raw={}){
+ const ability=Array.isArray(raw.ability)?raw.ability.map(x=>typeof x==='string'?x:x?.text||''):[];
+ const skills=Array.isArray(raw.skills)?raw.skills.flatMap(x=>[x?.description,x?.prefabKey]):[];
+ return [raw.name,raw.description,...ability,...skills].filter(Boolean).join(' ');
+}
+
+function enemyBlackboard(raw={}){
+ const out={};const rows=[...(raw.talentBlackboard||[]),...(raw.skills||[]).flatMap(skill=>skill?.blackboard||[])];for(const row of rows)if(row?.key!=null)out[row.key]=Number.isFinite(Number(row.value))?Number(row.value):row.value;
+ return out;
+}
+function enemyTalentBlackboard(raw={}){
+ const out={};for(const row of raw.talentBlackboard||[])if(row?.key!=null)out[row.key]=Number.isFinite(Number(row.value))?Number(row.value):row.value;return out;
+}
+
+function enemySkill(raw={}){
+ const skill=(raw.skills||[]).find(x=>x?.prefabKey&&!['BornAnim','StartRun','EndAnim','BeginAnim'].includes(x.prefabKey));
+ if(!skill)return null;
+ const bb={};for(const row of skill.blackboard||[])if(row?.key!=null)bb[row.key]=Number.isFinite(Number(row.value))?Number(row.value):row.value;
+ return {prefab:skill.prefabKey,cooldown:Number(skill.cooldown),initCooldown:Number(skill.initCooldown),spCost:Number(skill.spCost)||0,bb};
+}
+
+// Infer only safe, explicitly documented policies.  Ambiguous enemies retain
+// the historical stop-on-target behavior until a page/level supplies a policy.
+export function enemyBehaviorProfile(raw={}){
+ const explicit=raw.movementPolicy||raw.enemyBehavior?.movementPolicy||raw.behavior?.movementPolicy;
+ const text=enemyText(raw);
+ let movementPolicy=explicit||ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET;
+ if(!explicit){
+  if(/不停止移动|持续攻击.*移动|移动中.*攻击/.test(text))movementPolicy=ENEMY_MOVEMENT_POLICIES.ALWAYS_MOVE_ATTACK;
+  else if(/周期性停止移动/.test(text))movementPolicy=ENEMY_MOVEMENT_POLICIES.SCHEDULED_STOP;
+  else if(/停止移动.*蓄力|停止攻击.*蓄力|蓄力.*停止攻击/.test(text))movementPolicy=ENEMY_MOVEMENT_POLICIES.SKILL_CONTROLLED;
+  else if(/攻击数次后.*(?:蓄力|继续移动)|连续攻击.*(?:后|再).*移动/.test(text))movementPolicy=ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE;
+ }
+ const behavior=raw.enemyBehavior||raw.behavior||{};
+ const bb=enemyBlackboard(raw),talentBb=enemyTalentBlackboard(raw);
+ const specialSkill=enemySkill(raw);
+ const burstFromText=/三连击|攻击3次/.test(text)?3:/二连击|攻击2次/.test(text)?2:0;
+ if(!explicit&&burstFromText>0&&movementPolicy===ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET&&raw.applyWay==='RANGED')movementPolicy=ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE;
+ const burstShots=Number(behavior.burstShots??raw.burstShots??burstFromText);
+ const burstDuration=Number(behavior.burstDuration??raw.burstDuration);
+ const burstCooldown=Number(behavior.burstCooldown??raw.burstCooldown);
+ const stallTimeout=Number(behavior.stallTimeout??raw.stallTimeout);
+ const stanceInterval=Number(behavior.stanceInterval??raw.stanceInterval);
+ const stanceDuration=Number(behavior.stanceDuration??raw.stanceDuration);
+ const supportedSkillPrefabs=new Set(['AOEAttack','CrossAttack','PowerAttack','StunAttack','stuncombat','InvisibleCombat','DeathEye','PollutedRangedAtk','Flame']);
+ const complexity=behavior.complexity||(/召唤|分裂|重生|复活|变身|传送|遁地|载客|乘客|改变路线|修改地块|地图变化|全场.*效果|区域.*生成|多阶段/.test(text)||Boolean(specialSkill&&!supportedSkillPrefabs.has(specialSkill.prefab))?'complex':'common');
+ const randomPoolEligible=behavior.randomPoolEligible??(complexity!=='complex');
+ const stunMatch=text.match(/攻击\s*(\d+)次后[^。；;]*晕眩/),stunBefore=stunMatch?Number(stunMatch[1]):(/数次攻击后[^。；;]*晕眩/.test(text)?Number(raw.skills?.[0]?.spCost)||3:0);
+ const elementKey=/侵蚀损伤/.test(text)?'corrosion':/凋亡损伤/.test(text)?'necrosis':/灼燃损伤/.test(text)?'burn':/神经损伤/.test(text)?'neural':null;
+ const elementScale=Number(talentBb['epdamage.attack@ep_damage_ratio']??talentBb['EpDamage.attack@ep_damage_ratio']??talentBb['empty.attack@ep_damage_ratio']??talentBb['ep_damage_ratio']);
+ const explosion= /死亡[^。；;]*(?:产生|造成|爆炸)/.test(text)?{type:/法术/.test(text)?'arts':'physical',scale:Number(bb['boom.atk_scale'])||1,radius:Number(behavior.deathExplosionRadius??raw.deathExplosionRadius)||1,requiresFire:/点燃状态/.test(text)}:null;
+ const auraDef=Number(bb['defup.def']);
+ const auraRadius=Number(bb['defup.range_radius']??bb['aura.range_radius']);
+ const auraDamageResistance=Number(bb['aura.damage_resistance']);
+ const magicResistanceBonus=Number(bb['refracting.magic_resistance']);
+ const lowHpRatio=Number(bb['atkup.hp_ratio']??bb['enrage.hp_ratio']??behavior.lowHpRatio??(/生命值降至一半以下|生命值低于50%|生命值低于一半/.test(text)?0.5:0));
+ const lowHpAttackAdd=Number(bb['atkup.atk']??bb['AtkUp.atk']);
+ const lowHpAttackScale=Number(bb['enrage.damage_scale']??behavior.lowHpAttackScale);
+ const lowHpMoveScale=Number(bb['move_speed']??bb['run.attack@move_speed']);
+ const lowHpUnblockTime=Number(bb['block_free_time']??behavior.lowHpUnblockTime);
+ const initialInvisible=behavior.initialInvisible??/^\s*(?:<[^>]+>)*隐匿/.test(String(raw.description||''));
+ const initialUnblockable=behavior.initialUnblockable??/无法被阻挡/.test(text);
+ const initialShield=Number(bb['shield.dynamic']??behavior.initialShield);
+ const specialAtkScale=Number(specialSkill?.bb?.atk_scale??specialSkill?.bb?.damage_scale);
+ const firstAttackSplash=/首次攻击[^。；;]*溅射/.test(text);
+ const meleeAttackScale=Number(talentBb['Empty.attack@chuang_atk_scale']);
+ const pollutedDamage=Number(specialSkill?.bb?.polluted_damage_low);
+ return {
+  movementPolicy,
+  attackWhileMoving:movementPolicy===ENEMY_MOVEMENT_POLICIES.ALWAYS_MOVE_ATTACK,
+  burstShots:Number.isFinite(burstShots)&&burstShots>0?Math.floor(burstShots):0,
+  burstDuration:Number.isFinite(burstDuration)&&burstDuration>0?burstDuration:0,
+  burstCooldown:Number.isFinite(burstCooldown)&&burstCooldown>=0?burstCooldown:0,
+  stanceInterval:Number.isFinite(stanceInterval)&&stanceInterval>0?stanceInterval:0,
+  stanceDuration:Number.isFinite(stanceDuration)&&stanceDuration>0?stanceDuration:0,
+  stallTimeout:Number.isFinite(stallTimeout)&&stallTimeout>0?stallTimeout:2,
+  complexity,
+  randomPoolEligible,
+  attackStunEvery:stunBefore>0?stunBefore+1:0,
+  attackStunDuration:Number(bb.stun)||Number(behavior.attackStunDuration)||0,
+  attackElement:elementKey,
+  attackElementScale:Number.isFinite(elementScale)&&elementScale>0?elementScale:0,
+  deathExplosion:explosion,
+  aura:auraDef>0||auraDamageResistance>0?{def:auraDef>0?auraDef:0,damageResistance:auraDamageResistance>0?Math.min(1,auraDamageResistance):0,radius:Number.isFinite(auraRadius)&&auraRadius>0?auraRadius:1}:null,
+  magicResistanceBonus:Number.isFinite(magicResistanceBonus)&&magicResistanceBonus>0?magicResistanceBonus:0,
+  lowHpRatio:Number.isFinite(lowHpRatio)&&lowHpRatio>0&&lowHpRatio<1?lowHpRatio:0,
+  lowHpAttackMultiplier:Number.isFinite(lowHpAttackScale)&&lowHpAttackScale>0?lowHpAttackScale:Number.isFinite(lowHpAttackAdd)&&lowHpAttackAdd>0?1+lowHpAttackAdd:0,
+  lowHpMoveMultiplier:Number.isFinite(lowHpMoveScale)&&lowHpMoveScale>0?lowHpMoveScale:0,
+  lowHpUnblockTime:Number.isFinite(lowHpUnblockTime)&&lowHpUnblockTime>0?lowHpUnblockTime:0,
+  initialInvisible:Boolean(initialInvisible),
+  initialUnblockable:Boolean(initialUnblockable),
+  initialShield:Number.isFinite(initialShield)&&initialShield>0?initialShield:0,
+  specialSkill,
+  specialAtkScale:Number.isFinite(specialAtkScale)&&specialAtkScale>0?specialAtkScale:0,
+  firstAttackSplash,
+  meleeAttackScale:Number.isFinite(meleeAttackScale)&&meleeAttackScale>0?meleeAttackScale:0,
+  pollutedDamage:Number.isFinite(pollutedDamage)&&pollutedDamage>0?pollutedDamage:0
+ };
+}
+
+export function enemyTargetValid(target){
+ return !!target&&target.hp>0&&!target.hidden&&!target.untargetable&&!target.invulnerable;
+}
+
+export function enemyTargetInRange(enemy,target){
+ if(!enemyTargetValid(target))return false;
+ const range=Number(enemy.range||0);
+ if(!Number.isFinite(range)||range<=0)return false;
+ return Math.hypot((enemy.x??0)-(target.x??0),(enemy.y??0)-(target.y??0))<=range+(target.hitRadius||0);
+}
+
+export function enemyShouldHoldPosition(enemy,{target=null,now=0}={}){
+ if(enemy?.hidden||enemy?.untargetable)return false;
+ if(enemy?.block!=null)return true;
+ const policy=enemy?.movementPolicy||ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET;
+ const valid=enemyTargetValid(target);
+ switch(policy){
+  case ENEMY_MOVEMENT_POLICIES.ALWAYS_MOVE_ATTACK:return false;
+  case ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING:return !!enemy.action;
+  case ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE:
+   return !(Number(enemy.burstUntil)>now)&&Boolean(enemy.action||(
+    valid&&Number(enemy.burstShots)>0&&Number(enemy.burstFired)>0&&Number(enemy.burstFired)<Number(enemy.burstShots)
+   ));
+  case ENEMY_MOVEMENT_POLICIES.SCHEDULED_STOP:return Number(enemy.stanceUntil)>now;
+  case ENEMY_MOVEMENT_POLICIES.SKILL_CONTROLLED:return !!enemy.action||Number(enemy.stanceUntil)>now;
+  case ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET:
+  default:return valid;
+ }
+}
+
 export function remainingDistance(e){
  const route=e.route;if(!route||route.length===0)return 0;
  let d=0,x=e.x,y=e.y,i=e.cmd??e.segment??0;

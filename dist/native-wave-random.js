@@ -95,6 +95,17 @@ export function fillBudgetWave(random,table,type,tier){
  return {ids,spent,leftover:budget-spent,unfilled:false,...meta};
 }
 
+// Keep the editable wave table intact, but prevent explicitly complex enemy
+// behaviors from leaking into the random pool before they have fixed-wave tests.
+export function filterRandomPoolTable(table,data){
+ if(!data?.enemies)return table;
+ const out=structuredClone(table);
+ for(const type of Object.values(out.types||{}))for(const tier of Object.values(type||{}))for(const slot of tier?.templates||[]){
+  slot.pool=(slot.pool||[]).filter(id=>data.enemies[id]&&data.enemies[id].enemyBehavior?.randomPoolEligible!==false);
+ }
+ return out;
+}
+
 function visibleRoutes(level,fly){
  return (level.routes||[]).map((route,index)=>({route,index})).filter(({route})=>route&&route.startPosition.col<=10&&route.startPosition.row>=6&&route.startPosition.row<=12&&(fly?route.motionMode==='FLY':route.motionMode!=='FLY'));
 }
@@ -107,7 +118,7 @@ export function buildWavePlan(data,turn,roster=null,table=null){
  if(!assignment||assignment.boss)return {round:turn.round,benchmark:false,total:0,targets:0,queue:[],level,levelId,assignment:assignment||null};
  const ground=visibleRoutes(level,false),air=visibleRoutes(level,true),queue=[],mode=data.season.modeDataDict[roster.modeId];
  const scale=mode?enemyCombatScale(mode,turn.round,{hidden:!!turn.isConditional}):{atk:1,hp:1,moveSpeed:1};
- const waveTable=table||loadWaveTable(),pack=fillBudgetWave(waveRng(assignment.waveSeed||turn.round),waveTable,assignment.type,assignment.tier);
+ const sourceTable=table||loadWaveTable(),waveTable=filterRandomPoolTable(sourceTable,data),pack=fillBudgetWave(waveRng(assignment.waveSeed||turn.round),waveTable,assignment.type,assignment.tier);
  const interval=pack.ids.length<=1?0:Math.max(1.2,Math.min(4,24/pack.ids.length));
  pack.ids.forEach((id,i)=>{
   const fly=(data.enemies?.[id]||level.enemyProfiles?.[id])?.motion==='FLY';
