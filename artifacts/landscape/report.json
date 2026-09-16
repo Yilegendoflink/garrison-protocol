@@ -1,0 +1,69 @@
+{
+  "results": [
+    {
+      "width": 844,
+      "height": 390,
+      "scrollWidth": 844,
+      "scrollHeight": 390,
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 250,
+        "top": 0,
+        "right": 844,
+        "bottom": 250,
+        "left": 0
+      }
+    },
+    {
+      "width": 667,
+      "height": 375,
+      "scrollWidth": 667,
+      "scrollHeight": 375,
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 667,
+        "height": 235,
+        "top": 0,
+        "right": 667,
+        "bottom": 235,
+        "left": 0
+      }
+    },
+    {
+      "width": 568,
+      "height": 320,
+      "scrollWidth": 568,
+      "scrollHeight": 320,
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 568,
+        "height": 180,
+        "top": 0,
+        "right": 568,
+        "bottom": 180,
+        "left": 0
+      }
+    },
+    {
+      "width": 932,
+      "height": 430,
+      "scrollWidth": 932,
+      "scrollHeight": 430,
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 932,
+        "height": 290,
+        "top": 0,
+        "right": 932,
+        "bottom": 290,
+        "left": 0
+      }
+    }
+  ],
+  "errors": []
+}

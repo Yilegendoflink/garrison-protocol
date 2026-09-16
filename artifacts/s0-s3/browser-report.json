@@ -1,11 +1,33 @@
 {
   "passed": true,
-  "desktop": ["lobby", "limitations", "wave-editor-defaults", "briefing", "buy", "deploy", "start", "pause", "resume-after-reload"],
+  "desktop": [
+    "lobby",
+    "limitations",
+    "wave-editor-defaults",
+    "briefing",
+    "buy",
+    "deploy",
+    "start",
+    "pause",
+    "resume-after-reload"
+  ],
   "responsive": [
-    { "width": 320, "overflow": false },
-    { "width": 375, "overflow": false },
-    { "width": 414, "overflow": false },
-    { "width": 768, "overflow": false }
+    {
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "overflow": false
+    },
+    {
+      "width": 414,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "overflow": false
+    }
   ],
   "offlineFileLaunch": true,
   "errors": []
