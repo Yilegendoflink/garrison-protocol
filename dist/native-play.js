@@ -17,6 +17,35 @@ const plain=s=>String(s||'').replace(/<[^>]+>/g,'').replace(/\\n/g,'\n');
 const imageCache=new Map(),img=id=>{const file=data.assets[id];if(!file)return null;if(!imageCache.has(file)){const im=new Image();im.src='./'+file;imageCache.set(file,im);}return imageCache.get(file);};
 function preference(key,fallback){try{return localStorage.getItem(key)??fallback;}catch{return fallback;}}
 function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
+const mobilePlay=()=>matchMedia('(hover:none) and (pointer:coarse)').matches;
+function syncPlayChrome(){
+ const locked=document.documentElement.classList.contains('native-play-lock');
+ const compact=matchMedia('(orientation:landscape) and (max-height:600px) and (max-width:1100px)').matches;
+ const need=locked&&matchMedia('(orientation:portrait)').matches;
+ document.documentElement.classList.toggle('native-landscape-ui',locked||compact);
+ document.documentElement.classList.toggle('native-need-rotate',need);
+ const app=document.getElementById('app');
+ if(!app)return;
+ if(need){app.style.setProperty('width',innerHeight+'px','important');app.style.setProperty('height',innerWidth+'px','important');}
+ else{app.style.removeProperty('width');app.style.removeProperty('height');}
+}
+async function enterPlayChrome(){
+ if(!mobilePlay())return;
+ document.documentElement.classList.add('native-play-lock');
+ syncPlayChrome();
+ const node=document.documentElement;
+ try{if(!(document.fullscreenElement||document.webkitFullscreenElement))await (node.requestFullscreen||node.webkitRequestFullscreen).call(node);}catch{}
+ try{await screen.orientation?.lock?.('landscape');}catch{}
+ syncPlayChrome();
+}
+async function leavePlayChrome(){
+ document.documentElement.classList.remove('native-play-lock','native-need-rotate');
+ try{screen.orientation?.unlock?.();}catch{}
+ try{if(document.fullscreenElement||document.webkitFullscreenElement)await (document.exitFullscreen||document.webkitExitFullscreen).call(document);}catch{}
+ syncPlayChrome();
+}
+matchMedia('(orientation:portrait)').addEventListener('change',syncPlayChrome);
+window.addEventListener('resize',syncPlayChrome);
 const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:null,view:'lobby',mode:'mode_single_normal',band:'band_bldsk',map:data.maps.find(m=>m.weight>0).stageId,selected:null,item:null,inspect:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,editor:editorState(),waveTable:loadWaveTable()};
 let canvas,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0;
 try{const saved=JSON.parse(localStorage.getItem(SAVE)||'null');if(saved){state.game=NativeSession.restore(data,saved);if(state.game){state.paused=true;state.expiresAt=saved.expiresAt??null;}}}catch{}
@@ -97,7 +126,7 @@ function showResult(){const g=state.game,r=g.s.runResult||g.s.history.at(-1);if(
 function action(button){const a=button.dataset.act,g=state.game,uid=Number(button.dataset.uid);if(button.disabled)return;
  if(a==='band'){state.band=button.dataset.id;render();return;}if(a==='limits'){showLimitations();return;}if(a==='branches'){showBranches(button.dataset.id||null);return;}if(a==='close'){if(g?.s.rewardPending||g?.s.phase==='decision')return;state.modal=null;renderModal();return;}
  if(a==='supply-toggle'){state.supplyCollapsed=!state.supplyCollapsed;render();return;}
- if(a==='sandbox'){openSandbox();return;}if(a==='home'&&state.sandbox){const previous=state.sandbox.previousGame||null;state.sandbox=null;state.game=previous;state.view='lobby';state.paused=true;render();return;}if(a==='sandbox-exit'){const previous=state.sandbox?.previousGame||null;state.sandbox=null;state.game=previous;state.view='lobby';state.paused=true;render();return;}if(a==='sandbox-reset'){sandboxReset();return;}if(a==='sandbox-add-op'){sandboxAddOperator(button.dataset.id);return;}if(a==='sandbox-add-enemy'){sandboxSpawnEnemy(button.dataset.id,false);return;}if(a==='sandbox-add-dummy'){sandboxSpawnEnemy('enemy_1041_lazerd',true);return;}if(a==='sandbox-remove-enemy'){sandboxRemoveEnemy(uid);return;}if(a==='sandbox-remove-op'){const sb=state.sandbox;if(sb){sb.economy.s.units=sb.economy.s.units.filter(u=>u.uid!==uid);if(sb.battle)sb.battle.s.units=sb.battle.s.units.filter(u=>u.uid!==uid);render();}return;}if(a==='sandbox-start'){sandboxStart();return;}if(a==='sandbox-pause'){if(state.sandbox?.phase==='battle'){state.paused=!state.paused;render();}return;}if(a==='sandbox-step'){if(state.sandbox?.battle){state.sandbox.battle.step();render();}return;}if(a==='sandbox-clear-enemies'){if(state.sandbox){state.sandbox.enemyDrafts=[];if(state.sandbox.battle)state.sandbox.battle.s.enemies=[];render();}return;}if(a==='sandbox-fill-sp'){const sb=state.sandbox,u=sb?.battle?.s.units.find(v=>v.uid===uid);if(u){u.sp=sb.battle.spCost(u);render();}return;}if(a==='sandbox-skill'){const sb=state.sandbox,u=sb?.battle?.s.units.find(v=>v.uid===uid);if(u){if(u.skillLeft>0||u.ammo>0)sb.battle.deactivate(u);else{u.sp=sb.battle.spCost(u);sb.battle.activate(u);}render();}return;}
+ if(a==='sandbox'){enterPlayChrome();openSandbox();return;}if(a==='home'&&state.sandbox){const previous=state.sandbox.previousGame||null;state.sandbox=null;state.game=previous;state.view='lobby';state.paused=true;leavePlayChrome();render();return;}if(a==='sandbox-exit'){const previous=state.sandbox?.previousGame||null;state.sandbox=null;state.game=previous;state.view='lobby';state.paused=true;leavePlayChrome();render();return;}if(a==='sandbox-reset'){sandboxReset();return;}if(a==='sandbox-add-op'){sandboxAddOperator(button.dataset.id);return;}if(a==='sandbox-add-enemy'){sandboxSpawnEnemy(button.dataset.id,false);return;}if(a==='sandbox-add-dummy'){sandboxSpawnEnemy('enemy_1041_lazerd',true);return;}if(a==='sandbox-remove-enemy'){sandboxRemoveEnemy(uid);return;}if(a==='sandbox-remove-op'){const sb=state.sandbox;if(sb){sb.economy.s.units=sb.economy.s.units.filter(u=>u.uid!==uid);if(sb.battle)sb.battle.s.units=sb.battle.s.units.filter(u=>u.uid!==uid);render();}return;}if(a==='sandbox-start'){sandboxStart();return;}if(a==='sandbox-pause'){if(state.sandbox?.phase==='battle'){state.paused=!state.paused;render();}return;}if(a==='sandbox-step'){if(state.sandbox?.battle){state.sandbox.battle.step();render();}return;}if(a==='sandbox-clear-enemies'){if(state.sandbox){state.sandbox.enemyDrafts=[];if(state.sandbox.battle)state.sandbox.battle.s.enemies=[];render();}return;}if(a==='sandbox-fill-sp'){const sb=state.sandbox,u=sb?.battle?.s.units.find(v=>v.uid===uid);if(u){u.sp=sb.battle.spCost(u);render();}return;}if(a==='sandbox-skill'){const sb=state.sandbox,u=sb?.battle?.s.units.find(v=>v.uid===uid);if(u){if(u.skillLeft>0||u.ammo>0)sb.battle.deactivate(u);else{u.sp=sb.battle.spCost(u);sb.battle.activate(u);}render();}return;}
  if(a==='field-info'){modal(`<h2>战况 / 设置</h2>${document.querySelector('.native-detail').innerHTML.replace(/ id="[^"]*"/g,'')}${document.querySelector('.native-terrain-legend').outerHTML}<label>音量 <input data-native-volume aria-label="战斗音量" type="range" min="0" max="1" step="0.05" value="${state.volume}"></label><p><button data-act="limits">已知差异</button> <button data-act="branches">分支规则</button> <button data-act="export">导出存档</button></p>`);fitWaveFaces();return;}
  if(a==='editor'){state.view='editor';state.waveTable=loadWaveTable();render();return;}
  if(a.startsWith('ed-')){
@@ -111,10 +140,10 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
   if(result)render();return;
  }
  if(a==='new'){const seed=(Date.now()&0xffffffff)>>>0;state.draft={modeId:state.mode,mapId:state.map,seed,roster:createWaveRoster({random:waveRng(seed),data,modeId:state.mode})};state.view='briefing';state.modal=null;render();return;}
- if(a==='begin'){state.supplyCollapsed=false;if(!state.draft){state.view='lobby';render();return;}try{state.game=new NativeSession(data,{modeId:state.draft.modeId,bandId:state.band,mapId:state.draft.mapId,seed:state.draft.seed,waveRoster:state.draft.roster});state.view='game';state.draft=null;state.paused=false;state.expiresAt=null;state.selected=state.item=state.inspect=state.preview=state.modal=null;save();render();}catch(e){notice(e.message);}return;}
- if(a==='resume'){if(state.expiresAt&&Date.now()>=state.expiresAt){notice('暂离已超过24小时，请开始新模拟');return;}state.expiresAt=null;state.view='game';render();return;}if(a==='home'){if(state.view==='editor'||state.view==='briefing'){state.view='lobby';render();return;}state.view='lobby';state.paused=true;state.expiresAt??=Date.now()+86400000;state.modal=null;save();render();return;}if(a==='result'){showResult();return;}
+ if(a==='begin'){enterPlayChrome();state.supplyCollapsed=false;if(!state.draft){state.view='lobby';leavePlayChrome();render();return;}try{state.game=new NativeSession(data,{modeId:state.draft.modeId,bandId:state.band,mapId:state.draft.mapId,seed:state.draft.seed,waveRoster:state.draft.roster});state.view='game';state.draft=null;state.paused=false;state.expiresAt=null;state.selected=state.item=state.inspect=state.preview=state.modal=null;save();render();}catch(e){notice(e.message);}return;}
+ if(a==='resume'){if(state.expiresAt&&Date.now()>=state.expiresAt){notice('暂离已超过24小时，请开始新模拟');return;}enterPlayChrome();state.expiresAt=null;state.view='game';render();return;}if(a==='home'){if(state.view==='editor'||state.view==='briefing'){state.view='lobby';leavePlayChrome();render();return;}state.view='lobby';state.paused=true;state.expiresAt??=Date.now()+86400000;state.modal=null;save();leavePlayChrome();render();return;}if(a==='result'){showResult();return;}
  if(a==='export'){const url=URL.createObjectURL(new Blob([JSON.stringify(g.snapshot(),null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-round-'+g.s.round+'.json';link.click();URL.revokeObjectURL(url);return;}
- if(a==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{if(input.files[0].size>10e6)throw Error('存档文件过大');const record=JSON.parse(await input.files[0].text()),game=NativeSession.restore(data,record);if(!game)throw Error('存档版本、数据或有效期不匹配');state.game=game;state.view='game';state.paused=true;save();render();}catch(e){notice(e.message);}};input.click();return;}
+ if(a==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{if(input.files[0].size>10e6)throw Error('存档文件过大');const record=JSON.parse(await input.files[0].text()),game=NativeSession.restore(data,record);if(!game)throw Error('存档版本、数据或有效期不匹配');state.game=game;state.view='game';state.paused=true;save();enterPlayChrome();render();}catch(e){notice(e.message);}};input.click();return;}
  if(!g)return;
  if(a==='pause'){state.paused=!state.paused;render();return;}if(a==='speed'){state.speed=Number(button.dataset.speed);render();return;}
  if(a==='mute'){state.muted=!state.muted;savePreference('garrison-mute',state.muted?'1':'0');if(!state.muted)unlockAudio();render();return;}
@@ -141,7 +170,7 @@ function updateHud(){const g=state.game;if(!g||state.view!=='game')return;const 
 function geometry(){
  const r=canvas.getBoundingClientRect(),v=state.game?.map.viewport||{left:0,right:10,top:0,bottom:6},cols=v.right-v.left+1,rows=v.bottom-v.top+1;
  let left=16,top=22,width=r.width-32,height=r.height-44;
- if(innerWidth>innerHeight&&innerHeight<=600&&innerWidth<=1100){
+ if(document.documentElement.classList.contains('native-landscape-ui')||(innerWidth>innerHeight&&innerHeight<=600&&innerWidth<=1100)){
   const bonds=root.querySelector('.native-bonds').getBoundingClientRect(),controls=root.querySelector('.native-controls').getBoundingClientRect(),caption=root.querySelector('.native-field-caption').getBoundingClientRect();
   left=bonds.right-r.left+8;top=caption.bottom-r.top+8;width=controls.left-r.left-left-8;
   // Reserve the expanded shop's space in both states so deployment targets stay put.
@@ -281,4 +310,4 @@ root.addEventListener('pointercancel',()=>{clearDrag();aim=null;state.preview=nu
 document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea'))return;if(e.key==='Escape'){clearDrag();aim=null;state.preview=null;state.selected=null;state.inspect=null;if(!state.game?.s.rewardPending&&state.game?.s.phase!=='decision')state.modal=null;render();}if(state.preview){const d={ArrowRight:0,ArrowDown:1,ArrowLeft:2,ArrowUp:3}[e.key];if(d!==undefined){e.preventDefault();state.preview.dir=d;draw();}if(e.key==='Enter')commitPreview();}});
 window.addEventListener('beforeunload',()=>{state.expiresAt??=Date.now()+86400000;save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){state.paused=true;state.expiresAt??=Date.now()+86400000;save();}});
 function frame(now){const dt=Math.min(.15,(now-last)/1000);last=now;const g=state.game;if(state.view==='game'&&g?.s.phase==='battle'&&!state.paused){acc+=dt*state.speed;const previous=g.s.phase;while(acc>=1/30&&g.s.phase==='battle'){acc-=1/30;g.tick();}if(g.battle)playBattleEvents(g.battle.s,state.muted,state.volume);if(g.s.phase!==previous){acc=0;save();render();if(g.s.phase==='finished'){notice('模拟结束，总伤害 '+Math.round(g.s.runResult?.totalDamage||0).toLocaleString());showResult();}}}else if(state.view==='sandbox'&&state.sandbox?.phase==='battle'&&!state.paused){acc+=dt*state.speed;while(acc>=1/30&&!state.sandbox.battle.s.finished){acc-=1/30;state.sandbox.battle.step();}if(state.sandbox.battle)playBattleEvents(state.sandbox.battle.s,state.muted,state.volume);}else acc=0;hudTime+=dt;saveTime+=dt;if(hudTime>.2){updateHud();hudTime=0;}if(saveTime>2&&g){save();saveTime=0;}draw();requestAnimationFrame(frame);}
-root.setAttribute('data-view','native');root.addEventListener('pointerdown',()=>unlockAudio(),{once:true});render();document.getElementById('boot-screen')?.remove();clearTimeout(window.__garrisonBootTimer);window.__garrisonReady=true;requestAnimationFrame(frame);
+root.setAttribute('data-view','native');root.addEventListener('pointerdown',()=>unlockAudio(),{once:true});syncPlayChrome();render();document.getElementById('boot-screen')?.remove();clearTimeout(window.__garrisonBootTimer);window.__garrisonReady=true;requestAnimationFrame(frame);

@@ -1,5 +1,7 @@
 # 战斗系统规范
 
+> 2026-09-16：本文规范的是 legacy `dist/combat.js` / `engine.js` 层。当前主对局战斗在 `dist/native-battle.js`、`native-combat.js`、`native-effects.js`；公共规则核对见 [COMBAT_RULES.md](COMBAT_RULES.md)。
+
 更新：2026-09-08。运行规则版本：`battle.rulesVersion = 2`。
 
 本文件是后续战斗开发的接口与验收基线。基础数值运算按公开的原作机制建立；现有干员、盟约、地图、技能数值仍属于同人改编数据。不得将本次基础层接入解释为已经完成原作全部机制或逐帧复刻。
