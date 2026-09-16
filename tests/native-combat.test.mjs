@@ -108,7 +108,7 @@ test('native enemy low-health phase changes movement once and restores it after 
 });
 test('native mode multipliers remain independent of skill percentages',()=>{
  const b=liveBattle(),u=b.s.units[0],original=b.profile(u);b.rows={};b.s.band='band_dusk';b.s.units.push({...u,uid:999});
- b.profile=()=>({...original,branch:'fighter',attributes:{...original.attributes,atk:100},garrisons:[],skill:{blackboard:[{key:'atk',value:1}]}});u.skillLeft=10;u.source.equipment=[];
+ b.profile=()=>({...original,branch:'fighter',attributes:{...original.attributes,atk:100},activeTalents:[],garrisons:[],skill:{blackboard:[{key:'atk',value:1}]}});u.skillLeft=10;u.source.equipment=[];
  assert.equal(b.stats(u).atk,260);assert.ok(b.stats(u).parts.some(p=>p.src==='策略·夕'&&p.layer==='mul'));
 });
 test('explicit skill flow overrides and description changes do not alter reset policy',()=>{

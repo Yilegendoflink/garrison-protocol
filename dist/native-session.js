@@ -12,10 +12,24 @@ export class NativeSession extends NativeEconomy {
  eligible(){return Object.values(this.data.season.charShopChessDatas).filter(o=>o.charId&&!o.isHidden);}
  drawFromPool(r){
   if(r.kind==='item'){let items=this.data.items.filter(i=>!i.hidden&&i.rank<=this.s.level);const tier=Number(String(r.pool||'').match(/shop_(\d)/)?.[1]);if(tier)items=this.data.items.filter(i=>!i.hidden&&i.rank===tier);if(String(r.pool||'').includes('equip_vict'))items=items.filter(i=>i.normal?.giveBondId==='victoriaShip'||this.data.season.trapChessDataDict[i.id]?.giveBondId==='victoriaShip');if(!items.length)throw Error('没有可用装备');return this.pick(items).id;}
-  let rows=this.eligible(),tier=r.tier||Number(String(r.pool||'').match(/shop_(\d)/)?.[1]);if(tier)rows=rows.filter(o=>o.chessLevel===tier);else rows=rows.filter(o=>o.chessLevel<=(r.maxTier||this.s.level));
+  const pool=String(r.pool||''),fixedTier=r.tier||Number(pool.match(/shop_(\d)/)?.[1]);let rows=this.eligible();if(fixedTier)rows=rows.filter(o=>o.chessLevel===fixedTier);else rows=rows.filter(o=>o.chessLevel<=(r.maxTier||this.s.level));
   if(r.bond)rows=rows.filter(o=>this.data.season.charChessDataDict[o.chessId].bondIds.includes(r.bond));if(r.excludeCharId)rows=rows.filter(o=>o.charId!==r.excludeCharId);
-  if(String(r.pool).includes('later'))rows=this.eligible().filter(o=>o.chessLevel>=4&&this.data.season.charChessDataDict[o.chessId].bondIds.includes('lateranoShip'));
-  if(!rows.length)throw Error('当前候选池没有匹配干员');const row=this.pick(rows);return String(r.pool).includes('later')?row.goldenChessId:row.chessId;
+  if(pool.includes('later'))rows=this.eligible().filter(o=>o.chessLevel>=4&&this.data.season.charChessDataDict[o.chessId].bondIds.includes('lateranoShip'));
+  if(!rows.length)throw Error('当前候选池没有匹配干员');
+  if(!fixedTier&&r.maxTier&&!pool.includes('later')){
+   const maxTier=Math.max(...rows.map(o=>o.chessLevel)),previous=maxTier-1;
+   const top=rows.filter(o=>o.chessLevel===maxTier),prev=rows.filter(o=>o.chessLevel===previous),lower=rows.filter(o=>o.chessLevel<previous);
+   let candidates,roll=this.random();
+   if(maxTier<=1)candidates=top;
+   else if(maxTier===2)candidates=roll<.7?top:prev;
+   else if(roll<.6)candidates=top;
+   else if(roll<.9)candidates=prev;
+   else candidates=lower;
+   if(!candidates?.length)candidates=top.length?top:prev.length?prev:lower;
+   if(!candidates.length)throw Error('当前候选池没有匹配阶级');
+   return this.pick(candidates).chessId;
+  }
+  const row=this.pick(rows);return pool.includes('later')?row.goldenChessId:row.chessId;
  }
  rollOffers(){const required=runStrategyEvent(this,'refreshRequirements'),forced=this.s.forcedRefresh;let rows=Array.from({length:this.terms().operatorSlots},()=>this.drawFromPool({kind:'operator',maxTier:this.s.level,bond:forced?.bond}));for(const r of required){if(r.bond)for(let i=0;i<r.minCount;i++)rows[i]=this.drawFromPool({kind:'operator',bond:r.bond,maxTier:this.s.level});if(r.duplicateCount)for(let i=1;i<Math.min(rows.length,r.duplicateCount);i++)rows[i]=rows[0];}return rows;}
  fillItems(){this.s.itemOffers=Array.from({length:this.terms().itemSlots},()=>this.drawFromPool({kind:'item'}));}
