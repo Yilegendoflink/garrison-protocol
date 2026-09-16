@@ -11,7 +11,7 @@ export class NativeSession extends NativeEconomy {
  }
  eligible(){return Object.values(this.data.season.charShopChessDatas).filter(o=>o.charId&&!o.isHidden);}
  drawFromPool(r){
-  if(r.kind==='item'){let items=this.data.items.filter(i=>!i.hidden&&i.rank<=this.s.level);const tier=Number(String(r.pool||'').match(/shop_(\d)/)?.[1]);if(tier)items=this.data.items.filter(i=>!i.hidden&&i.rank===tier);if(!items.length)throw Error('没有可用装备');return this.pick(items).id;}
+  if(r.kind==='item'){let items=this.data.items.filter(i=>!i.hidden&&i.rank<=this.s.level);const tier=Number(String(r.pool||'').match(/shop_(\d)/)?.[1]);if(tier)items=this.data.items.filter(i=>!i.hidden&&i.rank===tier);if(String(r.pool||'').includes('equip_vict'))items=items.filter(i=>i.normal?.giveBondId==='victoriaShip'||this.data.season.trapChessDataDict[i.id]?.giveBondId==='victoriaShip');if(!items.length)throw Error('没有可用装备');return this.pick(items).id;}
   let rows=this.eligible(),tier=r.tier||Number(String(r.pool||'').match(/shop_(\d)/)?.[1]);if(tier)rows=rows.filter(o=>o.chessLevel===tier);else rows=rows.filter(o=>o.chessLevel<=(r.maxTier||this.s.level));
   if(r.bond)rows=rows.filter(o=>this.data.season.charChessDataDict[o.chessId].bondIds.includes(r.bond));if(r.excludeCharId)rows=rows.filter(o=>o.charId!==r.excludeCharId);
   if(String(r.pool).includes('later'))rows=this.eligible().filter(o=>o.chessLevel>=4&&this.data.season.charChessDataDict[o.chessId].bondIds.includes('lateranoShip'));

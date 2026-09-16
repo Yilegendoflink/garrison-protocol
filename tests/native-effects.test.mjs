@@ -203,6 +203,11 @@ test('凛御银灰技能会修改尚未自动部署单位的费用属性',()=>{
  const svash=byId(b,'char_1045_svash2'),guard=byId(b,'char_308_swire');b.deploy(svash);svash.sp=b.spCost(svash);const base=guard.baseCost;b.activate(svash);assert.equal(guard.costRealtimeDelta,-5);assert.equal(b.deploymentCost(guard),Math.max(0,base-5));
 });
 
+test('荒芜拉普兰德三技能开启后浮游单元显示并飞行索敌',()=>{
+ const chessId=Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId==='char_1045_svash2').chessId;
+ const {b}=openBattle({chessId,skillIndex:2});deployNow(b);const u=byId(b,'char_1045_svash2'),e=enemy(b,{x:u.x+2,y:u.y,hp:10000,def:0});u.sp=b.spCost(u);b.activate(u);const floats=b.s.summons.filter(s=>s.ownerUid===u.uid&&s.type==='svash2-float');assert.equal(floats.length,3);assert.ok(floats.every(eye=>eye.svashPursuit&&eye.flying));const eye=floats[0],before=Math.hypot(eye.x-e.x,eye.y-e.y);b.s.time+=1/30;tickLogic(b,1/30);assert.equal(eye.svashTargetUid,e.uid);assert.ok(Math.hypot(eye.x-e.x,eye.y-e.y)<before);
+});
+
 test('野鬃 S1 与砾 S1 的部署增益按生命周期衰减',()=>{
  const wild=openBattle({chessId:'chess_char_1_19_b',skillIndex:0}).b;deployNow(wild);const w=byId(wild,'char_496_wildmn'),wildBase=wild.profile(w).attributes.attackSpeed;assert.equal(wild.stats(w).attackSpeed,wildBase+100);wild.s.time=26;assert.equal(wild.stats(w).attackSpeed,wildBase);
  const gravel=openBattle({chessId:'chess_char_2_12_b',skillIndex:0}).b;deployNow(gravel);const g=byId(gravel,'char_237_gravel'),base=gravel.profile(g).attributes.def;assert.equal(gravel.stats(g).def,base*(1+3.4+.06));gravel.s.time=4;assert.ok(gravel.stats(g).def<base*(1+3.4+.06)&&gravel.stats(g).def>base*(1+.06));gravel.s.time=9;assert.equal(gravel.stats(g).def,base*(1+.06));

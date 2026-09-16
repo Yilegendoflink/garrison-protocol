@@ -2,6 +2,10 @@
   "version": 1,
   "description": "逐关卡或 PRTS 行为确认后的敌人覆盖；未确认项目保持解析器默认策略。",
   "overrides": {
+    "enemy_10122_uacann_2": {
+      "movementPolicy": "stop-while-attacking",
+      "reason": "集团军重型火炮只在开火动作期间停留，攻击完成后继续沿路线推进"
+    },
     "enemy_10162_mnctpt": {
       "movementPolicy": "burst-then-move",
       "burstShots": 3,

@@ -38,6 +38,7 @@ export class NativeEconomy extends PreparationState {
   const rows=this.bonds();for(const[id,b]of Object.entries(rows))if(b.active){const info=this.data.season.bondInfoDict[id];for(const [index,e]of (this.data.season.effectBuffInfoDataDict[info.effectId]||[]).entries()){
    const p=blackboard(e.blackboard),layers=this.s.bondLayers[id]||0,key=id+':'+index;
    if(e.key==='bond_layer_gain_coin'){const count=Math.floor(layers/p.layer),old=this.s.claimedBondRewards[key]||0;if(count>old){this.s.funds+=(count-old)*p.count;this.s.claimedBondRewards[key]=count;}}
+   if(e.key==='bond_layer_added_reward_equip'){const count=Math.floor(layers/(Number(p.layer)||25)),old=this.s.claimedBondRewards[key]||0;if(count>old){for(let n=old;n<count;n++){let itemId;if(this.poolDraw)itemId=this.draw({kind:'item',pool:p.pool});else{const items=(this.data.items||[]).filter(i=>!i.hidden&&i.normal?.itemType==='EQUIP'&&(!String(p.pool).includes('equip_vict')||i.normal?.giveBondId==='victoriaShip'));const fallback=items.length?items.map(i=>i.id):Object.entries(this.data.season.trapChessDataDict).filter(([,i])=>i.itemType==='EQUIP'&&(!String(p.pool).includes('equip_vict')||i.giveBondId==='victoriaShip')).map(([id])=>id);if(!fallback.length)throw Error('没有可用装备');itemId=this.pick(fallback);}this.gainItem(itemId);}this.s.claimedBondRewards[key]=count;}}
    if(e.key==='bond_multi_layer_char_goods_price_bond_discount'){if(layers>=p.layer2)this.s.permanentDiscount=2;else if(layers>=p.layer1)this.s.permanentDiscount=Math.max(1,this.s.permanentDiscount);}
   }}
  }

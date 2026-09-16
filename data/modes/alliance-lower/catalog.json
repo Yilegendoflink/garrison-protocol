@@ -111734,7 +111734,7 @@
         }
       ],
       "enemyBehavior": {
-        "movementPolicy": "stop-on-target",
+        "movementPolicy": "stop-while-attacking",
         "attackWhileMoving": false,
         "burstShots": 0,
         "burstDuration": 0,

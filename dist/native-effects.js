@@ -12,7 +12,7 @@ const QUEUE_CAP=256,ANCESTOR_CAP=32;
 export function emptySettle(){return {nextEventId:1,nextAttackId:1,nextEffectId:1,nextSeq:1,queue:[],consumed:[],byId:{},fault:null};}
 export function ensureBattleShape(s){
  s.battleSchemaVersion??=BATTLE_SCHEMA_VERSION;
- s.cost??=20;s.costInitial??=20;s.costMin??=0;s.costMax??=99;s.costRecoveryInterval??=1;s.costRecoveryClock??=0;s.enemyCostRecoveryMultiplier??=1;s.enemyRespawnTimeMultiplier??=1;s.mlyssFirstRhineDiscountUsed??=false;
+ s.cost??=20;s.costInitial??=20;s.costMin??=0;s.costMax??=99;s.costRecoveryInterval??=1;s.costRecoveryClock??=0;s.enemyCostRecoveryMultiplier??=1;s.enemyRespawnTimeMultiplier??=1;s.mlyssFirstRhineDiscountUsed??=false;s.bondLateranoAmmoStacks??=0;s.bondEgirReviveCount??=0;s.bondYanGuardiansSpawned??=false;
  s.logicEffects??=[];s.summons??=[];s.logicLog??=[];
  s.settle={...emptySettle(),...s.settle,byId:s.settle?.byId||{}};
  s.settle.consumed=s.settle.consumed||[];s.settle.queue=s.settle.queue||[];
@@ -151,7 +151,7 @@ export function commitExit(battle,{target,reason='knockdown',killer=null,event=n
   target.down=battle.respawnTime?battle.respawnTime(target):battle.stats(target).respawnTime;
   if(battle.s.band==='band_emperor')target.down*=.5;
   if(battle.s.band==='band_ermengard'&&(battle.s.revives||0)<3){battle.s.revives=(battle.s.revives||0)+1;target.down=0;}
-  if(battle.on?.('indomShip')&&battle.profile(target).position==='MELEE'&&battle.economy.random()<.18+.004*(battle.layers.indomShip||0))target.down=0;
+  if(battle.on?.('indomShip')&&battle.profile(target).position==='MELEE'){const ib=battle.params?.('indomShip')||{};if(battle.economy.random()<(Number(ib.base_prob)||.18)+(Number(ib.prob_per_stack)||.004)*(battle.layers.indomShip||0))target.down=0;}
   target.downMax=target.down;
  }
  battle.emit('down',{uid:target.uid,x:target.x,y:target.y,down:target.down,reason});
@@ -197,6 +197,9 @@ function runFatal(battle,target,wouldDie,event){
   const t=activeTalentsOf(battle,target).find(x=>x.name==='破财消灾');
   if(t){const base=Math.abs(Number(t.values.cost)||5),times=target.merchantRescueCount||0,cost=base*Math.pow(Number(t.values.cost_multi)||2,times);if(battle.spendCost?.(cost,{considerNegativeCost:true})){target.merchantRescueCount=times+1;target.hp=target.maxHp*(Number(t.values.hp_ratio)||.7);log(battle,'fatal-cost-save',{uid:target.uid,cost,hp:target.hp,eventId:event.eventId});return true;}}
  }
+ if(target.kind!=='summon'&&battle.on?.('egirShip')&&battle.rows?.egirShip?.count>=5&&battle.owns(target,'egirShip')&&!target.egirRevived&&((battle.s.bondEgirReviveCount||0)<3)){
+  target.egirRevived=true;battle.s.bondEgirReviveCount=(battle.s.bondEgirReviveCount||0)+1;target.hp=Math.max(1,target.maxHp);target.deployed=true;target.downed=false;target.exitLife=null;target.down=0;target.action=null;target.skillLeft=0;target.ammo=0;log(battle,'bond-revive',{uid:target.uid,bond:'egirShip',count:battle.s.bondEgirReviveCount,eventId:event.eventId});return true;
+ }
  if(typeof battle.fatalHook==='function')return battle.fatalHook(target,event);
  return false;
 }
@@ -226,6 +229,9 @@ export function dealDamage(battle,opts){
   const delayed=Math.max(0,value*(1-immediateRatio));
   if(delayed>0){protection.buffer=(protection.buffer||0)+delayed;log(battle,'damage-delayed',{eventId:event.eventId,targetUid:target.uid,amount:delayed,until:protection.until});}
   value*=immediateRatio;
+ }
+ if(!opts.skipBondStead&&value>0&&battle.on?.('steadShip')&&battle.rows?.steadShip?.count>=3&&battle.s.units.includes(target)&&!battle.owns(target,'steadShip')){
+  const guards=battle.s.units.filter(u=>u.deployed&&u.hp>0&&battle.owns(u,'steadShip'));if(guards.length){const shared=value*.4,own=value-shared,common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,skipBondStead:true,skipRedirect:true,skipProtection:true,skipHooks:true};const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;const parts=guards.map(receiver=>dealDamage(battle,{...common,target:receiver,value:shared/guards.length}));return {total:(ownResult?.total||0)+parts.reduce((n,r)=>n+(r?.total||0),0),hp:(ownResult?.hp||0)+parts.reduce((n,r)=>n+(r?.hp||0),0),shield:(ownResult?.shield||0)+parts.reduce((n,r)=>n+(r?.shield||0),0),blocked:!!(ownResult?.blocked&&parts.every(r=>r?.blocked)),potentialHpDamage:(ownResult?.potentialHpDamage||0)+parts.reduce((n,r)=>n+(r?.potentialHpDamage||0),0),redirected:true,bond:'stead',event};}
  }
  const reduction=damageReductionFor(battle,target,type,source);if(reduction>0)value*=1-reduction;
  const redirect=!opts.skipRedirect&&value>0?activeRedirect(battle,target,type):null;
@@ -306,7 +312,7 @@ export function applyLoss(battle,opts){
 
 export function applyElementDamage(battle,{source,target,amount,type='elemental',cause='element',parentEventId=null}={}){
  if(!target||target.hp<=0||!Number.isFinite(amount)||amount<=0||!ELEMENT_TYPES.has(type))return {added:0,burst:false};
- let resistance=Math.max(0,Math.min(1,Number(target.elementDamageResistance)||0));for(const sourceUnit of battle.s.units.filter(u=>u.deployed&&u.hp>0)){const talents=battle.activeTalentsOf?battle.activeTalentsOf(sourceUnit):(battle.profile(sourceUnit)?.activeTalents||[]);for(const talent of talents){const bb=talentValues(talent),text=talent.description||'';if(!Number.isFinite(Number(bb.ep_damage_resistance))||!/元素损伤.*降低/.test(text))continue;if(!battle.inside(sourceUnit,target))continue;if(target.maxHp>0&&battle.elementInjury?.(target)>target.maxHp*.5)resistance=Math.max(resistance,Number(bb.ep_damage_resistance));}}amount*=1-resistance;
+ amount*=1+Math.max(0,Number(target.elementDamageTakenBonus)||0);let resistance=Math.max(0,Math.min(1,Number(target.elementDamageResistance)||0));for(const sourceUnit of battle.s.units.filter(u=>u.deployed&&u.hp>0)){const talents=battle.activeTalentsOf?battle.activeTalentsOf(sourceUnit):(battle.profile(sourceUnit)?.activeTalents||[]);for(const talent of talents){const bb=talentValues(talent),text=talent.description||'';if(!Number.isFinite(Number(bb.ep_damage_resistance))||!/元素损伤.*降低/.test(text))continue;if(!battle.inside(sourceUnit,target))continue;if(target.maxHp>0&&battle.elementInjury?.(target)>target.maxHp*.5)resistance=Math.max(resistance,Number(bb.ep_damage_resistance));}}amount*=1-resistance;
  target.elemental??={};target.elementalMax??=target.maxHp;
  const before=target.elemental[type]||0,limit=target.elementalMax,added=Math.min(amount,Math.max(0,limit-before));target.elemental[type]=before+added;
  const event=nextEvent(battle,{cause,parentEventId,type:'element',sourceUid:source?.uid,targetUid:target.uid});log(battle,'element',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,element:type,amount:added,current:target.elemental[type],max:limit});
@@ -356,6 +362,8 @@ function dropEffect(battle,fx,reason){
 export function tickLogic(battle,dt){
  const now=battle.s.time;
  for(const u of [...battle.s.units,...(battle.s.summons||[])]){
+  if(u.bondFragileUntil!=null&&now>=u.bondFragileUntil){u.bondFragileUntil=null;u.fragile=null;}
+  if(u.elementDamageTakenUntil!=null&&now>=u.elementDamageTakenUntil){u.elementDamageTakenUntil=null;u.elementDamageTakenBonus=0;}
   u.barriers=(u.barriers||[]).filter(g=>{if(g.endsAt!=null&&now>=g.endsAt){log(battle,'expired',{uid:u.uid,guardId:g.id});return false;}return g.charges>0;});
   if(u.lockHp?.endsAt!=null&&now>=u.lockHp.endsAt){
    const end=u.lockHp.onEnd;u.lockHp=null;
@@ -368,7 +376,7 @@ export function tickLogic(battle,dt){
   if(u.shieldLayers){u.shieldLayers=u.shieldLayers.filter(l=>l.remaining>1e-9);u.shield=u.shieldLayers.reduce((n,l)=>n+l.remaining,0);}
   if(u.damageRedirects)u.damageRedirects=u.damageRedirects.filter(row=>row.endsAt==null||row.endsAt>now);
  }
- for(const e of battle.s.enemies||[])if(e.damageRedirects)e.damageRedirects=e.damageRedirects.filter(row=>row.endsAt==null||row.endsAt>now);
+ for(const e of battle.s.enemies||[]){if(e.damageRedirects)e.damageRedirects=e.damageRedirects.filter(row=>row.endsAt==null||row.endsAt>now);if(e.bondFragileUntil!=null&&now>=e.bondFragileUntil){e.bondFragileUntil=null;e.fragile=null;}if(e.elementDamageTakenUntil!=null&&now>=e.elementDamageTakenUntil){e.elementDamageTakenUntil=null;e.elementDamageTakenBonus=0;}}
  for(const fx of battle.s.logicEffects.slice()){
   if(fx.refKind==='live'&&!aliveSource(battle,fx)&&!fx.persistAfterSourceGone){dropEffect(battle,fx,'source');continue;}
   if(fx.refKind==='anchor'&&fx.anchorUid!=null&&!getActor(battle.s,fx.anchorUid)){dropEffect(battle,fx,'anchor');continue;}
@@ -384,11 +392,37 @@ export function tickLogic(battle,dt){
  for(const fx of battle.s.logicEffects.slice())if(fx.endsAt!=null&&now>=fx.endsAt)dropEffect(battle,fx,'expired');
  updateAreas(battle);
  tickAuras(battle);
- for(const u of battle.s.units)periodicMods(battle,u,ctxFor(battle));
+ for(const u of battle.s.units){periodicMods(battle,u,ctxFor(battle));bondPeriodic(battle,u);}
  tickSummons(battle,dt);
 }
 
 function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,log:(b,t,p)=>log(b,t,p)};}
+
+function bondUnits(battle,id,{deployedOnly=false}={}){return battle.s.units.filter(u=>(!deployedOnly||u.deployed&&u.hp>0)&&battle.owns?.(u,id));}
+function bondParam(battle,id){return battle.params?.(id)||blackboard(battle.data.season.effectBuffInfoDataDict[battle.data.season.bondInfoDict[id]?.effectId]?.find(e=>e.key==='env_gbuff_new')?.blackboard);}
+function bondBattleStart(battle){
+ if(battle.s.bondApplied)return;battle.s.bondApplied=true;
+ const yan=bondUnits(battle,'yanShip');
+ if(battle.on?.('yanShip')&&battle.rows?.yanShip?.count>=6&&yan.length){const b=bondParam(battle,'yanShip'),atk=yan.reduce((n,u)=>n+battle.stats(u).atk,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),hp=yan.reduce((n,u)=>n+u.maxHp,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),owner=yan[0];/* ponytail: synthetic 炎佑 uses the existing summon lifecycle; replace with a pinned token when one is available. */for(let i=0;i<(battle.rows.yanShip.count>=9?2:1);i++){const g=spawnSummon(battle,owner,{type:'yan-guardian',name:'炎佑',synthetic:true,canAttack:true,canBlock:false,occupiesTile:false});if(g){g.atk=atk;g.maxHp=g.hp=Math.max(1,hp);g.interval=1;g.attackSpeed=100;g.range=99;g.yanTargets=3;g.yanBurnScale=.2;g.yanVulnerability=.2;g.damageResistance=Number(b.damage_resistance)||.9;}}battle.s.bondYanGuardiansSpawned=true;}
+ const kj=bondUnits(battle,'kjeragShip');if(battle.on?.('kjeragShip')&&battle.rows?.kjeragShip?.count>=6&&kj.length){const b=bondParam(battle,'kjeragShip'),duration=Number(b['bond_eff_kjerag[storm].base_time'])||20;addEffect(battle,{kind:'zone',sourceUid:kj[0].uid,talentOrSkillId:'bond-kjerag-storm',x:kj[0].x,y:kj[0].y,radius:99,interval:Number(b['bond_eff_kjerag[storm].interval'])||25,nextAt:battle.s.time+(Number(b['bond_eff_kjerag[storm].interval'])||25),endsAt:null,trackSide:'enemy',values:{cold:duration+Number(b['bond_eff_kjerag[storm].time_per_stack']||0)*(battle.layers.kjeragShip||0)},snapshot:{},refKind:'owner',persistAfterSourceGone:true});}
+ const egirs=bondUnits(battle,'egirShip').sort((a,b)=>(a.y??999)-(b.y??999)||(a.x??999)-(b.x??999));if(battle.on?.('egirShip')&&egirs.length){const b=bondParam(battle,'egirShip'),dirs=[[1,0],[0,1],[-1,0],[0,-1]];for(const u of egirs){const d=dirs[u.dir||0],front=battle.s.units.find(v=>v!==u&&v.x===u.x+d[0]&&v.y===u.y+d[1]);if(!front)continue;const fp=battle.profile(front),fa=fp?.attributes||{};u.egirBorrowAtk=Number(fa.atk)||0;u.egirBorrowBlock=Number(fa.blockCnt)||0;u.egirConsumedUid=front.uid;dealDamage(battle,{source:front,target:u,amount:Number(b.damage_value)||5000,type:'physical',cause:'bond',skipHooks:true});battle.economy.addLayers('egirShip',Number(front.source?.rank||1));}}
+}
+function bondDeploy(battle,u){
+ if(!u||u.kind==='summon')return;
+ if(battle.on?.('siracusaShip')&&battle.rows?.siracusaShip?.count>=6&&battle.owns(u,'siracusaShip')){const b=bondParam(battle,'siracusaShip'),duration=(Number(b.base_duration)||32)+(Number(b.duration_per_stack)||.4)*(battle.layers.siracusaShip||0);u.siracusaInvisibleUntil=battle.s.time+duration;u.siracusaExposureUntil=u.siracusaInvisibleUntil+(Number(b.end_duration)||10);applyStatus(u,'invisible',duration,{source:u.uid,resistible:false});}
+}
+function bondSkillStart(battle,u){
+ if(!u||u.kind==='summon'||!battle.on?.('sargonShip')||!battle.owns(u,'sargonShip'))return;const b=bondParam(battle,'sargonShip'),duration=battle.s.band==='band_narant'?(Number(b.base_power_time)||60)+(Number(b.power_time_per_stack)||0)*(battle.layers.sargonShip||0):(Number(b.base_time)||5)+(Number(b.time_per_stack)||.22)*(battle.layers.sargonShip||0);for(const target of bondUnits(battle,'sargonShip',{deployedOnly:true})){target.sargonBuffs??=[];target.sargonBuffs.push({endsAt:battle.s.time+duration});const max=Number(b.max_buff_stack_cnt)||25;if(target.sargonBuffs.length>max)target.sargonBuffs.splice(0,target.sargonBuffs.length-max);}}
+function bondSkillEnd(battle,u){
+ if(!u||u.kind==='summon'||u.bondSwiftLastEnd===u.skillCount)return;u.bondSwiftLastEnd=u.skillCount;if(battle.on?.('swiftShip')&&battle.owns(u,'swiftShip')){const b=bondParam(battle,'swiftShip'),prob=Math.min(1,(Number(b.base_prob)||.2)+(Number(b.prob_per_stack)||.0035)*(battle.layers.swiftShip||0));if(battle.economy.random()<prob)gainSp(u,battle.profile(u).skill,Number(b.normal_sp)||12,battle.spCost(u));if((battle.layers.swiftShip||0)>=Number(b.power_bond_stack_cnt||40)&&battle.economy.random()<prob)for(const target of battle.s.units.filter(v=>v.deployed&&v.hp>0))gainSp(target,battle.profile(target).skill,Number(b.power_sp)||15,battle.spCost(target));}}
+function bondAmmo(battle,payload){if(!payload?.source||!battle.on?.('lateranoShip')||battle.rows?.lateranoShip?.count<6)return;const used=Math.max(0,Number(payload.used)||0),b=bondParam(battle,'lateranoShip'),cap=Math.ceil((Number(b.max_atk_for_consume)||2)/Math.max(.0001,Number(b.atk_per_consume)||.04));battle.s.bondLateranoAmmoStacks=Math.min(cap,(battle.s.bondLateranoAmmoStacks||0)+used);}
+function bondExit(battle,u,reason){if(!u||u.kind==='summon'||reason!=='knockdown'||!battle.on?.('indomShip')||battle.rows?.indomShip?.count<3)return;const b=bondParam(battle,'indomShip');for(const target of battle.s.units.filter(v=>v.deployed&&v.hp>0))gainSp(target,battle.profile(target).skill,Number(b.sp)||5,battle.spCost(target));}
+function bondAfterDamage(battle,payload){
+ const {source,target,result,cause}=payload;if(!source||!target||!result||result.total<=0||cause==='extra'||cause==='reflect')return;
+ if(battle.on?.('steadShip')&&battle.rows?.steadShip?.count>=3&&battle.s.units.includes(target)&&battle.owns(target,'steadShip')){const b=bondParam(battle,'steadShip');if((target.steadRetaliateAt||-Infinity)<=battle.s.time){target.steadRetaliateAt=battle.s.time+(Number(b['cd_duration'])||.2);if(source.hp>0)dealDamage(battle,{source:target,target:source,amount:Number(b.base_damage_value||850)+Number(b.damage_value_per_stack||10)*(battle.layers.steadShip||0),type:'arts',cause:'extra',skipHooks:true});source.fragile=Math.max(source.fragile||1,Number(b.damage_scale)||1.4);source.bondFragileUntil=battle.s.time+5;applyStatus(source,'fragile',5,{source:target.uid,value:Number(b.damage_scale)||1.4,resistible:false});}}
+}
+function bondPeriodic(battle,u){
+ if(!u||u.kind==='summon'||!battle.on?.('kazimierzShip')||battle.rows?.kazimierzShip?.count<6||!battle.owns(u,'kazimierzShip')||!u.deployed||u.hp<=0)return;const b=bondParam(battle,'kazimierzShip');u.kazimierzNextAt??=battle.s.time+(Number(b.damage_interval)||2);while(battle.s.time+1e-9>=u.kazimierzNextAt){const blocked=battle.s.enemies.filter(e=>e.hp>0&&e.block===u.uid);if(blocked.length)for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&Math.hypot(e.x-u.x,e.y-u.y)<=Number(b.range_radius||.8))) {dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(b.damage_atk_scale)||1.2),type:'true',cause:'extra',skipHooks:true});applyStatus(e,'stun',Number(b.stun)||.1,{source:u.uid,resistible:false});}u.kazimierzNextAt+=Number(b.damage_interval)||2;}}
 
 function zoneActors(battle,fx,side){
  const cx=fx.x,cy=fx.y,r=fx.radius??1;
@@ -459,7 +493,7 @@ function updateAreas(battle){
 }
 
 function tickAuras(battle){
- for(const e of enemyActors(battle.s))e.fragile=null;
+ for(const e of enemyActors(battle.s))e.fragile=e.bondFragileUntil>battle.s.time?1.4:null;
  for(const e of enemyActors(battle.s))e.attackSpeedMod=0;
  for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1039_thorn2')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='视界'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s))e.attackSpeedMod-=Number(bb.attack_speed_enemy)||5;}
  for(const fx of battle.s.logicEffects||[])if(fx.kind==='zone'&&fx.values?.fragile&&(fx.endsAt==null||battle.s.time<fx.endsAt))for(const e of zoneActors(battle,fx,'enemy'))e.fragile=Math.max(e.fragile||1,Number(fx.values.fragile));
@@ -579,6 +613,10 @@ export function moveActor(battle,target,source,description=''){
 export function dispatch(battle,type,payload){
  const {source,target,event}=payload;
  const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,exit:commitExit,log:(b,t,p)=>log(b,t,p)};
+ if(type==='battle-start')bondBattleStart(battle);
+ if(type==='after-damage')bondAfterDamage(battle,payload);
+ if(type==='ammo')bondAmmo(battle,payload);
+ if(type==='exit')bondExit(battle,target,payload.reason);
  if(type==='skill-start')payload.genericSuppress=operatorSkillStart(battle,target,ctx);
  else onEvent(battle,type,payload,ctx);
  if(type==='after-damage'&&payload.cause!=='dot'&&payload.cause!=='reflect'){
@@ -639,9 +677,9 @@ export function dispatch(battle,type,payload){
   const t=activeTalentsOf(battle,target).find(x=>x.name==='沃土予身');
   if(t)enqueue(battle,{kind:'heal',sourceUid:target.uid,targetUid:target.uid,amount:target.maxHp*(t.values.hp_ratio||.2),parentEventId:event?.eventId,effectId:'mudrok-t1-heal'});
  }
- if(type==='deploy')onOperatorDeploy(battle,payload.target);
- if(type==='skill-start'){const specialSuppress=onSkillStart(battle,payload.target);return !!payload.genericSuppress||!!specialSuppress;}
- if(type==='skill-end')onSkillEnd(battle,payload.target,payload.reason);
+ if(type==='deploy'){onOperatorDeploy(battle,payload.target);bondDeploy(battle,payload.target);}
+ if(type==='skill-start'){bondSkillStart(battle,payload.target);const specialSuppress=onSkillStart(battle,payload.target);return !!payload.genericSuppress||!!specialSuppress;}
+ if(type==='skill-end'){bondSkillEnd(battle,payload.target);onSkillEnd(battle,payload.target,payload.reason);}
  if(type==='exit')onOperatorExit(battle,payload.target,payload.reason);
 }
 
@@ -693,7 +731,7 @@ function onOperatorDeploy(battle,u){
  if(u.id==='char_332_archet'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='铁弦');if(talent)grantShield(battle,u,{amount:Number(talent.values?.shield_value)||500,sourceUid:u.uid,id:'archet-deploy-shield'});}
  if(u.id==='char_4148_philae'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='神河谕使');u.elementDamageResistance=Number(talent?.values?.damage_resistance)||.1;}
  if(u.id==='char_1046_sbell2'){const t=activeTalentsOf(battle,u).find(x=>x.name==='无垠的雪景'),bb=t&&t.values;if(t)addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'sbell2-snow',x:u.x,y:u.y,radius:2,interval:Number(bb.interval)||5,nextAt:battle.s.time+(Number(bb.interval)||5),endsAt:null,trackArea:true,trackSide:'enemy',values:{dot:true,sluggish:true,cold:Number(bb.cold)||5,elementScale:Number(bb.talent_magic_scale)||.75,type:'arts',elementType:'elemental'},snapshot:{damage:battle.stats(u).atk*(Number(bb.talent_magic_scale)||.75)},refKind:'live',persistAfterSourceGone:false});}
- if(u.id==='char_1045_svash2'&&!battle.s.summons.some(s=>s.ownerUid===u.uid&&s.type==='svash2-eye'))spawnSummon(battle,u,{type:'svash2-eye',name:'风雪之眼',synthetic:true,targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:true});
+ if(u.id==='char_1045_svash2'&&!battle.s.summons.some(s=>s.ownerUid===u.uid&&s.type==='svash2-float'))spawnSummon(battle,u,{type:'svash2-float',name:'浮游单元',synthetic:true,targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:true});
  if(u.id==='char_1014_nearl2'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===1){const bb=skillBB(battle,u);u.skillLeft=Number(battle.profile(u).skill.duration)||25;for(let n=0;n<(Number(bb.times)||3);n++)grantGuard(battle,u,{charges:1,sourceUid:u.uid,id:'nearl2-s2-'+n});}
  if(u.id==='char_1014_nearl2'){const t=activeTalentsOf(battle,u).find(x=>x.name==='不畏苦暗'),bb=t&&t.values;if(t)for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&chebyshev(e,u)<=4)){dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(bb.atk_scale)||.8),type:'true',cause:'skill'});applyStatus(e,'stun',Number(bb.stun)||3,{source:u.uid,resistible:false});}}
  if(u.id==='char_391_rosmon'){const t=activeTalentsOf(battle,u).find(x=>x.name==='感知稳定');if(t){const caster=battle.s.units.find(v=>v.uid!==u.uid&&v.deployed&&v.hp>0&&battle.profile(v).profession==='CASTER');u.rosmonPartner=caster?.uid??null;}}
@@ -765,6 +803,7 @@ function onSkillStart(battle,u){
  const skill=battle.profile(u)?.skill,skillText=skill?.description||'',skillBBValue=skillBB(battle,u);if(/技能结束时.*所有敌人.*法术伤害/.test(skillText)&&Number(skillBBValue.atk_scale)>0)for(const e of enemyActors(battle.s).filter(e=>battle.inside(u,e,true)))dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*Number(skillBBValue.atk_scale),type:'arts',cause:'skill'});
  if(u.id!=='char_143_ghost'&&/(?:技能结束后|持续时间结束后).*?(?:晕眩|眩晕)/s.test(skillText)&&Number(skillBBValue.stun)>0)applyStatus(u,'stun',Number(skillBBValue.stun),{source:u.uid,resistible:false});
  if(u.id==='char_4026_vulpis'&&idx===2&&u.vulpisKilled){applyStatus(u,'camouflage',1e9,{source:u.uid,resistible:false});u.vulpisKilled=false;}
+ if(u.id==='char_1045_svash2'&&idx===2)for(const eye of battle.s.summons.filter(s=>s.ownerUid===u.uid&&s.type==='svash2-float')){eye.svashPursuit=false;eye.svashTargetUid=null;eye.flying=false;eye.visible=true;eye.x=u.x;eye.y=u.y;}
  if(u.floatUnits){const elapsed=Math.max(0,battle.s.time-(u.floatStartedAt??battle.s.time));if(u.floatOverdrive&&elapsed>0)applyStatus(u,'stun',elapsed,{source:u.uid,resistible:false});u.floatUnits=0;u.floatTarget=null;u.floatStartedAt=null;u.floatOverdrive=false;}
  if(u.damageProtection){
   const protection=u.damageProtection;u.damageProtection=null;
@@ -804,7 +843,7 @@ function onOperatorExit(battle,u,reason){
 
 const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
 export function spawnSummon(battle,owner,spec){
- const tokenId=spec.tokenId||TOKEN_IDS[spec.type];let entity=battle.data.tokens?.[tokenId];if(!entity&&spec.synthetic){const attributes={maxHp:Math.max(1,owner.maxHp*.2),atk:Math.max(1,battle.stats(owner).atk*.3),def:0,magicResistance:0,blockCnt:0,baseAttackTime:1,attackSpeed:100,cost:0};entity={name:spec.name||spec.type,phases:[{maxLevel:1,rangeId:null,attributesKeyFrames:[{level:1,data:attributes}]}],skillRefs:[]};}
+ const tokenId=spec.tokenId||TOKEN_IDS[spec.type]||('synthetic_'+spec.type);let entity=battle.data.tokens?.[tokenId];if(!entity&&spec.synthetic){const attributes={maxHp:Math.max(1,owner.maxHp*.2),atk:Math.max(1,battle.stats(owner).atk*.3),def:0,magicResistance:0,blockCnt:0,baseAttackTime:1,attackSpeed:100,cost:0};entity={name:spec.name||spec.type,phases:[{maxLevel:1,rangeId:null,attributesKeyFrames:[{level:1,data:attributes}]}],skillRefs:[]};}
  if(!entity)throw Error('缺少固定召唤物数据 '+spec.type);
  const ctrl=owner.summonCtrl,live=battle.s.summons.filter(x=>x.ownerUid===owner.uid&&x.type===spec.type&&x.deployed);
  if(ctrl&&((ctrl.stock??0)<=0||live.length>=ctrl.cap))return null;
@@ -813,7 +852,7 @@ export function spawnSummon(battle,owner,spec){
  const position=candidates.find(([x,y])=>{const tile=battle.map.grid[y]?.[x];return tile&&tile.buildableType!=='NONE'&&!tile.obstacle&&(!spec.canBlock||tile.heightType!=='HIGHLAND')&&!occupied.has(x+','+y)&&(spec.type!=='vigil-wolf'||battle.inside(owner,{x,y}));});
  if(!position)return null;
  const [x,y]=position,a=nativeAttributes(entity,battle.profile(owner).status).attributes,uid=battle.s.nextId++,canBlock=spec.canBlock??a.blockCnt>0,canAttack=spec.canAttack??(a.baseAttackTime>0&&entity.skillRefs?.some(r=>r.skillId));
- const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type||tokenId,name:spec.name||entity.name,kind:'summon',allied:true,x,y,dir:owner.dir,hp:a.maxHp,maxHp:a.maxHp,atk:a.atk,def:a.def,res:a.magicResistance,cost:tokenCostFor(battle.profile(owner),tokenId,a.cost),interval:a.baseAttackTime,attackSpeed:a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,canBlock,canAttack,canHeal:spec.canHeal??false,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime,nextAuraAt:spec.type==='ghost2-substitute'?battle.s.time+1:null};
+ const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type||tokenId,name:spec.name||entity.name,kind:'summon',allied:true,x,y,dir:owner.dir,hp:spec.maxHp??a.maxHp,maxHp:spec.maxHp??a.maxHp,atk:spec.atk??a.atk,def:a.def,res:a.magicResistance,damageResistance:spec.damageResistance||0,cost:tokenCostFor(battle.profile(owner),tokenId,a.cost),interval:spec.interval??a.baseAttackTime,attackSpeed:spec.attackSpeed??a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,canBlock,canAttack,canHeal:spec.canHeal??false,flying:!!spec.flying,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime,nextAuraAt:spec.type==='ghost2-substitute'?battle.s.time+1:null};
  battle.s.summons.push(row);if(ctrl)ctrl.stock--;
  log(battle,'summon',{uid,ownerUid:owner.uid,type:spec.type,x,y});return row;
 }
@@ -830,6 +869,8 @@ function tickSummons(battle,dt){
    if(s.trapTriggered&&s.trapExtraAt!=null&&battle.s.time+1e-9>=s.trapExtraAt&&!s.trapExtraUsed){s.trapExtraUsed=true;const target=getActor(battle.s,s.trapTargetUid);if(target?.hp>0)dealDamage(battle,{source:owner||s,target,amount:(owner?battle.stats(owner).atk:s.atk)*(s.trapScale||1),type:'physical',cause:'skill',skill:true});commitExit(battle,{target:s,reason:'forced'});}
   }
   if(s.type==='vigil-wolf'&&battle.s.time>=s.nextLifeAt){s.lives=Math.min(3,(s.lives||0)+1);s.blockCnt=s.lives;s.nextLifeAt+=25;if(s.hp<=0){s.hp=s.maxHp;s.deployed=true;s.targetable=true;s.deployGen++;s.exitLife=null;}}
+  if(s.type==='svash2-float'&&s.svashPursuit&&s.deployed&&s.hp>0){const owner=getActor(battle.s,s.ownerUid),target=enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable).sort((a,b)=>Math.hypot(a.x-s.x,a.y-s.y)-Math.hypot(b.x-s.x,b.y-s.y)||a.uid-b.uid)[0];s.svashTargetUid=target?.uid??null;if(owner&&target){const dx=target.x-s.x,dy=target.y-s.y,d=Math.hypot(dx,dy)||1,speed=6;if(d<=speed*dt){s.x=target.x;s.y=target.y;if(battle.s.time+1e-9>=(s.nextAttackAt||0)){const bb=skillBB(battle,owner);dealDamage(battle,{source:owner,target,amount:battle.stats(owner).atk*(Number(bb.bird_atk_scale)||1.4),type:'physical',cause:'skill',skill:true});applyStatus(target,'fragile',Number(bb.damage_scale)||1.2,{source:owner.uid,resistible:false});s.nextAttackAt=battle.s.time+1;}}else{s.x+=dx/d*speed*dt;s.y+=dy/d*speed*dt;}}}
+  if(s.type==='yan-guardian'&&s.deployed&&s.hp>0){s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){const targets=enemyActors(battle.s).filter(x=>!x.hidden&&!x.untargetable).sort((a,b)=>chebyshev(s,a)-chebyshev(s,b)||a.uid-b.uid).slice(0,s.yanTargets||3);for(const e of targets){dealDamage(battle,{source:s,target:e,amount:s.atk,type:'arts',cause:'attack'});applyElementDamage(battle,{source:s,target:e,amount:s.atk*(s.yanBurnScale||.2),type:'burn',cause:'attack'});for(const near of enemyActors(battle.s).filter(x=>Math.hypot(x.x-e.x,x.y-e.y)<=1)) {near.elementDamageTakenBonus=Math.max(near.elementDamageTakenBonus||0,s.yanVulnerability||.2);near.elementDamageTakenUntil=battle.s.time+3;}}s.attackCooldown=s.interval||1;}}
   if(s.canAttack&&s.deployed&&s.hp>0){s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){const e=enemyActors(battle.s).filter(x=>!x.hidden).sort((a,b)=>chebyshev(s,a)-chebyshev(s,b)||a.uid-b.uid)[0];if(e&&chebyshev(s,e)<=(s.range||1.1)){const buff=s.vigilBuff;for(let i=0;i<(s.lives??1);i++)dealDamage(battle,{source:s,target:e,amount:s.atk*(buff?.scale||1),type:s.damageType||'physical',cause:'attack'});if(buff){const owner=getActor(battle.s,s.ownerUid);if(owner)applyHeal(battle,{source:owner,target:owner,amount:owner.maxHp*buff.heal});s.vigilBuff=null;}s.attackCooldown=s.interval||1;}}}
  }
  for(const owner of battle.s.units.filter(u=>u.id==='char_4162_cathy'&&u.deployed&&u.hp>0)){

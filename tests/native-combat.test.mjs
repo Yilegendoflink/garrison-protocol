@@ -6,6 +6,7 @@ import {NativeSession} from '../dist/native-session.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {applyStatus} from '../dist/status.js';
 import {addEffect,tickLogic} from '../dist/native-effects.js';
+import {createTrainingDummy} from '../dist/benchmark.js';
 
 function liveBattle(){
  const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.funds=100;assert.ok(g.perform('buy',0));const unit=g.s.units[0];
@@ -54,6 +55,13 @@ test('enemy behavior profiles infer documented move-and-attack and scheduled sta
  assert.equal(enemyBehaviorProfile({applyWay:'RANGED',description:'攻击为三连击'}).movementPolicy,ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE);
  assert.equal(enemyBehaviorProfile({applyWay:'RANGED',description:'攻击为三连击'}).burstShots,3);
  assert.equal(enemyBehaviorProfile({description:'普通远程攻击'}).movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET);
+});
+test('集团军重型火炮只在开火动作期间停留',()=>{
+ const profile=enemyBehaviorProfile(NATIVE_DATA.enemies.enemy_10122_uacann_2);assert.equal(profile.movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING);assert.equal(profile.attackWhileMoving,false);
+});
+test('最终木桩占据右上方两列三行并可作为范围判定目标',()=>{
+ const dummy=createTrainingDummy(1,9,1);assert.deepEqual(dummy.area,{left:9,right:10,top:0,bottom:2});
+ const b=liveBattle(),u=b.s.units[0];b.range=()=>[{x:10,y:2}];assert.equal(b.inside(u,dummy),true);b.range=()=>[{x:5,y:3}];assert.equal(b.inside(u,dummy),false);
 });
 test('enemy behavior profiles expose common attack counters, elements, explosions and auras',()=>{
  const profile=enemyBehaviorProfile({description:'攻击2次后，下一次攻击会晕眩；攻击额外造成神经损伤；死亡后会产生爆炸',skills:[{spCost:2,blackboard:[{key:'stun',value:3}]}],talentBlackboard:[{key:'epdamage.attack@ep_damage_ratio',value:.15},{key:'boom.atk_scale',value:2}]});
