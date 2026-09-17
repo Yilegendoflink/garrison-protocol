@@ -37,14 +37,18 @@
           "prep_finish_char_bond_add_layer"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_amiya",
         "serverHooks": [],
-        "pendingKeys": [
-          "env_gbuff_new_with_verify"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -53,12 +57,18 @@
           "band_first_self_refresh_present_char"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_sarkazb",
         "serverHooks": [],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -67,9 +77,10 @@
           "band_shop_refresh_copy_max_lv_char",
           "preparation_start_gain_chess_from_round"
         ],
-        "pendingKeys": [
-          "band_shop_refresh_copy_max_lv_char"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -81,14 +92,18 @@
           "preparation_start_gain_chess_from_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_ermengard",
         "serverHooks": [],
-        "pendingKeys": [
-          "env_gbuff_new_with_verify"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -101,6 +116,9 @@
           "prep_start_gain_chess_from_pool_in_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -109,6 +127,9 @@
           "band_coin_cost_gain_random_char_by_shop_level"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -117,6 +138,9 @@
           "up_shop_next_refresh_must_present_bond_char"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -125,6 +149,9 @@
           "gain_bond_char_per_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -133,6 +160,9 @@
           "first_buy_in_round_char_price_change"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -141,38 +171,45 @@
           "band_cost_coin_reach_cnt_gain_chess_from_pool"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_clementia",
         "serverHooks": [],
-        "pendingKeys": [
-          "env_gbuff_new_with_verify"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_emperor",
         "serverHooks": [],
-        "pendingKeys": [
-          "env_gbuff_new_with_verify"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_mberry",
         "serverHooks": [],
-        "pendingKeys": [
-          "env_gbuff_new_with_verify"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_humus",
         "serverHooks": [],
-        "pendingKeys": [
-          "env_gbuff_new_with_verify"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -181,6 +218,9 @@
           "preparation_start_gain_chess_from_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -189,6 +229,9 @@
           "round_start_bond_check_gain_layer"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -197,6 +240,9 @@
           "preparation_start_gain_chess_every_n_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -205,6 +251,9 @@
           "up_shop_add_special_goods"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -213,22 +262,27 @@
           "preparation_start_gain_chess_from_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_qalaisa",
         "serverHooks": [],
-        "pendingKeys": [
-          "env_gbuff_new_with_verify"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_chen",
         "serverHooks": [],
-        "pendingKeys": [
-          "env_gbuff_new_with_verify"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -239,6 +293,9 @@
           "preparation_start_gain_chess_from_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -247,6 +304,9 @@
           "preparation_start_gain_chess_from_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -254,9 +314,10 @@
         "serverHooks": [
           "preparation_start_gain_chess_from_round"
         ],
-        "pendingKeys": [
-          "env_gbuff_new_with_verify"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -265,14 +326,18 @@
           "coin_carry_over"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_ducklord",
         "serverHooks": [],
-        "pendingKeys": [
-          "round_start_all_player_change_enemy_2"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -281,22 +346,27 @@
           "round_start_activate_char_chess_effect_in_board"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_vodfox",
         "serverHooks": [],
-        "pendingKeys": [
-          "first_sell_char_chess_exchange_char_chess_in_shop"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_ioleta",
         "serverHooks": [],
-        "pendingKeys": [
-          "env_gbuff_new_with_verify"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -308,6 +378,9 @@
           "preparation_start_gain_chess_from_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -316,6 +389,9 @@
           "preparation_start_gain_chess_from_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -324,6 +400,9 @@
           "round_start_gain_char_chess_in_shop_every_n_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -335,6 +414,9 @@
           "preparation_start_gain_chess_from_round"
         ],
         "pendingKeys": [],
+        "gapNote": "信标转交协议已接入，需联机宿主实际传输",
+        "status": "partial",
+        "statusLabel": "部分接入",
         "mainBattleIntegrated": false
       },
       {
@@ -343,6 +425,9 @@
           "round_start_gain_coin_by_bond_char_chess_buy"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -351,6 +436,9 @@
           "refresh_shop_count_gain_coin_bond_char_chess"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
@@ -359,15 +447,18 @@
           "preparation_start_add_special_goods_every_n_round"
         ],
         "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       },
       {
         "id": "band_amedic",
         "serverHooks": [],
-        "pendingKeys": [
-          "auto_chess_change_map",
-          "auto_chess_change_map"
-        ],
+        "pendingKeys": [],
+        "gapNote": null,
+        "status": "complete",
+        "statusLabel": "效果已完整接入",
         "mainBattleIntegrated": false
       }
     ],

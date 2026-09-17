@@ -52,11 +52,7 @@ export function enemyCombatScale(mode,round,{hidden=false}={}){
  return {atk,hp,moveSpeed,side,column:col};
 }
 
-export function pressureTier(round,combatRounds){
- const index=combatRounds.indexOf(round);if(index<0)return 1;
- const n=combatRounds.length,a=Math.ceil(n/3),b=Math.ceil(2*n/3);
- return index<a?1:index<b?2:3;
-}
+export function pressureTier(round,combatRounds){if(round<=3)return 1;if(round<=9)return 2;return 3;}
 
 export function pickDistinct(random,items,count){
  const pool=items.slice();const chosen=[];

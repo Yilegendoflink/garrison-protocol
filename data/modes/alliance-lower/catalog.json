@@ -28752,7 +28752,7 @@
             "blackboard": [
               {
                 "key": "price",
-                "value": 2,
+                "value": 1,
                 "valueStr": null
               }
             ],
@@ -29129,7 +29129,7 @@
             "blackboard": [
               {
                 "key": "price",
-                "value": 2,
+                "value": 1,
                 "valueStr": null
               }
             ],

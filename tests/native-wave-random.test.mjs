@@ -39,7 +39,10 @@ test('combat rounds cycle the three types and rise through pressure thirds',()=>
  assert.equal(used.size,3);
  assert.equal(roster.rounds[9].boss,true);
  assert.equal(pressureTier(1,combat.map(t=>t.round)),1);
- assert.equal(pressureTier(8,combat.map(t=>t.round)),3);
+ assert.equal(pressureTier(3,combat.map(t=>t.round)),1);
+ assert.equal(pressureTier(4,combat.map(t=>t.round)),2);
+ assert.equal(pressureTier(9,combat.map(t=>t.round)),2);
+ assert.equal(pressureTier(10,combat.map(t=>t.round)),3);
 });
 
 test('PRTS user-table multipliers cover independent 标准／险境／终极 samples',()=>{

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
-import {commitExit,dealDamage,dispatch,tickLogic,applyElementDamage} from '../dist/native-effects.js';
+import {commitExit,dealDamage,dispatch,tickLogic,applyElementDamage,reviveActor} from '../dist/native-effects.js';
 import {applyStatus} from '../dist/status.js';
 import {deployNow,enemy} from './effects-harness.mjs';
 
@@ -59,6 +59,22 @@ test('叙拉古部署隐匿、卡西米尔阻挡周期伤害和突袭闲置再�
  const s=start(uniqueBond('siracusaShip',6),{siracusaShip:0}).b;assert.ok(s.s.units.every(u=>u.siracusaInvisibleUntil>s.s.time));
  const k=start(uniqueBond('kazimierzShip',6)).b,u=k.s.units[0],e=enemy(k,{x:u.x,y:u.y,hp:10000,block:u.uid,def:0,res:0});u.kazimierzNextAt=0;k.s.time=2;tickLogic(k,0);assert.ok(e.hp<10000&&e.statuses.some(x=>x.kind==='stun'));
  const r=start(uniqueBond('raidShip',2),{raidShip:50}).b,ru=r.s.units[0];ru.raidIdleSince=0;ru.sp=0;r.s.time=11;enemy(r,{x:ru.x+5,y:ru.y,hp:10000});r.tickBondIdle(ru,0);assert.ok(ru.raidBuffUntil>11);
+});
+
+test('卡西米尔部署卫戍识别 onstart，并在重新部署时重复叠层且遵守每场上限',()=>{
+ const forbidden=new Set(['char_237_gravel','char_423_blemsh','char_430_fartth','char_1014_nearl2','char_4116_blkkgt']);
+ const pool=Object.values(NATIVE_DATA.season.charShopChessDatas).filter(s=>s.charId&&!s.isHidden&&NATIVE_DATA.season.charChessDataDict[s.chessId].bondIds.includes('kazimierzShip')&&!forbidden.has(s.charId));
+ const gravel=Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId==='char_237_gravel'&&!s.isHidden).chessId;
+ const blemsh=Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId==='char_423_blemsh'&&!s.isHidden).chessId;
+ const {g:gravelGame,b:gravelBattle}=start([gravel,...pool.slice(0,5).map(s=>s.chessId)]);const gravelUnit=gravelBattle.s.units.find(u=>u.id==='char_237_gravel'),beforeGravel=gravelGame.s.bondLayers.kazimierzShip||0;gravelBattle.s.cost=999;commitExit(gravelBattle,{target:gravelUnit,reason:'knockdown'});gravelUnit.down=0;gravelBattle.deploy(gravelUnit,{reentry:true});assert.equal(gravelGame.s.bondLayers.kazimierzShip,beforeGravel+1);const beforeRevive=gravelGame.s.bondLayers.kazimierzShip;commitExit(gravelBattle,{target:gravelUnit,reason:'knockdown'});assert.equal(reviveActor(gravelBattle,gravelUnit,{hpRatio:1}),true);assert.equal(gravelGame.s.bondLayers.kazimierzShip,beforeRevive+1);
+ const {g:blemshGame,b:blemshBattle}=start([blemsh,...pool.slice(0,5).map(s=>s.chessId)]);const blemshUnit=blemshBattle.s.units.find(u=>u.id==='char_423_blemsh'),initial=blemshGame.s.bondLayers.kazimierzShip||0;blemshBattle.s.cost=999;for(let i=0;i<3;i++){commitExit(blemshBattle,{target:blemshUnit,reason:'knockdown'});blemshUnit.down=0;blemshBattle.deploy(blemshUnit,{reentry:true});}assert.equal(blemshGame.s.bondLayers.kazimierzShip,initial+8);
+});
+
+test('卡西米尔战斗开始的动态卫戍会在目标重新部署时生效',()=>{
+ const forbidden=new Set(['char_237_gravel','char_423_blemsh','char_430_fartth','char_1014_nearl2','char_4116_blkkgt']);
+ const pool=Object.values(NATIVE_DATA.season.charShopChessDatas).filter(s=>s.charId&&!s.isHidden&&NATIVE_DATA.season.charChessDataDict[s.chessId].bondIds.includes('kazimierzShip')&&!forbidden.has(s.charId));
+ const fartth=Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId==='char_430_fartth'&&!s.isHidden).chessId;
+ const {g,b}=start([fartth,...pool.slice(0,5).map(s=>s.chessId)]);const target=b.s.units.find(u=>u.extraGarrisonIds?.some(id=>id.startsWith('garrison_108_')));assert.ok(target);const before=g.s.bondLayers.kazimierzShip||0;b.s.cost=999;commitExit(b,{target,reason:'knockdown'});target.down=0;b.deploy(target,{reentry:true});assert.ok((g.s.bondLayers.kazimierzShip||0)>before);
 });
 
 test('维多利亚25层发放随机维式重锤',()=>{

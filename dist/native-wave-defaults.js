@@ -125,48 +125,44 @@ export const DEFAULT_WAVE_TABLE = {
       "1": {
         "templates": [
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨推进",
             "budget": 40,
             "maxCost": 4,
             "pool": [
               "enemy_1000_gopro_2",
               "enemy_1043_zomsbr",
-              "enemy_1046_agent",
               "enemy_1071_dftman",
               "enemy_1116_liprr",
               "enemy_1251_lysyta",
-              "enemy_1251_lysyta_2",
               "enemy_1325_cbgpro",
-              "enemy_1325_cbgpro_2",
-              "enemy_1381_winman",
-              "enemy_1422_lrsldr_2"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+              "enemy_1381_winman"
+            ]
           },
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨增援",
             "budget": 40,
             "maxCost": 4,
             "pool": [
               "enemy_1116_liprr",
               "enemy_1251_lysyta",
-              "enemy_1251_lysyta_2",
               "enemy_1325_cbgpro",
-              "enemy_1325_cbgpro_2",
-              "enemy_1381_winman",
-              "enemy_1422_lrsldr_2"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+              "enemy_1381_winman"
+            ]
           }
         ]
       },
       "2": {
         "templates": [
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "混合进攻",
             "budget": 160,
+            "maxCost": null,
             "pool": [
               "enemy_1000_gopro_2",
               "enemy_1043_zomsbr",
@@ -178,7 +174,6 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1325_cbgpro",
               "enemy_1325_cbgpro_2",
               "enemy_1381_winman",
-              "enemy_1422_lrsldr_2",
               "enemy_1072_dlancer",
               "enemy_1116_liprr_2",
               "enemy_1249_lysdb_2",
@@ -189,20 +184,19 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1061_zomshd",
               "enemy_1119_vofsd",
               "enemy_1045_hammer",
-              "enemy_1254_lypa_2",
               "enemy_1328_cbjedi"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+            ]
           },
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "精锐增援",
             "budget": 160,
+            "maxCost": null,
             "pool": [
               "enemy_1325_cbgpro",
               "enemy_1325_cbgpro_2",
               "enemy_1381_winman",
-              "enemy_1422_lrsldr_2",
               "enemy_1072_dlancer",
               "enemy_1116_liprr_2",
               "enemy_1249_lysdb_2",
@@ -210,22 +204,19 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1010_demon",
               "enemy_1118_lidbox_2",
               "enemy_1252_lysytb_2",
-              "enemy_1061_zomshd",
-              "enemy_1119_vofsd",
-              "enemy_1045_hammer",
-              "enemy_1254_lypa_2",
               "enemy_1328_cbjedi"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+            ]
           }
         ]
       },
       "3": {
         "templates": [
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "高压攻势",
             "budget": 560,
+            "maxCost": null,
             "pool": [
               "enemy_1000_gopro_2",
               "enemy_1043_zomsbr",
@@ -262,13 +253,14 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1121_lifbos_2",
               "enemy_1320_wdrrl_2",
               "enemy_1425_lrcmra_2"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           },
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "集中突破",
             "budget": 560,
+            "maxCost": null,
             "pool": [
               "enemy_1072_dlancer",
               "enemy_1116_liprr_2",
@@ -294,9 +286,7 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1121_lifbos_2",
               "enemy_1320_wdrrl_2",
               "enemy_1425_lrcmra_2"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           }
         ]
       }
@@ -305,76 +295,59 @@ export const DEFAULT_WAVE_TABLE = {
       "1": {
         "templates": [
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨推进",
             "budget": 24,
             "maxCost": 4,
             "pool": [
               "enemy_1005_yokai",
               "enemy_10083_hlbird",
-              "enemy_1005_yokai_2",
-              "enemy_1017_defdrn",
-              "enemy_1041_lazerd"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+              "enemy_1005_yokai_2"
+            ]
           },
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨增援",
             "budget": 24,
             "maxCost": 4,
             "pool": [
               "enemy_10083_hlbird",
-              "enemy_1005_yokai_2",
-              "enemy_1017_defdrn",
-              "enemy_1041_lazerd"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+              "enemy_1005_yokai_2"
+            ]
           }
         ]
       },
       "2": {
         "templates": [
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "混合进攻",
             "budget": 100,
+            "maxCost": null,
             "pool": [
               "enemy_1005_yokai",
               "enemy_10083_hlbird",
               "enemy_1005_yokai_2",
               "enemy_1017_defdrn",
               "enemy_1041_lazerd",
-              "enemy_1407_hummbd",
               "enemy_1355_mrfly",
               "enemy_1041_lazerd_2",
-              "enemy_1042_frostd",
-              "enemy_1355_mrfly_2"
-            ],
-            "minCount": 15,
-            "maxCount": 20
-          },
-          {
-            "name": "精锐增援",
-            "budget": 100,
-            "pool": [
-              "enemy_1017_defdrn",
-              "enemy_1041_lazerd",
-              "enemy_1407_hummbd",
-              "enemy_1355_mrfly",
-              "enemy_1041_lazerd_2",
-              "enemy_1042_frostd",
-              "enemy_1355_mrfly_2"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+              "enemy_1042_frostd"
+            ]
           }
         ]
       },
       "3": {
         "templates": [
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "高压攻势",
             "budget": 560,
+            "maxCost": null,
             "pool": [
               "enemy_1005_yokai",
               "enemy_10083_hlbird",
@@ -390,13 +363,14 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1112_emppnt",
               "enemy_9009_acfort",
               "enemy_1005_yokai_3"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           },
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "集中突破",
             "budget": 560,
+            "maxCost": null,
             "pool": [
               "enemy_1041_lazerd",
               "enemy_1407_hummbd",
@@ -408,9 +382,7 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1112_emppnt",
               "enemy_9009_acfort",
               "enemy_1005_yokai_3"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           }
         ]
       }
@@ -419,69 +391,69 @@ export const DEFAULT_WAVE_TABLE = {
       "1": {
         "templates": [
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨推进",
             "budget": 24,
             "maxCost": 4,
             "pool": [
               "enemy_1195_sfyin",
               "enemy_1197_sfshu",
-              "enemy_1195_sfyin_2",
-              "enemy_1197_sfshu_2"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+              "enemy_1195_sfyin_2"
+            ]
           },
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨增援",
             "budget": 24,
             "maxCost": 4,
             "pool": [
               "enemy_1197_sfshu",
-              "enemy_1195_sfyin_2",
-              "enemy_1197_sfshu_2"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+              "enemy_1195_sfyin_2"
+            ]
           }
         ]
       },
       "2": {
         "templates": [
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "混合进攻",
             "budget": 120,
+            "maxCost": null,
             "pool": [
               "enemy_1195_sfyin",
               "enemy_1197_sfshu",
               "enemy_1195_sfyin_2",
               "enemy_1197_sfshu_2",
-              "enemy_1288_duskls",
-              "enemy_1288_duskls_2",
-              "enemy_1199_sfjin"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+              "enemy_1288_duskls"
+            ]
           },
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "精锐增援",
             "budget": 120,
+            "maxCost": null,
             "pool": [
               "enemy_1195_sfyin_2",
               "enemy_1197_sfshu_2",
               "enemy_1288_duskls",
-              "enemy_1288_duskls_2",
-              "enemy_1199_sfjin"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+              "enemy_1288_duskls_2"
+            ]
           }
         ]
       },
       "3": {
         "templates": [
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "高压攻势",
             "budget": 360,
+            "maxCost": null,
             "pool": [
               "enemy_1195_sfyin",
               "enemy_1197_sfshu",
@@ -493,13 +465,14 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1292_duskld",
               "enemy_1207_sfji",
               "enemy_9010_acpupp"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           },
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "集中突破",
             "budget": 360,
+            "maxCost": null,
             "pool": [
               "enemy_1197_sfshu_2",
               "enemy_1288_duskls",
@@ -508,9 +481,7 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1292_duskld",
               "enemy_1207_sfji",
               "enemy_9010_acpupp"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           }
         ]
       }
@@ -519,42 +490,41 @@ export const DEFAULT_WAVE_TABLE = {
       "1": {
         "templates": [
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨推进",
             "budget": 24,
             "maxCost": 4,
             "pool": [
-              "enemy_1305_mhslim",
-              "enemy_1305_mhslim_2",
               "enemy_10065_ftzlc",
               "enemy_1148_dssbr",
-              "enemy_1148_dssbr_2",
               "enemy_1158_divman",
               "enemy_2021_syfish"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+            ]
           },
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨增援",
             "budget": 24,
             "maxCost": 4,
             "pool": [
               "enemy_10065_ftzlc",
               "enemy_1148_dssbr",
-              "enemy_1148_dssbr_2",
               "enemy_1158_divman",
               "enemy_2021_syfish"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+            ]
           }
         ]
       },
       "2": {
         "templates": [
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "混合进攻",
             "budget": 160,
+            "maxCost": null,
             "pool": [
               "enemy_1305_mhslim",
               "enemy_1305_mhslim_2",
@@ -566,15 +536,15 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1161_tidmag",
               "enemy_1229_darmy",
               "enemy_1161_tidmag_2",
-              "enemy_1229_darmy_2",
-              "enemy_10067_ftsjc"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+              "enemy_1229_darmy_2"
+            ]
           },
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "精锐增援",
             "budget": 160,
+            "maxCost": null,
             "pool": [
               "enemy_1148_dssbr_2",
               "enemy_1158_divman",
@@ -582,19 +552,19 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1161_tidmag",
               "enemy_1229_darmy",
               "enemy_1161_tidmag_2",
-              "enemy_1229_darmy_2",
-              "enemy_10067_ftsjc"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+              "enemy_1229_darmy_2"
+            ]
           }
         ]
       },
       "3": {
         "templates": [
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "高压攻势",
             "budget": 560,
+            "maxCost": null,
             "pool": [
               "enemy_1305_mhslim",
               "enemy_1305_mhslim_2",
@@ -614,13 +584,14 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_2025_syufo",
               "enemy_1439_dslntf",
               "enemy_9007_acelem"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           },
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "集中突破",
             "budget": 560,
+            "maxCost": null,
             "pool": [
               "enemy_2021_syfish",
               "enemy_1161_tidmag",
@@ -634,9 +605,7 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_2025_syufo",
               "enemy_1439_dslntf",
               "enemy_9007_acelem"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           }
         ]
       }
@@ -645,19 +614,20 @@ export const DEFAULT_WAVE_TABLE = {
       "1": {
         "templates": [
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨推进",
             "budget": 48,
             "maxCost": 4,
             "pool": [
               "enemy_1433_dsbasi",
               "enemy_1267_nhpbr",
-              "enemy_1267_nhpbr_2",
               "enemy_1433_dsbasi_2"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+            ]
           },
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨增援",
             "budget": 48,
             "maxCost": 4,
@@ -665,51 +635,49 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1267_nhpbr",
               "enemy_1267_nhpbr_2",
               "enemy_1433_dsbasi_2"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+            ]
           }
         ]
       },
       "2": {
         "templates": [
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "混合进攻",
             "budget": 160,
+            "maxCost": null,
             "pool": [
               "enemy_1433_dsbasi",
               "enemy_1267_nhpbr",
               "enemy_1267_nhpbr_2",
               "enemy_1433_dsbasi_2",
-              "enemy_10122_uacann_2",
-              "enemy_1234_dsubrl",
-              "enemy_1270_nhstlk",
-              "enemy_1234_dsubrl_2"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+              "enemy_1270_nhstlk"
+            ]
           },
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "精锐增援",
             "budget": 160,
+            "maxCost": null,
             "pool": [
               "enemy_1267_nhpbr_2",
               "enemy_1433_dsbasi_2",
-              "enemy_10122_uacann_2",
               "enemy_1234_dsubrl",
-              "enemy_1270_nhstlk",
-              "enemy_1234_dsubrl_2"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+              "enemy_1270_nhstlk"
+            ]
           }
         ]
       },
       "3": {
         "templates": [
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "高压攻势",
             "budget": 400,
+            "maxCost": null,
             "pool": [
               "enemy_1433_dsbasi",
               "enemy_1267_nhpbr",
@@ -723,13 +691,14 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_9006_actoxi",
               "enemy_1270_nhstlk_2",
               "enemy_1272_nhtank_2"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           },
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "集中突破",
             "budget": 400,
+            "maxCost": null,
             "pool": [
               "enemy_10122_uacann_2",
               "enemy_1234_dsubrl",
@@ -739,9 +708,7 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_9006_actoxi",
               "enemy_1270_nhstlk_2",
               "enemy_1272_nhtank_2"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           }
         ]
       }
@@ -750,40 +717,37 @@ export const DEFAULT_WAVE_TABLE = {
       "1": {
         "templates": [
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨推进",
             "budget": 32,
             "maxCost": 4,
             "pool": [
               "enemy_1009_lurker",
-              "enemy_1019_jshoot",
-              "enemy_10031_cnvsld",
-              "enemy_1019_jshoot_2",
-              "enemy_1043_zomsbr",
-              "enemy_10043_sailor"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+              "enemy_1019_jshoot"
+            ]
           },
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨增援",
             "budget": 32,
             "maxCost": 4,
             "pool": [
-              "enemy_10031_cnvsld",
-              "enemy_1019_jshoot_2",
               "enemy_1043_zomsbr",
               "enemy_10043_sailor"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+            ]
           }
         ]
       },
       "2": {
         "templates": [
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "混合进攻",
             "budget": 120,
+            "maxCost": null,
             "pool": [
               "enemy_1009_lurker",
               "enemy_1019_jshoot",
@@ -791,39 +755,19 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1019_jshoot_2",
               "enemy_1043_zomsbr",
               "enemy_10043_sailor",
-              "enemy_1381_winman",
-              "enemy_1422_lrsldr_2",
-              "enemy_10042_prtrop",
-              "enemy_1404_msnip",
-              "enemy_10042_prtrop_2",
-              "enemy_1299_ymkilr"
-            ],
-            "minCount": 15,
-            "maxCount": 20
-          },
-          {
-            "name": "精锐增援",
-            "budget": 120,
-            "pool": [
-              "enemy_1043_zomsbr",
-              "enemy_10043_sailor",
-              "enemy_1381_winman",
-              "enemy_1422_lrsldr_2",
-              "enemy_10042_prtrop",
-              "enemy_1404_msnip",
-              "enemy_10042_prtrop_2",
-              "enemy_1299_ymkilr"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+              "enemy_1381_winman"
+            ]
           }
         ]
       },
       "3": {
         "templates": [
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "高压攻势",
             "budget": 360,
+            "maxCost": null,
             "pool": [
               "enemy_1009_lurker",
               "enemy_1019_jshoot",
@@ -842,13 +786,14 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_9008_acbunn",
               "enemy_1299_ymkilr_2",
               "enemy_1283_sgkill"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           },
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "集中突破",
             "budget": 360,
+            "maxCost": null,
             "pool": [
               "enemy_10043_sailor",
               "enemy_1381_winman",
@@ -862,9 +807,7 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_9008_acbunn",
               "enemy_1299_ymkilr_2",
               "enemy_1283_sgkill"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           }
         ]
       }
@@ -873,74 +816,66 @@ export const DEFAULT_WAVE_TABLE = {
       "1": {
         "templates": [
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨推进",
             "budget": 24,
             "maxCost": 4,
             "pool": [
               "enemy_1165_duhond",
               "enemy_1166_dusbr",
-              "enemy_1166_dusbr_2",
-              "enemy_1168_dumage",
-              "enemy_1169_duphlx"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+              "enemy_1168_dumage"
+            ]
           },
           {
+            "minCount": 6,
+            "maxCount": 8,
             "name": "前哨增援",
             "budget": 24,
             "maxCost": 4,
             "pool": [
               "enemy_1166_dusbr",
-              "enemy_1166_dusbr_2",
-              "enemy_1168_dumage",
               "enemy_1169_duphlx"
-            ],
-            "minCount": 6,
-            "maxCount": 8
+            ]
           }
         ]
       },
       "2": {
         "templates": [
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "混合进攻",
             "budget": 160,
+            "maxCost": null,
             "pool": [
               "enemy_1165_duhond",
               "enemy_1166_dusbr",
-              "enemy_1166_dusbr_2",
               "enemy_1168_dumage",
-              "enemy_1169_duphlx",
-              "enemy_1169_duphlx_2",
-              "enemy_1170_dushld",
-              "enemy_1172_dugago",
-              "enemy_1170_dushld_2"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+              "enemy_1169_duphlx"
+            ]
           },
           {
+            "minCount": 15,
+            "maxCount": 20,
             "name": "精锐增援",
             "budget": 160,
+            "maxCost": null,
             "pool": [
-              "enemy_1168_dumage",
-              "enemy_1169_duphlx",
               "enemy_1169_duphlx_2",
-              "enemy_1170_dushld",
-              "enemy_1172_dugago",
-              "enemy_1170_dushld_2"
-            ],
-            "minCount": 15,
-            "maxCount": 20
+              "enemy_1170_dushld"
+            ]
           }
         ]
       },
       "3": {
         "templates": [
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "高压攻势",
             "budget": 520,
+            "maxCost": null,
             "pool": [
               "enemy_1165_duhond",
               "enemy_1166_dusbr",
@@ -955,13 +890,14 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1174_duholy",
               "enemy_9011_acrefr",
               "enemy_1174_duholy_2"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           },
           {
+            "minCount": 35,
+            "maxCount": 40,
             "name": "集中突破",
             "budget": 520,
+            "maxCost": null,
             "pool": [
               "enemy_1169_duphlx",
               "enemy_1169_duphlx_2",
@@ -972,9 +908,7 @@ export const DEFAULT_WAVE_TABLE = {
               "enemy_1174_duholy",
               "enemy_9011_acrefr",
               "enemy_1174_duholy_2"
-            ],
-            "minCount": 35,
-            "maxCount": 40
+            ]
           }
         ]
       }

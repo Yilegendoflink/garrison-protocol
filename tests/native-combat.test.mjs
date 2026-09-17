@@ -5,7 +5,7 @@ import {recent,attackVisual} from '../dist/native-fx.js';
 import {NativeSession} from '../dist/native-session.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {applyStatus} from '../dist/status.js';
-import {addEffect,tickLogic} from '../dist/native-effects.js';
+import {addEffect,tickLogic,dispatch} from '../dist/native-effects.js';
 import {createTrainingDummy} from '../dist/benchmark.js';
 
 function liveBattle(){
@@ -29,6 +29,8 @@ test('healing and aftershock effects originate from actual combat events',()=>{
  assert.equal(b.s.events.some(e=>e.type==='aftershock'),false);b.s.time+=2/30;for(const packet of dueStrikes(b.s))b.deliverStrike(packet);
  assert.equal(b.s.events.filter(e=>e.type==='aftershock').length,1);
 });
+test('休谟斯策略在地面干员技能结束后给相邻干员回复技力',()=>{const b=liveBattle(),source=b.s.units[0],ally=structuredClone(source);source.x=1;source.y=1;source.deployed=true;ally.uid=source.uid+100;ally.x=2;ally.y=1;ally.deployed=true;ally.hp=ally.maxHp;ally.sp=0;b.s.units.push(ally);const profile=b.profile.bind(b);b.profile=u=>u===source?{...profile(u),position:'MELEE'}:profile(u);b.s.band='band_humus';dispatch(b,'skill-end',{target:source});assert.equal(ally.sp,3);});
+test('桑葚策略给最右侧单位按攻击概率添加一次护盾层',()=>{const b=liveBattle(),u=b.s.units[0],enemy={uid:100,x:u.x+1,y:u.y,hp:1000,maxHp:1000,statuses:[]};b.s.enemies=[enemy];b.s.band='band_mberry';b.economy.random=()=>0;dispatch(b,'battle-start',{target:null});dispatch(b,'after-damage',{source:u,target:enemy,result:{total:10},cause:'attack',event:{eventId:1,attackId:null}});assert.equal(u.barriers.filter(x=>x.charges>0).length,1);});
 test('native spawn uses route origin and target-lock ranged attacks hold position',()=>{
  const b=liveBattle(),u=b.s.units[0];const origin={col:b.map.origin.col+u.x+1,row:b.map.origin.row-u.y};
  b.level={routes:[{motionMode:'FLY',startPosition:origin,endPosition:{col:origin.col+2,row:origin.row},checkpoints:[]}],enemyProfiles:{probe:{name:'probe',motion:'FLY',applyWay:'RANGED',rangeRadius:3,attributes:{maxHp:100000,atk:1,moveSpeed:1,baseAttackTime:1,def:0,magicResistance:0},enemyBehavior:{movementPolicy:ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET}}}};

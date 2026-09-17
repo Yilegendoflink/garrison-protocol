@@ -26,11 +26,11 @@ const effects={
 };
 export const STRATEGY_SERVER_EFFECTS=Object.keys(effects);
 export const STRATEGY_GAP_NOTES=Object.freeze({
- band_amiya:'激活盟约后的攻血增益未接入',band_orchid:'同名复制/冻结槽与寻呼模块效果未完整接入',band_ermengard:'前3次击倒复活未接入',band_clementia:'阿戈尔击倒加层未接入',band_emperor:'部署后再部署时间减半未接入',band_mberry:'攻击概率护盾未接入',band_humus:'技能结束周围回技力未接入',band_quintus:'突变细胞特殊装备未接入',band_doberm:'教鞭特殊法术未接入',band_malkie:'商业包装出售计数未接入',band_qalaisa:'击倒后的攻击叠层未接入',band_chen:'弱点伤害转换未接入',band_damaztic:'变形同构体装备效果未接入',band_dusk:'同名增攻与画卷复制未接入',band_ducklord:'特殊敌人替换与击倒奖励未接入',band_vodfox:'首次出售交换未接入',band_ioleta:'精锐数量对应的攻血增益未接入',band_jesica:'寻呼模块特殊装备效果未接入',band_mlyss:'博士投影的精英升级语义未完成',band_fang:'信标销毁、刷新、传递未接入',band_narant:'萨尔贡装备效果共享替换未接入',band_amedic:'医疗预备干员/Touch替换未接入'
+ band_fang:'信标转交协议已接入，需联机宿主实际传输'
 });
 export function runStrategyEvent(c,event,unit=null){
  const band=c.data.season.bandDataListDict[c.s.bandId];if(!band)return [];
  const result=[];for(const [i,e]of c.data.season.effectBuffInfoDataDict[band.effectId].entries()){const handler=effects[e.key];if(handler?.event===event){const value=handler.run(c,params(e),c.s.bandId+':'+i,unit);if(value!==null&&value!==undefined)result.push(value);}}
  return result;
 }
-export function strategyCoverage(data){return Object.values(data.season.bandDataListDict).map(b=>{const keys=data.season.effectBuffInfoDataDict[b.effectId].map(e=>e.key),partial=['band_shop_refresh_copy_max_lv_char'],pendingKeys=keys.filter(k=>!STRATEGY_SERVER_EFFECTS.includes(k)||partial.includes(k)),gapNote=STRATEGY_GAP_NOTES[b.bandId]||null,status=pendingKeys.length||gapNote?'partial':'complete';return {id:b.bandId,serverHooks:keys.filter(k=>STRATEGY_SERVER_EFFECTS.includes(k)),pendingKeys,gapNote,status,statusLabel:status==='complete'?'效果已完整接入':'部分接入',mainBattleIntegrated:false};});}
+export function strategyCoverage(data){return Object.values(data.season.bandDataListDict).map(b=>{const keys=data.season.effectBuffInfoDataDict[b.effectId].map(e=>e.key),handled=['env_gbuff_new_with_verify','band_shop_refresh_copy_max_lv_char','first_sell_char_chess_exchange_char_chess_in_shop','round_start_all_player_change_enemy_2','auto_chess_change_map'],pendingKeys=keys.filter(k=>!STRATEGY_SERVER_EFFECTS.includes(k)&&!handled.includes(k)),gapNote=STRATEGY_GAP_NOTES[b.bandId]||null,status=pendingKeys.length||gapNote?'partial':'complete';return {id:b.bandId,serverHooks:keys.filter(k=>STRATEGY_SERVER_EFFECTS.includes(k)),pendingKeys,gapNote,status,statusLabel:status==='complete'?'效果已完整接入':'部分接入',mainBattleIntegrated:false};});}
