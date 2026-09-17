@@ -8,7 +8,7 @@ import {usesSp,spTypeOf,skillKind,ammoCount,initSpOf,gainSp,tickTimeSp} from './
 import {containsTarget} from './targeting.js';
 import {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds,TENTATIVE_PROJECTILE_SPEED,enemyBehaviorProfile,enemyTargetValid,enemyTargetInRange,enemyShouldHoldPosition,ENEMY_MOVEMENT_POLICIES} from './native-combat.js';
 import {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,tokenCostFor} from './native-operator-effects.js';
-import {ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor} from './native-effects.js';
+import {ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,spawnSummon} from './native-effects.js';
 
 export class NativeBattle {
  constructor(data,economy,map,turn,{restore=false}={}){
@@ -19,9 +19,19 @@ export class NativeBattle {
   this.s.band=economy.s.bandId;this.s.banner={text:'作战开始',life:1.6};
   const sources=economy.s.units.filter(u=>u.position).sort((a,b)=>a.position.y-b.position.y||a.position.x-b.position.x);
   this.s.units=sources.map((u,i)=>{const p=this.profile(u),a=p.attributes,skill=p.skill,costData=moduleCostData(p);return {uid:u.uid,id:u.charId,chessId:u.chessId,source:u,x:u.position.x,y:u.position.y,dir:u.dir,hp:a.maxHp,maxHp:a.maxHp,baseCost:a.cost||0,deploymentCost:0,lastDeploymentCost:0,redeployPenalty:0,waitingCost:false,runtimeCost:costData.runtimeCost,runtimeCostActive:costData.runtimeCostActive,runtimeCostUsed:false,refundRatio:costData.refundRatio,refundIgnoresCap:costData.refundIgnoresCap,chargerKillCost:costData.chargerKillCost,merchantCost:costData.merchantCost,merchantInterval:costData.merchantInterval,sp:initSpOf(skill),spCd:0,spLock:0,coins:0,deployed:false,deployAt:3+i*.18,down:0,skillLeft:0,skillCount:0,ammo:0,ammoMax:0,attackCooldown:0,action:null,statuses:[],immunities:{stun:a.stunImmune,silence:a.silenceImmune,frozen:a.frozenImmune,sleep:a.sleepImmune,levitate:a.levitateImmune,fear:a.fearedImmune,terror:a.fearedImmune,tremble:a.palsyImmune,root:a.attractImmune},shield:0,barriers:[],shieldLayers:[],damage:0,healing:0,lastAttack:0,lastSkill:-999,counters:{},buffs:[],deployGen:0,exitLife:null};});
-  ensureBattleShape(this.s);dispatch(this,'battle-start',{target:null});
+  ensureBattleShape(this.s);dispatch(this,'battle-start',{target:null});this.spawnPreparedSummons();
   if(this.s.benchmark){this.s.enemies=[createTrainingDummy(this.s.nextId++,9,1)];this.s.total=1;}else this.prepareWaves(turn);
   for(const u of this.s.units){const stats=this.stats(u);u.hp=u.maxHp=stats.maxHp;}
+ }
+ spawnPreparedSummons(){
+  for(const card of this.economy.s.summonCards||[]){if(!card.position)continue;const owner=this.s.units.find(u=>u.uid===card.ownerUid);if(!owner)continue;let token=null;
+   if(card.type==='vigil-wolf')token=spawnSummon(this,owner,{type:'vigil-wolf',name:'狼群',x:card.position.x,y:card.position.y,targetable:true,canBlock:true,canAttack:true,blockCnt:2,lives:2,nextLifeAt:this.s.time+25,occupiesTile:true});
+   if(card.type==='mlyss-fluid')token=spawnSummon(this,owner,{type:'mlyss-fluid',name:'流形',x:card.position.x,y:card.position.y,synthetic:true,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,persistAfterSourceGone:true});
+   if(card.type==='silent-drone')token=spawnSummon(this,owner,{type:'silent-drone',name:'医疗无人机',x:card.position.x,y:card.position.y,targetable:false,healable:false,canBlock:false,canAttack:false,canHeal:true,device:true,maxHp:1,atk:this.stats(owner).atk,duration:10,persistAfterSourceGone:true,healScale:.5});
+   if(card.type==='skadi2-seaborn')token=spawnSummon(this,owner,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',x:card.position.x,y:card.position.y,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:30,persistAfterSourceGone:false});
+   if(card.type==='cathy-device'){const anchor=this.s.units.filter(v=>v.uid!==owner.uid).sort((a,b)=>Math.hypot(a.x-card.position.x,a.y-card.position.y)-Math.hypot(b.x-card.position.x,b.y-card.position.y))[0];token=spawnSummon(this,owner,{type:'cathy-device',name:'支援装置',x:card.position.x,y:card.position.y,targetable:false,healable:false,canBlock:false,anchorUid:anchor?.uid,occupiesTile:false,device:true});if(token&&anchor){token.nextShieldAt=this.s.time;token.shieldId='cathy-'+token.uid;token.shieldCap=this.stats(owner).maxHp*.2;}}
+   if(token)token.tacticalCardUid=card.uid;
+  }
  }
  attachRuntime(){
   this.rows=this.economy.bonds();this.layers=this.economy.s.bondLayers;this.s.band=this.economy.s.bandId;for(const u of this.s.units){const p=this.profile(u),d=moduleCostData(p);u.runtimeCost??=d.runtimeCost;u.runtimeCostActive??=d.runtimeCostActive;u.runtimeCostUsed??=Boolean(u.deployCount||u.deployed);u.refundRatio??=d.refundRatio;u.refundIgnoresCap??=d.refundIgnoresCap;u.chargerKillCost??=d.chargerKillCost;u.merchantCost??=d.merchantCost;u.merchantInterval??=d.merchantInterval;}
@@ -41,7 +51,7 @@ export class NativeBattle {
   const noExternal=this.behavior(target).noExternalHealing,selfException=noExternal&&source?.uid===target.uid;
   return selfException||(!noExternal&&!target.unhealable&&!target.statuses?.some(s=>s.kind==='healingBlocked'));
  }
- elementInjury(target){const value=target.elemental??target.elementInjury;return typeof value==='number'?Math.max(0,value):Object.values(value||{}).reduce((sum,n)=>sum+Math.max(0,n||0),0);}
+ elementInjury(target){const value=target.elemental??target.elementInjury;return typeof value==='number'?Math.max(0,value):Math.max(0,...Object.values(value||{}).map(n=>Number(n)||0));}
   healingTargets(u,allowFull=false){const element=this.behavior(u).elementHealing,locked=u.papyrsTargetUid;return alliedActors(this.s).filter(v=>(locked==null||!this.skillActive(u)||v.uid===locked)&&this.canHeal(v,u)&&this.inside(u,v)&&(allowFull||v.hp<v.maxHp||(element&&this.elementInjury(v)>0))).sort((a,b)=>{const la=(this.profile(u).charId==='char_4042_lumen'&&(this.profile(u).skillIndex??u.source?.skillIndex)===2?Number((a.statuses||[]).some(s=>['stun','frozen','sleep','fear','root','silence'].includes(s.kind))):0),lb=(this.profile(u).charId==='char_4042_lumen'&&(this.profile(u).skillIndex??u.source?.skillIndex)===2?Number((b.statuses||[]).some(s=>['stun','frozen','sleep','fear','root','silence'].includes(s.kind))):0);return lb-la||(this.profile(u).charId==='char_4114_harold'?this.elementInjury(b)-this.elementInjury(a):a.hp/a.maxHp-b.hp/b.maxHp)||(element?this.elementInjury(b)-this.elementInjury(a):0)||a.uid-b.uid;});}
  inNamedRange(center,target,id){const range=this.data.ranges[id];return (range?.grids||[]).some(g=>{let x=g.col,y=-g.row;for(let i=0;i<(center.dir||0);i++)[x,y]=[-y,x];return Math.abs(center.x+x-target.x)<=.5&&Math.abs(center.y+y-target.y)<=.5;});}
   heal(source,target,amount,origin=source){
@@ -51,7 +61,7 @@ export class NativeBattle {
   return applyHeal(this,{source,target,amount,origin});
  }
  healElements(source,target,amount){
-  if(!this.canHeal(target,source)||amount<=0)return;let restored=0;const injury=target.elemental??target.elementInjury;if(typeof injury==='number'){restored=Math.min(injury,amount);target.elemental=injury-restored;}else if(injury){for(const key of Object.keys(injury)){const n=Math.min(Math.max(0,injury[key]),amount);injury[key]-=n;restored+=n;}}source.elementHealing=(source.elementHealing||0)+restored;
+  if(!this.canHeal(target,source)||amount<=0)return;let restored=0;const injury=target.elemental??target.elementInjury;if(typeof injury==='number'){restored=Math.min(injury,amount);target.elemental=injury-restored;}else if(injury){const [type,value]=Object.entries(injury).sort((a,b)=>(Number(b[1])||0)-(Number(a[1])||0))[0]||[];if(type){restored=Math.min(Number(value)||0,amount);injury[type]=(Number(value)||0)-restored;if(injury[type]<=0){target.elemental={};target.elementalType=null;target.elementalStartedAt=null;target.elementalBatch=null;}}}source.elementHealing=(source.elementHealing||0)+restored;
  }
  regenerate(source,target,amount){return applyRegen(this,{source,target,amount});}
  updateBranch(u,dt){

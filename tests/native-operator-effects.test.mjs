@@ -61,11 +61,12 @@ test('status flags and bounded push/pull share the simulation state',()=>{
  const before=e.x;assert.equal(moveActor(b,e,u,'推开'),true);assert.equal(e.x,before+1);assert.equal(moveActor(b,e,u,'拉向'),true);assert.equal(e.x,before);
 });
 
-test('element damage accumulates independently and emits a burst at the target threshold',()=>{
+test('element damage only keeps one type and same-frame damage keeps the larger accumulation',()=>{
  const {b}=openBattle({name:'焰影苇草',chessId:'chess_char_6_08_b'});deployNow(b);const u=b.s.units[0],e=enemy(b,{hp:1000});
  const a=applyElementDamage(b,{source:u,target:e,amount:400,type:'burn'});assert.equal(a.burst,false);assert.equal(e.elemental.burn,400);
- const neural=applyElementDamage(b,{source:u,target:e,amount:120,type:'neural'});assert.equal(neural.burst,false);assert.equal(e.elemental.neural,120);assert.equal(e.elemental.burn,400);
- const c=applyElementDamage(b,{source:u,target:e,amount:600,type:'burn'});assert.equal(c.burst,true);assert.equal(e.elemental.burn,0);assert.equal(e.elementBurst,1);assert.equal(b.s.logicLog.filter(x=>x.type==='element').length,3);
+ const neural=applyElementDamage(b,{source:u,target:e,amount:120,type:'neural'});assert.equal(neural.burst,false);assert.equal(neural.immune,true);assert.equal(e.elemental.neural,undefined);assert.equal(e.elemental.burn,400);
+ const c=applyElementDamage(b,{source:u,target:e,amount:600,type:'burn'});assert.equal(c.burst,true);assert.equal(e.elemental.burn||0,0);assert.equal(e.elementBurst,1);assert.equal(b.s.logicLog.filter(x=>x.type==='element').length,2);
+ const e2=enemy(b,{hp:1000}),first=applyElementDamage(b,{source:u,target:e2,amount:400,type:'burn'}),higher=applyElementDamage(b,{source:u,target:e2,amount:600,type:'neural'});assert.equal(first.added,400);assert.equal(higher.added,200);assert.equal(e2.elementalType,'neural');assert.equal(e2.elemental.neural,600);assert.equal(applyElementDamage(b,{source:u,target:e2,amount:100,type:'burn'}).immune,true);
 });
 
 test('shield and lock fields are discoverable from skill blackboards',()=>{

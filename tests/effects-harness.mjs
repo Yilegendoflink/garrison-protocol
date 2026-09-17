@@ -24,6 +24,7 @@ export function openBattle(specs,{seed=reps.seed}={}){
   }
   assert.ok(placed,'no tile for '+u.chessId);
  }
+ const summonCells=new Set();for(const card of g.s.summonCards||[]){let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++){const key=x+','+y;if(summonCells.has(key))continue;if(g.canDeploySummonCard(card.uid,x,y)){placed=g.deploySummonCard(card.uid,x,y);if(placed)summonCells.add(key);}}if(card.type!=='cathy-device')assert.ok(placed,'no tile for summon '+card.type);}
  assert.ok(g.perform('start'),g.lastError||'start failed');
  const b=g.battle;b.s.queue=[];b.s.limit=1e9;
  enemy(b,{hp:1e12,x:-8,y:-8,trainingDummy:true,hidden:true,untargetable:true,invulnerable:true});

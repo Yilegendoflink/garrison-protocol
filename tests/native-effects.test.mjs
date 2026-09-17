@@ -105,6 +105,15 @@ test('four summon skills resolve through the shared token lifecycle',()=>{
  for(const [chessId,type] of cases){const {b}=openBattle({chessId});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);const token=b.s.summons.find(s=>s.ownerUid===u.uid&&s.type===type);assert.ok(token,type);assert.equal(token.kind,'summon');assert.ok(token.maxHp>0);}
 });
 
+test('整备区召唤卡按范围放置并在开战时生成对应召唤物',()=>{
+ const g=new NativeSession(NATIVE_DATA,{seed:1});g.s.funds=9999;g.s.capacity=16;g.s.rewardPending=null;g.s.rewardQueue=[];
+ for(const id of ['chess_char_3_19_a','chess_char_4_11_b','chess_char_2_02_b','chess_char_6_04_b'])g.gain(id);
+ for(const u of g.s.units){let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(!g.s.units.some(v=>v.uid!==u.uid&&v.position?.x===x&&v.position?.y===y)&&g.canDeploy(u.uid,x,y))placed=g.deploy(u.uid,x,y,0);assert.ok(placed,u.chessId);}
+ const cards=g.s.summonCards;assert.equal(cards.filter(c=>c.type==='vigil-wolf').length,1);assert.equal(cards.filter(c=>c.type==='cathy-device').length,3);assert.equal(cards.filter(c=>c.type==='silent-drone').length,1);assert.equal(cards.filter(c=>c.type==='skadi2-seaborn').length,1);
+ const used=new Set();for(const card of cards){let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++){if(used.has(x+','+y))continue;if(g.canDeploySummonCard(card.uid,x,y))placed=g.deploySummonCard(card.uid,x,y),used.add(x+','+y);}if(card.type!=='cathy-device')assert.ok(placed,card.type);}
+ assert.equal(g.perform('start'),true,g.lastError||'start failed');const types=new Set(g.battle.s.summons.map(s=>s.type));assert.ok(types.has('vigil-wolf')&&types.has('silent-drone')&&types.has('skadi2-seaborn'));assert.ok(g.battle.s.summons.filter(s=>s.type==='cathy-device').length>=1);
+});
+
 test('归溟幽灵鲨 S1 locks lethal damage and exits exactly once at skill end',()=>{
  const {b}=openBattle({chessId:'chess_char_5_13_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,def:0});u.sp=b.spCost(u);b.activate(u);
  dealDamage(b,{source:e,target:u,amount:u.maxHp+100,type:'true'});assert.equal(u.hp,1);assert.equal(u.deployed,true);assert.equal(u.lockHp.min,1);
@@ -1066,7 +1075,7 @@ test('凯瑟琳 device protects an ally and consumes finite stock',()=>{
  const {b}=openBattle([reps.operators.cathy,reps.operators.yak]);deployNow(b);steps(b,1);
  const u=byId(b,'char_4162_cathy'),ally=byId(b,'char_199_yak'),device=b.s.summons.find(t=>t.type==='cathy-device');
  assert.ok(device);assert.equal(device.targetable,false);assert.equal(device.anchorUid,ally.uid);assert.ok(ally.shield>0);
- const stock=u.summonCtrl.stock;commitExit(b,{target:device,reason:'forced'});steps(b,1);assert.equal(u.summonCtrl.stock,stock-1);
+ const stock=u.summonCtrl.stock;commitExit(b,{target:device,reason:'forced'});steps(b,1);assert.equal(u.summonCtrl.stock,stock);assert.equal(b.s.summons.filter(t=>t.type==='cathy-device').length,1);
 });
 
 test('applyLoss lethal still goes through death, not armor',()=>{

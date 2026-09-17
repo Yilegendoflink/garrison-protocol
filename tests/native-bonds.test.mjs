@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
-import {commitExit,dealDamage,dispatch,tickLogic} from '../dist/native-effects.js';
+import {commitExit,dealDamage,dispatch,tickLogic,applyElementDamage} from '../dist/native-effects.js';
+import {applyStatus} from '../dist/status.js';
 import {deployNow,enemy} from './effects-harness.mjs';
 
 const uniqueBond=(id,count)=>[...new Map(Object.values(NATIVE_DATA.season.charShopChessDatas).filter(s=>s.charId&&NATIVE_DATA.season.charChessDataDict[s.chessId].bondIds.includes(id)).map(s=>[s.charId,s.chessId])).values()].slice(0,count);
@@ -16,6 +17,22 @@ function start(ids,layers={}){
 test('大盟约炎召唤炎佑并按6人谢拉格建立寒风周期',()=>{
  const {b}=start(uniqueBond('yanShip',6),{yanShip:0});assert.equal(b.s.summons.filter(s=>s.type==='yan-guardian').length,1);assert.ok(b.s.summons[0].atk>0);
  const k=start(uniqueBond('kjeragShip',6),{kjeragShip:0}).b;assert.ok(k.s.logicEffects.some(x=>x.talentOrSkillId==='bond-kjerag-storm'&&x.interval===25));
+});
+
+test('炎佑不收集调和虚拟炎属性并在9层召唤双炎佑',()=>{
+ const yan=uniqueBond('yanShip',6),mani=uniqueBond('maniShip',1).find(id=>!yan.includes(id));assert.ok(mani);
+ const {b}=start([...yan,mani]),baseline=start(yan).b;const guards=b.s.summons.filter(s=>s.type==='yan-guardian');assert.equal(guards.length,1);
+ const savedRows=b.rows,savedDeploy=b.s.units.map(u=>u.deployed);b.rows=baseline.rows;b.s.units.forEach(u=>u.deployed=false);const expected=b.s.units.filter(u=>b.economy.ownBonds(u.source).includes('yanShip')).reduce((n,u)=>n+b.stats(u).atk,0)*.3;b.rows=savedRows;b.s.units.forEach((u,i)=>u.deployed=savedDeploy[i]);assert.ok(Math.abs(guards[0].atk-expected)<1e-6);
+ const nine=start(uniqueBond('yanShip',9)).b,nineGuards=nine.s.summons.filter(s=>s.type==='yan-guardian');assert.equal(nineGuards.length,2);assert.ok(nineGuards.every(g=>g.atk>guards[0].atk));
+});
+
+test('炎佑模式乙持续施法、元素光环、元素免疫和沉默打断',()=>{
+ const {b}=start(uniqueBond('yanShip',6)),g=b.s.summons.find(s=>s.type==='yan-guardian');
+ const target=enemy(b,{x:g.x+2,y:g.y,hp:100000,threat:10,def:0,res:0}),splash=enemy(b,{x:g.x+2,y:g.y+1,hp:100000,threat:1,def:0,res:0}),aura=enemy(b,{x:g.x+1,y:g.y,hp:100000,threat:0,def:0,res:0}),outside=enemy(b,{x:g.x+2,y:g.y+2,hp:100000,threat:0,def:0,res:0});
+ g.attackCooldown=999;tickLogic(b,0);assert.equal(g.yanSkillActive,true);const targetHp=target.hp,splashHp=splash.hp,outsideHp=outside.hp; b.s.time=1;tickLogic(b,1);
+ assert.ok(target.hp<targetHp&&splash.hp<splashHp&&outside.hp===outsideHp);assert.equal(aura.yanElementDamageTakenBonus,.2);assert.equal(outside.yanElementDamageTakenBonus,0);
+ const elemental=applyElementDamage(b,{source:g,target:aura,amount:100,type:'burn'});assert.equal(elemental.added,120);assert.equal(applyElementDamage(b,{source:target,target:g,amount:100,type:'burn'}).added,0);const guardianHp=g.hp;dealDamage(b,{source:target,target:g,amount:100,type:'true'});assert.equal(Math.round(guardianHp-g.hp),10);
+ applyStatus(g,'silence',1,{source:target.uid});b.s.time+=1/30;tickLogic(b,1/30);assert.equal(g.yanSkillActive,false);
 });
 
 test('萨尔贡技能启动给全体萨尔贡叠加独立持续时间攻速',()=>{
