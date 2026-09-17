@@ -138,6 +138,16 @@ export function drawStatuses(c,x,y,unit,size){
  if((unit.barriers||[]).some(b=>b.charges>0))kinds.push('barrier');
  kinds.slice(0,3).forEach((k,i)=>mark(c,x-size/2+6+i*13,y-size*.82,k));
 }
+const ELEMENT_RING_COLORS={neural:'#67c9ff',burn:'#ff875c',necrosis:'#c19aff',corrosion:'#b7d875',elemental:'#f3d27f'};
+export function drawElementRing(c,x,y,unit,size){
+ const raw=unit?.elemental,max=Number(unit?.elementalMax||unit?.maxHp)||0;
+ if(!raw||typeof raw!=='object'||max<=0)return;
+ const entries=Object.entries(raw).filter(([,value])=>Number(value)>0).map(([type,value])=>[type,Number(value)]).sort((a,b)=>b[1]-a[1]),[type,value]=entries[0]||[];
+ if(!type)return;
+ const progress=Math.min(1,value/max),radius=size*.56;
+ c.save();c.lineWidth=Math.max(2,size*.045);c.lineCap='butt';c.strokeStyle='#0b1718cc';c.beginPath();c.arc(x,y-size*.2,radius,-Math.PI/2,Math.PI*1.5);c.stroke();c.strokeStyle=ELEMENT_RING_COLORS[unit.elementalType||type]||ELEMENT_RING_COLORS.elemental;c.beginPath();c.arc(x,y-size*.2,radius,-Math.PI/2,-Math.PI/2+Math.PI*2*progress);c.stroke();
+ c.restore();
+}
 export function drawDownRing(c,p,u,size,opts={}){
  const max=u.downMax||u.down||1,ratio=Math.max(0,Math.min(1,1-(u.down||0)/max));
  c.strokeStyle='#8eb4a7';c.lineWidth=2;c.beginPath();c.arc(p.x,p.y-size*.1,size*.42,-Math.PI/2, -Math.PI/2+ratio*Math.PI*2);c.stroke();
