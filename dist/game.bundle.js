@@ -6208,7 +6208,7 @@ const portraitQuery=matchMedia('(orientation:portrait)');
 if(portraitQuery.addEventListener)portraitQuery.addEventListener('change',syncPlayChrome);else portraitQuery.addListener(syncPlayChrome);
 window.addEventListener('resize',syncPlayChrome);
 const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:null,view:'lobby',mode:'mode_single_normal',band:'band_amiya',strategyDraft:null,map:data.maps.find(m=>m.weight>0).stageId,selected:null,summonSelected:null,item:null,inspect:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,editor:editorState(),waveTable:loadWaveTable()};
-let canvas,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0;
+let canvas,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0,dossierDismissedAt=0;
 function readSave(key){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):null;}catch{return null;}}
 function savedView(){try{return sessionStorage.getItem(VIEW_SAVE)||'lobby';}catch{return 'lobby';}}
 function rememberView(view){try{sessionStorage.setItem(VIEW_SAVE,view);}catch{}}
@@ -6586,13 +6586,20 @@ root.addEventListener('wheel',e=>{
  setShift(scroller,shiftOf(scroller)+e.deltaY);
 },{passive:false});
 root.addEventListener('click',e=>{
- if(e.target.closest('.native-strategy-pane, .native-dossier'))return;
+  if(dossierDismissedAt>0&&performance.now()-dossierDismissedAt<500){dossierDismissedAt=0;e.preventDefault();return;}
+  const dossierButton=e.target.closest?.('.native-dossier button[data-act]');
+  if(dossierButton){
+   if(e.pointerType==='touch'||(e.pointerId===ignoredClickPointer&&performance.now()<ignoredClickUntil))return;
+   action(dossierButton);return;
+  }
+  if(e.target.closest('.native-strategy-pane, .native-dossier'))return;
  if(e.pointerType==='touch'||(e.pointerId===ignoredClickPointer&&performance.now()<ignoredClickUntil))return;
  if(state.view==='editor'){const hit=e.target.closest('[data-act]');if(!hit||hit.matches('input,select,textarea'))return;action(hit);return;}
  const button=e.target.closest('button[data-act]');if(button)action(button);
 });
 root.addEventListener('pointerdown',e=>{
- if(e.isPrimary===false||e.button!==0)return;ignoredClickPointer=null;ignoredClickUntil=0;
+  if(e.isPrimary===false||e.button!==0)return;ignoredClickPointer=null;ignoredClickUntil=0;
+  if(state.inspect?.kind==='unit'&&!e.target.closest?.('.native-dossier')){state.inspect=null;dossierDismissedAt=performance.now();e.preventDefault();render();return;}
  const paneHit=hitInScroller(scrollerAtPoint(e.clientX,e.clientY),e.clientX,e.clientY);
  const button=paneHit||e.target.closest('button[data-act]');
  if(e.pointerType==='touch'&&button&&!button.disabled)touchButton={b:button,id:e.pointerId,x:e.clientX,y:e.clientY};
