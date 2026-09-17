@@ -1,6 +1,6 @@
 # 卫戍协议：盟约下半 · 手动验收版
 
-非官方同人项目。主入口已连接历史下半期数据、运营控制器与 native 战斗循环；旧版 35 人演示保留在 `dist/legacy.html`。
+非官方同人项目。主入口已连接历史下半期数据、运营控制器与 native 战斗循环。
 
 源码仓库：[Yilegendoflink/garrison-protocol](https://github.com/Yilegendoflink/garrison-protocol)
 
@@ -8,9 +8,15 @@
 
 给后续开发者的当前事实见 [AGENTS.md](AGENTS.md)。
 
-## 当前版本
+## 概述
 
-2026-09-16。主对局是 native 客户端，不是 35 人演示。`data/modes/alliance-lower/readiness.json` 中资料目录齐、`playableParityComplete=false`、`acceptedScopeComplete=true`。后一个旗标只表示用户约定的最终木桩范围，**不是** 112 名干员原作对等完成。
+你也没玩够，我也没玩够。我有没用完的codex额度，所以这个项目就这么出现了
+
+数据库来自PRTS。一部分玩法逻辑来自我和群友的记忆，还有一部分是一点点自由发挥 添加一抹奇幻色彩。
+
+彩蛋部分代码来自 https://github.com/ophixation/325calculator
+
+## 当前版本
 
 已接上主对局的：本期 112 名可见预设、初始／精锐养成、技能选择、地图裁切、轮次；购买、晋升、装备、两段式部署、准备／作战／决策／结算、存档；大厅 → 战前准备 → 对局；词条预算随机波次与编制台；职业分支基础层；公共结算（伤害／治疗／回复／流失／退场）；112 名 `descriptor-v1` 适配入口（`needsSpecialHandler=0`）；战斗费用账本与整备资金分离；部分敌人移动／攻击策略。
 
@@ -47,6 +53,14 @@
 - `dist/legacy.html`：此前的演示与资料库。
 
 期次资料见 `data/modes/alliance-lower/README.md`。早期阶段文档作为历史记录保留；当前事实以本页和 `AGENTS.md` 为准。
+
+## TODO
+
+- 补全大部分特殊敌人行为机制，例如复活、解压缩
+- 补全最终BOSS战
+- 实装小人动画和更精致的特效
+- 支持自定义追加原创干员、盟约、敌人、BOSS
+- 支持联机（有可能吗？）
 
 ## 来源
 
