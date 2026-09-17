@@ -1,5 +1,4 @@
-// Generated from data/modes/alliance-lower/default-wave-table.json. Edit the JSON export, then rebuild.
-export const DEFAULT_WAVE_TABLE = {
+{
   "version": 2,
   "defaultCost": 1,
   "costs": {
@@ -980,4 +979,4 @@ export const DEFAULT_WAVE_TABLE = {
       }
     }
   }
-};
+}
