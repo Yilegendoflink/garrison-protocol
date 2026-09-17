@@ -1313,7 +1313,7 @@ function branchBehavior(profile,active=false){
 return {BRANCH_POLICIES,branchTrait,branchBehavior};
 },
 "native-wave-defaults.js": function(load) {
-// 默认测试波次 v2：本期词条池，数量为前期6–8、中期15–20、后期35–40；低档模板限制最高敌人成本；非原作出怪表。
+// Generated from data/modes/alliance-lower/default-wave-table.json. Edit the JSON export, then rebuild.
 const DEFAULT_WAVE_TABLE = {
   "version": 2,
   "defaultCost": 1,
@@ -3359,7 +3359,7 @@ function operatorSkillStart(battle,u,ctx){
  if(profile.charId==='char_1023_ghost2'&&profile.skillIndex===0){const target=allAllies(battle,u,true).filter(v=>v.uid!==u.uid).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.uid-b.uid)[0];if(target){const ratio=u.hp/u.maxHp,other=target.hp/target.maxHp;u.hp=u.maxHp*other;target.hp=target.maxHp*ratio;}}
  if(profile.charId==='char_174_slbell'&&profile.skillIndex===0)for(const e of allTargets(battle,u,true)){const value=Number(bb.attack_speed)||-50;e.attackSpeedMod=(e.attackSpeedMod||0)+value;applyStatus(e,'attackSpeedDown',Math.max(1,Number(duration)||5),{source:u.uid,value});}
  if(profile.charId==='char_373_lionhd'&&profile.skillIndex===1){for(const e of allTargets(battle,u,true)){ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(bb.atk_scale)||2),type:'arts',cause:'skill',skill:true});if(Number(bb.magic_resistance)<0)applyStatus(e,'resDown',Number(duration)||6,{source:u.uid,value:Number(bb.magic_resistance),resistible:false});}return true;}
- if(profile.charId==='char_4148_philae'&&profile.skillIndex===0){u.elemental={};u.elementInjury=0;if(ctx.grantShield)ctx.grantShield(battle,u,{amount:Number(bb.shield_value)||1200,sourceUid:u.uid,id:'philae-s1'});}
+ if(profile.charId==='char_4148_philae'&&profile.skillIndex===0){u.elemental={};u.elementalType=null;u.elementalStartedAt=null;u.elementalBatch=null;u.elementInjury=0;if(ctx.grantShield)ctx.grantShield(battle,u,{amount:Number(bb.shield_value)||1200,sourceUid:u.uid,id:'philae-s1'});}
  if(profile.charId==='char_350_surtr'&&profile.skillIndex===0)u.surtrS1=true;
  if(profile.charId==='char_350_surtr'&&profile.skillIndex===2){const interval=Number(bb.interval)||.2,ratio=Number(bb.hp_ratio)||.2;ctx.addEffect(battle,{kind:'loss',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:u.uid,talentOrSkillId:'surtr-s3-loss',interval,nextAt:battle.s.time+interval,endsAt:null,values:{amount:u.maxHp*ratio*interval},refKind:'owner',persistAfterSourceGone:false});}
  if(profile.charId==='char_1012_skadi2'&&profile.skillIndex===0){const ratio=Math.max(0,Math.min(1,Number(bb.damage_resistance)||.5));for(const ally of battle.s.units.filter(v=>v.uid!==u.uid&&v.deployed&&v.hp>0&&battle.inside(u,v,true)))ctx.addDamageRedirect(battle,ally,{id:'skadi2-share-'+u.uid+'-'+ally.uid,targetUid:u.uid,ratio,mode:'share',types:['physical','arts'],sourceUid:u.uid,endsAt:duration>0?battle.s.time+duration:null});}
@@ -3569,7 +3569,7 @@ return {blackboardValues,talentValues,coinCapFor,grantCoins,spendCoins,coinGainA
 },
 "native-effects.js": function(load) {
 const {applyDamage,recoverHP,damage} = load("combat.js");
-const {applyStatus} = load("status.js");
+const {applyStatus,permissions} = load("status.js");
 const {blackboard,resolveActiveTalents,nativeAttributes} = load("protocol.js");
 const {gainSp} = load("native-sp.js");
 const {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor,talentValues,grantCoins,coinCapFor,coinGainAtSkillStart,tokenCostFor} = load("native-operator-effects.js");
@@ -3789,6 +3789,7 @@ function dealDamage(battle,opts){
   if(target.fragile)value*=target.fragile;
  }
  let type=opts.type||'physical';
+ if(!Number.isFinite(opts.value)&&target.damageResistance>0)value*=Math.max(0,1-target.damageResistance);
  if(!opts.skipHooks&&opts.cause!=='dot'&&opts.cause!=='extra'&&opts.cause!=='reflect'){
   const before={source,target,value,type,event,cause:opts.cause};dispatch(battle,'before-damage',before);value=before.value;type=before.type;
  }
@@ -3879,15 +3880,34 @@ function applyLoss(battle,opts){
  return hp;
 }
 
+function elementalState(target){
+ const raw=target.elemental;
+ if(raw&&typeof raw==='object'){
+  const entries=Object.entries(raw).filter(([,value])=>Number(value)>0).sort((a,b)=>Number(b[1])-Number(a[1]));
+  const type=target.elementalType&&Number(raw[target.elementalType])>0?target.elementalType:entries[0]?.[0];
+  if(type){const value=Number(raw[type]);target.elementalType=type;target.elemental={[type]:value};return {type,value};}
+ }
+ if(Number(raw)>0){target.elementalType='elemental';target.elemental={elemental:Number(raw)};return {type:'elemental',value:Number(raw)};}
+ target.elemental??={};target.elementalType=null;return {type:null,value:0};
+}
 function applyElementDamage(battle,{source,target,amount,type='elemental',cause='element',parentEventId=null}={}){
- if(!target||target.hp<=0||!Number.isFinite(amount)||amount<=0||!ELEMENT_TYPES.has(type))return {added:0,burst:false};
- amount*=1+Math.max(0,Number(target.elementDamageTakenBonus)||0);let resistance=Math.max(0,Math.min(1,Number(target.elementDamageResistance)||0));for(const sourceUnit of battle.s.units.filter(u=>u.deployed&&u.hp>0)){const talents=battle.activeTalentsOf?battle.activeTalentsOf(sourceUnit):(battle.profile(sourceUnit)?.activeTalents||[]);for(const talent of talents){const bb=talentValues(talent),text=talent.description||'';if(!Number.isFinite(Number(bb.ep_damage_resistance))||!/元素损伤.*降低/.test(text))continue;if(!battle.inside(sourceUnit,target))continue;if(target.maxHp>0&&battle.elementInjury?.(target)>target.maxHp*.5)resistance=Math.max(resistance,Number(bb.ep_damage_resistance));}}amount*=1-resistance;
- target.elemental??={};target.elementalMax??=target.maxHp;
- const before=target.elemental[type]||0,limit=target.elementalMax,added=Math.min(amount,Math.max(0,limit-before));target.elemental[type]=before+added;
- const event=nextEvent(battle,{cause,parentEventId,type:'element',sourceUid:source?.uid,targetUid:target.uid});log(battle,'element',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,element:type,amount:added,current:target.elemental[type],max:limit});
+ if(!target||target.hp<=0||!Number.isFinite(amount)||amount<=0||!ELEMENT_TYPES.has(type)||target.elementalImmune)return {added:0,burst:false};
+ amount*=1+Math.max(0,Number(target.elementDamageTakenBonus)||0)+Math.max(0,Number(target.yanElementDamageTakenBonus)||0);let resistance=Math.max(0,Math.min(1,Number(target.elementDamageResistance)||0));for(const sourceUnit of battle.s.units.filter(u=>u.deployed&&u.hp>0)){const talents=battle.activeTalentsOf?battle.activeTalentsOf(sourceUnit):(battle.profile(sourceUnit)?.activeTalents||[]);for(const talent of talents){const bb=talentValues(talent),text=talent.description||'';if(!Number.isFinite(Number(bb.ep_damage_resistance))||!/元素损伤.*降低/.test(text))continue;if(!battle.inside(sourceUnit,target))continue;if(target.maxHp>0&&battle.elementInjury?.(target)>target.maxHp*.5)resistance=Math.max(resistance,Number(bb.ep_damage_resistance));}}amount*=1-resistance;
+ const state=elementalState(target),limit=target.elementalMax??(target.elementalMax=target.maxHp),sameFrame=state.type&&target.elementalStartedAt===battle.s.time;
+ if(state.type&&state.type!==type&&!sameFrame)return {added:0,burst:false,immune:true};
+ let before=state.value,added=0,immune=false;
+ if(!state.type||sameFrame){
+  if(target.elementalBatchAt!==battle.s.time){target.elementalBatchAt=battle.s.time;target.elementalBatch={};}
+  const batch=target.elementalBatch;batch[type]=(batch[type]||0)+amount;const winner=Object.entries(batch).sort((a,b)=>b[1]-a[1])[0][0];
+  target.elementalStartedAt??=battle.s.time;target.elementalType=winner;immune=winner!==type;target.elemental={[winner]:Math.min(batch[winner],limit)};added=Math.max(0,target.elemental[winner]-before);before=target.elemental[winner];
+ }else{
+  added=Math.min(amount,Math.max(0,limit-before));target.elemental[type]=before+added;
+ }
+ if(immune&&added<=0)return {added:0,burst:false,immune:true};
+ const event=nextEvent(battle,{cause,parentEventId,type:'element',sourceUid:source?.uid,targetUid:target.uid});log(battle,'element',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,element:target.elementalType,amount:added,current:target.elemental[target.elementalType]||0,max:limit});
  if(target.id==='char_4148_philae'&&type==='necrosis'){gainSp(target,battle.profile(target).skill,2,battle.spCost(target));if(battle.skillActive?.(target)&&(target.source?.skillIndex??battle.profile(target).skillIndex)===1)target.philaeElementBoost=true;}
- let burst=false;if(target.elemental[type]>=limit){target.elemental[type]=0;target.elementBurst=(target.elementBurst||0)+1;target.elementBurstUntil=battle.s.time+3;burst=true;dispatch(battle,'element-burst',{source,target,element:type,event});}
- return {added,burst};
+ let burst=false;if((target.elemental[target.elementalType]||0)>=limit){const burstType=target.elementalType;target.elemental={};target.elementalType=null;target.elementalStartedAt=null;target.elementalBatch=null;target.elementBurst=(target.elementBurst||0)+1;target.elementBurstUntil=battle.s.time+3;burst=true;dispatch(battle,'element-burst',{source,target,element:burstType,event});}
+ return {added,burst,immune};
 }
 
 function activeRedirect(battle,target,type){
@@ -3968,11 +3988,44 @@ function tickLogic(battle,dt){
 function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,log:(b,t,p)=>log(b,t,p)};}
 
 function bondUnits(battle,id,{deployedOnly=false}={}){return battle.s.units.filter(u=>(!deployedOnly||u.deployed&&u.hp>0)&&battle.owns?.(u,id));}
+function yanUnits(battle){return battle.s.units.filter(u=>battle.economy.ownBonds(u.source).includes('yanShip'));}
 function bondParam(battle,id){return battle.params?.(id)||blackboard(battle.data.season.effectBuffInfoDataDict[battle.data.season.bondInfoDict[id]?.effectId]?.find(e=>e.key==='env_gbuff_new')?.blackboard);}
+function yanThreat(e){return Number.isFinite(Number(e.threat))?Number(e.threat):Number.isFinite(Number(e.yanThreat))?Number(e.yanThreat):Number.isFinite(Number(e.progress))?-Number(e.progress):0;}
+function yanCompare(a,b){return yanThreat(b)-yanThreat(a)||(b.leak||0)-(a.leak||0)||a.uid-b.uid;}
+function yanTargets(battle,guardian,count=3){return enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable).sort(yanCompare).slice(0,count);}
+function yanTarget(battle,guardian){const target=yanTargets(battle,guardian,1)[0];if(target)return target;const cols=Math.max(1,battle.map?.cols||1),rows=Math.max(1,battle.map?.rows||1);guardian.yanAim={x:Math.floor(battle.economy.random()*cols),y:Math.floor(battle.economy.random()*rows)};return null;}
+function yanDamage(battle,guardian,target,scale,cause='attack'){
+ if(!target||target.hp<=0)return;
+ dealDamage(battle,{source:guardian,target,amount:guardian.atk*scale,type:'arts',cause,skill:cause==='skill'});
+ applyElementDamage(battle,{source:guardian,target,amount:guardian.atk*.2,type:'burn',cause});
+}
+function startYanSkill(battle,guardian){
+ if(guardian.yanSkillUsed||guardian.yanSkillSp<guardian.yanSkillCost||permissions(guardian).silenced)return false;
+ const target=yanTarget(battle,guardian);if(!target)return false;
+ guardian.yanSkillUsed=true;guardian.yanSkillActive=true;guardian.yanSkillSp=0;guardian.yanSkillLeft=20;guardian.yanSkillTargetUid=target.uid;guardian.yanSkillNextAt=battle.s.time;
+ battle.emit('skill-start',{uid:guardian.uid,kind:'duration',name:'祛恶之焰',x:guardian.x,y:guardian.y});return true;
+}
+function endYanSkill(battle,guardian,reason='complete'){
+ if(!guardian.yanSkillActive)return;
+ guardian.yanSkillActive=false;guardian.yanSkillLeft=0;guardian.yanSkillTargetUid=null;guardian.yanSkillNextAt=0;
+ battle.emit('skill-end',{uid:guardian.uid,kind:'duration',name:'祛恶之焰',reason,x:guardian.x,y:guardian.y});
+}
+function tickYanSkill(battle,guardian,dt){
+ if(!guardian.yanSkillActive)return false;
+ if(permissions(guardian).silenced){endYanSkill(battle,guardian,'silence');return true;}
+ guardian.yanSkillLeft=Math.max(0,guardian.yanSkillLeft-dt);
+ while(guardian.yanSkillLeft>0&&battle.s.time+1e-9>=guardian.yanSkillNextAt){
+  let target=getActor(battle.s,guardian.yanSkillTargetUid);if(!target||target.hp<=0||target.hidden||target.untargetable)target=yanTarget(battle,guardian);
+  if(target){const victims=enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable&&Math.hypot(e.x-target.x,e.y-target.y)<=1);for(const e of victims)yanDamage(battle,guardian,e,.6,'skill');}
+  guardian.yanSkillNextAt+=1;
+ }
+ if(guardian.yanSkillLeft<=0)endYanSkill(battle,guardian,'complete');
+ return true;
+}
 function bondBattleStart(battle){
  if(battle.s.bondApplied)return;battle.s.bondApplied=true;
- const yan=bondUnits(battle,'yanShip');
- if(battle.on?.('yanShip')&&battle.rows?.yanShip?.count>=6&&yan.length){const b=bondParam(battle,'yanShip'),atk=yan.reduce((n,u)=>n+battle.stats(u).atk,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),hp=yan.reduce((n,u)=>n+u.maxHp,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),owner=yan[0];/* ponytail: synthetic 炎佑 uses the existing summon lifecycle; replace with a pinned token when one is available. */for(let i=0;i<(battle.rows.yanShip.count>=9?2:1);i++){const g=spawnSummon(battle,owner,{type:'yan-guardian',name:'炎佑',synthetic:true,canAttack:true,canBlock:false,occupiesTile:false});if(g){g.atk=atk;g.maxHp=g.hp=Math.max(1,hp);g.interval=1;g.attackSpeed=100;g.range=99;g.yanTargets=3;g.yanBurnScale=.2;g.yanVulnerability=.2;g.damageResistance=Number(b.damage_resistance)||.9;}}battle.s.bondYanGuardiansSpawned=true;}
+ const yan=yanUnits(battle);
+ if(battle.on?.('yanShip')&&battle.rows?.yanShip?.count>=6&&yan.length){const b=bondParam(battle,'yanShip'),atk=yan.reduce((n,u)=>n+battle.stats(u).atk,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),hp=yan.reduce((n,u)=>n+battle.stats(u).maxHp,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),owner=yan[0];for(let i=0;i<(battle.rows.yanShip.count>=9?2:1);i++){const g=spawnSummon(battle,owner,{type:'yan-guardian',name:'炎佑',synthetic:true,canAttack:false,canBlock:false,occupiesTile:false,targetable:true,healable:false,isolated:true,flying:true,elementalImmune:true});if(g){g.atk=atk;g.maxHp=g.hp=Math.max(1,hp);g.interval=2.5;g.attackSpeed=100;g.range=99;g.yanTargets=3;g.yanBurnScale=.2;g.yanVulnerability=.2;g.yanSkillSp=15;g.yanSkillCost=15;g.yanSkillUsed=false;g.yanSkillActive=false;g.yanSkillLeft=0;g.yanSkillTargetUid=null;g.damageResistance=Number(b.damage_resistance)||.9;}}battle.s.bondYanGuardiansSpawned=true;}
  const kj=bondUnits(battle,'kjeragShip');if(battle.on?.('kjeragShip')&&battle.rows?.kjeragShip?.count>=6&&kj.length){const b=bondParam(battle,'kjeragShip'),duration=Number(b['bond_eff_kjerag[storm].base_time'])||20;addEffect(battle,{kind:'zone',sourceUid:kj[0].uid,talentOrSkillId:'bond-kjerag-storm',x:kj[0].x,y:kj[0].y,radius:99,interval:Number(b['bond_eff_kjerag[storm].interval'])||25,nextAt:battle.s.time+(Number(b['bond_eff_kjerag[storm].interval'])||25),endsAt:null,trackSide:'enemy',values:{cold:duration+Number(b['bond_eff_kjerag[storm].time_per_stack']||0)*(battle.layers.kjeragShip||0)},snapshot:{},refKind:'owner',persistAfterSourceGone:true});}
  const egirs=bondUnits(battle,'egirShip').sort((a,b)=>(a.y??999)-(b.y??999)||(a.x??999)-(b.x??999));if(battle.on?.('egirShip')&&egirs.length){const b=bondParam(battle,'egirShip'),dirs=[[1,0],[0,1],[-1,0],[0,-1]];for(const u of egirs){const d=dirs[u.dir||0],front=battle.s.units.find(v=>v!==u&&v.x===u.x+d[0]&&v.y===u.y+d[1]);if(!front)continue;const fp=battle.profile(front),fa=fp?.attributes||{};u.egirBorrowAtk=Number(fa.atk)||0;u.egirBorrowBlock=Number(fa.blockCnt)||0;u.egirConsumedUid=front.uid;dealDamage(battle,{source:front,target:u,amount:Number(b.damage_value)||5000,type:'physical',cause:'bond',skipHooks:true});battle.economy.addLayers('egirShip',Number(front.source?.rank||1));}}
 }
@@ -4063,9 +4116,11 @@ function updateAreas(battle){
 
 function tickAuras(battle){
  for(const e of enemyActors(battle.s))e.fragile=e.bondFragileUntil>battle.s.time?1.4:null;
+ for(const e of enemyActors(battle.s))e.yanElementDamageTakenBonus=0;
  for(const e of enemyActors(battle.s))e.attackSpeedMod=0;
  for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1039_thorn2')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='视界'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s))e.attackSpeedMod-=Number(bb.attack_speed_enemy)||5;}
  for(const fx of battle.s.logicEffects||[])if(fx.kind==='zone'&&fx.values?.fragile&&(fx.endsAt==null||battle.s.time<fx.endsAt))for(const e of zoneActors(battle,fx,'enemy'))e.fragile=Math.max(e.fragile||1,Number(fx.values.fragile));
+ for(const source of battle.s.summons.filter(s=>s.type==='yan-guardian'&&s.deployed&&s.hp>0))for(const e of enemyActors(battle.s))if(Math.hypot(source.x-e.x,source.y-e.y)<=1.5)e.yanElementDamageTakenBonus=Math.max(e.yanElementDamageTakenBonus||0,source.yanVulnerability||.2);
  for(const u of battle.s.units){
   if(!u.deployed||u.hp<=0)continue;
   const p=battle.profile(u),id=u.id;
@@ -4288,14 +4343,13 @@ function onOperatorDeploy(battle,u){
   }
  }
  if(u.id==='char_107_liskam'&&(u.source?.skillIndex??0)===0){/* S1 applied on activate */}
- if(u.id==='char_108_silent')u.summonCtrl={stock:0,cap:1,type:'drone'};
- if(u.id==='char_427_vigil'){u.summonCtrl={stock:1,cap:1,type:'wolf'};spawnSummon(battle,u,{type:'vigil-wolf',name:'狼群',targetable:true,canBlock:true,canAttack:true,blockCnt:2,lives:2,nextLifeAt:battle.s.time+25,occupiesTile:true});}
- if(u.id==='char_4162_cathy'){const t=activeTalentsOf(battle,u).find(t=>t.name==='定向支援信号');u.summonCtrl={stock:t?.values.cnt??3,cap:2,type:'device'};}
- if(u.id==='char_108_silent'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===1){u.summonCtrl.stock=1;spawnSummon(battle,u,{type:'silent-drone',name:'医疗探机',targetable:false,healable:false,canHeal:true,duration:10,persistAfterSourceGone:true});}
+ if(u.id==='char_108_silent')u.summonCtrl={stock:0,cap:1,type:'drone',manualSummonCards:true};
+ if(u.id==='char_427_vigil')u.summonCtrl={stock:0,cap:1,type:'wolf',manualSummonCards:true};
+ if(u.id==='char_4162_cathy'){const t=activeTalentsOf(battle,u).find(t=>t.name==='定向支援信号');u.summonCtrl={stock:0,cap:2,type:'device',manualSummonCards:true,maxStock:t?.values.cnt??3};}
  if(u.id==='char_1023_ghost2'){spawnSummon(battle,u,{type:'ghost2-substitute',tokenId:'token_10024_ebnhlz_rcube',name:'旧日残影',targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:false});}
  if(u.id==='char_4134_cetsyr'){u.cetsyrDust=3;for(let n=0;n<3;n++)spawnSummon(battle,u,{type:'cetsyr-dust',name:'微尘',synthetic:true,targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:true});}
  if(u.id==='char_4087_ines'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'ines-shadow',x:u.x,y:u.y,radius:2,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+25,trackArea:true,trackSide:'enemy',values:{sluggish:true,reveal:true},snapshot:{},refKind:'live',persistAfterSourceGone:true});commitExit(battle,{target:u,reason:'skill'});}
- if(u.id==='char_1012_skadi2'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='远古血亲');if(talent)spawnSummon(battle,u,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:Number((talent.description||'').match(/持续(\d+)秒/)?.[1])||30,persistAfterSourceGone:false});}
+ if(u.id==='char_1012_skadi2'&&!battle.s.summons.some(s=>s.ownerUid===u.uid&&s.type==='skadi2-seaborn'&&s.deployed)){const talent=activeTalentsOf(battle,u).find(t=>t.name==='远古血亲');if(talent)spawnSummon(battle,u,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:Number((talent.description||'').match(/持续(\d+)秒/)?.[1])||30,persistAfterSourceGone:false});}
  if(u.id==='char_103_angel'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='天使的祝福');if(talent){const values=talent.values||{},candidates=battle.s.units.filter(v=>v.uid!==u.uid&&v.deployed&&v.hp>0);if(candidates.length){const target=candidates[Math.floor(battle.economy.random()*candidates.length)];target.angelBlessing={atk:Number(values.atk)||.06,maxHp:Number(values.max_hp)||.1,sourceUid:u.uid};}}}
  if(u.id==='char_332_archet'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='铁弦');if(talent)grantShield(battle,u,{amount:Number(talent.values?.shield_value)||500,sourceUid:u.uid,id:'archet-deploy-shield'});}
  if(u.id==='char_4148_philae'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='神河谕使');u.elementDamageResistance=Number(talent?.values?.damage_resistance)||.1;}
@@ -4328,7 +4382,7 @@ function onSkillStart(battle,u){
  }
  if(u.id==='char_427_vigil'&&idx===0){const wolf=battle.s.summons.find(s=>s.ownerUid===u.uid&&s.type==='vigil-wolf'&&s.deployed);if(wolf){wolf.lives=Math.min(3,(wolf.lives||1)+1);wolf.blockCnt=wolf.lives;}}
  if(u.id==='char_427_vigil'&&idx===1){const wolf=battle.s.summons.find(s=>s.ownerUid===u.uid&&s.type==='vigil-wolf'&&s.deployed);if(wolf){const bb=skillBB(battle,u);wolf.vigilBuff={scale:Number(bb['vigil_wolf_s_2.atk_scale'])||1.7,heal:Number(bb['vigil_wolf_s_2.hp_ratio'])||.15,endsAt:battle.s.time+5};}}
- if(u.id==='char_249_mlyss'&&(idx===0||idx===1||idx===2)){const token=spawnSummon(battle,u,{type:'mlyss-fluid',name:'流形',synthetic:!battle.data.tokens?.token_10030_mlyss_wtrman,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:idx===2?25:u.skillLeft,persistAfterSourceGone:true});const copy=battle.s.units.find(v=>v.uid!==u.uid&&!v.deployed&&v.hp>0);if(token&&copy){const attrs=battle.profile(copy).attributes;token.copyOf=copy.uid;for(const [to,from] of [['maxHp','maxHp'],['hp','maxHp'],['atk','atk'],['def','def'],['res','magicResistance'],['blockCnt','blockCnt'],['interval','baseAttackTime'],['attackSpeed','attackSpeed']])if(Number.isFinite(attrs[from]))token[to]=attrs[from];token.canBlock=token.blockCnt>0;token.occupiesTile=token.canBlock;token.damageType=battle.behavior?.(copy)?.damageType||'physical';token.range=Math.max(1.1,Math.max(...(battle.profile(copy).range?.grids||[]).map(g=>Math.hypot(g.col,g.row)),1));}}
+ if(u.id==='char_249_mlyss'&&(idx===0||idx===1||idx===2)){const token=battle.s.summons.find(s=>s.ownerUid===u.uid&&s.type==='mlyss-fluid'&&s.deployed)||spawnSummon(battle,u,{type:'mlyss-fluid',name:'流形',synthetic:!battle.data.tokens?.token_10030_mlyss_wtrman,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:idx===2?25:u.skillLeft,persistAfterSourceGone:true});const copy=battle.s.units.find(v=>v.uid!==u.uid&&!v.deployed&&v.hp>0);if(token&&copy&&!token.copyOf){const attrs=battle.profile(copy).attributes;token.copyOf=copy.uid;for(const [to,from] of [['maxHp','maxHp'],['hp','maxHp'],['atk','atk'],['def','def'],['res','magicResistance'],['blockCnt','blockCnt'],['interval','baseAttackTime'],['attackSpeed','attackSpeed']])if(Number.isFinite(attrs[from]))token[to]=attrs[from];token.canBlock=token.blockCnt>0;token.occupiesTile=token.canBlock;token.damageType=battle.behavior?.(copy)?.damageType||'physical';token.range=Math.max(1.1,Math.max(...(battle.profile(copy).range?.grids||[]).map(g=>Math.hypot(g.col,g.row)),1));}}
  if(u.id==='char_143_ghost'&&idx===1){u.lockHp={min:1,endsAt:null,onEnd:null};log(battle,'lock',{uid:u.uid,min:1});}
  if(u.id==='char_1023_ghost2'&&idx===1){u.lockHp={min:1,endsAt:null,onEnd:'forced'};log(battle,'lock',{uid:u.uid,min:1,operator:'归溟幽灵鲨'});}
  if(u.id==='char_107_liskam'&&idx===0){
@@ -4344,7 +4398,7 @@ function onSkillStart(battle,u){
   const bb=skillBB(battle,u),grounds=battle.s.units.filter(v=>v.deployed&&v.hp>0&&battle.profile(v).position==='MELEE').slice(0,bb.max_target||2);
   for(const a of grounds)for(let ball=0;ball<3;ball++)addEffect(battle,{kind:'attached',sourceUid:u.uid,sourceDeployGen:u.deployGen,anchorUid:a.uid,talentOrSkillId:'reed2-s2-'+ball,radius:.8,interval:bb.cooldown||1.5,nextAt:battle.s.time+(ball+1)*(bb.cooldown||1.5)/3,endsAt:battle.s.time+(bb.projectile_life_time||20),values:{atk_scale:bb.atk_scale||1.9,heal_ratio:.5},refKind:'anchor',persistAfterSourceGone:true});
  }
- if(u.id==='char_108_silent'&&idx===1){
+ if(u.id==='char_108_silent'&&idx===1&&!u.summonCtrl?.manualSummonCards){
   u.summonCtrl??={stock:0,cap:1,type:'drone'};
   if((u.summonCtrl.stock||0)<u.summonCtrl.cap)u.summonCtrl.stock++;
   if(u.summonCtrl.stock>0){spawnSummon(battle,u,{type:'silent-drone',name:'医疗无人机',targetable:false,healable:false,canBlock:false,canAttack:false,canHeal:true,device:true,maxHp:1,atk:battle.stats(u).atk,duration:10,persistAfterSourceGone:true,healScale:.5});}
@@ -4418,10 +4472,10 @@ function spawnSummon(battle,owner,spec){
  if(ctrl&&((ctrl.stock??0)<=0||live.length>=ctrl.cap))return null;
  const occupied=new Set(alliedActors(battle.s).filter(x=>x.occupiesTile!==false&&(x.kind!=='summon'||(x.deployed&&x.hp>0))).map(x=>x.x+','+x.y));
  const candidates=spec.x!=null?[[spec.x,spec.y]]:[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>[owner.x+dx,owner.y+dy]);
- const position=candidates.find(([x,y])=>{const tile=battle.map.grid[y]?.[x];return tile&&tile.buildableType!=='NONE'&&!tile.obstacle&&(!spec.canBlock||tile.heightType!=='HIGHLAND')&&!occupied.has(x+','+y)&&(spec.type!=='vigil-wolf'||battle.inside(owner,{x,y}));});
+ const position=candidates.find(([x,y])=>{const tile=battle.map.grid[y]?.[x];return tile&&tile.buildableType!=='NONE'&&!tile.obstacle&&(!spec.canBlock||tile.heightType!=='HIGHLAND')&&(spec.occupiesTile===false||!occupied.has(x+','+y))&&(spec.type!=='vigil-wolf'||battle.inside(owner,{x,y}));});
  if(!position)return null;
  const [x,y]=position,a=nativeAttributes(entity,battle.profile(owner).status).attributes,uid=battle.s.nextId++,canBlock=spec.canBlock??a.blockCnt>0,canAttack=spec.canAttack??(a.baseAttackTime>0&&entity.skillRefs?.some(r=>r.skillId));
- const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type||tokenId,name:spec.name||entity.name,kind:'summon',allied:true,x,y,dir:owner.dir,hp:spec.maxHp??a.maxHp,maxHp:spec.maxHp??a.maxHp,atk:spec.atk??a.atk,def:a.def,res:a.magicResistance,damageResistance:spec.damageResistance||0,cost:tokenCostFor(battle.profile(owner),tokenId,a.cost),interval:spec.interval??a.baseAttackTime,attackSpeed:spec.attackSpeed??a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,canBlock,canAttack,canHeal:spec.canHeal??false,flying:!!spec.flying,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime,nextAuraAt:spec.type==='ghost2-substitute'?battle.s.time+1:null};
+ const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type||tokenId,name:spec.name||entity.name,kind:'summon',allied:true,x,y,dir:owner.dir,hp:spec.maxHp??a.maxHp,maxHp:spec.maxHp??a.maxHp,atk:spec.atk??a.atk,def:a.def,res:a.magicResistance,damageResistance:spec.damageResistance||0,elementalImmune:!!spec.elementalImmune,isolated:!!spec.isolated,cost:tokenCostFor(battle.profile(owner),tokenId,a.cost),interval:spec.interval??a.baseAttackTime,attackSpeed:spec.attackSpeed??a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],immunities:{...(spec.immunities||{})},shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,canBlock,canAttack,canHeal:spec.canHeal??false,flying:!!spec.flying,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime,nextAuraAt:spec.type==='ghost2-substitute'?battle.s.time+1:null};
  battle.s.summons.push(row);if(ctrl)ctrl.stock--;
  log(battle,'summon',{uid,ownerUid:owner.uid,type:spec.type,x,y});return row;
 }
@@ -4439,12 +4493,12 @@ function tickSummons(battle,dt){
   }
   if(s.type==='vigil-wolf'&&battle.s.time>=s.nextLifeAt){s.lives=Math.min(3,(s.lives||0)+1);s.blockCnt=s.lives;s.nextLifeAt+=25;if(s.hp<=0){s.hp=s.maxHp;s.deployed=true;s.targetable=true;s.deployGen++;s.exitLife=null;}}
   if(s.type==='svash2-float'&&s.svashPursuit&&s.deployed&&s.hp>0){const owner=getActor(battle.s,s.ownerUid),target=enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable).sort((a,b)=>Math.hypot(a.x-s.x,a.y-s.y)-Math.hypot(b.x-s.x,b.y-s.y)||a.uid-b.uid)[0];s.svashTargetUid=target?.uid??null;if(owner&&target){const dx=target.x-s.x,dy=target.y-s.y,d=Math.hypot(dx,dy)||1,speed=6;if(d<=speed*dt){s.x=target.x;s.y=target.y;if(battle.s.time+1e-9>=(s.nextAttackAt||0)){const bb=skillBB(battle,owner);dealDamage(battle,{source:owner,target,amount:battle.stats(owner).atk*(Number(bb.bird_atk_scale)||1.4),type:'physical',cause:'skill',skill:true});applyStatus(target,'fragile',Number(bb.damage_scale)||1.2,{source:owner.uid,resistible:false});s.nextAttackAt=battle.s.time+1;}}else{s.x+=dx/d*speed*dt;s.y+=dy/d*speed*dt;}}}
-  if(s.type==='yan-guardian'&&s.deployed&&s.hp>0){s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){const targets=enemyActors(battle.s).filter(x=>!x.hidden&&!x.untargetable).sort((a,b)=>chebyshev(s,a)-chebyshev(s,b)||a.uid-b.uid).slice(0,s.yanTargets||3);for(const e of targets){dealDamage(battle,{source:s,target:e,amount:s.atk,type:'arts',cause:'attack'});applyElementDamage(battle,{source:s,target:e,amount:s.atk*(s.yanBurnScale||.2),type:'burn',cause:'attack'});for(const near of enemyActors(battle.s).filter(x=>Math.hypot(x.x-e.x,x.y-e.y)<=1)) {near.elementDamageTakenBonus=Math.max(near.elementDamageTakenBonus||0,s.yanVulnerability||.2);near.elementDamageTakenUntil=battle.s.time+3;}}s.attackCooldown=s.interval||1;}}
+  if(s.type==='yan-guardian'&&s.deployed&&s.hp>0){if(tickYanSkill(battle,s,dt))continue;s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){for(const e of yanTargets(battle,s,s.yanTargets||3))yanDamage(battle,s,e,1);s.attackCooldown=s.interval||2.5;}if(s.yanSkillSp>=s.yanSkillCost)startYanSkill(battle,s);continue;}
   if(s.canAttack&&s.deployed&&s.hp>0){s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){const e=enemyActors(battle.s).filter(x=>!x.hidden).sort((a,b)=>chebyshev(s,a)-chebyshev(s,b)||a.uid-b.uid)[0];if(e&&chebyshev(s,e)<=(s.range||1.1)){const buff=s.vigilBuff;for(let i=0;i<(s.lives??1);i++)dealDamage(battle,{source:s,target:e,amount:s.atk*(buff?.scale||1),type:s.damageType||'physical',cause:'attack'});if(buff){const owner=getActor(battle.s,s.ownerUid);if(owner)applyHeal(battle,{source:owner,target:owner,amount:owner.maxHp*buff.heal});s.vigilBuff=null;}s.attackCooldown=s.interval||1;}}}
  }
  for(const owner of battle.s.units.filter(u=>u.id==='char_4162_cathy'&&u.deployed&&u.hp>0)){
   const ctrl=owner.summonCtrl;if(!ctrl)continue;const devices=battle.s.summons.filter(s=>s.ownerUid===owner.uid&&s.type==='cathy-device');
-  for(const target of battle.s.units.filter(t=>t.uid!==owner.uid&&t.deployed&&t.hp>0&&!devices.some(s=>s.anchorUid===t.uid))){if(ctrl.stock<=0||devices.length>=ctrl.cap)break;const device=spawnSummon(battle,owner,{type:'cathy-device',name:'支援装置',targetable:false,healable:false,canBlock:false,anchorUid:target.uid});if(device){device.nextShieldAt=battle.s.time+1;device.shieldId='cathy-'+target.uid;device.shieldCap=battle.stats(owner).maxHp*.2;grantShield(battle,target,{id:device.shieldId,amount:device.shieldCap,sourceUid:owner.uid});devices.push(device);}}
+  if(!ctrl.manualSummonCards)for(const target of battle.s.units.filter(t=>t.uid!==owner.uid&&t.deployed&&t.hp>0&&!devices.some(s=>s.anchorUid===t.uid))){if(ctrl.stock<=0||devices.length>=ctrl.cap)break;const device=spawnSummon(battle,owner,{type:'cathy-device',name:'支援装置',targetable:false,healable:false,canBlock:false,anchorUid:target.uid});if(device){device.nextShieldAt=battle.s.time+1;device.shieldId='cathy-'+target.uid;device.shieldCap=battle.stats(owner).maxHp*.2;grantShield(battle,target,{id:device.shieldId,amount:device.shieldCap,sourceUid:owner.uid});devices.push(device);}}
   for(const device of devices){const target=getActor(battle.s,device.anchorUid);if(!target?.deployed)continue;if(battle.s.time>=device.nextShieldAt){device.nextShieldAt+=1;const ownerSkill=owner.source?.skillIndex??battle.profile(owner).skillIndex,obb=ownerSkill===1?skillBB(battle,owner):null;if(ownerSkill===1){const cap=device.shieldCap,layer=target.shieldLayers.find(l=>l.id===device.shieldId),remaining=Math.min(cap,(layer?.remaining||0)+battle.stats(owner).maxHp*(Number(obb.overwrite_ratio)||.06));grantShield(battle,target,{id:device.shieldId,amount:remaining,sourceUid:owner.uid});}else if(battle.s.time-(target.lastDamagedAt??-999)>=5){const layer=target.shieldLayers.find(l=>l.id===device.shieldId),remaining=Math.min(device.shieldCap,(layer?.remaining||0)+battle.stats(owner).maxHp*.06);grantShield(battle,target,{id:device.shieldId,amount:remaining,sourceUid:owner.uid});}}}
  }
 }
@@ -4468,7 +4522,7 @@ const {usesSp,spTypeOf,skillKind,ammoCount,initSpOf,gainSp,tickTimeSp} = load("n
 const {containsTarget} = load("targeting.js");
 const {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds,TENTATIVE_PROJECTILE_SPEED,enemyBehaviorProfile,enemyTargetValid,enemyTargetInRange,enemyShouldHoldPosition,ENEMY_MOVEMENT_POLICIES} = load("native-combat.js");
 const {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,tokenCostFor} = load("native-operator-effects.js");
-const {ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor} = load("native-effects.js");
+const {ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,spawnSummon} = load("native-effects.js");
 class NativeBattle {
  constructor(data,economy,map,turn,{restore=false}={}){
   this.data=data;this.economy=economy;this.map=map;this.turn=turn;this.operatorRegistry=operatorRegistry(data);
@@ -4478,9 +4532,19 @@ class NativeBattle {
   this.s.band=economy.s.bandId;this.s.banner={text:'作战开始',life:1.6};
   const sources=economy.s.units.filter(u=>u.position).sort((a,b)=>a.position.y-b.position.y||a.position.x-b.position.x);
   this.s.units=sources.map((u,i)=>{const p=this.profile(u),a=p.attributes,skill=p.skill,costData=moduleCostData(p);return {uid:u.uid,id:u.charId,chessId:u.chessId,source:u,x:u.position.x,y:u.position.y,dir:u.dir,hp:a.maxHp,maxHp:a.maxHp,baseCost:a.cost||0,deploymentCost:0,lastDeploymentCost:0,redeployPenalty:0,waitingCost:false,runtimeCost:costData.runtimeCost,runtimeCostActive:costData.runtimeCostActive,runtimeCostUsed:false,refundRatio:costData.refundRatio,refundIgnoresCap:costData.refundIgnoresCap,chargerKillCost:costData.chargerKillCost,merchantCost:costData.merchantCost,merchantInterval:costData.merchantInterval,sp:initSpOf(skill),spCd:0,spLock:0,coins:0,deployed:false,deployAt:3+i*.18,down:0,skillLeft:0,skillCount:0,ammo:0,ammoMax:0,attackCooldown:0,action:null,statuses:[],immunities:{stun:a.stunImmune,silence:a.silenceImmune,frozen:a.frozenImmune,sleep:a.sleepImmune,levitate:a.levitateImmune,fear:a.fearedImmune,terror:a.fearedImmune,tremble:a.palsyImmune,root:a.attractImmune},shield:0,barriers:[],shieldLayers:[],damage:0,healing:0,lastAttack:0,lastSkill:-999,counters:{},buffs:[],deployGen:0,exitLife:null};});
-  ensureBattleShape(this.s);dispatch(this,'battle-start',{target:null});
+  ensureBattleShape(this.s);dispatch(this,'battle-start',{target:null});this.spawnPreparedSummons();
   if(this.s.benchmark){this.s.enemies=[createTrainingDummy(this.s.nextId++,9,1)];this.s.total=1;}else this.prepareWaves(turn);
   for(const u of this.s.units){const stats=this.stats(u);u.hp=u.maxHp=stats.maxHp;}
+ }
+ spawnPreparedSummons(){
+  for(const card of this.economy.s.summonCards||[]){if(!card.position)continue;const owner=this.s.units.find(u=>u.uid===card.ownerUid);if(!owner)continue;let token=null;
+   if(card.type==='vigil-wolf')token=spawnSummon(this,owner,{type:'vigil-wolf',name:'狼群',x:card.position.x,y:card.position.y,targetable:true,canBlock:true,canAttack:true,blockCnt:2,lives:2,nextLifeAt:this.s.time+25,occupiesTile:true});
+   if(card.type==='mlyss-fluid')token=spawnSummon(this,owner,{type:'mlyss-fluid',name:'流形',x:card.position.x,y:card.position.y,synthetic:true,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,persistAfterSourceGone:true});
+   if(card.type==='silent-drone')token=spawnSummon(this,owner,{type:'silent-drone',name:'医疗无人机',x:card.position.x,y:card.position.y,targetable:false,healable:false,canBlock:false,canAttack:false,canHeal:true,device:true,maxHp:1,atk:this.stats(owner).atk,duration:10,persistAfterSourceGone:true,healScale:.5});
+   if(card.type==='skadi2-seaborn')token=spawnSummon(this,owner,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',x:card.position.x,y:card.position.y,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:30,persistAfterSourceGone:false});
+   if(card.type==='cathy-device'){const anchor=this.s.units.filter(v=>v.uid!==owner.uid).sort((a,b)=>Math.hypot(a.x-card.position.x,a.y-card.position.y)-Math.hypot(b.x-card.position.x,b.y-card.position.y))[0];token=spawnSummon(this,owner,{type:'cathy-device',name:'支援装置',x:card.position.x,y:card.position.y,targetable:false,healable:false,canBlock:false,anchorUid:anchor?.uid,occupiesTile:false,device:true});if(token&&anchor){token.nextShieldAt=this.s.time;token.shieldId='cathy-'+token.uid;token.shieldCap=this.stats(owner).maxHp*.2;}}
+   if(token)token.tacticalCardUid=card.uid;
+  }
  }
  attachRuntime(){
   this.rows=this.economy.bonds();this.layers=this.economy.s.bondLayers;this.s.band=this.economy.s.bandId;for(const u of this.s.units){const p=this.profile(u),d=moduleCostData(p);u.runtimeCost??=d.runtimeCost;u.runtimeCostActive??=d.runtimeCostActive;u.runtimeCostUsed??=Boolean(u.deployCount||u.deployed);u.refundRatio??=d.refundRatio;u.refundIgnoresCap??=d.refundIgnoresCap;u.chargerKillCost??=d.chargerKillCost;u.merchantCost??=d.merchantCost;u.merchantInterval??=d.merchantInterval;}
@@ -4500,7 +4564,7 @@ class NativeBattle {
   const noExternal=this.behavior(target).noExternalHealing,selfException=noExternal&&source?.uid===target.uid;
   return selfException||(!noExternal&&!target.unhealable&&!target.statuses?.some(s=>s.kind==='healingBlocked'));
  }
- elementInjury(target){const value=target.elemental??target.elementInjury;return typeof value==='number'?Math.max(0,value):Object.values(value||{}).reduce((sum,n)=>sum+Math.max(0,n||0),0);}
+ elementInjury(target){const value=target.elemental??target.elementInjury;return typeof value==='number'?Math.max(0,value):Math.max(0,...Object.values(value||{}).map(n=>Number(n)||0));}
   healingTargets(u,allowFull=false){const element=this.behavior(u).elementHealing,locked=u.papyrsTargetUid;return alliedActors(this.s).filter(v=>(locked==null||!this.skillActive(u)||v.uid===locked)&&this.canHeal(v,u)&&this.inside(u,v)&&(allowFull||v.hp<v.maxHp||(element&&this.elementInjury(v)>0))).sort((a,b)=>{const la=(this.profile(u).charId==='char_4042_lumen'&&(this.profile(u).skillIndex??u.source?.skillIndex)===2?Number((a.statuses||[]).some(s=>['stun','frozen','sleep','fear','root','silence'].includes(s.kind))):0),lb=(this.profile(u).charId==='char_4042_lumen'&&(this.profile(u).skillIndex??u.source?.skillIndex)===2?Number((b.statuses||[]).some(s=>['stun','frozen','sleep','fear','root','silence'].includes(s.kind))):0);return lb-la||(this.profile(u).charId==='char_4114_harold'?this.elementInjury(b)-this.elementInjury(a):a.hp/a.maxHp-b.hp/b.maxHp)||(element?this.elementInjury(b)-this.elementInjury(a):0)||a.uid-b.uid;});}
  inNamedRange(center,target,id){const range=this.data.ranges[id];return (range?.grids||[]).some(g=>{let x=g.col,y=-g.row;for(let i=0;i<(center.dir||0);i++)[x,y]=[-y,x];return Math.abs(center.x+x-target.x)<=.5&&Math.abs(center.y+y-target.y)<=.5;});}
   heal(source,target,amount,origin=source){
@@ -4510,7 +4574,7 @@ class NativeBattle {
   return applyHeal(this,{source,target,amount,origin});
  }
  healElements(source,target,amount){
-  if(!this.canHeal(target,source)||amount<=0)return;let restored=0;const injury=target.elemental??target.elementInjury;if(typeof injury==='number'){restored=Math.min(injury,amount);target.elemental=injury-restored;}else if(injury){for(const key of Object.keys(injury)){const n=Math.min(Math.max(0,injury[key]),amount);injury[key]-=n;restored+=n;}}source.elementHealing=(source.elementHealing||0)+restored;
+  if(!this.canHeal(target,source)||amount<=0)return;let restored=0;const injury=target.elemental??target.elementInjury;if(typeof injury==='number'){restored=Math.min(injury,amount);target.elemental=injury-restored;}else if(injury){const [type,value]=Object.entries(injury).sort((a,b)=>(Number(b[1])||0)-(Number(a[1])||0))[0]||[];if(type){restored=Math.min(Number(value)||0,amount);injury[type]=(Number(value)||0)-restored;if(injury[type]<=0){target.elemental={};target.elementalType=null;target.elementalStartedAt=null;target.elementalBatch=null;}}}source.elementHealing=(source.elementHealing||0)+restored;
  }
  regenerate(source,target,amount){return applyRegen(this,{source,target,amount});}
  updateBranch(u,dt){
@@ -4827,9 +4891,14 @@ const {runStrategyEvent} = load("strategy.js");
 const {createWaveRoster} = load("native-wave-random.js");
 class NativeSession extends NativeEconomy {
  constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,egg325=false}={}){
-  const map=data.maps.find(m=>m.stageId===mapId)||data.maps.find(m=>m.weight>0);super(data,modeId,{bandId,board:map,seed,manualPreview:true});this.map=map;this.battle=null;this.s.mapId=map.stageId;this.s.itemOffers=[];this.s.capacity=8;this.s.passiveIncome=0;this.s.history=[];this.s.runResult=null;this.s.frozenSlots=[];this.s.roundDecisions=[];this.s.enemyModifiers=[];this.s.operatorModifiers=[];this.s.commands=[];
+  const map=data.maps.find(m=>m.stageId===mapId)||data.maps.find(m=>m.weight>0);super(data,modeId,{bandId,board:map,seed,manualPreview:true});this.map=map;this.battle=null;this.s.mapId=map.stageId;this.s.itemOffers=[];this.s.summonCards=[];this.s.capacity=8;this.s.passiveIncome=0;this.s.history=[];this.s.runResult=null;this.s.frozenSlots=[];this.s.roundDecisions=[];this.s.enemyModifiers=[];this.s.operatorModifiers=[];this.s.commands=[];
   this.poolDraw=request=>this.drawFromPool(request);this.s.offers=this.rollOffers();this.fillItems();this.startPreparation();this.ensureRewards();this.s.waveRoster=waveRoster||createWaveRoster({random:()=>this.random(),data:this.data,modeId:this.s.modeId});if(egg325)this.s.egg325=true;
  }
+ summonCardSpecs(u){const p=this.data.profiles[u?.chessId],skillIndex=u?.skillIndex??p?.skillIndex??0,out=[];if(p?.branch==='tactician'){if(u.charId==='char_427_vigil')out.push({type:'vigil-wolf',name:'狼群',count:1});if(u.charId==='char_249_mlyss')out.push({type:'mlyss-fluid',name:'流形',count:1});}if(u.charId==='char_4162_cathy')out.push({type:'cathy-device',name:'支援装置',count:3});if(u.charId==='char_108_silent'&&skillIndex===1)out.push({type:'silent-drone',name:'医疗无人机',count:1});if(u.charId==='char_1012_skadi2')out.push({type:'skadi2-seaborn',name:'海嗣',count:1});return out;}
+ syncSummonCards({resetPlaced=false}={}){this.s.summonCards??=[];const owners=new Map(this.s.units.filter(u=>u.position&&this.summonCardSpecs(u).length).map(u=>[u.uid,u]));this.s.summonCards=this.s.summonCards.filter(card=>{const owner=owners.get(card.ownerUid),spec=owner&&this.summonCardSpecs(owner).find(x=>x.type===card.type);if(!spec)return false;if(resetPlaced)card.position=null;return true;});for(const owner of owners.values())for(const spec of this.summonCardSpecs(owner)){const existing=this.s.summonCards.filter(card=>card.ownerUid===owner.uid&&card.type===spec.type);for(let i=existing.length;i<spec.count;i++)this.s.summonCards.push({uid:++this.s.seq,kind:'summon-card',type:spec.type,name:spec.name,ownerUid:owner.uid,position:null,dir:0});}}
+ summonCardRange(card,x,y){const owner=this.s.units.find(u=>u.uid===card.ownerUid);if(!owner?.position)return false;const grids=this.data.profiles[owner.chessId]?.range?.grids||[];return grids.some(g=>{let dx=g.col,dy=-g.row;for(let i=0;i<(owner.dir||0);i++)[dx,dy]=[-dy,dx];return owner.position.x+dx===x&&owner.position.y+dy===y;});}
+ canDeploySummonCard(cardUid,x,y){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid&&c.position===null),cell=this.map.grid[y]?.[x];if(!card||!cell||cell.buildableType==='NONE'||cell.obstacle||!this.summonCardRange(card,x,y))return false;if(card.type==='cathy-device'&&this.s.summonCards.filter(c=>c.ownerUid===card.ownerUid&&c.type===card.type&&c.position).length>=2)return false;if(['vigil-wolf','skadi2-seaborn'].includes(card.type)&&cell.heightType==='HIGHLAND')return false;return card.type==='cathy-device'||!this.s.units.some(u=>u.position?.x===x&&u.position?.y===y);}
+ deploySummonCard(cardUid,x,y){if(!this.canDeploySummonCard(cardUid,x,y))return false;this.s.summonCards.find(c=>c.uid===cardUid).position={x,y};return true;}
  eligible(){return Object.values(this.data.season.charShopChessDatas).filter(o=>o.charId&&!o.isHidden);}
  drawFromPool(r){
   if(r.kind==='item'){let items=this.data.items.filter(i=>!i.hidden&&i.rank<=this.s.level);const tier=Number(String(r.pool||'').match(/shop_(\d)/)?.[1]);if(tier)items=this.data.items.filter(i=>!i.hidden&&i.rank===tier);if(String(r.pool||'').includes('equip_vict'))items=items.filter(i=>i.normal?.giveBondId==='victoriaShip'||this.data.season.trapChessDataDict[i.id]?.giveBondId==='victoriaShip');if(!items.length)throw Error('没有可用装备');return this.pick(items).id;}
@@ -4865,12 +4934,13 @@ class NativeSession extends NativeEconomy {
    else if(type==='buyItem')result=this.buyItem(args[0]);
    else if(type==='equip')result=this.equip(args[0],args[1],args[2]);
    else if(type==='discard'){if(this.s.phase!=='prep')return false;this.s.items=this.s.items.filter(i=>i.uid!==args[0]);result=true;}
+   else if(type==='deploySummon')result=this.deploySummonCard(args[0],args[1],args[2]);
    else if(type==='start')result=this.startBattle();
    else if(type==='stop'){if(!this.battle?.s.benchmark)return false;this.battle.finish('manual');this.finishCurrentBattle();return true;}
    else if(type==='next')result=this.advanceRound();
    else if(type==='decision')result=this.chooseDecision(args[0]);
    else{const r=this.command(type,...args);result=r.ok;if(!result)throw Error(r.message||'当前条件不能执行此操作');}
-   if(result===false){this.s=before;return false;}this.ensureRewards();this.s.commands.push({round:this.s.round,type,args});if(type==='takePromotion'&&this.s.prepApplied&&!this.s.rewardPending)this.startBattle();return true;
+   if(result===false){this.s=before;return false;}if(this.s.phase==='prep')this.syncSummonCards();this.ensureRewards();this.s.commands.push({round:this.s.round,type,args});if(type==='takePromotion'&&this.s.prepApplied&&!this.s.rewardPending)this.startBattle();return true;
   }catch(error){this.s=before;this.triggerChain=[];this.lastError=error.message;return false;}
  }
  buyItem(index){if(this.s.phase!=='prep'||this.s.rewardPending)return false;const id=this.s.itemOffers[index],item=this.data.season.trapChessDataDict[id];if(!item||this.hand().length>=10||!this.spend(item.purchasePrice))return false;this.s.itemOffers[index]=null;this.gainItem(id);return true;}
@@ -4891,13 +4961,13 @@ class NativeSession extends NativeEconomy {
  deploy(uid,x,y,dir){
   if(!Number.isInteger(dir)||dir<0||dir>3||!this.canDeploy(uid,x,y))return false;
   const u=this.s.units.find(u=>u.uid===uid),other=this.s.units.find(v=>v.uid!==uid&&v.position?.x===x&&v.position?.y===y),old=u.position;
-  if(other)other.position=old;u.position={x,y};u.dir=dir;this.settleBondRewards();return true;
+  if(other)other.position=old;u.position={x,y};u.dir=dir;if(old&&(old.x!==x||old.y!==y))for(const card of this.s.summonCards||[])if(card.ownerUid===u.uid)card.position=null;this.settleBondRewards();this.syncSummonCards();return true;
  }
  startBattle(){if(this.s.phase!=='prep'||this.s.rewardPending||!this.s.units.some(u=>u.position))return false;const ok=this.beginBattle();if(!ok)return false;if(this.s.phase==='prep')return true;const turn=buildPhasePlan(this.data,this.s.modeId).find(t=>t.round===this.s.round);this.battle=new NativeBattle(this.data,this,this.map,turn);return true;}
  finishCurrentBattle(){if(!this.battle?.s.finished||this.s.phase!=='battle')return;const r=this.battle.s.result;this.s.history.push(r);if(r.kind==='training-dummy'){this.s.runResult=r;this.s.phase='finished';}else{this.s.hp=Math.max(0,this.s.hp-r.leaks);this.finishBattle({success:this.s.hp>0,leaks:r.leaks});if(!this.s.hp)this.s.runResult=r;}}
  tick(){if(this.s.phase==='battle'&&this.battle){this.battle.step();this.finishCurrentBattle();}}
  advanceRound(){if(this.s.phase!=='intermission')return false;const frozen=this.s.locked?this.s.itemOffers.slice():null;this.s.prepApplied=false;const ok=this.nextRound(this.rollOffers());if(!ok)return false;if(frozen)this.s.itemOffers=frozen;else this.fillItems();this.s.funds+=this.s.passiveIncome;
-  if(this.s.phase==='decision'){const pool=Object.values(this.data.season.effectInfoDataDict).filter(e=>e.effectType==='BUFF_GAIN'&&this.data.season.effectBuffInfoDataDict[e.effectId]?.every(x=>['global_special_choice_gain_coin','global_special_choice_refresh_free','global_special_choice_bond_addlayer','enemy_attribute_add','enemy_attribute_mul','char_attribute_mul'].includes(x.key)));this.s.roundDecisions=[];while(this.s.roundDecisions.length<3&&pool.length){const i=Math.floor(this.random()*pool.length);this.s.roundDecisions.push(pool.splice(i,1)[0].effectId);}}
+  if(this.s.phase==='prep')this.syncSummonCards({resetPlaced:true});if(this.s.phase==='decision'){const pool=Object.values(this.data.season.effectInfoDataDict).filter(e=>e.effectType==='BUFF_GAIN'&&this.data.season.effectBuffInfoDataDict[e.effectId]?.every(x=>['global_special_choice_gain_coin','global_special_choice_refresh_free','global_special_choice_bond_addlayer','enemy_attribute_add','enemy_attribute_mul','char_attribute_mul'].includes(x.key)));this.s.roundDecisions=[];while(this.s.roundDecisions.length<3&&pool.length){const i=Math.floor(this.random()*pool.length);this.s.roundDecisions.push(pool.splice(i,1)[0].effectId);}}
   return true;
  }
  chooseDecision(id){if(this.s.phase!=='decision'||!this.s.roundDecisions.includes(id))return false;for(const e of this.data.season.effectBuffInfoDataDict[id]){const p=blackboard(e.blackboard);if(e.key==='global_special_choice_gain_coin')this.s.funds+=p.count;if(e.key==='global_special_choice_refresh_free')this.s.freeRefresh+=p.count;if(e.key==='global_special_choice_bond_addlayer')for(const b of p.bond_list.split(','))this.addLayers(b,p.count,false);if(e.key.startsWith('enemy_attribute'))this.s.enemyModifiers.push(e);if(e.key==='char_attribute_mul')this.s.operatorModifiers.push(e);}this.s.roundDecisions=[];this.s.phase='prep';this.startPreparation();return true;}
@@ -5057,6 +5127,16 @@ function drawStatuses(c,x,y,unit,size){
  if((unit.barriers||[]).some(b=>b.charges>0))kinds.push('barrier');
  kinds.slice(0,3).forEach((k,i)=>mark(c,x-size/2+6+i*13,y-size*.82,k));
 }
+const ELEMENT_RING_COLORS={neural:'#67c9ff',burn:'#ff875c',necrosis:'#c19aff',corrosion:'#b7d875',elemental:'#f3d27f'};
+function drawElementRing(c,x,y,unit,size){
+ const raw=unit?.elemental,max=Number(unit?.elementalMax||unit?.maxHp)||0;
+ if(!raw||typeof raw!=='object'||max<=0)return;
+ const entries=Object.entries(raw).filter(([,value])=>Number(value)>0).map(([type,value])=>[type,Number(value)]).sort((a,b)=>b[1]-a[1]),[type,value]=entries[0]||[];
+ if(!type)return;
+ const progress=Math.min(1,value/max),radius=size*.56;
+ c.save();c.lineWidth=Math.max(2,size*.045);c.lineCap='butt';c.strokeStyle='#0b1718cc';c.beginPath();c.arc(x,y-size*.2,radius,-Math.PI/2,Math.PI*1.5);c.stroke();c.strokeStyle=ELEMENT_RING_COLORS[unit.elementalType||type]||ELEMENT_RING_COLORS.elemental;c.beginPath();c.arc(x,y-size*.2,radius,-Math.PI/2,-Math.PI/2+Math.PI*2*progress);c.stroke();
+ c.restore();
+}
 function drawDownRing(c,p,u,size,opts={}){
  const max=u.downMax||u.down||1,ratio=Math.max(0,Math.min(1,1-(u.down||0)/max));
  c.strokeStyle='#8eb4a7';c.lineWidth=2;c.beginPath();c.arc(p.x,p.y-size*.1,size*.42,-Math.PI/2, -Math.PI/2+ratio*Math.PI*2);c.stroke();
@@ -5064,7 +5144,7 @@ function drawDownRing(c,p,u,size,opts={}){
  c.fillStyle='#e9fff7';c.font='11px sans-serif';c.textAlign='center';c.fillText((opts.formatNumber?opts.formatNumber(n):n)+'s',p.x,p.y+4);
 }
 
-return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawFx,drawStatuses,drawDownRing};
+return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing};
 },
 "native-325.js": function(load) {
 // 325 display rewrite. Algorithm and lookup table from
@@ -6087,7 +6167,7 @@ const {NativeBattle} = load("native-battle.js");
 const {renderLobby} = load("native-lobby.js");
 const {buildPhasePlan} = load("protocol.js");
 const {spBarFill} = load("native-sp.js");
-const {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawDownRing} = load("native-fx.js");
+const {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing} = load("native-fx.js");
 const {EGG_BASE_MODE,EGG_MODE_ID,apply325Display,egg325Active,format325,rewrite325Text} = load("native-325.js");
 const data=NATIVE_DATA,root=document.getElementById('app'),SAVE='garrison-native-manual-v1',CHECKPOINT_SAVE='garrison-native-safe-v1',VIEW_SAVE='garrison-native-view-v1';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -6125,7 +6205,7 @@ async function leavePlayChrome(){
 }
 matchMedia('(orientation:portrait)').addEventListener('change',syncPlayChrome);
 window.addEventListener('resize',syncPlayChrome);
-const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:null,view:'lobby',mode:'mode_single_normal',band:'band_bldsk',map:data.maps.find(m=>m.weight>0).stageId,selected:null,item:null,inspect:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,editor:editorState(),waveTable:loadWaveTable()};
+const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:null,view:'lobby',mode:'mode_single_normal',band:'band_bldsk',map:data.maps.find(m=>m.weight>0).stageId,selected:null,summonSelected:null,item:null,inspect:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,editor:editorState(),waveTable:loadWaveTable()};
 let canvas,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0;
 function readSave(key){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):null;}catch{return null;}}
 function savedView(){try{return sessionStorage.getItem(VIEW_SAVE)||'lobby';}catch{return 'lobby';}}
@@ -6165,6 +6245,34 @@ function sandboxReset(){const previous=state.sandbox?.previousGame||null;state.s
 function sandboxDetail(){const sb=state.sandbox,b=sb?.battle,ops=sandboxOperators,ens=sandboxEnemies;return `<section class="sandbox-inline"><div class="sandbox-inline-head"><b>技能测试内容</b><small>${sb?.phase==='setup'?'按正式场景方式选择干员、拖拽/点击地块并确认朝向':'沿用正式战斗控制器，可暂停、单步和手动释放技能'}</small></div><details open><summary>添加干员</summary><input id="sandbox-op-search" type="search" value="${esc(sb?.opQuery||'')}" placeholder="搜索名称或 ID" aria-label="搜索测试干员"><div class="sandbox-inline-results">${ops.map(o=>`<button data-act="sandbox-add-op" data-id="${o.id}" data-sandbox-op="${esc((o.name+' '+o.id).toLowerCase())}" ${sb?.opQuery&&!((o.name+' '+o.id).toLowerCase().includes(sb.opQuery.toLowerCase()))?'hidden':''}>${avatar(o.charId)}<span><b>${esc(o.name)}</b><small>${o.rank} 阶${o.isGolden?' · 精锐':''}</small></span></button>`).join('')}</div></details><details open><summary>添加敌人</summary><input id="sandbox-enemy-search" type="search" value="${esc(sb?.enemyQuery||'')}" placeholder="搜索敌人名称或 ID" aria-label="搜索测试敌人"><button class="sandbox-dummy" data-act="sandbox-add-dummy">＋ 不行动木桩</button><div class="sandbox-inline-results">${ens.map(e=>`<button data-act="sandbox-add-enemy" data-id="${e.id}" data-sandbox-enemy="${esc((e.name+' '+e.id).toLowerCase())}" ${sb?.enemyQuery&&!((e.name+' '+e.id).toLowerCase().includes(sb.enemyQuery.toLowerCase()))?'hidden':''}><span class="sandbox-enemy-glyph">◆</span><span><b>${esc(e.name)}</b><small>${e.applyWay==='RANGED'?'远程':'近战'} · ${e.motion==='FLY'?'飞行':'地面'}</small></span></button>`).join('')}</div></details><div class="sandbox-inline-picked"><b>已选敌人</b>${(sb?.enemyDrafts||[]).map(d=>`<div><span>${d.dummy?'∞':'◆'} ${esc(d.dummy?'不行动木桩':data.enemies[d.id]?.name||d.id)}</span><button data-act="sandbox-remove-enemy" data-uid="${d.uid}">移除</button></div>`).join('')||'<small>暂无敌人</small>'}</div><div class="sandbox-inline-actions"><button data-act="sandbox-start" ${sb?.phase!=='setup'?'disabled':''}>开始测试</button><button data-act="sandbox-step" ${sb?.phase!=='battle'?'disabled':''}>单步</button><button data-act="sandbox-clear-enemies">清空敌人</button><button data-act="sandbox-reset">重置</button><button data-act="sandbox-exit">退出</button></div>${sb?.battle?`<div class="sandbox-inline-live"><b>测试干员</b>${sb.economy.s.units.map(u=>{const live=b.s.units.find(v=>v.uid===u.uid),p=data.profiles[u.chessId];return live?`<div><span>${esc(p.name)} · ${Math.round(live.hp)}/${Math.round(live.maxHp)}</span><button data-act="sandbox-fill-sp" data-uid="${u.uid}">充能</button><button data-act="sandbox-skill" data-uid="${u.uid}">${live.skillLeft>0||live.ammo>0?'结束技能':'释放技能'}</button></div>`:''}).join('')||'<small>暂无已部署干员</small>'}<b>测试敌人</b>${(sb.enemyDrafts||[]).map(d=>`<div><span>${d.dummy?'∞':'◆'} ${esc(d.dummy?'不行动木桩':data.enemies[d.id]?.name||d.id)}</span><button data-act="sandbox-remove-enemy" data-uid="${d.uid}">移除</button></div>`).join('')||'<small>暂无敌人</small>'}</div>`:''}</section>`;}
 function bondOperators(id){const seen=new Set();return Object.values(data.season.charShopChessDatas).filter(shop=>shop.charId&&!shop.isHidden&&data.profiles[shop.chessId]?.bonds?.includes(id)).map(shop=>{if(seen.has(shop.charId))return null;seen.add(shop.charId);const p=data.profiles[shop.chessId];return {chessId:shop.chessId,charId:shop.charId,name:p.name,rank:shop.chessLevel};}).filter(Boolean).sort((a,b)=>a.rank-b.rank||a.name.localeCompare(b.name,'zh-CN'));}
 function sortedBondRows(rows,layers={}){return Object.entries(rows).filter(([,b])=>b.count>0).sort(([aId,a],[bId,b])=>(layers[bId]||0)-(layers[aId]||0)||b.count-a.count||aId.localeCompare(bId));}
+function bondCurrentPreview(id,layers){
+ const level=Math.max(0,Number(layers)||0),info=data.season.bondInfoDict[id],effects=data.season.effectBuffInfoDataDict[info?.effectId]||[],values={};
+ for(const row of effects.flatMap(e=>e.blackboard||[]))if(row.key!=='key'&&values[row.key]===undefined)values[row.key]=Number(row.value);
+ const n=v=>Number.isInteger(v)?String(v):String(Math.round(v*100)/100),pct=v=>`${n(v*100)}%`,line=(label,value)=>`<li><span>${label}</span><b>${value}</b></li>`,lines=[];
+ const scaled=(label,base,per)=>lines.push(line(label,`${pct(base)} + ${pct(per)} × ${level}层 = ${pct(base+per*level)}`));
+ switch(id){
+  case 'yanShip':scaled('【炎】攻击力提升',values.base_atk,values.atk_per_stack);break;
+  case 'sargonShip':lines.push(line('技能增益持续时间',`${n(values.base_time+values.time_per_stack*level)}秒（5 + 0.22 × ${level}）`));break;
+  case 'victoriaShip':lines.push(line('装备干员伤害倍率',`${n(values.base_damage_scale+values.damage_scale_per_stack*level)}倍（基础1.25倍）`));break;
+  case 'kjeragShip':lines.push(line('寒冷/冻结目标伤害倍率',`${n(values.base_ex_damage_scale+values.ex_damage_scale_per_stack*level)}倍`),line('寒风施加寒冷时间',`${n(values['bond_eff_kjerag[storm].base_time']+values['bond_eff_kjerag[storm].time_per_stack']*level)}秒`));break;
+  case 'lateranoShip':lines.push(line('技能额外弹药比例',pct(values.base_ammo_percent+values.ammo_percent_per_stack*level)));break;
+  case 'egirShip':scaled('最大生命值提升',values.base_max_hp,values.max_hp_per_stack);break;
+  case 'siracusaShip':lines.push(line('隐匿期间攻速加成',`${n(values.base_attack_speed+values.attack_speed_per_stack*level)}`),line('隐匿期间真伤',`${n(values.base_damage+values.damage_per_stack*level)}`));break;
+  case 'kazimierzShip':lines.push(line('部署攻击增益上限',pct(values.base_max_atk_when_born+values.max_atk_when_born_per_stack*level)));break;
+  case 'preciShip':scaled('攻击力提升',values.base_atk,values.atk_per_stack);break;
+  case 'swiftShip':lines.push(line('技能结束回技力概率',pct(values.base_prob+values.prob_per_stack*level)));break;
+  case 'skillfulShip':lines.push(line('邻近干员攻速加成',n(values.base_attack_speed+values.attack_speed_per_stack*level)),line('扩大范围阈值',`${values.power_bond_stack_cnt}层`));break;
+  case 'arcaneShip':lines.push(line('法术脆弱',pct(values.base_damage_scale_show+values.damage_scale_per_stack*level)),line('低于50%生命时法术脆弱',pct(values.base_damage_scale_show_ex+values.damage_scale_per_stack_show_ex*level)));break;
+  case 'steadShip':scaled('最大生命值提升',values.base_max_hp,values.max_hp_per_stack);lines.push(line('反击法术伤害',`${n(values.base_damage_value+values.damage_value_per_stack*level)}`));break;
+  case 'deputShip':scaled('防御力提升',values.base_def,values.def_per_stack);break;
+  case 'visiShip':lines.push(line('已达到的资金奖励',`${Math.floor(level/values.layer)*values.count}资金（每${values.layer}层+${values.count}）`));break;
+  case 'miraShip':lines.push(line('下次刷新免费概率',pct(values.baseprob+values.prob*level)),line('已达到的层数资金奖励',`${Math.floor(level/values.layer)*values.count}资金`));break;
+  case 'investShip':lines.push(line('SERVER_GAIN重复次数',`${level>=100?3:2}次（${level>=100?'已达到':'100层后达到'}）`));break;
+  case 'raidShip':lines.push(line('闲置强化状态',level>=values.power_bond_stack_cnt?`攻击速度 +${values.power_attack_speed}，攻击/生命 ${pct(values.base_atk+values.atk_per_stack*level)}`:`未激活（需${values.power_bond_stack_cnt}层）`));break;
+  case 'indomShip':lines.push(line('近战干员保留部署概率',pct(values.base_prob+values.prob_per_stack*level)));break;
+ }
+ return lines.length?`<section class="native-bond-current"><h3>当前动态数值 · ${level}层</h3><ul>${lines.join('')}</ul></section>`:'';
+}
 function render(){
  painting=true;
  try{
@@ -6242,7 +6350,7 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
   if(result)render();return;
  }
  if(a==='new'){const egg=state.mode===EGG_MODE_ID,modeId=egg?EGG_BASE_MODE:state.mode,seed=(Date.now()&0xffffffff)>>>0;state.draft={modeId,mapId:state.map,seed,roster:createWaveRoster({random:waveRng(seed),data,modeId}),egg325:egg};state.view='briefing';state.modal=null;render();return;}
- if(a==='begin'){enterPlayChrome();state.supplyCollapsed=false;if(!state.draft){state.view='lobby';leavePlayChrome();render();return;}try{state.game=new NativeSession(data,{modeId:state.draft.modeId,bandId:state.band,mapId:state.draft.mapId,seed:state.draft.seed,waveRoster:state.draft.roster,egg325:!!state.draft.egg325});state.view='game';state.draft=null;state.paused=false;state.expiresAt=null;state.selected=state.item=state.inspect=state.preview=state.modal=null;save();saveCheckpoint();render();}catch(e){notice(e.message);}return;}
+ if(a==='begin'){enterPlayChrome();state.supplyCollapsed=false;if(!state.draft){state.view='lobby';leavePlayChrome();render();return;}try{state.game=new NativeSession(data,{modeId:state.draft.modeId,bandId:state.band,mapId:state.draft.mapId,seed:state.draft.seed,waveRoster:state.draft.roster,egg325:!!state.draft.egg325});state.view='game';state.draft=null;state.paused=false;state.expiresAt=null;state.selected=state.summonSelected=state.item=state.inspect=state.preview=state.modal=null;save();saveCheckpoint();render();}catch(e){notice(e.message);}return;}
  if(a==='resume'){if(state.expiresAt&&Date.now()>=state.expiresAt){notice('暂离已超过24小时，请开始新模拟');return;}enterPlayChrome();state.expiresAt=null;state.view='game';render();return;}if(a==='home'){if(state.view==='editor'||state.view==='briefing'){state.view='lobby';leavePlayChrome();render();return;}state.view='lobby';state.paused=true;state.expiresAt??=Date.now()+86400000;state.modal=null;save();leavePlayChrome();render();return;}if(a==='result'){showResult();return;}
  if(a==='export'){const url=URL.createObjectURL(new Blob([JSON.stringify(g.snapshot(),null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-round-'+g.s.round+'.json';link.click();URL.revokeObjectURL(url);return;}
  if(a==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{if(input.files[0].size>10e6)throw Error('存档文件过大');const record=JSON.parse(await input.files[0].text()),game=NativeSession.restore(data,record);if(!game)throw Error('存档版本、数据或有效期不匹配');state.game=game;state.view='game';state.paused=true;save();saveCheckpoint();enterPlayChrome();render();}catch(e){notice(e.message);}};input.click();return;}
@@ -6251,14 +6359,16 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
  if(a==='mute'){state.muted=!state.muted;savePreference('garrison-mute',state.muted?'1':'0');if(!state.muted)unlockAudio();render();return;}
  if(a==='reduce-fx'){state.reduceFx=!state.reduceFx;savePreference('garrison-reduce-fx',state.reduceFx?'1':'0');render();return;}
  if(a==='inspect-close'){state.inspect=null;render();return;}
- if(a==='select'){if(state.item){if(!g.perform('equip',state.item,uid)){const u=g.s.units.find(u=>u.uid===uid);if(u?.equipment.length>=2){modal(`<h2>选择替换的装备</h2>${u.equipment.map((e,i)=>`<button data-act="replace" data-uid="${uid}" data-slot="${i}">${esc(itemName(e.chessId))}</button>`).join('')}`);return;}}state.item=null;}state.selected=uid;state.inspect={kind:'unit',uid};state.preview=null;save();render();return;}
- if(a==='item'){if(inspectSame('pack',uid)){state.item=uid;notice('点击一名场上或整备区干员以装备／使用。');}else{state.item=null;state.selected=null;state.inspect={kind:'pack',uid};}render();return;}
+ if(a==='summon-select'){state.summonSelected=uid;state.selected=null;state.item=null;state.inspect={kind:'summon-card',uid};state.preview=null;render();return;}
+ if(a==='select'){if(state.item){if(!g.perform('equip',state.item,uid)){const u=g.s.units.find(u=>u.uid===uid);if(u?.equipment.length>=2){modal(`<h2>选择替换的装备</h2>${u.equipment.map((e,i)=>`<button data-act="replace" data-uid="${uid}" data-slot="${i}">${esc(itemName(e.chessId))}</button>`).join('')}`);return;}}state.item=null;}state.summonSelected=null;state.selected=uid;state.inspect={kind:'unit',uid};state.preview=null;save();render();return;}
+ if(a==='item'){state.summonSelected=null;if(inspectSame('pack',uid)){state.item=uid;notice('点击一名场上或整备区干员以装备／使用。');}else{state.item=null;state.selected=null;state.inspect={kind:'pack',uid};}render();return;}
  if(a==='replace'){g.perform('equip',state.item,uid,Number(button.dataset.slot));state.item=null;state.modal=null;save();render();return;}
- if(a==='bond-info'){const id=button.dataset.id,b=data.season.bondInfoDict[id],members=bondOperators(id),live=new Set((g?.s.units||[]).filter(u=>u.position).map(u=>u.charId));modal(`<h2>${esc(b.name)}</h2><p>${esc(plain(b.desc))}</p><div class="native-bond-roster" aria-label="盟约干员">${members.map(m=>{const active=live.has(m.charId);return `<div class="native-bond-member${active?' active':''}">${avatar(m.charId)}<span><b>${esc(m.name)}</b><small>${m.rank} 阶${active?' · 场上':''}</small></span></div>`;}).join('')||'<small>暂无可用干员</small>'}</div>`);return;}if(a==='aim'){if(state.preview){state.preview.dir=Number(button.dataset.dir);draw();}return;}if(a==='cancel'){state.preview=null;render();return;}if(a==='place-confirm'){commitPreview();return;}
+ if(a==='bond-info'){const id=button.dataset.id,b=data.season.bondInfoDict[id],members=bondOperators(id),live=new Set((g?.s.units||[]).filter(u=>u.position).map(u=>u.charId)),layer=g?.s.bondLayers?.[id]||0,active=g?.bonds?.()?.[id]?.active;modal(`<h2>${esc(b.name)}</h2><p>${esc(plain(b.desc))}</p>${bondCurrentPreview(id,layer)}<p class="muted small">${active?'当前盟约已激活，动态数值生效中。':'当前盟约尚未激活，动态数值仅作预览。'}</p><div class="native-bond-roster" aria-label="盟约干员">${members.map(m=>{const active=live.has(m.charId);return `<div class="native-bond-member${active?' active':''}">${avatar(m.charId)}<span><b>${esc(m.name)}</b><small>${m.rank} 阶${active?' · 场上':''}</small></span></div>`;}).join('')||'<small>暂无可用干员</small>'}</div>`);return;}if(a==='aim'){if(state.preview){state.preview.dir=Number(button.dataset.dir);draw();}return;}if(a==='cancel'){state.preview=null;render();return;}if(a==='place-confirm'){commitPreview();return;}
  let ok;if(a==='buy'||a==='buyItem'){const kind=a==='buy'?'shop':'shopItem',index=Number(button.dataset.index);if(!inspectSame(kind,index)){state.inspect={kind,index};state.selected=null;state.item=null;render();return;}if(g.s.phase!=='prep'){notice('当前阶段不能购买');return;}ok=g.perform(a,index);if(ok){state.inspect=null;if(a==='buy')state.selected=g.s.units.at(-1)?.uid??null;}}else if(a==='reward'){const reward=g.s.rewardPending,index=Number(button.dataset.index),id=reward?.tier?reward.offers?.[index]:button.dataset.id;if(reward?.tier&&!inspectSame('reward',index)){state.inspect={kind:'reward',index};state.selected=null;state.item=null;render();return;}ok=id?g.perform('takePromotion',id):false;state.modal=null;if(ok)state.inspect=null;}else if(a==='decision'){ok=g.perform(a,button.dataset.id);state.modal=null;}else if(a==='sell'){ok=g.perform(a,uid);if(ok){state.selected=null;state.inspect=null;}}else if(a==='withdraw'){ok=g.perform(a,uid);}else if(['upgrade','refresh','lock','start','next','stop'].includes(a)){ok=g.perform(a);if(a==='start'){state.paused=false;resetFxClock();unlockAudio();}state.preview=null;if(a==='refresh')state.inspect=null;}else return;
  if(!ok)notice(g.lastError||'当前资金、位置或阶段不允许此操作');if(ok&&(a==='next'||a==='decision'))saveCheckpoint();save();render();if(g.s.phase==='finished')showResult();
 }
-function updateHud(){const g=state.game;if(!g||state.view!=='game')return;const b=g.battle?.s,rounds=buildPhasePlan(data,g.s.modeId).filter(r=>!r.isConditional).length,status=document.getElementById('native-status');
+function renderSummonCards(){const game=state.game;if(game?.s.phase==='prep')game.syncSummonCards?.();const bench=document.getElementById('native-hand'),cards=game?.s.phase==='prep'?(game.s.summonCards||[]).filter(c=>c.position===null):[];if(!bench)return;bench.querySelectorAll('[data-act="summon-select"]').forEach(node=>node.remove());for(const card of cards){const button=document.createElement('button');button.dataset.act='summon-select';button.dataset.uid=String(card.uid);button.className=`native-summon-card${state.summonSelected===card.uid?' chosen':''}`;button.innerHTML=`<span class="native-summon-icon">◈</span><b>${esc(card.name)}</b><small>召唤卡 · 点击放置</small>`;bench.append(button);}}
+function updateHud(){const g=state.game;if(!g||state.view!=='game')return;renderSummonCards();const b=g.battle?.s,rounds=buildPhasePlan(data,g.s.modeId).filter(r=>!r.isConditional).length,status=document.getElementById('native-status');
  if(status){const time=b&&g.s.phase==='battle'?`<div><small>剩余时间</small><b>${Math.max(0,Math.ceil(b.limit-b.time))}<i> 秒</i></b></div><div><small>剩余资金</small><b class="funds">${g.s.funds}<i> ◆</i></b></div>`:`<div><small>剩余资金</small><b class="funds">${g.s.funds}<i> ◆</i></b></div>`;
   const wave=b&&g.s.phase==='battle'?`<div><small>波次</small><b>${b.kills}<i> / ${b.total}</i></b></div>`:`<div><small>回合</small><b>${g.s.round}<i>/${rounds}</i></b></div>`;
   status.innerHTML=`<div><small>生命</small><b class="hp">${g.s.hp}<i>/${g.s.maxHp}</i></b></div>${time}${wave}`;}
@@ -6289,8 +6399,9 @@ function place(uid,x,y){
  if(!g.canDeploy(uid,x,y)){notice('该位置无法部署或交换此干员');return;}
  state.inspect=null;state.selected=uid;state.preview={uid,x,y,dir:null,revision:g.s.commands.length};render();
 }
+function placeSummon(cardUid,x,y){const g=state.game;if(!g||g.s.phase!=='prep'||!g.canDeploySummonCard(cardUid,x,y)){notice('该位置不在召唤卡的可部署范围内');return;}state.inspect=null;state.preview={summonUid:cardUid,x,y,dir:0,revision:g.s.commands.length};render();}
 function commitPreview(){
- const p=state.preview,g=state.game;if(!p||p.dir===null){notice('请先选择朝向');return;}
+ const p=state.preview,g=state.game;if(!p)return;if(p.summonUid!=null){if(g.s.phase!=='prep'||g.s.commands.length!==p.revision){state.preview=null;notice('阵地已变化，请重新选择召唤卡');render();return;}if(!g.perform('deploySummon',p.summonUid,p.x,p.y)){notice('该位置无法部署召唤卡');return;}state.preview=null;state.summonSelected=null;state.inspect=null;save();render();return;}if(p.dir===null){notice('请先选择朝向');return;}
  if(g.s.phase!=='prep'||g.s.commands.length!==p.revision){state.preview=null;notice('阵地已变化，请重新选择位置');render();return;}
  if(!g.perform('deploy',p.uid,p.x,p.y,p.dir))notice('该位置无法部署');
  state.preview=null;state.selected=null;state.inspect=null;save();render();
@@ -6350,6 +6461,7 @@ function draw(){
   if(u.skillLeft>0||u.ammo>0){c.strokeStyle='#f4d38b';c.lineWidth=2;c.strokeRect(p.x-size/2-3,p.y-size*.75-3,size+6,size+6);}
   c.globalAlpha=1;c.fillStyle='#d5fff1';c.font='14px sans-serif';c.textAlign='center';c.fillText(['→','↓','←','↑'][u.dir],p.x+size*.65,p.y);
   statusOverlays.push(()=>{
+  drawElementRing(c,p.x,p.y,u,size);
   if(u.hp!==undefined&&u.deployed){c.fillStyle='#122022';c.fillRect(p.x-size/2,p.y+size*.35,size,4);c.fillStyle='#75d9aa';c.fillRect(p.x-size/2,p.y+size*.35,size*Math.max(0,u.hp/u.maxHp),4);}
   const sk=profile(u)?.skill,cost=g.battle&&u.sp!==undefined?g.battle.spCost(u):sk?.spData?.spCost||0,fill=spBarFill(u,sk,cost);if(fill&&u.deployed){const bx=p.x-size/2,by=p.y+size*.35+(u.hp!==undefined?6:0);if(fill.kind==='ammo'){const n=fill.cells,gap=1,cw=Math.max(1,(size-(n-1)*gap)/n);for(let i=0;i<n;i++){c.fillStyle='#122022';c.fillRect(bx+i*(cw+gap),by,cw,4);if(i<fill.filled){c.fillStyle='#f4d38b';c.fillRect(bx+i*(cw+gap),by,cw,4);}}}else{c.fillStyle='#122022';c.fillRect(bx,by,size,3);c.fillStyle=fill.on?'#f4d38b':fill.ready?'#f0d18a':'#7bbaf3';c.fillRect(bx,by,size*fill.ratio,3);}}
   if(g.battle)drawStatuses(c,p.x,p.y,u,size);if(down)drawDownRing(c,p,u,size,eggOn()?{formatNumber:format325}:undefined);
@@ -6360,12 +6472,13 @@ function draw(){
   const p=point(s.x,s.y);p.y-=tileLift(g.map.grid[s.y]?.[s.x],z)*.5;const size=Math.min(z.tw*.5,z.th*.8);
   if(s.type==='svash2-float'){c.fillStyle='#8bd8e5';c.beginPath();c.arc(p.x,p.y-size*.05,size*.42,0,Math.PI*2);c.fill();c.fillStyle='#143238';c.font='bold '+Math.max(12,size*.55)+'px sans-serif';c.textAlign='center';c.fillText('浮',p.x,p.y+size*.15);c.strokeStyle='#f4efe2';c.lineWidth=2;c.stroke();}else{c.fillStyle=s.device?'#7ec8e3':'#c9a56a';c.beginPath();c.moveTo(p.x,p.y-size*.55);c.lineTo(p.x+size*.4,p.y);c.lineTo(p.x,p.y+size*.45);c.lineTo(p.x-size*.4,p.y);c.closePath();c.fill();c.strokeStyle='#f4efe2';c.lineWidth=state.inspect?.kind==='summon'&&state.inspect.uid===s.uid?2:1;c.stroke();}
   statusOverlays.push(()=>{
+  drawElementRing(c,p.x,p.y,s,size);
   c.fillStyle='#122022';c.fillRect(p.x-size/2,p.y+size*.35,size,4);c.fillStyle='#75d9aa';c.fillRect(p.x-size/2,p.y+size*.35,size*Math.max(0,s.hp/s.maxHp),4);
   drawStatuses(c,p.x,p.y,s,size);
   c.fillStyle='#e9fff7';c.font='10px sans-serif';c.textAlign='center';c.fillText(s.name||s.type,p.x,p.y-size*.65);
   });
  }
- if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),im=img(e.id),size=z.tw*.55;if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);});}if(g.battle.s.summons?.some(s=>s.type==='svash2-float'&&s.svashPursuit&&s.svashTargetUid===e.uid)){c.fillStyle='#ef566b';c.font='bold 14px sans-serif';c.textAlign='center';c.fillText('狼眼',p.x,p.y-size*.8);}}
+ if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),im=img(e.id),size=z.tw*.55;if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{drawElementRing(c,p.x,p.y-(e.flying?15:0),e,size);c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);});}if(g.battle.s.summons?.some(s=>s.type==='svash2-float'&&s.svashPursuit&&s.svashTargetUid===e.uid)){c.fillStyle='#ef566b';c.font='bold 14px sans-serif';c.textAlign='center';c.fillText('狼眼',p.x,p.y-size*.8);}}
  if(g.battle&&g.s.phase==='battle')drawFx(c,point,z,g.battle,{reduceFx:state.reduceFx,formatText:eggOn()?rewrite325Text:null});
  if(drag?.moved&&overCanvas(drag.x,drag.y)){const cell=cellAt(drag.x,drag.y);if(g.map.grid[cell.y]?.[cell.x]){c.strokeStyle=g.canDeploy(drag.uid,cell.x,cell.y)?'#78f1bd':'#f88c78';c.lineWidth=3;c.strokeRect(z.ox+cell.x*z.tw+2,z.oy+cell.y*z.th+2,z.tw-4,z.th-4);}}
  if(state.preview){const p=point(state.preview.x,state.preview.y);c.fillStyle='#08151195';c.fillRect(0,0,z.r.width,z.r.height);c.strokeStyle='#70e4c1';c.lineWidth=2;c.beginPath();c.moveTo(p.x,p.y-62);c.lineTo(p.x+62,p.y);c.lineTo(p.x,p.y+62);c.lineTo(p.x-62,p.y);c.closePath();c.stroke();c.fillStyle='#e9fff7';c.font='bold 32px sans-serif';c.fillText(state.preview.dir===null?'✥':['→','↓','←','↑'][state.preview.dir],p.x,p.y+10);}
@@ -6484,7 +6597,7 @@ root.addEventListener('pointerup',e=>{
    else if(overCanvas(e.clientX,e.clientY)){const cell=cellAt(e.clientX,e.clientY);place(d.uid,cell.x,cell.y);}else render();return;
   }drag=null;dragFeedback();if(d.from==='field'){canvasPress=null;action({dataset:{act:'select',uid:String(d.uid)}});return;}}
  if(aim&&aim.id===e.pointerId){aim=null;ignoredClickPointer=e.pointerId;ignoredClickUntil=performance.now()+400;if(state.preview&&state.preview.dir!==null)commitPreview();else{state.preview=null;render();}return;}
- if(canvasPress){const press=canvasPress;canvasPress=null;if(overCanvas(e.clientX,e.clientY)){const cell=cellAt(e.clientX,e.clientY);if(press.uid){const summon=state.game.battle?.s.summons?.find(s=>s.uid===press.uid);if(summon){state.inspect={kind:'summon',uid:press.uid};state.selected=null;render();}else action({dataset:{act:'select',uid:String(press.uid)}});}else if(state.selected)place(state.selected,cell.x,cell.y);}}
+ if(canvasPress){const press=canvasPress;canvasPress=null;if(overCanvas(e.clientX,e.clientY)){const cell=cellAt(e.clientX,e.clientY);if(press.uid){const summon=state.game.battle?.s.summons?.find(s=>s.uid===press.uid);if(summon){state.inspect={kind:'summon',uid:press.uid};state.selected=null;render();}else action({dataset:{act:'select',uid:String(press.uid)}});}else if(state.selected)place(state.selected,cell.x,cell.y);else if(state.summonSelected)placeSummon(state.summonSelected,cell.x,cell.y);}}
  if(paneMoved||performance.now()<ignoredClickUntil){paneMoved=false;touchButton=null;ignoredClickPointer=e.pointerId;ignoredClickUntil=performance.now()+400;return;}
  const scroller=scrollerAtPoint(e.clientX,e.clientY);
  if(scroller){
@@ -6500,7 +6613,7 @@ root.addEventListener('pointerup',e=>{
  }
 });
 root.addEventListener('pointercancel',()=>{clearDrag();aim=null;state.preview=null;render();});
-document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea'))return;if(e.key==='Escape'){clearDrag();aim=null;state.preview=null;state.selected=null;state.inspect=null;if(!state.game?.s.rewardPending&&state.game?.s.phase!=='decision')state.modal=null;render();}if(state.preview){const d={ArrowRight:0,ArrowDown:1,ArrowLeft:2,ArrowUp:3}[e.key];if(d!==undefined){e.preventDefault();state.preview.dir=d;draw();}if(e.key==='Enter')commitPreview();}});
+document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea'))return;if(e.key==='Escape'){clearDrag();aim=null;state.preview=null;state.selected=state.summonSelected=null;state.inspect=null;if(!state.game?.s.rewardPending&&state.game?.s.phase!=='decision')state.modal=null;render();}if(state.preview){const d={ArrowRight:0,ArrowDown:1,ArrowLeft:2,ArrowUp:3}[e.key];if(d!==undefined){e.preventDefault();state.preview.dir=d;draw();}if(e.key==='Enter')commitPreview();}});
 window.addEventListener('beforeunload',()=>{state.expiresAt??=Date.now()+86400000;save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){state.paused=true;state.expiresAt??=Date.now()+86400000;save();}});
 function frame(now){const dt=Math.min(.15,(now-last)/1000);last=now;const g=state.game;if(state.view==='game'&&g?.s.phase==='battle'&&!state.paused){acc+=dt*state.speed;const previous=g.s.phase;while(acc>=1/30&&g.s.phase==='battle'){acc-=1/30;g.tick();}if(g.battle)playBattleEvents(g.battle.s,state.muted,state.volume);if(g.s.phase!==previous){acc=0;save();render();if(g.s.phase==='finished'){const dmg=Math.round(g.s.runResult?.totalDamage||0);notice('模拟结束，总伤害 '+(eggOn()?format325(dmg):dmg.toLocaleString()));showResult();}}}else if(state.view==='sandbox'&&state.sandbox?.phase==='battle'&&!state.paused){acc+=dt*state.speed;while(acc>=1/30&&!state.sandbox.battle.s.finished){acc-=1/30;state.sandbox.battle.step();}if(state.sandbox.battle)playBattleEvents(state.sandbox.battle.s,state.muted,state.volume);}else acc=0;hudTime+=dt;saveTime+=dt;if(hudTime>.2){updateHud();hudTime=0;}if(saveTime>2&&g){save();saveTime=0;}draw();requestAnimationFrame(frame);}
 root.setAttribute('data-view','native');root.addEventListener('pointerdown',()=>unlockAudio(),{once:true});syncPlayChrome();render();document.getElementById('boot-screen')?.remove();clearTimeout(window.__garrisonBootTimer);window.__garrisonReady=true;requestAnimationFrame(frame);
