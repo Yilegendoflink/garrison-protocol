@@ -2595,10 +2595,10 @@ function renderWaveEditor(data,table,ui){
  const sample=ui.sample||fillBudgetWave(waveRng((type.id.length+ui.tier)*9973),table,type.id,ui.tier);
  const used=sample.unfilled?0:sample.spent,pct=sample.budget?Math.min(100,used/sample.budget*100):0;
  return `<main class="wave-ed">
-   <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>编制台 / WAVE LEDGER</small><h1>敌人波次</h1></div><span>本期 ${rows.length} 条可出怪档案</span></header>
-   <p class="wave-ed-lead">同一词条、同一难度可编多套模板。开战时先随机抽一套，再按那一套的预算从它的池里抽怪，直到买不起为止。</p>
-   <p class="wave-ed-lead">内置默认配置覆盖全部 7 种词条、3 个压力档，每档 2 套模板；前期 6–8 只、中期 15–20 只、后期 35–40 只。默认预算足够完成数量目标；手动降低预算可能减少出怪数。预算与敌人难度用于测试，不代表原作波次；部分敌人特殊能力仍待完善。恢复默认会覆盖当前整张表。</p>
-   <nav class="wave-ed-types">${TRAINING_TYPES.map(t=>`<button data-act="ed-type" data-id="${t.id}" class="${t.id===type.id?'chosen':''}">${esc(t.name)}<small>${esc(t.id)}</small></button>`).join('')}</nav>
+  <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>编制台 / WAVE LEDGER</small><h1>敌人波次</h1></div><span>本期 ${rows.length} 条可出怪档案</span></header>
+  <p class="wave-ed-lead">同一词条、同一难度可编多套模板。开战时先随机抽一套，再按那一套的预算从它的池里抽怪，直到买不起为止。</p>
+  <p class="wave-ed-lead">内置默认配置覆盖全部 7 种词条、3 个压力档，每档 2 套模板；前期 6–8 只、中期 15–20 只、后期 35–40 只。默认预算足够完成数量目标；手动降低预算可能减少出怪数。预算与敌人难度用于测试，不代表原作波次；部分敌人特殊能力仍待完善。恢复默认会覆盖当前整张表。</p>
+  <nav class="wave-ed-types">${TRAINING_TYPES.map(t=>`<button data-act="ed-type" data-id="${t.id}" class="${t.id===type.id?'chosen':''}">${esc(t.name)}<small>${esc(t.id)}</small></button>`).join('')}</nav>
   <div class="wave-ed-toolbar">
    <div class="wave-ed-tiers">${[1,2,3].map(n=>`<button data-act="ed-tier" data-tier="${n}" class="${ui.tier===n?'chosen':''}">${'I'.repeat(n)}</button>`).join('')}</div>
    <nav class="wave-ed-temps">${pack.templates.map((row,i)=>`<button data-act="ed-temp" data-index="${i}" class="${i===ui.template?'chosen':''}">${esc(templateLabel(row,i))}<small>${row.pool.length} 种 · ${row.minCount?row.minCount+'–'+row.maxCount+'只 · ':''}预算 ${row.budget}${row.maxCost?` · ≤${row.maxCost}成本`:''}</small></button>`).join('')}<button data-act="ed-add-temp">＋ 新模板</button><button data-act="ed-copy-temp">复制本套</button><button data-act="ed-del-temp" ${pack.templates.length<=1?'disabled':''}>删除本套</button></nav>
@@ -2611,8 +2611,8 @@ function renderWaveEditor(data,table,ui){
    <button data-act="ed-roll">预演抽取</button>
    <button data-act="ed-export">导出 JSON</button>
    <button data-act="ed-import">导入 JSON</button>
-    <button data-act="ed-defaults" title="替换全部词条、模板与费用为内置测试配置">恢复默认配置</button>
-    <button data-act="ed-reset">清空本表</button>
+   <button data-act="ed-defaults" title="替换全部词条、模板与费用为内置测试配置">恢复默认配置</button>
+   <button data-act="ed-reset">清空本表</button>
   </div>
   <div class="wave-ed-meter" aria-label="预算占用"><i style="width:${pct}%"></i></div>
   ${drawList(data,table,sample,byId)}
@@ -6177,6 +6177,7 @@ const imageCache=new Map(),img=id=>{const file=data.assets[id];if(!file)return n
 function preference(key,fallback){try{return localStorage.getItem(key)??fallback;}catch{return fallback;}}
 function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
 const mobilePlay=()=>matchMedia('(hover:none) and (pointer:coarse)').matches;
+const iosMobile=()=>/iPhone|iPad|iPod/i.test(navigator.platform)||/iPhone|iPad|iPod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
 function syncPlayChrome(){
  const locked=document.documentElement.classList.contains('native-play-lock');
  const compact=matchMedia('(orientation:landscape) and (max-height:600px) and (max-width:1100px)').matches;
@@ -6189,7 +6190,7 @@ function syncPlayChrome(){
  else{app.style.removeProperty('width');app.style.removeProperty('height');}
 }
 async function enterPlayChrome(){
- if(!mobilePlay())return;
+ if(!mobilePlay()||iosMobile())return;
  document.documentElement.classList.add('native-play-lock');
  syncPlayChrome();
  const node=document.documentElement;
@@ -6203,7 +6204,8 @@ async function leavePlayChrome(){
  try{if(document.fullscreenElement||document.webkitFullscreenElement)await (document.exitFullscreen||document.webkitExitFullscreen).call(document);}catch{}
  syncPlayChrome();
 }
-matchMedia('(orientation:portrait)').addEventListener('change',syncPlayChrome);
+const portraitQuery=matchMedia('(orientation:portrait)');
+if(portraitQuery.addEventListener)portraitQuery.addEventListener('change',syncPlayChrome);else portraitQuery.addListener(syncPlayChrome);
 window.addEventListener('resize',syncPlayChrome);
 const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:null,view:'lobby',mode:'mode_single_normal',band:'band_amiya',strategyDraft:null,map:data.maps.find(m=>m.weight>0).stageId,selected:null,summonSelected:null,item:null,inspect:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,editor:editorState(),waveTable:loadWaveTable()};
 let canvas,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0;

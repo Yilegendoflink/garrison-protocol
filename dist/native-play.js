@@ -19,6 +19,7 @@ const imageCache=new Map(),img=id=>{const file=data.assets[id];if(!file)return n
 function preference(key,fallback){try{return localStorage.getItem(key)??fallback;}catch{return fallback;}}
 function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
 const mobilePlay=()=>matchMedia('(hover:none) and (pointer:coarse)').matches;
+const iosMobile=()=>/iPhone|iPad|iPod/i.test(navigator.platform)||/iPhone|iPad|iPod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
 function syncPlayChrome(){
  const locked=document.documentElement.classList.contains('native-play-lock');
  const compact=matchMedia('(orientation:landscape) and (max-height:600px) and (max-width:1100px)').matches;
@@ -31,7 +32,7 @@ function syncPlayChrome(){
  else{app.style.removeProperty('width');app.style.removeProperty('height');}
 }
 async function enterPlayChrome(){
- if(!mobilePlay())return;
+ if(!mobilePlay()||iosMobile())return;
  document.documentElement.classList.add('native-play-lock');
  syncPlayChrome();
  const node=document.documentElement;
@@ -45,7 +46,8 @@ async function leavePlayChrome(){
  try{if(document.fullscreenElement||document.webkitFullscreenElement)await (document.exitFullscreen||document.webkitExitFullscreen).call(document);}catch{}
  syncPlayChrome();
 }
-matchMedia('(orientation:portrait)').addEventListener('change',syncPlayChrome);
+const portraitQuery=matchMedia('(orientation:portrait)');
+if(portraitQuery.addEventListener)portraitQuery.addEventListener('change',syncPlayChrome);else portraitQuery.addListener(syncPlayChrome);
 window.addEventListener('resize',syncPlayChrome);
 const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:null,view:'lobby',mode:'mode_single_normal',band:'band_amiya',strategyDraft:null,map:data.maps.find(m=>m.weight>0).stageId,selected:null,summonSelected:null,item:null,inspect:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,editor:editorState(),waveTable:loadWaveTable()};
 let canvas,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0;

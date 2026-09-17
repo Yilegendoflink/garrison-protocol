@@ -97,9 +97,9 @@ html.native-landscape-ui{
  .native-facing button{min-height:30px;margin:2px;padding:3px 8px}
  .native-dossier{inset:40px auto calc(var(--dock-height) + env(safe-area-inset-bottom)) 0;width:280px;z-index:11;display:block;overflow:hidden;pointer-events:auto;touch-action:none;background:#101f1bf5;border-right:1px solid #577b6c}
  .native-dossier-body{width:100%;max-height:none;overflow:visible;padding:6px 12px 12px;font-size:11px}.native-dossier h2{font-size:20px;padding-right:30px}.native-dossier h3{margin:8px 0 4px}.native-dossier p{margin-bottom:5px}.native-dossier-stats{margin-bottom:6px}
- .native-modal{padding:8px max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left))}.native-modal>section{max-height:calc(100dvh - 16px);padding:16px 24px}.native-modal h2{margin:0 30px 10px 0;font-size:18px}
+ .native-modal{padding:8px max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left))}.native-modal>section{max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px);padding:16px 24px}.native-modal h2{margin:0 30px 10px 0;font-size:18px}
  .native-rewards{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.native-rewards button{padding:8px}.native-rewards img{width:60px;height:60px}
- .native-lobby{padding:10px 20px;min-height:100dvh}.native-lobby header{font-size:11px}.native-lobby h1{font-size:28px;margin:10px 0;letter-spacing:4px}.native-lobby h1 span{display:inline;font-size:16px;letter-spacing:3px;margin-left:16px}
+ .native-lobby{padding:10px 20px;min-height:100vh;min-height:100dvh}.native-lobby header{font-size:11px}.native-lobby h1{font-size:28px;margin:10px 0;letter-spacing:4px}.native-lobby h1 span{display:inline;font-size:16px;letter-spacing:3px;margin-left:16px}
  .native-lobby>p{font-size:11px;margin:4px 0}.native-home{grid-template-columns:1.2fr 1fr;gap:30px}.native-home h2,.native-briefing h2{font-size:13px;margin:8px 0 4px}.native-home button,.native-home a{margin-top:5px;padding:7px}.native-home select{padding:6px}.native-home p{font-size:11px;margin:5px 0}.native-lobby footer{padding:10px 0;font-size:10px}
  .native-briefing{height:100vh;height:100dvh;display:grid;grid-template-columns:220px minmax(0,1fr);grid-template-rows:32px 34px 24px 24px minmax(0,1fr) 38px;gap:4px 16px;overflow:hidden}
  .native-briefing header{grid-column:1/-1}.native-briefing h1{grid-column:1;grid-row:2;margin:0;font-size:24px}.native-briefing>p:first-of-type{grid-column:1;grid-row:3}.native-briefing>h2:first-of-type{grid-column:1;grid-row:4;margin:0}.native-briefing>p:nth-of-type(2){display:none}
@@ -110,9 +110,9 @@ html.native-landscape-ui{
 html.native-need-rotate .native-game,html.native-need-rotate .native-briefing,html.native-need-rotate .native-lobby{width:100%;height:100%!important;min-height:0}
 
 /* Main terminal redesign: a dark, information-first entry surface */
-html,body{overflow-x:clip;overflow-y:auto}
+html,body{overflow-x:hidden;overflow-y:auto;-webkit-text-size-adjust:100%}
 body{min-width:0;background:#071114}
-.native-lobby{position:relative;isolation:isolate;max-width:none;min-height:100dvh;padding:clamp(20px,4vw,54px) clamp(18px,5vw,82px) 28px;color:#e8f4ef;background:radial-gradient(circle at 78% -8%,#1b4641 0,#0d2426 32%,#081519 70%,#061013 100%);overflow-x:clip;overflow-y:auto}
+.native-lobby{position:relative;isolation:isolate;max-width:none;min-height:100dvh;padding:clamp(20px,4vw,54px) clamp(18px,5vw,82px) 28px;color:#e8f4ef;background:radial-gradient(circle at 78% -8%,#1b4641 0,#0d2426 32%,#081519 70%,#061013 100%);overflow-x:hidden;overflow-y:auto}
 .native-lobby:before{content:"";position:absolute;inset:0;z-index:-1;opacity:.16;pointer-events:none;background-image:linear-gradient(#78d8c51a 1px,transparent 1px),linear-gradient(90deg,#78d8c51a 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(180deg,#000 0,#0008 45%,transparent 100%)}
 .native-lobby:after{content:"";position:absolute;z-index:-1;right:-15vw;top:18vh;width:48vw;height:48vw;border:1px solid #6ad9c31f;border-radius:50%;box-shadow:0 0 0 36px #6ad9c30a,0 0 0 72px #6ad9c305;pointer-events:none}
 .native-lobby>header,.native-lobby>.native-hero,.native-lobby>.native-home,.native-lobby>footer{position:relative;z-index:1;max-width:1320px;margin-left:auto;margin-right:auto}
@@ -236,7 +236,7 @@ body{min-width:0;background:#071114}
   .native-dossier-body{max-height:none;overflow:visible;position:relative}
 }
 @media(max-width:820px){
-  .native-briefing{height:100dvh;min-height:0;max-height:100dvh;display:flex;flex-direction:column;overflow:hidden;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+  .native-briefing{height:100vh;height:100dvh;min-height:0;max-height:100vh;max-height:100dvh;display:flex;flex-direction:column;overflow:hidden;padding-bottom:max(10px,env(safe-area-inset-bottom))}
   .native-briefing header,.native-briefing h1,.native-briefing>p,.native-briefing>h2{flex:none}
   .native-briefing h1{font-size:28px;margin:8px 0 4px}
   .native-briefing>h2{margin:8px 0 6px}
@@ -262,7 +262,7 @@ html.native-need-rotate .native-lobby,html.native-need-rotate .native-briefing{
 
 /* Keep the entry flow usable on short mobile landscape screens. */
 @media (orientation:landscape) and (max-height:600px) and (max-width:1100px){
- html.native-landscape-ui .native-lobby{height:100dvh;min-height:0;max-height:100dvh;padding:10px max(12px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-bottom));overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+ html.native-landscape-ui .native-lobby{height:100vh;height:100dvh;min-height:0;max-height:100vh;max-height:100dvh;padding:10px max(12px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-bottom));overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
  html.native-landscape-ui .native-lobby-topbar{gap:10px;padding-bottom:10px}
  html.native-landscape-ui .native-brand{gap:8px}
  html.native-landscape-ui .native-brand-mark{width:28px;height:28px;font-size:16px}
@@ -308,7 +308,7 @@ html.native-need-rotate .native-lobby,html.native-need-rotate .native-briefing{
  html.native-landscape-ui .native-tool-grid small{font-size:9px}
  html.native-landscape-ui .native-tool-grid em{font-size:15px}
  html.native-landscape-ui .native-lobby-footer{gap:8px;margin-top:15px;padding-top:9px;font-size:9px}
- html.native-landscape-ui .native-briefing{display:block;height:100dvh;min-height:0;max-height:100dvh;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:max(14px,env(safe-area-inset-bottom))}
+ html.native-landscape-ui .native-briefing{display:block;height:100vh;height:100dvh;min-height:0;max-height:100vh;max-height:100dvh;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:max(14px,env(safe-area-inset-bottom))}
  html.native-landscape-ui .native-briefing header,html.native-landscape-ui .native-briefing h1,html.native-landscape-ui .native-briefing>p,html.native-landscape-ui .native-briefing>h2{grid-column:auto;grid-row:auto}
  html.native-landscape-ui .native-briefing h1{margin:8px 0 3px;font-size:26px}
  html.native-landscape-ui .native-briefing>p{margin:3px 0;font-size:10px;line-height:1.5}
@@ -326,7 +326,7 @@ html.native-need-rotate .native-lobby,html.native-need-rotate .native-briefing{
  html.native-landscape-ui .native-selected-strategy p{margin:4px 0;font-size:11px;line-height:1.45}
  html.native-landscape-ui .native-selected-strategy button{grid-column:auto;padding:8px 10px;font-size:11px}
  html.native-landscape-ui .native-begin{grid-column:auto;grid-row:auto;width:100%;margin:0;padding:10px;font-size:13px}
- html.native-landscape-ui .native-strategy-select{display:flex;flex-direction:column;height:100dvh;min-height:0;max-height:100dvh;overflow:hidden;background:#d2e0d9;color:#243e36}
+ html.native-landscape-ui .native-strategy-select{display:flex;flex-direction:column;height:100vh;height:100dvh;min-height:0;max-height:100vh;max-height:100dvh;overflow:hidden;background:#d2e0d9;color:#243e36}
  html.native-landscape-ui .native-strategy-select-heading{display:flex;align-items:end;gap:12px;margin-bottom:8px}
  html.native-landscape-ui .native-strategy-select-heading h1{margin:7px 0 9px;font-size:26px}
  html.native-landscape-ui .native-strategy-select-heading p{margin:0;font-size:11px;line-height:1.45}
@@ -339,8 +339,17 @@ html.native-need-rotate .native-lobby,html.native-need-rotate .native-briefing{
  html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px;font-size:11px}
 }
 @media(max-width:820px){
- .native-lobby{height:100dvh;min-height:0;max-height:100dvh;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+ .native-lobby{height:100vh;height:100dvh;min-height:0;max-height:100vh;max-height:100dvh;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
  .native-lobby button{touch-action:pan-y}
+}
+
+/* Safari mobile: keep fixed screens stable while the browser chrome expands or collapses. */
+@supports (height:100svh){
+ .native-lobby{min-height:100svh}
+ @media(max-width:820px){.native-lobby{height:100svh;max-height:100svh}.native-briefing{height:100svh;max-height:100svh}}
+ html.native-landscape-ui .native-game,html.native-landscape-ui .native-strategy-select{height:100svh;max-height:100svh}
+ html.native-landscape-ui .native-lobby,html.native-landscape-ui .native-briefing{height:100svh;max-height:100svh}
+ .native-modal>section{max-height:calc(100svh - 16px)}
 }
 .native-pool-update{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid #d3a954;background:linear-gradient(105deg,#3a3020,#172b2b);color:#f4dda0}
 .native-pool-update>div{display:flex;flex-direction:column;gap:2px;min-width:0}
