@@ -1152,7 +1152,7 @@ const effects={
  prep_finish_char_bond_add_layer:{event:'prepEnd',run:(c,p)=>{const units=c.s.units.filter(u=>u.position);for(const rank of new Set(units.map(u=>u.rank))){const u=c.pick(units.filter(u=>u.rank===rank));for(const id of c.ownBonds(u))c.addLayers(id,p.layer,false);}}},
  coin_carry_over:{event:'prepEnd',run:(c,p)=>{c.s.carryFunds=c.s.funds+Math.min(p.max,Math.floor(c.s.funds/p.capital))*p.interest;}},
  up_shop_add_special_goods:{event:'upgrade',run:(c,p)=>c.rewardFromPool(p.pool,p.count,p.choice,'item')},
- up_shop_next_refresh_must_present_bond_char:{event:'upgrade',run:(c,p)=>{if(list(p.lvlist).map(Number).includes(c.s.level))c.s.forcedRefresh={bond:p.bond,price:p.price};}},
+ up_shop_next_refresh_must_present_bond_char:{event:'upgrade',run:(c,p,k)=>{const level=Number(c.s.level);if(!list(p.lvlist).map(Number).includes(level))return;const claim=k+':level:'+level;if(c.s.strategyClaims[claim])return;c.s.strategyClaims[claim]=1;c.s.forcedRefresh={bond:p.bond,price:p.price};}},
  band_coin_cost_gain_random_char_by_shop_level:{event:'spent',run:(c,p,k)=>{const earned=Math.floor(c.s.totalSpent/p.coin_cnt),claimed=c.s.strategyClaims[k]||0;for(let i=claimed;i<earned;i++)for(let n=0;n<p.count;n++)c.gain(c.draw({kind:'operator',maxTier:c.s.level}));c.s.strategyClaims[k]=earned;}},
  band_cost_coin_reach_cnt_gain_chess_from_pool:{event:'spent',run:(c,p,k)=>{if(c.s.totalSpent>=p.coin_cnt&&!c.s.strategyClaims[k]){randomGain(c,p);c.s.strategyClaims[k]=1;}}},
  round_start_gain_coin_by_bond_char_chess_buy:{event:'bought',run:(c,p,k,u)=>{if(c.ownBonds(u).includes(p.bond)){const key=k+':'+c.s.round,claimed=c.s.strategyClaims[key]||0;if(claimed<p.max_count){c.s.nextRoundBonus+=p.count;c.s.strategyClaims[key]=claimed+1;}}}},
@@ -1162,14 +1162,17 @@ const effects={
  band_shop_refresh_copy_max_lv_char:{event:'refreshRequirements',run:()=>({duplicateCount:2,freezeOne:true})}
 };
 const STRATEGY_SERVER_EFFECTS=Object.keys(effects);
+const STRATEGY_GAP_NOTES=Object.freeze({
+ band_amiya:'激活盟约后的攻血增益未接入',band_orchid:'同名复制/冻结槽与寻呼模块效果未完整接入',band_ermengard:'前3次击倒复活未接入',band_clementia:'阿戈尔击倒加层未接入',band_emperor:'部署后再部署时间减半未接入',band_mberry:'攻击概率护盾未接入',band_humus:'技能结束周围回技力未接入',band_quintus:'突变细胞特殊装备未接入',band_doberm:'教鞭特殊法术未接入',band_malkie:'商业包装出售计数未接入',band_qalaisa:'击倒后的攻击叠层未接入',band_chen:'弱点伤害转换未接入',band_damaztic:'变形同构体装备效果未接入',band_dusk:'同名增攻与画卷复制未接入',band_ducklord:'特殊敌人替换与击倒奖励未接入',band_vodfox:'首次出售交换未接入',band_ioleta:'精锐数量对应的攻血增益未接入',band_jesica:'寻呼模块特殊装备效果未接入',band_mlyss:'博士投影的精英升级语义未完成',band_fang:'信标销毁、刷新、传递未接入',band_narant:'萨尔贡装备效果共享替换未接入',band_amedic:'医疗预备干员/Touch替换未接入'
+});
 function runStrategyEvent(c,event,unit=null){
  const band=c.data.season.bandDataListDict[c.s.bandId];if(!band)return [];
  const result=[];for(const [i,e]of c.data.season.effectBuffInfoDataDict[band.effectId].entries()){const handler=effects[e.key];if(handler?.event===event){const value=handler.run(c,params(e),c.s.bandId+':'+i,unit);if(value!==null&&value!==undefined)result.push(value);}}
  return result;
 }
-function strategyCoverage(data){return Object.values(data.season.bandDataListDict).map(b=>{const keys=data.season.effectBuffInfoDataDict[b.effectId].map(e=>e.key),partial=['band_shop_refresh_copy_max_lv_char'];return {id:b.bandId,serverHooks:keys.filter(k=>STRATEGY_SERVER_EFFECTS.includes(k)),pendingKeys:keys.filter(k=>!STRATEGY_SERVER_EFFECTS.includes(k)||partial.includes(k)),mainBattleIntegrated:false};});}
+function strategyCoverage(data){return Object.values(data.season.bandDataListDict).map(b=>{const keys=data.season.effectBuffInfoDataDict[b.effectId].map(e=>e.key),partial=['band_shop_refresh_copy_max_lv_char'],pendingKeys=keys.filter(k=>!STRATEGY_SERVER_EFFECTS.includes(k)||partial.includes(k)),gapNote=STRATEGY_GAP_NOTES[b.bandId]||null,status=pendingKeys.length||gapNote?'partial':'complete';return {id:b.bandId,serverHooks:keys.filter(k=>STRATEGY_SERVER_EFFECTS.includes(k)),pendingKeys,gapNote,status,statusLabel:status==='complete'?'效果已完整接入':'部分接入',mainBattleIntegrated:false};});}
 
-return {STRATEGY_SERVER_EFFECTS,runStrategyEvent,strategyCoverage};
+return {STRATEGY_SERVER_EFFECTS,STRATEGY_GAP_NOTES,runStrategyEvent,strategyCoverage};
 },
 "native-economy.js": function(load) {
 const {runStrategyEvent,strategyCoverage} = load("strategy.js");
@@ -6166,10 +6169,11 @@ const {NativeSession} = load("native-session.js");
 const {NativeBattle} = load("native-battle.js");
 const {renderLobby} = load("native-lobby.js");
 const {buildPhasePlan} = load("protocol.js");
+const {strategyCoverage} = load("strategy.js");
 const {spBarFill} = load("native-sp.js");
 const {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing} = load("native-fx.js");
 const {EGG_BASE_MODE,EGG_MODE_ID,apply325Display,egg325Active,format325,rewrite325Text} = load("native-325.js");
-const data=NATIVE_DATA,root=document.getElementById('app'),SAVE='garrison-native-manual-v1',CHECKPOINT_SAVE='garrison-native-safe-v1',VIEW_SAVE='garrison-native-view-v1';
+const data=NATIVE_DATA,root=document.getElementById('app'),strategyCoverageById=Object.fromEntries(strategyCoverage(data).map(x=>[x.id,x])),SAVE='garrison-native-manual-v1',CHECKPOINT_SAVE='garrison-native-safe-v1',VIEW_SAVE='garrison-native-view-v1';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const skillDescription=skill=>{const values=Object.fromEntries((skill?.blackboard||[]).map(b=>[b.key,b.valueStr??b.value]));return plain(skill?.description).replace(/\{([^}:]+)(?::([^}]+))?\}/g,(all,key,format)=>{const value=values[key];return value===undefined?'—':format?.includes('%')?Math.round(value*100)+'%':String(value);});};
 const plain=s=>String(s||'').replace(/<[^>]+>/g,'').replace(/\\n/g,'\n');
@@ -6276,13 +6280,14 @@ function bondCurrentPreview(id,layers){
  return lines.length?`<section class="native-bond-current"><h3>当前动态数值 · ${level}层</h3><ul>${lines.join('')}</ul></section>`:'';
 }
 function strategyInfo(id){const b=data.season.bandDataListDict[id],common=data.common.bandDataDict[id];return {id,name:common?.bandName||id,desc:plain(b?.bandDesc||''),hp:b?.totalHp??'—'};}
+function decorateStrategyCatalog(){for(const button of root.querySelectorAll('.native-strategy-catalog button')){const c=strategyCoverageById[button.dataset.id]||{status:'partial',statusLabel:'待核对',gapNote:'尚未建立效果覆盖记录'},span=button.querySelector('span');if(!span)continue;const status=document.createElement('small');status.className=`native-strategy-completeness ${c.status}`;status.textContent=c.statusLabel;status.title=c.gapNote||c.statusLabel;span.prepend(status);if(c.gapNote){const gap=document.createElement('em');gap.className='native-strategy-gap';gap.textContent='缺口：'+c.gapNote;span.append(gap);}}}
 function renderBriefingScreen(){const d=state.draft,mode=data.season.modeDataDict[d.modeId],mapName=data.maps.filter(m=>m.weight>0).findIndex(m=>m.stageId===d.mapId),tags=(d.roster.types||[]).map(id=>trainingType(id)).filter(Boolean),order=(d.roster.order||[]).map(id=>trainingType(id)?.name||id),strategy=strategyInfo(state.band);return `<main class="native-lobby native-briefing"><header><button data-act="home">‹ 大厅</button><span>战前准备</span></header><h1>战前准备</h1><p>${esc(d.egg325?'325模式':mode?.name||'')} · 阵地 ${mapName+1}</p><h2>本局特训</h2><p>抽中三种词条，战斗按 ${order.map(esc).join(' → ')} 轮换出怪。</p><div class="native-tags">${tags.map(t=>`<article><b>${esc(t.name)}</b><small>${esc(t.id)}</small><p>${esc(t.desc)}</p></article>`).join('')}</div><h2>初始策略</h2><section class="native-selected-strategy"><div class="native-selected-strategy-art">${avatar(strategy.id)}</div><div><span class="native-eyebrow">CURRENT STRATEGY</span><h3>${esc(strategy.name)}</h3><p>${esc(strategy.desc)}</p><small>初始生命 ${strategy.hp}</small></div><button data-act="strategy-select">选择策略 →</button></section><button class="native-primary native-begin" data-act="begin">进入对局 →</button></main>`;}
 function renderStrategySelectScreen(){const selected=state.strategyDraft||state.band,list=Object.values(data.season.bandDataListDict).map(b=>strategyInfo(b.bandId)).filter(b=>b.name);return `<main class="native-lobby native-strategy-select"><header><button data-act="strategy-cancel">‹ 返回战前准备</button><span>策略选择</span></header><div class="native-strategy-select-heading"><div><span class="native-eyebrow">STRATEGY CATALOG</span><h1>选择初始策略</h1></div><p>点击策略卡片预览，再次点击当前策略确认并返回战前准备。</p></div><div class="native-strategy-catalog">${list.map(b=>`<button data-act="strategy-pick" data-id="${b.id}" class="${selected===b.id?'chosen':''}"><div class="native-strategy-card-art">${avatar(b.id)}</div><span><b>${esc(b.name)}</b><small>初始生命 ${b.hp}</small><p>${esc(b.desc)}</p></span></button>`).join('')}</div><div class="native-strategy-select-actions"><button data-act="strategy-cancel">取消</button></div></main>`;}
 function render(){
  painting=true;
  try{
  if(state.view==='lobby'){root.innerHTML=renderLobby({data,state,avatar});root.querySelector('.native-tool-grid')?.insertAdjacentHTML('afterbegin','<div class="native-pool-update"><div><span>CONFIGURATION UPDATE</span><b>默认敌人池已经更新</b><small>需要点击按钮刷新新配置</small></div><button class="native-pool-update-action" data-act="ed-defaults">重置默认敌人池</button></div>');renderModal();return;}
- if(state.view==='strategy-select'){root.innerHTML=renderStrategySelectScreen();renderModal();return;}
+  if(state.view==='strategy-select'){root.innerHTML=renderStrategySelectScreen();decorateStrategyCatalog();renderModal();return;}
  if(state.view==='briefing'){root.innerHTML=renderBriefingScreen();renderModal();return;}
  if(state.view==='briefing'){const d=state.draft,mode=data.season.modeDataDict[d.modeId],mapName=data.maps.filter(m=>m.weight>0).findIndex(m=>m.stageId===d.mapId),tags=(d.roster.types||[]).map(id=>trainingType(id)).filter(Boolean),order=(d.roster.order||[]).map(id=>trainingType(id)?.name||id);root.innerHTML=`<main class="native-lobby native-briefing"><header><button data-act="home">‹ 大厅</button><span>战前准备</span></header><h1>战前准备</h1><p>${esc(d.egg325?'325模式':mode?.name||'')} · 阵地 ${mapName+1}</p><h2>本局特训</h2><p>抽中三种词条，战斗按 ${order.map(esc).join(' → ')} 轮换出怪。</p><div class="native-tags">${tags.map(t=>`<article><b>${esc(t.name)}</b><small>${esc(t.id)}</small><p>${esc(t.desc)}</p></article>`).join('')}</div><h2>初始策略</h2><div class="native-strategy-pane"><div class="native-strategies">${Object.values(data.season.bandDataListDict).map(b=>`<button data-act="band" data-id="${b.bandId}" class="${state.band===b.bandId?'chosen':''}">${avatar(b.bandId)}<span><b>${esc(data.common.bandDataDict[b.bandId].bandName)}</b><small>生命 ${b.totalHp}</small><p>${esc(plain(b.bandDesc))}</p></span></button>`).join('')}</div></div><button class="native-primary native-begin" data-act="begin">进入对局 →</button></main>`;renderModal();return;}
  if(state.view==='editor'){root.innerHTML=renderWaveEditor(data,state.waveTable,state.editor);const search=document.getElementById('ed-search'),catalog=document.getElementById('ed-catalog');if(search&&state.editor.keepSearch){search.focus();try{search.setSelectionRange(state.editor.caret,state.editor.caret);}catch{}}state.editor.keepSearch=false;if(catalog)catalog.scrollTop=state.editor.scroll||0;renderModal();return;}
