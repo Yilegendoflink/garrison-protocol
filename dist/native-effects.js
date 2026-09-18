@@ -3,6 +3,7 @@ import {applyStatus,permissions} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes} from './protocol.js';
 import {gainSp} from './native-sp.js';
 import {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor,talentValues,grantCoins,coinCapFor,coinGainAtSkillStart,tokenCostFor} from './native-operator-effects.js';
+import {FLIGHT_PRESETS,stepFlight,faceTarget,setFlightVelocity,distanceBetween,ensureFlight} from './native-flight.js';
 
 export const BATTLE_SCHEMA_VERSION=1;
 export const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','attached','aura','guard','barrier','lock','stat']);
@@ -425,6 +426,9 @@ function yanThreat(e){return Number.isFinite(Number(e.threat))?Number(e.threat):
 function yanCompare(a,b){return yanThreat(b)-yanThreat(a)||(b.leak||0)-(a.leak||0)||a.uid-b.uid;}
 function yanTargets(battle,guardian,count=3){return enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable).sort(yanCompare).slice(0,count);}
 function yanTarget(battle,guardian){const target=yanTargets(battle,guardian,1)[0];if(target)return target;const cols=Math.max(1,battle.map?.cols||1),rows=Math.max(1,battle.map?.rows||1);guardian.yanAim={x:Math.floor(battle.economy.random()*cols),y:Math.floor(battle.economy.random()*rows)};return null;}
+// 自由飞行用的连续坐标边界（不吸附到格心）与漫游目标点
+function flightBounds(battle){const cols=Math.max(1,battle.map?.cols||1),rows=Math.max(1,battle.map?.rows||1);return {left:0,right:cols-1,top:0,bottom:rows-1};}
+function yanWanderPoint(battle){const cols=Math.max(1,battle.map?.cols||1),rows=Math.max(1,battle.map?.rows||1);return {x:battle.economy.random()*cols,y:battle.economy.random()*rows};}
 function yanDamage(battle,guardian,target,scale,cause='attack'){
  if(!target||target.hp<=0)return;
  dealDamage(battle,{source:guardian,target,amount:guardian.atk*scale,type:'arts',cause,skill:cause==='skill'});
@@ -459,7 +463,7 @@ function bondBattleStart(battle){
  if(battle.s.bondApplied)return;battle.s.bondApplied=true;
  applyGarrisonTransfers(battle);
  const yan=yanUnits(battle);
- if(battle.on?.('yanShip')&&battle.rows?.yanShip?.count>=6&&yan.length){const b=bondParam(battle,'yanShip'),atk=yan.reduce((n,u)=>n+battle.stats(u).atk,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),hp=yan.reduce((n,u)=>n+battle.stats(u).maxHp,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),owner=yan[0];for(let i=0;i<(battle.rows.yanShip.count>=9?2:1);i++){const g=spawnSummon(battle,owner,{type:'yan-guardian',name:'炎佑',synthetic:true,canAttack:false,canBlock:false,occupiesTile:false,targetable:true,healable:false,isolated:true,flying:true,elementalImmune:true});if(g){g.atk=atk;g.maxHp=g.hp=Math.max(1,hp);g.interval=2.5;g.attackSpeed=100;g.range=99;g.yanTargets=3;g.yanBurnScale=.2;g.yanVulnerability=.2;g.yanSkillSp=15;g.yanSkillCost=15;g.yanSkillUsed=false;g.yanSkillActive=false;g.yanSkillLeft=0;g.yanSkillTargetUid=null;g.damageResistance=Number(b.damage_resistance)||.9;}}battle.s.bondYanGuardiansSpawned=true;}
+ if(battle.on?.('yanShip')&&battle.rows?.yanShip?.count>=6&&yan.length){const b=bondParam(battle,'yanShip'),atk=yan.reduce((n,u)=>n+battle.stats(u).atk,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),hp=yan.reduce((n,u)=>n+battle.stats(u).maxHp,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),owner=yan[0];for(let i=0;i<(battle.rows.yanShip.count>=9?2:1);i++){const g=spawnSummon(battle,owner,{type:'yan-guardian',name:'炎佑',synthetic:true,canAttack:false,canBlock:false,occupiesTile:false,targetable:true,healable:false,isolated:true,flying:true,elementalImmune:true});if(g){g.atk=atk;g.maxHp=g.hp=Math.max(1,hp);g.interval=2.5;g.attackSpeed=100;g.range=2;g.yanRange=2;g.moveSpeed=1;g.motion='FLY';g.yanTargets=3;g.yanBurnScale=.2;g.yanVulnerability=.2;g.yanSkillSp=15;g.yanSkillCost=15;g.yanSkillUsed=false;g.yanSkillNextAt=0;g.yanSkillActive=false;g.yanSkillLeft=0;g.yanSkillTargetUid=null;g.damageResistance=Number(b.damage_resistance)||.9;}}battle.s.bondYanGuardiansSpawned=true;}
  const kj=bondUnits(battle,'kjeragShip');if(battle.on?.('kjeragShip')&&battle.rows?.kjeragShip?.count>=6&&kj.length){const b=bondParam(battle,'kjeragShip'),duration=Number(b['bond_eff_kjerag[storm].base_time'])||20;addEffect(battle,{kind:'zone',sourceUid:kj[0].uid,talentOrSkillId:'bond-kjerag-storm',x:kj[0].x,y:kj[0].y,radius:99,interval:Number(b['bond_eff_kjerag[storm].interval'])||25,nextAt:battle.s.time+(Number(b['bond_eff_kjerag[storm].interval'])||25),endsAt:null,trackSide:'enemy',values:{cold:duration+Number(b['bond_eff_kjerag[storm].time_per_stack']||0)*(battle.layers.kjeragShip||0)},snapshot:{},refKind:'owner',persistAfterSourceGone:true});}
  const egirs=bondUnits(battle,'egirShip').sort((a,b)=>(a.y??999)-(b.y??999)||(a.x??999)-(b.x??999));if(battle.on?.('egirShip')&&egirs.length){const b=bondParam(battle,'egirShip'),dirs=[[1,0],[0,1],[-1,0],[0,-1]];for(const u of egirs){const d=dirs[u.dir||0],front=battle.s.units.find(v=>v!==u&&v.x===u.x+d[0]&&v.y===u.y+d[1]);if(!front)continue;const fp=battle.profile(front),fa=fp?.attributes||{};u.egirBorrowAtk=Number(fa.atk)||0;u.egirBorrowBlock=Number(fa.blockCnt)||0;u.egirConsumedUid=front.uid;dealDamage(battle,{source:front,target:u,amount:Number(b.damage_value)||5000,type:'physical',cause:'bond',skipHooks:true});battle.economy.addLayers('egirShip',Number(front.source?.rank||1));}}
 }
@@ -934,7 +938,36 @@ function tickSummons(battle,dt){
   }
   if(s.type==='vigil-wolf'&&battle.s.time>=s.nextLifeAt){s.lives=Math.min(3,(s.lives||0)+1);s.blockCnt=s.lives;s.nextLifeAt+=25;if(s.hp<=0){s.hp=s.maxHp;s.deployed=true;s.targetable=true;s.deployGen++;s.exitLife=null;}}
   if(s.type==='svash2-float'&&s.svashPursuit&&s.deployed&&s.hp>0){const owner=getActor(battle.s,s.ownerUid),target=enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable).sort((a,b)=>Math.hypot(a.x-s.x,a.y-s.y)-Math.hypot(b.x-s.x,b.y-s.y)||a.uid-b.uid)[0];s.svashTargetUid=target?.uid??null;if(owner&&target){const dx=target.x-s.x,dy=target.y-s.y,d=Math.hypot(dx,dy)||1,speed=6;if(d<=speed*dt){s.x=target.x;s.y=target.y;if(battle.s.time+1e-9>=(s.nextAttackAt||0)){const bb=skillBB(battle,owner);dealDamage(battle,{source:owner,target,amount:battle.stats(owner).atk*(Number(bb.bird_atk_scale)||1.4),type:'physical',cause:'skill',skill:true});applyStatus(target,'fragile',Number(bb.damage_scale)||1.2,{source:owner.uid,resistible:false});s.nextAttackAt=battle.s.time+1;}}else{s.x+=dx/d*speed*dt;s.y+=dy/d*speed*dt;}}}
-  if(s.type==='yan-guardian'&&s.deployed&&s.hp>0){if(tickYanSkill(battle,s,dt))continue;s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){for(const e of yanTargets(battle,s,s.yanTargets||3))yanDamage(battle,s,e,1);s.attackCooldown=s.interval||2.5;}if(s.yanSkillSp>=s.yanSkillCost)startYanSkill(battle,s);continue;}
+  if(s.type==='yan-guardian'&&s.deployed&&s.hp>0){
+   if(tickYanSkill(battle,s,dt))continue;
+   // 自由飞行：连续坐标推进（不按格子移动）。追踪全场仇恨最高的敌人，进入攻击范围（2.0 格）即停；
+   // 场上无可选敌人时飞向随机地块。移动速度取单位数据的 1 格/秒。
+   const bounds=flightBounds(battle);
+   const target=yanTargets(battle,s,1)[0];
+   if(target){
+    s.yanAim=null;
+    const heading=faceTarget(s,target,{turnPerFrame:FLIGHT_PRESETS.guardian.chase.turnPerFrame,dt});
+    const gap=distanceBetween(s,target);
+    if(gap>Number(s.yanRange||2))stepFlight(s,dt,{accel:FLIGHT_PRESETS.guardian.chase.accel,maxSpeed:Number(s.moveSpeed||1),bounds});
+    else setFlightVelocity(s,0,heading);
+   }else{
+    const aim=s.yanAim||(s.yanAim=yanWanderPoint(battle));
+    // 漫游不受转向限制：直接朝目标点飞
+    s.travel=ensureFlight(s);s.travel.heading=Math.atan2(aim.y-s.y,aim.x-s.x);
+    const flight=stepFlight(s,dt,{accel:FLIGHT_PRESETS.guardian.chase.accel,maxSpeed:Number(s.moveSpeed||1),bounds,arrive:.2});
+    if(flight.arrived)s.yanAim=null;
+   }
+   const inAttackRange=Boolean(target)&&distanceBetween(s,target)<=Number(s.yanRange||2);
+   s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);
+   if(s.attackCooldown<=0&&inAttackRange){
+    const inRange=yanTargets(battle,s,99).filter(e=>distanceBetween(s,e)<=Number(s.yanRange||2));
+    if(inRange.length)for(const e of inRange.slice(0,s.yanTargets||3))yanDamage(battle,s,e,1);
+    s.attackCooldown=s.interval||2.5;
+   }
+   // 「祛恶之焰」需先飞入射程再开启：否则炎佑第一帧就原地施法，永远不会移动
+   if(s.yanSkillSp>=s.yanSkillCost&&inAttackRange&&battle.s.time>=Number(s.yanSkillNextAt||0))startYanSkill(battle,s);
+   continue;
+  }
   if(s.canAttack&&s.deployed&&s.hp>0){s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){const e=enemyActors(battle.s).filter(x=>!x.hidden).sort((a,b)=>chebyshev(s,a)-chebyshev(s,b)||a.uid-b.uid)[0];if(e&&chebyshev(s,e)<=(s.range||1.1)){const buff=s.vigilBuff;for(let i=0;i<(s.lives??1);i++)dealDamage(battle,{source:s,target:e,amount:s.atk*(buff?.scale||1),type:s.damageType||'physical',cause:'attack'});if(buff){const owner=getActor(battle.s,s.ownerUid);if(owner)applyHeal(battle,{source:owner,target:owner,amount:owner.maxHp*buff.heal});s.vigilBuff=null;}s.attackCooldown=s.interval||1;}}}
   }
   for(const owner of battle.s.units.filter(u=>u.id==='char_1012_skadi2'&&u.deployed&&u.hp>0&&u.summonRespawnAt!=null&&battle.s.time>=u.summonRespawnAt)){

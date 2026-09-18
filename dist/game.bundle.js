@@ -3512,6 +3512,7 @@ const {applyStatus,permissions} = load("status.js");
 const {blackboard,resolveActiveTalents,nativeAttributes} = load("protocol.js");
 const {gainSp} = load("native-sp.js");
 const {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor,talentValues,grantCoins,coinCapFor,coinGainAtSkillStart,tokenCostFor} = load("native-operator-effects.js");
+const {FLIGHT_PRESETS,stepFlight,faceTarget,setFlightVelocity,distanceBetween,ensureFlight} = load("native-flight.js");
 const BATTLE_SCHEMA_VERSION=1;
 const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','attached','aura','guard','barrier','lock','stat']);
 const ELEMENT_TYPES=new Set(['neural','burn','necrosis','corrosion','elemental']);
@@ -3933,6 +3934,9 @@ function yanThreat(e){return Number.isFinite(Number(e.threat))?Number(e.threat):
 function yanCompare(a,b){return yanThreat(b)-yanThreat(a)||(b.leak||0)-(a.leak||0)||a.uid-b.uid;}
 function yanTargets(battle,guardian,count=3){return enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable).sort(yanCompare).slice(0,count);}
 function yanTarget(battle,guardian){const target=yanTargets(battle,guardian,1)[0];if(target)return target;const cols=Math.max(1,battle.map?.cols||1),rows=Math.max(1,battle.map?.rows||1);guardian.yanAim={x:Math.floor(battle.economy.random()*cols),y:Math.floor(battle.economy.random()*rows)};return null;}
+// 自由飞行用的连续坐标边界（不吸附到格心）与漫游目标点
+function flightBounds(battle){const cols=Math.max(1,battle.map?.cols||1),rows=Math.max(1,battle.map?.rows||1);return {left:0,right:cols-1,top:0,bottom:rows-1};}
+function yanWanderPoint(battle){const cols=Math.max(1,battle.map?.cols||1),rows=Math.max(1,battle.map?.rows||1);return {x:battle.economy.random()*cols,y:battle.economy.random()*rows};}
 function yanDamage(battle,guardian,target,scale,cause='attack'){
  if(!target||target.hp<=0)return;
  dealDamage(battle,{source:guardian,target,amount:guardian.atk*scale,type:'arts',cause,skill:cause==='skill'});
@@ -3967,7 +3971,7 @@ function bondBattleStart(battle){
  if(battle.s.bondApplied)return;battle.s.bondApplied=true;
  applyGarrisonTransfers(battle);
  const yan=yanUnits(battle);
- if(battle.on?.('yanShip')&&battle.rows?.yanShip?.count>=6&&yan.length){const b=bondParam(battle,'yanShip'),atk=yan.reduce((n,u)=>n+battle.stats(u).atk,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),hp=yan.reduce((n,u)=>n+battle.stats(u).maxHp,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),owner=yan[0];for(let i=0;i<(battle.rows.yanShip.count>=9?2:1);i++){const g=spawnSummon(battle,owner,{type:'yan-guardian',name:'炎佑',synthetic:true,canAttack:false,canBlock:false,occupiesTile:false,targetable:true,healable:false,isolated:true,flying:true,elementalImmune:true});if(g){g.atk=atk;g.maxHp=g.hp=Math.max(1,hp);g.interval=2.5;g.attackSpeed=100;g.range=99;g.yanTargets=3;g.yanBurnScale=.2;g.yanVulnerability=.2;g.yanSkillSp=15;g.yanSkillCost=15;g.yanSkillUsed=false;g.yanSkillActive=false;g.yanSkillLeft=0;g.yanSkillTargetUid=null;g.damageResistance=Number(b.damage_resistance)||.9;}}battle.s.bondYanGuardiansSpawned=true;}
+ if(battle.on?.('yanShip')&&battle.rows?.yanShip?.count>=6&&yan.length){const b=bondParam(battle,'yanShip'),atk=yan.reduce((n,u)=>n+battle.stats(u).atk,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),hp=yan.reduce((n,u)=>n+battle.stats(u).maxHp,0)*.3*(battle.rows.yanShip.count>=9?(Number(b.atk)||1.5):1),owner=yan[0];for(let i=0;i<(battle.rows.yanShip.count>=9?2:1);i++){const g=spawnSummon(battle,owner,{type:'yan-guardian',name:'炎佑',synthetic:true,canAttack:false,canBlock:false,occupiesTile:false,targetable:true,healable:false,isolated:true,flying:true,elementalImmune:true});if(g){g.atk=atk;g.maxHp=g.hp=Math.max(1,hp);g.interval=2.5;g.attackSpeed=100;g.range=2;g.yanRange=2;g.moveSpeed=1;g.motion='FLY';g.yanTargets=3;g.yanBurnScale=.2;g.yanVulnerability=.2;g.yanSkillSp=15;g.yanSkillCost=15;g.yanSkillUsed=false;g.yanSkillNextAt=0;g.yanSkillActive=false;g.yanSkillLeft=0;g.yanSkillTargetUid=null;g.damageResistance=Number(b.damage_resistance)||.9;}}battle.s.bondYanGuardiansSpawned=true;}
  const kj=bondUnits(battle,'kjeragShip');if(battle.on?.('kjeragShip')&&battle.rows?.kjeragShip?.count>=6&&kj.length){const b=bondParam(battle,'kjeragShip'),duration=Number(b['bond_eff_kjerag[storm].base_time'])||20;addEffect(battle,{kind:'zone',sourceUid:kj[0].uid,talentOrSkillId:'bond-kjerag-storm',x:kj[0].x,y:kj[0].y,radius:99,interval:Number(b['bond_eff_kjerag[storm].interval'])||25,nextAt:battle.s.time+(Number(b['bond_eff_kjerag[storm].interval'])||25),endsAt:null,trackSide:'enemy',values:{cold:duration+Number(b['bond_eff_kjerag[storm].time_per_stack']||0)*(battle.layers.kjeragShip||0)},snapshot:{},refKind:'owner',persistAfterSourceGone:true});}
  const egirs=bondUnits(battle,'egirShip').sort((a,b)=>(a.y??999)-(b.y??999)||(a.x??999)-(b.x??999));if(battle.on?.('egirShip')&&egirs.length){const b=bondParam(battle,'egirShip'),dirs=[[1,0],[0,1],[-1,0],[0,-1]];for(const u of egirs){const d=dirs[u.dir||0],front=battle.s.units.find(v=>v!==u&&v.x===u.x+d[0]&&v.y===u.y+d[1]);if(!front)continue;const fp=battle.profile(front),fa=fp?.attributes||{};u.egirBorrowAtk=Number(fa.atk)||0;u.egirBorrowBlock=Number(fa.blockCnt)||0;u.egirConsumedUid=front.uid;dealDamage(battle,{source:front,target:u,amount:Number(b.damage_value)||5000,type:'physical',cause:'bond',skipHooks:true});battle.economy.addLayers('egirShip',Number(front.source?.rank||1));}}
 }
@@ -4442,7 +4446,36 @@ function tickSummons(battle,dt){
   }
   if(s.type==='vigil-wolf'&&battle.s.time>=s.nextLifeAt){s.lives=Math.min(3,(s.lives||0)+1);s.blockCnt=s.lives;s.nextLifeAt+=25;if(s.hp<=0){s.hp=s.maxHp;s.deployed=true;s.targetable=true;s.deployGen++;s.exitLife=null;}}
   if(s.type==='svash2-float'&&s.svashPursuit&&s.deployed&&s.hp>0){const owner=getActor(battle.s,s.ownerUid),target=enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable).sort((a,b)=>Math.hypot(a.x-s.x,a.y-s.y)-Math.hypot(b.x-s.x,b.y-s.y)||a.uid-b.uid)[0];s.svashTargetUid=target?.uid??null;if(owner&&target){const dx=target.x-s.x,dy=target.y-s.y,d=Math.hypot(dx,dy)||1,speed=6;if(d<=speed*dt){s.x=target.x;s.y=target.y;if(battle.s.time+1e-9>=(s.nextAttackAt||0)){const bb=skillBB(battle,owner);dealDamage(battle,{source:owner,target,amount:battle.stats(owner).atk*(Number(bb.bird_atk_scale)||1.4),type:'physical',cause:'skill',skill:true});applyStatus(target,'fragile',Number(bb.damage_scale)||1.2,{source:owner.uid,resistible:false});s.nextAttackAt=battle.s.time+1;}}else{s.x+=dx/d*speed*dt;s.y+=dy/d*speed*dt;}}}
-  if(s.type==='yan-guardian'&&s.deployed&&s.hp>0){if(tickYanSkill(battle,s,dt))continue;s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){for(const e of yanTargets(battle,s,s.yanTargets||3))yanDamage(battle,s,e,1);s.attackCooldown=s.interval||2.5;}if(s.yanSkillSp>=s.yanSkillCost)startYanSkill(battle,s);continue;}
+  if(s.type==='yan-guardian'&&s.deployed&&s.hp>0){
+   if(tickYanSkill(battle,s,dt))continue;
+   // 自由飞行：连续坐标推进（不按格子移动）。追踪全场仇恨最高的敌人，进入攻击范围（2.0 格）即停；
+   // 场上无可选敌人时飞向随机地块。移动速度取单位数据的 1 格/秒。
+   const bounds=flightBounds(battle);
+   const target=yanTargets(battle,s,1)[0];
+   if(target){
+    s.yanAim=null;
+    const heading=faceTarget(s,target,{turnPerFrame:FLIGHT_PRESETS.guardian.chase.turnPerFrame,dt});
+    const gap=distanceBetween(s,target);
+    if(gap>Number(s.yanRange||2))stepFlight(s,dt,{accel:FLIGHT_PRESETS.guardian.chase.accel,maxSpeed:Number(s.moveSpeed||1),bounds});
+    else setFlightVelocity(s,0,heading);
+   }else{
+    const aim=s.yanAim||(s.yanAim=yanWanderPoint(battle));
+    // 漫游不受转向限制：直接朝目标点飞
+    s.travel=ensureFlight(s);s.travel.heading=Math.atan2(aim.y-s.y,aim.x-s.x);
+    const flight=stepFlight(s,dt,{accel:FLIGHT_PRESETS.guardian.chase.accel,maxSpeed:Number(s.moveSpeed||1),bounds,arrive:.2});
+    if(flight.arrived)s.yanAim=null;
+   }
+   const inAttackRange=Boolean(target)&&distanceBetween(s,target)<=Number(s.yanRange||2);
+   s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);
+   if(s.attackCooldown<=0&&inAttackRange){
+    const inRange=yanTargets(battle,s,99).filter(e=>distanceBetween(s,e)<=Number(s.yanRange||2));
+    if(inRange.length)for(const e of inRange.slice(0,s.yanTargets||3))yanDamage(battle,s,e,1);
+    s.attackCooldown=s.interval||2.5;
+   }
+   // 「祛恶之焰」需先飞入射程再开启：否则炎佑第一帧就原地施法，永远不会移动
+   if(s.yanSkillSp>=s.yanSkillCost&&inAttackRange&&battle.s.time>=Number(s.yanSkillNextAt||0))startYanSkill(battle,s);
+   continue;
+  }
   if(s.canAttack&&s.deployed&&s.hp>0){s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){const e=enemyActors(battle.s).filter(x=>!x.hidden).sort((a,b)=>chebyshev(s,a)-chebyshev(s,b)||a.uid-b.uid)[0];if(e&&chebyshev(s,e)<=(s.range||1.1)){const buff=s.vigilBuff;for(let i=0;i<(s.lives??1);i++)dealDamage(battle,{source:s,target:e,amount:s.atk*(buff?.scale||1),type:s.damageType||'physical',cause:'attack'});if(buff){const owner=getActor(battle.s,s.ownerUid);if(owner)applyHeal(battle,{source:owner,target:owner,amount:owner.maxHp*buff.heal});s.vigilBuff=null;}s.attackCooldown=s.interval||1;}}}
   }
   for(const owner of battle.s.units.filter(u=>u.id==='char_1012_skadi2'&&u.deployed&&u.hp>0&&u.summonRespawnAt!=null&&battle.s.time>=u.summonRespawnAt)){
@@ -5173,6 +5206,106 @@ function drawDownRing(c,p,u,size,opts={}){
 }
 
 return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing};
+},
+"native-flight.js": function(load) {
+// 自由飞行移动原语（连续坐标，不做格子吸附、不走路网）。
+// 用于「炎佑」与荒芜拉普兰德的「特殊形态浮游单元」——两者飞行逻辑各自实现，只共用这里的向量推进。
+// 速度单位为「格/秒」：1 表示每秒移动 1 个地块。
+
+const FULL_TURN=Math.PI*2;
+const FLIGHT_MODES={SCATTER:'scatter',CHASE:'chase',ORBIT:'orbit'};
+
+const FLIGHT_PRESETS={
+ // 荒芜拉普兰德「终幕·浩劫」浮游单元：散开 → 追击 → 抵达
+ litter:{scatterSeconds:1.3,scatter:{speed:0.1,accel:1.9,maxSpeed:2.0},chase:{speed:2.0,accel:1.0,maxSpeed:4.0,turnPerFrame:1/6},arrive:.15},
+ // 炎佑：恒速巡航，进入攻击范围即停
+ guardian:{chase:{speed:1,accel:6,maxSpeed:1,turnPerFrame:1/4},arrive:.05},
+};
+
+function wrapAngle(value){
+ let angle=Number(value)||0;
+ while(angle>Math.PI)angle-=FULL_TURN;
+ while(angle<-Math.PI)angle+=FULL_TURN;
+ return angle;
+}
+function flightPointOf(actor){return {x:Number(actor?.x)||0,y:Number(actor?.y)||0};}
+function ensureFlight(actor){
+ if(!actor.travel)actor.travel={vx:0,vy:0,speed:0,phase:FLIGHT_MODES.CHASE,phaseLeft:0,heading:0};
+ if(actor.x==null)actor.x=0;
+ if(actor.y==null)actor.y=0;
+ return actor.travel;
+}
+function setFlightVelocity(actor,speed,heading){
+ const travel=ensureFlight(actor);
+ travel.heading=heading;travel.speed=Math.max(0,Number(speed)||0);
+ travel.vx=Math.cos(heading)*travel.speed;travel.vy=Math.sin(heading)*travel.speed;
+ return travel;
+}
+function faceTarget(actor,target,{turnPerFrame=0,dt=0}={}){
+ const travel=ensureFlight(actor),from=flightPointOf(actor),to=flightPointOf(target);
+ const heading=Math.atan2(to.y-from.y,to.x-from.x);
+ if(turnPerFrame>0){
+  // 转向速度按帧给定：先按 30Hz 帧换算成角度/秒，再按本次 dt 应用
+  const maxTurn=turnPerFrame*30*dt;
+  travel.heading=travel.heading+Math.max(-maxTurn,Math.min(maxTurn,wrapAngle(heading-travel.heading)));
+ }else travel.heading=heading;
+ return travel.heading;
+}
+function distanceBetween(a,b){const p=flightPointOf(a),q=flightPointOf(b);return Math.hypot(q.x-p.x,q.y-p.y);}
+function clampToBounds(actor,bounds){
+ if(!bounds)return;
+ const left=bounds.left??0,right=bounds.right??left,top=bounds.top??0,bottom=bounds.bottom??top;
+ actor.x=Math.max(left,Math.min(right,actor.x));
+ actor.y=Math.max(top,Math.min(bottom,actor.y));
+}
+// 沿指定/当前朝向推进。到达目的地附近返回 true（不吸附到该点，位置保持连续）。
+// 返回 {arrived,remaining} 便于调用方判断是否进入下一阶段。
+function stepFlight(actor,dt,{accel=0,maxSpeed=Infinity,destination=null,bounds=null,arrive=.15}={}){
+ const travel=ensureFlight(actor);
+ const step=Math.max(0,Number(dt)||0);
+ if(!step)return {arrived:false,remaining:destination?distanceBetween(actor,destination):Infinity};
+ let remaining=Infinity;
+ if(destination){
+  remaining=distanceBetween(actor,destination);
+  if(remaining>1e-9)travel.heading=Math.atan2(destination.y-actor.y,destination.x-actor.x);
+ }
+ const ceiling=Number.isFinite(Number(maxSpeed))?Number(maxSpeed):travel.speed;
+ travel.speed=Math.max(0,Math.min(ceiling,travel.speed+Math.max(0,Number(accel)||0)*step));
+ const advance=Math.min(travel.speed*step,Number.isFinite(remaining)?remaining:Infinity);
+ actor.x+=Math.cos(travel.heading)*advance;
+ actor.y+=Math.sin(travel.heading)*advance;
+ travel.vx=Math.cos(travel.heading)*travel.speed;
+ travel.vy=Math.sin(travel.heading)*travel.speed;
+ clampToBounds(actor,bounds);
+ if(!destination)return {arrived:false,remaining:Infinity};
+ return {arrived:distanceBetween(actor,destination)<=Math.max(0,Number(arrive)||0),remaining:distanceBetween(actor,destination)};
+}
+function orbitStep(actor,center,dt,{radius=.9,lineSpeed=1,direction=-1}={}){
+ const travel=ensureFlight(actor);
+ const step=Math.max(0,Number(dt)||0);
+ if(!step)return;
+ let angle=Math.atan2(actor.y-center.y,actor.x-center.x);
+ angle+=direction*lineSpeed/Math.max(1e-6,radius)*step;
+ actor.x=center.x+Math.cos(angle)*radius;
+ actor.y=center.y+Math.sin(angle)*radius;
+ travel.heading=angle+(direction>0?Math.PI/2:-Math.PI/2);
+ travel.speed=lineSpeed;
+ travel.vx=Math.cos(travel.heading)*lineSpeed;
+ travel.vy=Math.sin(travel.heading)*lineSpeed;
+}
+// 以当前朝向为基准，把 count 个方向均匀铺开（始终包含自身朝向）
+function fanHeadings(baseHeading,count,spread=Math.PI*2){
+ const headings=[];
+ if(count<=1)return [baseHeading];
+ const step=spread/count;
+ for(let i=0;i<count;i++)headings.push(wrapAngle(baseHeading-step/2+(i+.5)*step));
+ return headings;
+}
+function randomPointInSquare(center,halfSide,random=Math.random){
+ return {x:center.x+(random()*2-1)*halfSide,y:center.y+(random()*2-1)*halfSide};
+}
+
+return {FLIGHT_MODES,FLIGHT_PRESETS,wrapAngle,flightPointOf,ensureFlight,setFlightVelocity,faceTarget,distanceBetween,stepFlight,orbitStep,fanHeadings,randomPointInSquare};
 },
 "native-skill-text.js": function(load) {
 // 技能描述文本渲染。纯函数，不读写战斗状态。
