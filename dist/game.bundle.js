@@ -255,9 +255,15 @@ const CONTROL={stun:['attack','move','block','skill'],frozen:['attack','move','b
 function applyStatus(target,kind,duration,{source=null,value=1,resistible=true}={}){
  if(!Number.isFinite(duration)||duration<=0||target.hp<=0)return false;if(target.immunities?.[kind])return false;
  if(['sleep','levitate','fear','terror','tremble'].includes(kind)&&Object.hasOwn(target,'block'))target.block=null;target.statuses??=[];
- if(kind==='cold'&&target.statuses.some(s=>s.kind==='cold')){target.statuses=target.statuses.filter(s=>s.kind!=='cold');return applyStatus(target,'frozen',duration,{source,value,resistible});}
  const time=duration*(resistible?1-Math.min(1,Math.max(0,target.statusResistance||0)):1),existing=target.statuses.find(s=>s.kind===kind&&s.source===source);
- if(time<=0)return false;if(existing){existing.remaining=Math.max(existing.remaining,time);existing.value=Math.max(existing.value,value);}else target.statuses.push({kind,remaining:time,source,value});if(['invisible','camouflage'].includes(kind))target.invisible=!target.revealed;if(kind==='fragile')target.fragile=Math.max(target.fragile||1,value);return true;
+ if(time<=0)return false;
+ // Cold upgrades to frozen when it lands a second time. A target immune to frozen keeps the cold it
+ // already has (and refreshes it) instead of having the debuff stripped and gaining nothing.
+ if(kind==='cold'&&target.statuses.some(s=>s.kind==='cold')){
+  if(target.immunities?.frozen){const cold=target.statuses.find(s=>s.kind==='cold');cold.remaining=Math.max(cold.remaining,time);return true;}
+  target.statuses=target.statuses.filter(s=>s.kind!=='cold');return applyStatus(target,'frozen',duration,{source,value,resistible});
+ }
+ if(existing){existing.remaining=Math.max(existing.remaining,time);existing.value=Math.max(existing.value,value);}else target.statuses.push({kind,remaining:time,source,value});if(['invisible','camouflage'].includes(kind))target.invisible=!target.revealed;if(kind==='fragile')target.fragile=Math.max(target.fragile||1,value);return true;
 }
 function tickStatuses(target,dt){if(!Number.isFinite(dt)||dt<0)throw Error('Invalid status delta');target.statuses??=[];for(const s of target.statuses)s.remaining-=dt;target.statuses=target.statuses.filter(s=>s.remaining>1e-9);target.invisible=target.statuses.some(s=>['invisible','camouflage'].includes(s.kind))&&!target.revealed;target.levitated=target.statuses.some(s=>s.kind==='levitate');target.fragile=target.statuses.filter(s=>s.kind==='fragile').reduce((v,s)=>Math.max(v,s.value||1),1);}
 function permissions(target){const denied=new Set();for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!(target.statuses||[]).some(s=>['sleep','levitate'].includes(s.kind)),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
