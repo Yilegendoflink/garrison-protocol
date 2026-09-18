@@ -1133,3 +1133,8 @@ test('逐名适配覆盖被动撤回、狼影、心烛、雪山复起与链路�
  const sbell=openBattle({chessId:'chess_char_6_02_a',skillIndex:0}).b;deployNow(sbell);const su=sbell.s.units[0];dealDamage(sbell,{source:enemy(sbell,{atk:999999}),target:su,value:999999,type:'true'});assert.ok(su.hp>0&&su.sbellRevived);
  const mlyss=openBattle({chessId:'chess_char_6_11_a',skillIndex:0}).b;deployNow(mlyss);const mu=mlyss.s.units[0];mu.sp=mlyss.spCost(mu);mlyss.activate(mu);assert.ok(mlyss.s.summons.some(s=>s.type==='mlyss-fluid'));
 });
+
+test('魔王技能区域与微尘在技能结束和重新部署后不累积',()=>{
+ const skill=openBattle({chessId:'chess_char_4_25_a',skillIndex:2}).b;deployNow(skill);const su=skill.s.units[0];su.sp=skill.spCost(su);skill.activate(su);assert.equal(skill.s.logicEffects.filter(f=>String(f.talentOrSkillId).startsWith('cetsyr-dust:')).length,1);dispatch(skill,'skill-end',{target:su});assert.equal(skill.s.logicEffects.filter(f=>String(f.talentOrSkillId).startsWith('cetsyr-dust:')).length,0);
+ const redeploy=openBattle({chessId:'chess_char_4_25_a',skillIndex:0}).b;deployNow(redeploy);const ru=redeploy.s.units[0];redeploy.s.cost=99;commitExit(redeploy,{target:ru,reason:'knockdown'});ru.down=0;redeploy.deploy(ru,{reentry:true});assert.equal(redeploy.s.summons.filter(s=>s.type==='cetsyr-dust').length,3);
+});

@@ -3707,7 +3707,7 @@ function periodicMods(battle,u,ctx){
  if(u.id==='char_1047_halo2'){u.haloStay??={};const talent=activeTalents(battle,u).find(t=>t.name==='能源解析'),tb=talent&&talentValues(talent);if(talent)for(const e of battle.s.enemies.filter(e=>e.hp>0&&battle.inside(u,e,true))){u.haloStay[e.uid]=(u.haloStay[e.uid]||0)+1/30;const scale=u.haloStay[e.uid]>=(Number(tb.interval)||7)?Number(tb.damage_scale_max)||1.14:Number(tb.damage_scale)||1.1;applyStatus(e,'fragile',1.1,{source:u.uid,value:scale,resistible:false});}}
  if(u.id==='char_427_vigil'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2&&u.pendingVigilCost){const p=u.pendingVigilCost;if(battle.s.time>=p.nextAt&&p.remaining>0){battle.gainCost?.(Math.min(p.perTick,p.remaining));p.remaining-=p.perTick;p.nextAt+=p.interval;}}
  if(u.id==='char_1045_svash2'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2&&u.svashCostRemaining>0&&battle.s.time+1e-9>=u.svashCostAt){battle.gainCost?.(1);u.svashCostRemaining-=1;u.svashCostAt+=Number(skillBB(battle,u)['svash2_s_3[cost].interval'])||2;}
- if(u.id==='char_1028_texas2'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){const bb=skillBB(battle,u);u.texas2NextAt??=battle.s.time+1;while(battle.s.time+1e-9>=u.texas2NextAt){const targets=allTargets(battle,u,true).slice(0,Number(bb.max_target)||3);for(const e of targets){ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(bb.atk_scale)||1),type:'arts',cause:'skill'});applyStatus(e,'stun',Number(bb.stun)||.2,{source:u.uid,resistible:false});}u.texas2NextAt+=Number(bb['texas2_s_3[sword].interval'])||1;}}
+ if(u.id==='char_1028_texas2'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){const bb=skillBB(battle,u),interval=Math.max(.1,Number(bb['texas2_s_3[sword].interval'])||1);u.texas2NextAt??=battle.s.time+1;while(battle.s.time+1e-9>=u.texas2NextAt){const targets=allTargets(battle,u,true).slice(0,Number(bb.max_target)||3);for(const e of targets){ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(bb.atk_scale)||1),type:'arts',cause:'skill'});applyStatus(e,'stun',Number(bb.stun)||.2,{source:u.uid,resistible:false});}u.texas2NextAt+=interval;}}
  if(u.id==='char_446_aroma'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===1){const bb=skillBB(battle,u);u.aromaLevitateSeen??={};u.aromaLevitateFired??={};for(const e of battle.s.enemies){const lev=e.statuses?.some(s=>s.kind==='levitate'&&s.source===u.uid);if(lev)u.aromaLevitateSeen[e.uid]=true;else if(u.aromaLevitateSeen[e.uid]&&!u.aromaLevitateFired[e.uid]){u.aromaLevitateFired[e.uid]=true;ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(bb['attack@atk_scale_when_fly_finish'])||.8),type:'arts',cause:'skill'});}}}
  if(u.id==='char_4194_rmixer'){const talent=activeTalents(battle,u).find(t=>t.name==='架盾送客仪礼'),bb=talent?.values||{};if(talent&&battle.s.time-(u.lastAttack||u.deployAt||0)>=Number(bb.interval||8)&&!(u.shieldLayers||[]).some(l=>l.id==='rmixer-idle'))ctx.grantShield(battle,u,{id:'rmixer-idle',amount:u.maxHp*(Number(bb.shield)||.15),sourceUid:u.uid});}
  if(u.id==='char_181_flower')return;
@@ -3827,7 +3827,9 @@ function drainQueue(battle){
  const st=battle.s.settle;
  if(battle.draining)return;
  battle.draining=true;
+ let processed=0;
  try{while(st.queue.length){
+  if(++processed>QUEUE_CAP){st.fault={type:'queue-drain',size:st.queue.length};break;}
   const job=st.queue.shift();
   if(job.kind==='damage')dealDamage(battle,job);
   else if(job.kind==='heal')applyHeal(battle,job);
@@ -4089,7 +4091,7 @@ function addEffect(battle,fx){
  const id=battle.s.settle.nextEffectId++;
  const row={id,startedAt:battle.s.time,stacks:1,stackRule:'refresh',refKind:'owner',...fx};
  if(row.stackRule==='refresh'||row.stackRule==='maxSame'){
-  const same=battle.s.logicEffects.find(e=>e.kind===row.kind&&e.talentOrSkillId===row.talentOrSkillId&&e.targetUid===row.targetUid&&e.sourceUid===row.sourceUid);
+  const same=battle.s.logicEffects.find(e=>e.kind===row.kind&&e.talentOrSkillId===row.talentOrSkillId&&e.targetUid===row.targetUid&&(row.sharedStack||e.sourceUid===row.sourceUid));
   if(same){
    if(row.stackRule==='maxSame'){same.endsAt=Math.max(same.endsAt??0,row.endsAt??0);same.values=row.values;return same;}
    same.endsAt=row.endsAt;same.values=row.values;same.snapshot=row.snapshot;return same;
@@ -4209,7 +4211,7 @@ function bondAfterDamage(battle,payload){
  if(battle.on?.('steadShip')&&battle.rows?.steadShip?.count>=3&&battle.s.units.includes(target)&&battle.owns(target,'steadShip')){const b=bondParam(battle,'steadShip');if((target.steadRetaliateAt||-Infinity)<=battle.s.time){target.steadRetaliateAt=battle.s.time+(Number(b['cd_duration'])||.2);if(source.hp>0)dealDamage(battle,{source:target,target:source,amount:Number(b.base_damage_value||850)+Number(b.damage_value_per_stack||10)*(battle.layers.steadShip||0),type:'arts',cause:'extra',skipHooks:true});source.fragile=Math.max(source.fragile||1,Number(b.damage_scale)||1.4);source.bondFragileUntil=battle.s.time+5;applyStatus(source,'fragile',5,{source:target.uid,value:Number(b.damage_scale)||1.4,resistible:false});}}
 }
 function bondPeriodic(battle,u){
- if(!u||u.kind==='summon'||!battle.on?.('kazimierzShip')||battle.rows?.kazimierzShip?.count<6||!battle.owns(u,'kazimierzShip')||!u.deployed||u.hp<=0)return;const b=bondParam(battle,'kazimierzShip');u.kazimierzNextAt??=battle.s.time+(Number(b.damage_interval)||2);while(battle.s.time+1e-9>=u.kazimierzNextAt){const blocked=battle.s.enemies.filter(e=>e.hp>0&&e.block===u.uid);if(blocked.length)for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&Math.hypot(e.x-u.x,e.y-u.y)<=Number(b.range_radius||.8))) {dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(b.damage_atk_scale)||1.2),type:'true',cause:'extra',skipHooks:true});applyStatus(e,'stun',Number(b.stun)||.1,{source:u.uid,resistible:false});}u.kazimierzNextAt+=Number(b.damage_interval)||2;}}
+ if(!u||u.kind==='summon'||!battle.on?.('kazimierzShip')||battle.rows?.kazimierzShip?.count<6||!battle.owns(u,'kazimierzShip')||!u.deployed||u.hp<=0)return;const b=bondParam(battle,'kazimierzShip'),interval=Math.max(.1,Number(b.damage_interval)||2);u.kazimierzNextAt??=battle.s.time+interval;while(battle.s.time+1e-9>=u.kazimierzNextAt){const blocked=battle.s.enemies.filter(e=>e.hp>0&&e.block===u.uid);if(blocked.length)for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&Math.hypot(e.x-u.x,e.y-u.y)<=Number(b.range_radius||.8))) {dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(b.damage_atk_scale)||1.2),type:'true',cause:'extra',skipHooks:true});applyStatus(e,'stun',Number(b.stun)||.1,{source:u.uid,resistible:false});}u.kazimierzNextAt+=interval;}}
 
 function zoneActors(battle,fx,side){
  const cx=fx.x,cy=fx.y,r=fx.radius??1;
@@ -4309,7 +4311,7 @@ function tickAuras(battle){
     for(const a of alliedActors(battle.s).filter(x=>x.deployed&&x.hp>0&&x.regenerable!==false))applyRegen(battle,{source:u,target:a,amount});
   }
   if(id==='char_213_mostma')for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&battle.inside(u,e,true)))applyStatus(e,'sluggish',1/15,{source:u.uid,resistible:false});
- if(id==='char_332_archet'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='兰登战术');if(talent){u.landenNextAt??=battle.s.time+(Number(talent.values?.interval)||2.5);while(battle.s.time+1e-9>=u.landenNextAt){for(const ally of battle.s.units.filter(v=>v.deployed&&v.hp>0&&battle.profile(v)?.profession==='SNIPER'))gainSp(ally,battle.profile(ally).skill,Number(talent.values?.sp)||1,battle.spCost(ally));u.landenNextAt+=Number(talent.values?.interval)||2.5;}}}
+ if(id==='char_332_archet'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='兰登战术');if(talent){const interval=Math.max(.1,Number(talent.values?.interval)||2.5);u.landenNextAt??=battle.s.time+interval;while(battle.s.time+1e-9>=u.landenNextAt){for(const ally of battle.s.units.filter(v=>v.deployed&&v.hp>0&&battle.profile(v)?.profession==='SNIPER'))gainSp(ally,battle.profile(ally).skill,Number(talent.values?.sp)||1,battle.spCost(ally));u.landenNextAt+=interval;}}}
   if(id==='char_206_gnosis'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='坚冰'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&battle.inside(u,e,true))){const frozen=e.statuses?.some(s=>s.kind==='frozen'),cold=e.statuses?.some(s=>s.kind==='cold');if(cold||frozen)e.fragile=Math.max(e.fragile||1,Number(frozen?bb.damage_scale_freeze:bb.damage_scale_cold)||1.25);}const resist=activeTalentsOf(battle,u).find(t=>t.name==='殊途同归'),rbb=resist?.values||{};if(resist&&!u.gnosisResistanceApplied&&battle.s.time-(u.deployAt??0)>=Number(rbb.interval||10)){for(const ally of battle.s.units.filter(v=>v.deployed&&v.hp>0&&battle.profile(v)?.groupId==='karlan'))ally.statusResistance=Math.max(ally.statusResistance||0,Math.max(0,Math.min(1,-Number(rbb.one_minus_status_resistance)||.5)));u.gnosisResistanceApplied=true;}}
  }
 }
@@ -4518,7 +4520,7 @@ function onOperatorDeploy(battle,u){
  if(u.id==='char_427_vigil')u.summonCtrl={stock:0,cap:1,type:'wolf',manualSummonCards:true};
  if(u.id==='char_4162_cathy'){const t=activeTalentsOf(battle,u).find(t=>t.name==='定向支援信号');u.summonCtrl={stock:0,cap:2,type:'device',manualSummonCards:true,maxStock:t?.values.cnt??3};}
  if(u.id==='char_1023_ghost2'){spawnSummon(battle,u,{type:'ghost2-substitute',tokenId:'token_10024_ebnhlz_rcube',name:'旧日残影',targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:false});}
- if(u.id==='char_4134_cetsyr'){u.cetsyrDust=3;for(let n=0;n<3;n++)spawnSummon(battle,u,{type:'cetsyr-dust',name:'微尘',synthetic:true,targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:true});}
+ if(u.id==='char_4134_cetsyr'){const dust=battle.s.summons.filter(s=>s.ownerUid===u.uid&&s.type==='cetsyr-dust'&&s.deployed);for(const extra of dust.slice(3))commitExit(battle,{target:extra,reason:'refresh'});u.cetsyrDust=3;for(let n=Math.min(3,dust.length);n<3;n++)spawnSummon(battle,u,{type:'cetsyr-dust',name:'微尘',synthetic:true,targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:true});}
  if(u.id==='char_4087_ines'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'ines-shadow',x:u.x,y:u.y,radius:2,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+25,trackArea:true,trackSide:'enemy',values:{sluggish:true,reveal:true},snapshot:{},refKind:'live',persistAfterSourceGone:true});commitExit(battle,{target:u,reason:'skill'});}
   if(u.id==='char_1012_skadi2'&&!battle.s.summons.some(s=>s.ownerUid===u.uid&&s.type==='skadi2-seaborn'&&s.deployed)&&!battle.economy?.s.summonCards?.some(card=>card.ownerUid===u.uid&&card.type==='skadi2-seaborn'&&card.position)){const talent=activeTalentsOf(battle,u).find(t=>t.name==='远古血亲');if(talent){spawnSummon(battle,u,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:Number((talent.description||'').match(/持续(\d+)秒/)?.[1])||30,persistAfterSourceGone:false});u.summonRespawnAt=null;}}
  if(u.id==='char_103_angel'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='天使的祝福');if(talent){const values=talent.values||{},candidates=battle.s.units.filter(v=>v.uid!==u.uid&&v.deployed&&v.hp>0);if(candidates.length){const target=candidates[Math.floor(battle.economy.random()*candidates.length)];target.angelBlessing={atk:Number(values.atk)||.06,maxHp:Number(values.max_hp)||.1,sourceUid:u.uid};}}}
@@ -4585,7 +4587,7 @@ function onSkillStart(battle,u){
  const idx=u.source?.skillIndex??battle.profile(u).skillIndex;
  u.skillDisarmUntil=null;u.focusHealAfter=null;u.focusHeal=false;u.statusResistance=0;u.papyrsTargetUid=null;if(u.id==='char_311_mudrok')u.invulnerableUntil=0;if(u.id==='char_311_mudrok'&&idx===2){const bb=skillBB(battle,u);for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&!e.flying&&chebyshev(e,u)<=1))applyStatus(e,'stun',Number(bb.stun)||3,{source:u.uid,resistible:false});u.mudrokAwake=false;}if(u.id==='char_4056_titi'){for(const actor of battle.s.units)actor.statuses=(actor.statuses||[]).filter(s=>s.source!==u.uid||s.kind!=='sleep');u.titiSleepUid=null;}
  u.pendingPeriodicCost=null;u.svashCostRemaining=0;u.svashCostHandled=false;u.pendingNextAttack=null;u.pendingAttackSelfHeal=null;u.pendingHealScale=null;u.papyrsShieldScale=null;u.pendingCostGain=null;
- for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-heal-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-loss:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-regen-zone:${u.id}:${u.skillCount}`))dropEffect(battle,fx,'skill-end');
+ for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-heal-zone:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-loss:${u.id}:${u.skillCount}`||fx.talentOrSkillId===`skill-regen-zone:${u.id}:${u.skillCount}`||(u.id==='char_4134_cetsyr'&&String(fx.talentOrSkillId||'').startsWith('cetsyr-dust:'))))dropEffect(battle,fx,'skill-end');
  for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId==='warfarin-s2-ally'||fx.talentOrSkillId==='saria-s3'))dropEffect(battle,fx,'skill-end');
  for(const fx of battle.s.logicEffects.slice())if(fx.sourceUid===u.uid&&(fx.talentOrSkillId==='surtr-s3-loss'||fx.talentOrSkillId==='horn-s3-loss'))dropEffect(battle,fx,'skill-end');
  if(u.warfarinTargetUid!=null){const target=getActor(battle.s,u.warfarinTargetUid);if(target?.warfarinBuff?.sourceUid===u.uid)target.warfarinBuff=null;u.warfarinTargetUid=null;}
@@ -5060,8 +5062,27 @@ class NativeBattle {
   const a={...base,atk:combineStat(base.atk,extra.add.atk||0,atk,muls.atk,extra.finalAdd.atk||0),maxHp:combineStat(base.maxHp,extra.add.maxHp||0,hp,muls.maxHp,extra.finalAdd.maxHp||0),def:combineStat(base.def,extra.add.def||0,def,muls.def,extra.finalAdd.def||0),attackSpeed:Math.max(10,Math.min(600,base.attackSpeed+as+(u.enemyAttackSpeedMod||0))),parts};
   return a;
  }
- range(u,skill=false){const p=this.profile(u),r=skill&&p.skill?.rangeId?this.data.ranges[p.skill.rangeId]:p.range;let grids=r?.grids||[{row:0,col:1}];if(p.branch==='fortress'&&!grids.some(g=>g.row===0&&g.col===0))grids=grids.concat({row:0,col:0});return grids.map(g=>{let x=g.col,y=-g.row;for(let i=0;i<u.dir;i++)[x,y]=[-y,x];return{x:u.x+x,y:u.y+y};});}
- inside(u,e,skill=(u.skillLeft>0||u.ammo>0)){if(e.hidden)return false;if(e.trainingDummy&&e.area){const cells=this.range(u,skill);for(const cell of cells)if(cell.x>=e.area.left&&cell.x<=e.area.right&&cell.y>=e.area.top&&cell.y<=e.area.bottom)return true;return false;}return containsTarget(this.range(u,skill).map(g=>[g.x,g.y]),e);}
+ range(u,skill=false){return this.rangeWithSkill(u,skill).cells;}
+ // forceSkill=true 时无视当前是否开技，一律按技能范围算：自动释放要看的是「开技后能不能打到」。
+ rangeWithSkill(u,skill=false,forceSkill=false){const p=this.profile(u),useSkill=(skill||forceSkill)&&p.skill?.rangeId,r=useSkill?this.data.ranges[p.skill.rangeId]:p.range;let grids=r?.grids||[{row:0,col:1}];if(p.branch==='fortress'&&!grids.some(g=>g.row===0&&g.col===0))grids=grids.concat({row:0,col:0});return {skill:useSkill,rangeId:useSkill?p.skill.rangeId:p.rangeId,cells:grids.map(g=>{let x=g.col,y=-g.row;for(let i=0;i<u.dir;i++)[x,y]=[-y,x];return{x:u.x+x,y:u.y+y};})};}
+ inside(u,e,skill=(u.skillLeft>0||u.ammo>0)){if(e.hidden)return false;const cells=this.range(u,skill);if(e.trainingDummy&&e.area){for(const cell of cells)if(cell.x>=e.area.left&&cell.x<=e.area.right&&cell.y>=e.area.top&&cell.y<=e.area.bottom)return true;return false;}return containsTarget(cells.map(g=>[g.x,g.y]),e);}
+ // 自动释放专用：技能开启后这次攻击能不能真的打到它。
+ // 与 targets() 的区别是范围强制用技能范围，且不要求「当前就能选中」（飞行单位在开技前可能不可选）。
+ skillWouldHitTarget(u,p){
+  const cfg=operatorSkillConfig(this,u),behavior=this.behavior(u);
+  const sleepOk=cfg.canTargetSleep||behavior.kind==='damage-heal'||p.charId==='char_4056_titi'||(p.charId==='char_423_blemsh'&&(p.activeTalents||[]).some(t=>/优先攻击.*沉睡/.test(t.description||'')));
+  const cells=this.rangeWithSkill(u,false,true).cells;
+  if(!cells.length)return false;
+  const canReach=e=>{
+   if(e.trainingDummy&&e.area)return cells.some(cell=>cell.x>=e.area.left&&cell.x<=e.area.right&&cell.y>=e.area.top&&cell.y<=e.area.bottom);
+   return containsTarget(cells.map(g=>[g.x,g.y]),e);
+  };
+  return this.s.enemies.some(e=>e.hp>0&&!e.hidden&&!e.invulnerable&&!e.untargetable&&
+   (!e.invisible||cfg.canSeeHidden||e.block===u.uid)&&
+   (e.block===u.uid||(!e.flying||behavior.antiAir))&&
+   (sleepOk||!permissions(e).sleeping)&&
+   canReach(e));
+ }
  // 当前是否处于「范围扩大」状态：技能 rangeId 与常态 rangeId 不同即为真。纯显示标记，不参与命中判定。
  wideAttack(u){return this.wideSkillKind(this.profile(u),u.skillIndex??u.source?.skillIndex??null)!==null;}
  // none=未扩大范围；burst=瞬时自身 AoE；sweep=持续范围强化；passive=入场自动释放的大范围技能
@@ -5102,9 +5123,9 @@ class NativeBattle {
   // 我方受到治疗时解除「治疗可解除」的敌方持续伤害（目前只有逐腐兽的流血）。
   cureHealCurableEffects(target){for(const fx of this.s.logicEffects||[])if(fx.kind==='dot'&&fx.targetUid===target?.uid&&String(fx.talentOrSkillId||'').endsWith('-bleeding')){fx.endsAt=this.s.time;}}
   // 敌方持续伤害区域统一入口：射击落点、跟随自身的常驻光环、死亡后留下的毒雾都走这里。
-  addEnemyGroundZone(source,spec,{x,y,follow=false,attackId=null}={}){if(!source||!spec||!(Number(spec.damage)>0||Number(spec.atkScale)>0||Number(spec.elementScale)>0))return null;const interval=Math.max(.1,Number(spec.interval)||1),duration=Number(spec.duration),radius=Number(spec.radius)||1;const row=addEffect(this,{kind:'field',sourceUid:source.uid,sourceDeployGen:source.deployGen,x,y,followUid:follow?source.uid:null,radius,interval,nextAt:this.s.time+interval,endsAt:Number.isFinite(duration)&&duration>0?this.s.time+duration:null,values:{damage:Number(spec.damage)||0,atkScale:Number(spec.atkScale)||0,damageType:spec.damageType||'true',elementScale:Number(spec.elementScale)||0,elementType:spec.elementType||null},trackSide:'ally',trackArea:true,refKind:'owner',persistAfterSourceGone:true,attackId});if(row)this.emit('enemy-skill',{uid:source.uid,x:row.x??x,y:row.y??y,skill:spec.trigger||'ground-zone',radius:row.radius,endsAt:row.endsAt});return row;}
+  addEnemyGroundZone(source,spec,{x,y,follow=false,cleanupWithSource=false,attackId=null,key=null}={}){if(!source||!spec||!(Number(spec.damage)>0||Number(spec.atkScale)>0||Number(spec.elementScale)>0))return null;const interval=Math.max(.1,Number(spec.interval)||1),duration=Number(spec.duration),radius=Number(spec.radius)||1;const row=addEffect(this,{kind:'field',sourceUid:source.uid,sourceDeployGen:source.deployGen,x,y,followUid:follow?source.uid:null,radius,interval,nextAt:this.s.time+interval,endsAt:Number.isFinite(duration)&&duration>0?this.s.time+duration:null,talentOrSkillId:key||enemySpecialTraitId(source),sharedStack:!!key,values:{damage:Number(spec.damage)||0,atkScale:Number(spec.atkScale)||0,damageType:spec.damageType||'true',elementScale:Number(spec.elementScale)||0,elementType:spec.elementType||null},trackSide:'ally',trackArea:true,refKind:cleanupWithSource?'live':'owner',persistAfterSourceGone:!cleanupWithSource,attackId});if(row)this.emit('enemy-skill',{uid:source.uid,x:row.x??x,y:row.y??y,skill:spec.trigger||'ground-zone',radius:row.radius,endsAt:row.endsAt});return row;}
   // 常驻范围（如深溟巢涌者）：敌人活着时它自己就是区域中心，每秒结算一次。
-  ensureEnemySelfField(enemy){if(!enemy?.selfField||enemy.hp<=0)return;const trait=enemySpecialTraitId(enemy);if((this.s.logicEffects||[]).some(fx=>fx.kind==='field'&&fx.talentOrSkillId===trait))return;this.addEnemyGroundZone(enemy,enemy.selfField,{x:enemy.x,y:enemy.y,follow:true});}
+  ensureEnemySelfField(enemy){if(!enemy?.selfField||enemy.hp<=0)return;const trait=enemySpecialTraitId(enemy);if((this.s.logicEffects||[]).some(fx=>fx.kind==='field'&&fx.talentOrSkillId===trait))return;this.addEnemyGroundZone(enemy,enemy.selfField,{x:enemy.x,y:enemy.y,follow:true,cleanupWithSource:true});}
   // 区域结算：1 秒一次，与其它周期效果共用同一套伤害入口（护盾、闪避、元素损伤都按常规处理）。
   tickEnemyGroundZones(){for(const fx of (this.s.logicEffects||[]).slice()){if(fx.kind!=='field'||fx.nextAt==null)continue;if(fx.endsAt!=null&&this.s.time>=fx.endsAt){fx.nextAt=null;continue;}if(this.s.time+1e-9<fx.nextAt)continue;
     if(fx.followUid!=null){const owner=getActor(this.s,fx.followUid);if(owner&&owner.hp>0){fx.x=owner.x;fx.y=owner.y;}}
@@ -5123,7 +5144,7 @@ class NativeBattle {
    // 死亡区域（污秽／毒雾）：以死亡位置为中心留一片持续伤害区；死亡爆炸与区域可以同时存在。
    if(enemy.deathZone){const zone=enemy.deathZone,at=zone.trigger==='death-target'&&source&&source.hp>0?{x:source.x,y:source.y}:{x:enemy.x,y:enemy.y},radius=Number(zone.radius)||1;
     // 原表的污染落点只盖住周围的我方；半径内没有我方时不留下空区域（否则远处被击倒也会撒一片）。
-    if(attackableAllies(this.s).some(a=>Math.max(Math.abs(a.x-at.x),Math.abs(a.y-at.y))<=radius)){this.addEnemyGroundZone(enemy,zone,{...at,follow:!!zone.follow});this.emit('enemy-ability',{uid:enemy.uid,x:at.x,y:at.y,ability:'death-zone',radius,damage:Number(zone.damage)||0,atkScale:Number(zone.atkScale)||0});}}}
+    if(attackableAllies(this.s).some(a=>Math.max(Math.abs(a.x-at.x),Math.abs(a.y-at.y))<=radius)){this.addEnemyGroundZone(enemy,zone,{...at,follow:!!zone.follow,key:`zone-death-${at.x},${at.y}`});this.emit('enemy-ability',{uid:enemy.uid,x:at.x,y:at.y,ability:'death-zone',radius,damage:Number(zone.damage)||0,atkScale:Number(zone.atkScale)||0});}}}
  event(u,event){
   const p=this.profile(u);for(const g of p.garrisons){if(g.eventType!=='IN_BATTLE'||g.effectType!=='ADD_BOND')continue;const b=blackboard(g.blackboard),key=b.key||'',match=event==='kill'?/selfkillenemy/.test(key):event==='skill'?/skill/.test(key):event==='deploy'?/born|deploy|onstart/.test(key):event==='selfdead'?/selfdead/.test(key):event==='ammo'?/consume_ammo/.test(key):false;if(!match)continue;const id=g.id+':'+event;u.counters[id]=(u.counters[id]||0)+1;const threshold=b.check_cnt||b.consume_count||1;if(u.counters[id]%threshold)continue;const limit=b.max_cnt||b.max_count||b.max_trigger_count||Infinity;if(u.counters[id]/threshold>limit)continue;const amount=b.bond_add_type==='by_charlevel'?p.rank:(b.bond_add_count??1),maxTotal=Number(b.max_add_count_per_battle),appliedKey=id+':'+event+':applied',applied=u.counters[appliedKey]||0,grant=Number.isFinite(maxTotal)?Math.max(0,Math.min(amount,maxTotal-applied)):amount;if(!grant)continue;const bonds=b.bond_id?String(b.bond_id).split(','):this.economy.ownBonds(u.source);for(const bond of bonds)this.economy.addLayers(bond,grant);if(Number.isFinite(maxTotal))u.counters[appliedKey]=applied+grant;}
  }
@@ -5187,7 +5208,11 @@ class NativeBattle {
    tickTimeSp(u,skill,dt,stats.spRecoveryPerSec??1,{requiresBlock:!!behavior.spRequiresBlock,blocking,cost});
    let targets=this.targets(u),heals=this.healingTargets(u),healer=behavior.kind==='heal'||u.focusHeal;
    const policy=skillPolicy(this.data.common,{id:u.id,profession:p.profession,branch:p.branch},p.skillIndex).skillTriggerType;
-   const skillReady=skill?.skillType==='AUTO'?u.sp>=cost&&(healer?heals.length>0:targets.length>0):shouldAutoSkill({policy,ready:u.sp>=cost,deployed:u.deployed,now:this.s.time,lastOperation:u.lastSkill,initialDeployment:u.deployAt,hasTarget:healer?heals.length>0:targets.length>0,hasAnyTarget:this.s.enemies.length>0,hasEnemyInInitialRange:targets.length>0,hasEnemyInSkillRange:this.s.enemies.some(e=>e.hp>0&&this.inside(u,e,true)),wasDamaged:this.s.time-(u.lastDamagedAt??-999)<.1});
+   // 自动释放的判定口径：只要「技能开启后能打到」任何敌人就该开。因此这里用的是技能范围（不是当前范围）
+   // 预判，包含飞行敌人、召唤物、以及未被阻挡的目标；被阻挡只是让单位可选，不是唯一条件。
+   const canHitAfterSkill=this.skillWouldHitTarget(u,p);
+   const readyByTargets=healer?heals.length>0:(targets.length>0||canHitAfterSkill);
+   const skillReady=skill?.skillType==='AUTO'?u.sp>=cost&&readyByTargets:shouldAutoSkill({policy,ready:u.sp>=cost,deployed:u.deployed,now:this.s.time,lastOperation:u.lastSkill,initialDeployment:u.deployAt,hasTarget:readyByTargets,hasAnyTarget:this.s.enemies.length>0,hasEnemyInInitialRange:targets.length>0,hasEnemyInSkillRange:canHitAfterSkill,wasDamaged:this.s.time-(u.lastDamagedAt??-999)<.1});
    if(skill?.skillType==='PASSIVE'&&u.coinSkillEnabled&&(skill.skillIndex??u.source?.skillIndex)===1&&u.coins>0&&targets.length)this.activate(u);
    if(skill&&skill.skillType!=='PASSIVE'&&!u.enhanced&&!this.skillActive(u)&&skillReady)this.activate(u);
    stats=this.stats(u);behavior=this.behavior(u);healer=behavior.kind==='heal'||u.focusHeal;u.branchSkillActive=this.skillActive(u);
@@ -5730,15 +5755,17 @@ function drawAuraField(c,point,z,battle,{reduceFx=false}={}){
 const ZONE_TONE={thunder:['#bcd8ff','#7fb2ff'],blade:['#ffe9c2','#ffb877'],gold:['#ffe6a4','#f0c774'],
  holy:['#fff4d6','#f7cf8f'],water:['#bfe8ff','#79c4ee'],sand:['#f0dcae','#c9a86a'],
  burn:['#ffc79a','#ff8f57'],frost:['#d8f1ff','#8fd0ee'],shadow:['#d9c7ff','#9d84d8'],
- arts:['#dcc9ff','#a98ce0'],heal:['#c8f6dc','#7fd8a8'],time:['#e6e0ff','#a9a2e8'],
- danger:['#ffb0a0','#c85a48']};
+ arts:['#dcc9ff','#a98ce0'],heal:['#c8f6dc','#7fd8a8'],time:['#e6e0ff','#a9a2e8']};
+// 敌方持续伤害区域的配色：原作的污染是发暗的紫绿，不是亮粉。压暗后按 source-over 叠在地块上，
+// 不再像此前用加成混合那样把整片地照成粉色。
+const FIELD_TINT={fill:'#4a4160',edge:'#8f86b8'};
 function drawZones(c,point,z,battle,{reduceFx=false}={}){
  const s=battle?.s;if(!s)return false;
  // 敌方留下的持续伤害区域（kind:'field'：污染秽蚀、燃烧区域、毒雾）和我方技能区域共用这套绘制。
  const list=(s.logicEffects||[]).filter(fx=>(fx.kind==='zone'||(fx.kind==='field'&&(Number(fx.values?.damage)>0||Number(fx.values?.atkScale)>0||Number(fx.values?.elementScale)>0)))&&(fx.endsAt==null||fx.endsAt>s.time));
  if(!list.length)return false;
  for(const fx of list){
-  const visual=fx.kind==='field'?{shape:'circle',tone:'danger'}:(battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'});
+  const visual=battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
   const [light,deep]=ZONE_TONE[visual.tone]||ZONE_TONE.arts;
   const radius=Number.isFinite(fx.radius)?fx.radius:1;
   // 剩余时间不足 1.5 秒时开始闪烁提示即将结束
@@ -5755,9 +5782,29 @@ function drawZones(c,point,z,battle,{reduceFx=false}={}){
      // 斜线扫过的形状：沿对角线方向铺开，宽度 1 格
      if(Math.abs(dx)!==Math.abs(dy))continue;
      if(Math.abs(dx)>radius)continue;
-    }else if(Math.max(Math.abs(dx),Math.abs(dy))>radius)continue;
+    // 作用格数按向上取整：半径 2.2 覆盖 3 圈（7x7），与此前的散怪范围写法一致
+    }else if(Math.max(Math.abs(dx),Math.abs(dy))>Math.ceil(radius))continue;
     cells.push({x:(fx.x??0)+dx,y:(fx.y??0)+dy});
    }
+  }
+  const isField=fx.kind==='field';
+  // 敌方留下来的持续伤害区域只画「一圈」：铺格 + 逐格描边会变成一堆小方块，加成混合下看着像许多圈拼在一起。
+  if(isField){
+   const cx=point(fx.x??0,fx.y??0),rx=radius*z.tw,ry=radius*z.th;
+   c.save();c.globalCompositeOperation='source-over';
+   c.fillStyle=`${FIELD_TINT.fill}${Math.round(Math.min(.5,alpha*1.6)*255).toString(16).padStart(2,'0')}`;
+   c.beginPath();c.ellipse(cx.x,cx.y,rx,ry,0,0,Math.PI*2);c.fill();
+   c.strokeStyle=`${FIELD_TINT.edge}${Math.round(Math.min(.75,.34+.3*pulse)*blink*255).toString(16).padStart(2,'0')}`;
+   c.lineWidth=1.8;c.beginPath();c.ellipse(cx.x,cx.y,rx,ry,0,0,Math.PI*2);c.stroke();
+   // 周期结算的瞬间让整圈脉动一次，说明「这里每秒会结算」
+   const fieldInterval=Number(fx.interval)||0;
+   if(fieldInterval>0&&!reduceFx&&fx.nextAt!=null&&fx.nextAt-s.time<=.25){
+    const k=1-Math.max(0,fx.nextAt-s.time)/.25;
+    c.strokeStyle=`${FIELD_TINT.edge}${Math.round(.4*(1-k)*255).toString(16).padStart(2,'0')}`;c.lineWidth=2.4;
+    c.beginPath();c.ellipse(cx.x,cx.y,rx*(1+k*.14),ry*(1+k*.14),0,0,Math.PI*2);c.stroke();
+   }
+   c.restore();
+   continue;
   }
   c.save();c.globalCompositeOperation='lighter';
   for(const cell of cells){
@@ -7142,7 +7189,7 @@ const portraitQuery=matchMedia('(orientation:portrait)');
 if(portraitQuery.addEventListener)portraitQuery.addEventListener('change',syncPlayChrome);else portraitQuery.addListener(syncPlayChrome);
 window.addEventListener('resize',syncPlayChrome);
 const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:null,view:'lobby',mode:'mode_single_normal',band:'band_amiya',strategyDraft:null,map:data.maps.find(m=>m.weight>0).stageId,selected:null,summonSelected:null,item:null,inspect:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,editor:editorState(),waveTable:loadWaveTable()};
-let canvas,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0,dossierDismissedAt=0;
+let canvas,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0,dossierDismissedAt=0,runtimeFault=null;
 function readSave(key){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):null;}catch{return null;}}
 function savedView(){try{return sessionStorage.getItem(VIEW_SAVE)||'lobby';}catch{return 'lobby';}}
 function rememberView(view){try{sessionStorage.setItem(VIEW_SAVE,view);}catch{}}
@@ -7295,7 +7342,7 @@ function stockPanel(){
 }
 function showRequired(){const g=state.game,r=g.s.rewardPending;if(r&&!r.tier){if(r.kind==='bounty')modal(`<h2>悬赏决策</h2><p>选择一项悬赏加入下一场战斗</p><div class="native-rewards">${r.offers.map(id=>{const e=data.season.effectInfoDataDict[id];return `<button data-act="reward" data-id="${id}"><b>${esc(e?.effectName||id)}</b><p>${esc(plain(e?.effectDesc||''))}</p></button>`;}).join('')}</div>`);else{g.ensureRewards();modal(`<h2>晋升／特殊调配</h2><p>选择获得一项奖励</p><div class="native-rewards">${r.offers.map(id=>`<button data-act="reward" data-id="${id}">${r.kind==='item'?'◇':avatar(data.profiles[id].charId)}<b>${esc(r.kind==='item'?itemName(id):data.profiles[id].name)}</b></button>`).join('')}</div>`);}}else if(g.s.phase==='decision')modal(`<h2>机变决策</h2><div class="native-rewards">${g.s.roundDecisions.map(id=>{const e=data.season.effectInfoDataDict[id];return `<button data-act="decision" data-id="${id}"><b>${esc(e.effectName)}</b><p>${esc(plain(e.effectDesc))}</p></button>`;}).join('')}</div>`);}
 function showResult(){const g=state.game,r=g.s.runResult||g.s.history.at(-1);if(!r)return;modal(`<h2>${r.kind==='training-dummy'?'木桩测试完成':'作战报告'}</h2><p>总伤害</p><strong class="native-total">${Math.round(r.totalDamage||0).toLocaleString()}</strong><p>${r.elapsed.toFixed(2)} 秒${r.dps!==undefined?' · DPS '+r.dps.toFixed(2):' · 击倒 '+r.kills+' · 漏失 '+r.leaks}</p>${(r.units||[]).sort((a,b)=>b.damage-a.damage).map(u=>`<div class="native-result-row"><span>${esc(g.s.units.find(x=>x.uid===u.uid)?data.profiles[g.s.units.find(x=>x.uid===u.uid).chessId].name:u.id||'其他')}</span><b>${Math.round(u.damage).toLocaleString()}</b></div>`).join('')}<button data-act="export">导出本次记录</button><button data-act="home">返回大厅</button>`);}
-function action(button){const a=button.dataset.act,g=state.game,uid=Number(button.dataset.uid);if(button.disabled)return;if(['sandbox','home','sandbox-exit','new'].includes(a))rememberView('lobby');if(['begin','resume','import'].includes(a))rememberView('game');
+function action(button){const a=button.dataset.act,g=state.game,uid=Number(button.dataset.uid);if(button.disabled)return;if(['home','new','begin','resume','sandbox','sandbox-exit'].includes(a))runtimeFault=null;if(['sandbox','home','sandbox-exit','new'].includes(a))rememberView('lobby');if(['begin','resume','import'].includes(a))rememberView('game');
  if(a==='band'){state.band=button.dataset.id;render();return;}if(a==='limits'){showLimitations();return;}if(a==='branches'){showBranches(button.dataset.id||null);return;}if(a==='close'){if(g?.s.rewardPending||g?.s.phase==='decision')return;state.modal=null;renderModal();return;}
  if(a==='supply-toggle'){state.supplyCollapsed=!state.supplyCollapsed;render();return;}
  if(a==='sandbox'){enterPlayChrome();openSandbox();return;}if(a==='home'&&state.sandbox){const previous=state.sandbox.previousGame||null;state.sandbox=null;state.game=previous;state.view='lobby';state.paused=true;leavePlayChrome();render();return;}if(a==='sandbox-exit'){const previous=state.sandbox?.previousGame||null;state.sandbox=null;state.game=previous;state.view='lobby';state.paused=true;leavePlayChrome();render();return;}if(a==='sandbox-reset'){sandboxReset();return;}if(a==='sandbox-add-op'){sandboxAddOperator(button.dataset.id);return;}if(a==='sandbox-add-enemy'){sandboxSpawnEnemy(button.dataset.id,false);return;}if(a==='sandbox-add-dummy'){sandboxSpawnEnemy('enemy_1041_lazerd',true);return;}if(a==='sandbox-remove-enemy'){sandboxRemoveEnemy(uid);return;}if(a==='sandbox-remove-op'){const sb=state.sandbox;if(sb){sb.economy.s.units=sb.economy.s.units.filter(u=>u.uid!==uid);if(sb.battle)sb.battle.s.units=sb.battle.s.units.filter(u=>u.uid!==uid);render();}return;}if(a==='sandbox-start'){sandboxStart();return;}if(a==='sandbox-pause'){if(state.sandbox?.phase==='battle'){state.paused=!state.paused;render();}return;}if(a==='sandbox-step'){if(state.sandbox?.battle){state.sandbox.battle.step();render();}return;}if(a==='sandbox-clear-enemies'){if(state.sandbox){state.sandbox.enemyDrafts=[];if(state.sandbox.battle)state.sandbox.battle.s.enemies=[];render();}return;}if(a==='sandbox-fill-sp'){const sb=state.sandbox,u=sb?.battle?.s.units.find(v=>v.uid===uid);if(u){u.sp=sb.battle.spCost(u);render();}return;}if(a==='sandbox-skill'){const sb=state.sandbox,u=sb?.battle?.s.units.find(v=>v.uid===uid);if(u){if(u.skillLeft>0||u.ammo>0)sb.battle.deactivate(u);else{u.sp=sb.battle.spCost(u);sb.battle.activate(u);}render();}return;}
@@ -7612,7 +7659,13 @@ if(d.kind==='item'&&d.from==='hand'){const u=equipDropTarget(e.clientX,e.clientY
 root.addEventListener('pointercancel',()=>{if(!drag&&!aim&&!state.preview&&!canvasPress)return;clearDrag();aim=null;state.preview=null;render();});
 document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea'))return;if(e.key==='Escape'){clearDrag();aim=null;state.preview=null;state.selected=state.summonSelected=null;state.inspect=null;if(!state.game?.s.rewardPending&&state.game?.s.phase!=='decision')state.modal=null;render();}if(state.preview){const d={ArrowRight:0,ArrowDown:1,ArrowLeft:2,ArrowUp:3}[e.key];if(d!==undefined){e.preventDefault();state.preview.dir=d;draw();}if(e.key==='Enter')commitPreview();}});
 window.addEventListener('beforeunload',()=>{state.expiresAt??=Date.now()+86400000;save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){state.paused=true;state.expiresAt??=Date.now()+86400000;save();}});
-function frame(now){const dt=Math.min(.15,(now-last)/1000);last=now;const g=state.game;if(state.view==='game'&&g?.s.phase==='battle'&&!state.paused){acc+=dt*state.speed;const previous=g.s.phase;while(acc>=1/30&&g.s.phase==='battle'){acc-=1/30;g.tick();}if(g.battle)playBattleEvents(g.battle.s,state.muted,state.volume);if(g.s.phase!==previous){acc=0;save();render();if(g.s.phase==='finished'){const dmg=Math.round(g.s.runResult?.totalDamage||0);notice('模拟结束，总伤害 '+(eggOn()?format325(dmg):dmg.toLocaleString()));showResult();}}}else if(state.view==='sandbox'&&state.sandbox?.phase==='battle'&&!state.paused){acc+=dt*state.speed;while(acc>=1/30&&!state.sandbox.battle.s.finished){acc-=1/30;state.sandbox.battle.step();}if(state.sandbox.battle)playBattleEvents(state.sandbox.battle.s,state.muted,state.volume);}else acc=0;hudTime+=dt;saveTime+=dt;if(hudTime>.2){updateHud();hudTime=0;}if(saveTime>2&&g){save();saveTime=0;}draw();requestAnimationFrame(frame);}
+function frame(now){
+ if(runtimeFault){requestAnimationFrame(frame);return;}
+ try{
+  const dt=Math.min(.15,(now-last)/1000);last=now;const g=state.game;if(state.view==='game'&&g?.s.phase==='battle'&&!state.paused){acc+=dt*state.speed;const previous=g.s.phase;while(acc>=1/30&&g.s.phase==='battle'){acc-=1/30;g.tick();}if(g.battle)playBattleEvents(g.battle.s,state.muted,state.volume);if(g.s.phase!==previous){acc=0;save();render();if(g.s.phase==='finished'){const dmg=Math.round(g.s.runResult?.totalDamage||0);notice('模拟结束，总伤害 '+(eggOn()?format325(dmg):dmg.toLocaleString()));showResult();}}}else if(state.view==='sandbox'&&state.sandbox?.phase==='battle'&&!state.paused){acc+=dt*state.speed;while(acc>=1/30&&!state.sandbox.battle.s.finished){acc-=1/30;state.sandbox.battle.step();}if(state.sandbox.battle)playBattleEvents(state.sandbox.battle.s,state.muted,state.volume);}else acc=0;hudTime+=dt;saveTime+=dt;if(hudTime>.2){updateHud();hudTime=0;}if(saveTime>2&&g){save();saveTime=0;}draw();
+ }catch(error){runtimeFault=error;state.paused=true;console.error('Native runtime paused',error);try{notice('战斗已暂停：'+(error?.message||String(error)));}catch{}}
+ requestAnimationFrame(frame);
+}
 root.setAttribute('data-view','native');root.addEventListener('pointerdown',()=>unlockAudio(),{once:true});syncPlayChrome();render();document.getElementById('boot-screen')?.remove();clearTimeout(window.__garrisonBootTimer);window.__garrisonReady=true;requestAnimationFrame(frame);
 
 return {};
