@@ -509,6 +509,9 @@ function settlePeriodic(battle,fx){
   if(fx.values?.elementScale&&!fx.values?.dot&&source)for(const e of zoneActors(battle,fx,'enemy'))applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot'});
   if(fx.values?.sluggish)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'sluggish',fx.interval||1,{source:source?.uid,resistible:false});
   if(fx.values?.cold)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'cold',fx.values.cold,{source:source?.uid,resistible:false});
+  // Presentation marker for the 6-operator Kjerag storm: emitted once per periodic settlement so the
+  // renderer can play a timed full-screen effect. It never changes damage, status or timing.
+  if(fx.talentOrSkillId==='bond-kjerag-storm')battle.emit('ice-wind',{uid:fx.sourceUid,effectId:fx.id});
   if(fx.values?.attackDown)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'attackDown',fx.interval||1,{source:source?.uid,value:fx.values.attackDown,resistible:false});
   if(fx.values?.defDown)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'defDown',fx.interval||1,{source:source?.uid,value:fx.values.defDown,resistible:false});
   if(fx.values?.resDown)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'resDown',fx.interval||1,{source:source?.uid,value:fx.values.resDown,resistible:false});

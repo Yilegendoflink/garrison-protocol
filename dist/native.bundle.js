@@ -4017,6 +4017,9 @@ function settlePeriodic(battle,fx){
   if(fx.values?.elementScale&&!fx.values?.dot&&source)for(const e of zoneActors(battle,fx,'enemy'))applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot'});
   if(fx.values?.sluggish)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'sluggish',fx.interval||1,{source:source?.uid,resistible:false});
   if(fx.values?.cold)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'cold',fx.values.cold,{source:source?.uid,resistible:false});
+  // Presentation marker for the 6-operator Kjerag storm: emitted once per periodic settlement so the
+  // renderer can play a timed full-screen effect. It never changes damage, status or timing.
+  if(fx.talentOrSkillId==='bond-kjerag-storm')battle.emit('ice-wind',{uid:fx.sourceUid,effectId:fx.id});
   if(fx.values?.attackDown)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'attackDown',fx.interval||1,{source:source?.uid,value:fx.values.attackDown,resistible:false});
   if(fx.values?.defDown)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'defDown',fx.interval||1,{source:source?.uid,value:fx.values.defDown,resistible:false});
   if(fx.values?.resDown)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'resDown',fx.interval||1,{source:source?.uid,value:fx.values.resDown,resistible:false});
@@ -5071,9 +5074,41 @@ function actorOffset(u,battle){
  if(!t)return {x:0,y:0};
  const d=Math.hypot(t.x-u.x,t.y-u.y)||1;return {x:(t.x-u.x)/d*.12,y:(t.y-u.y)/d*.12};
 }
+// Full-screen Kjerag storm, played for ICE_WIND_SECONDS after each 'ice-wind' settlement event.
+// Pure presentation: it reads events and logic-effect timing only, and writes nothing to battle state.
+const ICE_WIND_SECONDS=.5;
+function drawIceWind(c,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ const [ev]=recent(s.events,s.time,'ice-wind',ICE_WIND_SECONDS);
+ if(!ev)return false;
+ const age=Math.max(0,Math.min(1,(s.time-ev.t)/ICE_WIND_SECONDS));
+ const peak=reduceFx?.06:.11,                   // 主雾峰值透明度
+  alpha=Math.round(peak*Math.sin(Math.PI*age)*1.15*1e4)/1e4, // 中段最亮，首尾归零；取整避免科学计数法
+  W=z.r.width,H=z.r.height;
+ c.save();
+ c.globalCompositeOperation='lighter';          // 只提亮、不压暗界面
+ const g=c.createLinearGradient(0,0,W*.65,H);
+ g.addColorStop(0,`rgba(238,250,255,${alpha})`);
+ g.addColorStop(.55,`rgba(212,240,252,${alpha*.85})`);
+ g.addColorStop(1,`rgba(198,232,250,${alpha*.6})`);
+ c.fillStyle=g;c.fillRect(0,0,W,H);
+ const sweep=(1-age)*W*.45-W*.12;               // 风痕整体横扫
+ c.lineCap='round';
+ const streaks=reduceFx?3:8;
+ for(let i=0;i<streaks;i++){
+  const y=H*((i+.5)/streaks);
+  const x=(i%2?-sweep:sweep)+W*.5+(i%3-1)*W*.12;
+  const a=alpha*(i%2?.9:1.25);
+  c.strokeStyle=`rgba(255,255,255,${Math.min(.5,a)})`;c.lineWidth=i%2?1.5:2.6;
+  c.beginPath();c.moveTo(x,y+H*.05);c.lineTo(x+W*.3,y-H*.05);c.stroke();
+ }
+ c.restore();
+ return true;
+}
 function drawFx(c,point,z,battle,opts={}){
  const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
  drawCombatFx(c,point,z,battle,reduce);
+ drawIceWind(c,z,battle,{reduceFx:reduce});
  for(const e of s.effects||[]){
   if(e.type!=='healing'&&e.type!=='evade'&&e.type!=='block')continue;
   const p=point(e.x,e.y);c.fillStyle=e.type==='healing'?'#8fe8b5':'#f6e7c8';c.font='12px sans-serif';c.textAlign='center';c.fillText(opts.formatText?opts.formatText(e.text):e.text,p.x,p.y-24-(.6-e.life)*30);
@@ -5137,7 +5172,7 @@ function drawDownRing(c,p,u,size,opts={}){
  c.fillStyle='#e9fff7';c.font='11px sans-serif';c.textAlign='center';c.fillText((opts.formatNumber?opts.formatNumber(n):n)+'s',p.x,p.y+4);
 }
 
-return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing};
+return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing};
 },
 "native-325.js": function(load) {
 // 325 display rewrite. Algorithm and lookup table from
