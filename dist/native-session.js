@@ -1,6 +1,6 @@
 import {NativeEconomy} from './native-economy.js';
 import {NativeBattle} from './native-battle.js';
-import {buildPhasePlan,blackboard,ensureStock,restoreStock} from './protocol.js';
+import {buildPhasePlan,blackboard,ensureStock,restoreStock,stockOf} from './protocol.js';
 import {runStrategyEvent} from './strategy.js';
 import {createWaveRoster} from './native-wave-random.js';
 
@@ -16,13 +16,17 @@ export class NativeSession extends NativeEconomy {
  deploySummonCard(cardUid,x,y,dir=0){if(!this.canDeploySummonCard(cardUid,x,y))return false;const card=this.s.summonCards.find(c=>c.uid===cardUid);card.position={x,y};card.dir=dir;return true;}
  withdrawSummonCard(cardUid){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid&&c.position);if(!card)return false;card.position=null;return true;}
  eligible(){return Object.values(this.data.season.charShopChessDatas).filter(o=>o.charId&&!o.isHidden);}
- drawFromPool(r){
+ // used 只在商店刷新时传入：同一家店对库存无放回，避免给出比库存更多的同名卡
+ drawFromPool(r,used=null){
   if(r.kind==='item'){let items=this.data.items.filter(i=>!i.hidden&&i.rank<=this.s.level);const tier=Number(String(r.pool||'').match(/shop_(\d)/)?.[1]);if(tier)items=this.data.items.filter(i=>!i.hidden&&i.rank===tier);if(String(r.pool||'').includes('equip_vict'))items=items.filter(i=>i.normal?.giveBondId==='victoriaShip'||this.data.season.trapChessDataDict[i.id]?.giveBondId==='victoriaShip');if(!items.length)throw Error('没有可用装备');return this.pick(items).id;}
   const pool=String(r.pool||''),fixedTier=r.tier||Number(pool.match(/shop_(\d)/)?.[1]);let rows=this.eligible();if(fixedTier)rows=rows.filter(o=>o.chessLevel===fixedTier);else rows=rows.filter(o=>o.chessLevel<=(r.maxTier||this.s.level));
+  // 有库存系统时（对局内），候选池按各干员剩余库存铺成多份后等权抽；used 让同一次刷新无放回
+  const stockPool=!!this.s.stock;
   if(r.bond)rows=rows.filter(o=>this.data.season.charChessDataDict[o.chessId].bondIds.includes(r.bond));if(r.excludeCharId)rows=rows.filter(o=>o.charId!==r.excludeCharId);
+  if(stockPool&&used){rows=rows.filter(o=>stockOf(this.data,this.s,o.chessId)-(used[o.chessId]||0)>0);if(!rows.length)throw Error('当前候选池没有可用库存');}
   if(pool.includes('later'))rows=this.eligible().filter(o=>o.chessLevel>=4&&this.data.season.charChessDataDict[o.chessId].bondIds.includes('lateranoShip'));
   if(!rows.length)throw Error('当前候选池没有匹配干员');
-  if(!fixedTier&&r.maxTier&&!pool.includes('later')){
+  if(!fixedTier&&r.maxTier&&!pool.includes('later')&&!stockPool){
    // 阶级权重：最高阶 30%、次高阶 40%、其余所有低阶共用 30%（档内等权）
    const maxTier=Math.max(...rows.map(o=>o.chessLevel)),previous=maxTier-1;
    const top=rows.filter(o=>o.chessLevel===maxTier),prev=rows.filter(o=>o.chessLevel===previous),lower=rows.filter(o=>o.chessLevel<previous);
@@ -36,9 +40,14 @@ export class NativeSession extends NativeEconomy {
    if(!candidates.length)throw Error('当前候选池没有匹配阶级');
    return this.pick(candidates).chessId;
   }
-  const row=this.pick(rows);return pool.includes('later')?row.goldenChessId:row.chessId;
+  let row;
+  if(stockPool){const copies=[];for(const o of rows)for(let i=stockOf(this.data,this.s,o.chessId)-(used?.[o.chessId]||0);i>0;i--)copies.push(o);const total=copies.length,q=this.random()*total;let c=0;row=copies[copies.length-1];for(const o of copies){c+=1;if(q<c){row=o;break;}}}else row=this.pick(rows);
+  if(used&&stockPool)used[row.chessId]=(used[row.chessId]||0)+1;
+  return pool.includes('later')?row.goldenChessId:row.chessId;
  }
- rollOffers(){const required=runStrategyEvent(this,'refreshRequirements'),forced=this.s.forcedRefresh;let rows=Array.from({length:this.terms().operatorSlots},()=>this.drawFromPool({kind:'operator',maxTier:this.s.level,bond:forced?.bond}));for(const r of required){if(r.bond)for(let i=0;i<r.minCount;i++)rows[i]=this.drawFromPool({kind:'operator',bond:r.bond,maxTier:this.s.level});if(r.duplicateCount)for(let i=1;i<Math.min(rows.length,r.duplicateCount);i++)rows[i]=rows[0];}return rows;}
+ // 商店候选取自「库存池」：每个干员按剩余库存占权重，整池无放回抽。
+ // 库存 3/3/4 的三人等价于十张卡等权，同一家店也不会给出比库存更多的同名卡。
+ rollOffers(){const required=runStrategyEvent(this,'refreshRequirements'),forced=this.s.forcedRefresh,used={};const draw=extra=>{try{return this.drawFromPool({kind:'operator',maxTier:this.s.level,...extra},used);}catch{return null;}};const rows=Array.from({length:this.terms().operatorSlots},()=>draw({bond:forced?.bond}));for(const r of required){if(r.bond)for(let i=0;i<r.minCount;i++)rows[i]=draw({bond:r.bond})??rows[i];if(r.duplicateCount&&rows[0]){const cap=Number.isFinite(this.s.stock?.[rows[0]])?this.s.stock[rows[0]]:Infinity;for(let i=1;i<rows.length&&i<r.duplicateCount&&i<cap;i++)rows[i]=rows[0];}}return rows;}
  fillItems(){if(this.s.level<3){this.s.itemOffers=[];return;}this.s.itemOffers=Array.from({length:this.terms().itemSlots},()=>this.drawFromPool({kind:'item'}));}
  ensureRewards(){const r=this.s.rewardPending;if(r?.tier&&!r.offers){r.offers=Array.from({length:3},()=>this.drawFromPool({kind:'operator',tier:r.tier}));r.kind='operator';}}
  rewardFromBond(owner,count){const bonds=this.ownBonds(owner).filter(Boolean);if(!bonds.length)return false;this.s.rewardPending={offers:Array.from({length:count},()=>this.drawFromPool({kind:'operator',bond:this.pick(bonds),maxTier:this.s.level})),choice:1,kind:'operator'};return true;}
