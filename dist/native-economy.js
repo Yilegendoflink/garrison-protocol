@@ -10,7 +10,7 @@ export class NativeEconomy extends PreparationState {
   Object.assign(this.s,{bondLayers:{},claimedBondRewards:{},strategyClaims:{},roundBoughtBonds:{},carryFunds:0,forcedRefresh:null,permanentDiscount:0,nextRoundBonus:0,freeRefresh:0,roundGainCount:0,roundSpent:0,roundRefreshCount:0,totalSpent:0,rewardQueue:[],randomState:(options.seed??1)>>>0,bandId:options.bandId??null,lastPrepRound:null,playerId:options.playerId??'local',teamPeers:structuredClone(options.teamPeers||[]),transferInbox:[],transferOutbox:[]});if(this.s.bandId)this.s.hp=this.s.maxHp=data.season.bandDataListDict[this.s.bandId].totalHp;
  }
  command(type,...args){
-  if(!['buy','deploy','upgrade','refresh','sell','takePromotion','beginBattle','finishBattle','nextRound','startPreparation'].includes(type))return {ok:false,code:'UNKNOWN_COMMAND'};
+  if(!['buy','deploy','upgrade','refresh','sell','takePromotion','beginBattle','finishBattle','nextRound','startPreparation','destroy','destroyEquip'].includes(type))return {ok:false,code:'UNKNOWN_COMMAND'};
   const pending=strategyCoverage(this.data).find(b=>b.id===this.s.bandId)?.pendingKeys||[];if(pending.length&&!this.manualPreview)return {ok:false,code:'EFFECT_UNRESOLVED',message:'Strategy effects await execution support: '+pending.join(',')};
   const previous=structuredClone(this.s);
   try{const result=this[type](...args);if(result===false||result?.ok===false){this.s=previous;return result?.ok===false?result:{ok:false,code:'RULE_REJECTED'};}return {ok:true};}

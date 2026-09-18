@@ -20,6 +20,12 @@
 .native-dossier-body{overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 /* 海猫模式：资金显示为彩色 ALL */
 .native-funds-all{background-image:linear-gradient(90deg,#ff6b6b,#ffd166,#7af0bd,#63dce4,#b28dff,#ff8fd0);background-clip:text;-webkit-background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;font-weight:800;letter-spacing:.08em}
+/* 装备上的销毁按钮：手牌卡片与干员装备位共用 */
+.native-item-destroy{position:absolute;top:2px;right:2px;z-index:2;width:18px;height:18px;padding:0;line-height:1;font-size:13px;border-radius:50%;border:1px solid #a8606a;background:#2b1418e0;color:#ffb9c2;display:grid;place-content:center;cursor:pointer}
+.native-item-destroy:hover{border-color:#ff9aa8;background:#54212a;color:#fff}
+.native-bench>[data-act="item"]{position:relative}
+.native-equipment-slot.filled{position:relative;padding-right:22px}
+.native-equipment-slot .native-item-destroy{top:3px;right:3px}
 .native-dossier-item{position:static;opacity:1;width:auto;height:120px;margin:4px 0 8px;display:grid;place-content:center;font-size:72px;color:#e4d39a;-webkit-mask-image:none;mask-image:none}
 .native-dossier h2{margin:0 0 2px;font-size:28px;letter-spacing:.06em;color:#f3fff9}
 .native-dossier-kicker{margin:0 0 8px;color:#9ec4b6;font-size:12px}
