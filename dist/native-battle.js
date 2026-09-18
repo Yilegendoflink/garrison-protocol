@@ -21,7 +21,9 @@ export class NativeBattle {
   this.s.units=sources.map((u,i)=>{const p=this.profile(u),a=p.attributes,skill=p.skill,costData=moduleCostData(p);return {uid:u.uid,id:u.charId,chessId:u.chessId,source:u,x:u.position.x,y:u.position.y,dir:u.dir,hp:a.maxHp,maxHp:a.maxHp,baseCost:a.cost||0,deploymentCost:0,lastDeploymentCost:0,redeployPenalty:0,waitingCost:false,runtimeCost:costData.runtimeCost,runtimeCostActive:costData.runtimeCostActive,runtimeCostUsed:false,refundRatio:costData.refundRatio,refundIgnoresCap:costData.refundIgnoresCap,chargerKillCost:costData.chargerKillCost,merchantCost:costData.merchantCost,merchantInterval:costData.merchantInterval,sp:initSpOf(skill),spCd:0,spLock:0,coins:0,deployed:false,deployAt:0,down:0,skillLeft:0,skillCount:0,ammo:0,ammoMax:0,attackCooldown:0,action:null,statuses:[],immunities:{stun:a.stunImmune,silence:a.silenceImmune,frozen:a.frozenImmune,sleep:a.sleepImmune,levitate:a.levitateImmune,fear:a.fearedImmune,terror:a.fearedImmune,tremble:a.palsyImmune,root:a.attractImmune},shield:0,barriers:[],shieldLayers:[],damage:0,healing:0,lastAttack:0,lastSkill:-999,counters:{},buffs:[],deployGen:0,exitLife:null};});
   ensureBattleShape(this.s);dispatch(this,'battle-start',{target:null});for(const u of this.s.units)this.deploy(u);this.spawnPreparedSummons();
   if(this.s.benchmark){this.s.enemies=[createTrainingDummy(this.s.nextId++,9,1)];this.s.total=1;}else this.prepareWaves(turn);
-  for(const u of this.s.units){const stats=this.stats(u);u.hp=u.maxHp=stats.maxHp;}
+  // 入场的血量在同一次 deploy 里已经按 stats 设过；这里如果无脑刷回满值，
+  // 会把「部署后立即流失生命」这类入场被动（如宴 S2）的结果覆盖掉，所以只补没走过入场的单位。
+  for(const u of this.s.units){const stats=this.stats(u);u.maxHp=stats.maxHp;if(!u.deployed)u.hp=stats.maxHp;}
  }
  spawnPreparedSummons(){
   for(const card of this.economy.s.summonCards||[]){if(!card.position)continue;const owner=this.s.units.find(u=>u.uid===card.ownerUid);if(!owner)continue;let token=null;
