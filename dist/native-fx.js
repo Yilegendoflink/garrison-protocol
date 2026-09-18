@@ -98,10 +98,8 @@ function drawCombatFx(c,point,z,battle,reduce){
 function mark(c,x,y,kind){
  c.save();c.translate(x,y);c.strokeStyle='#f4f0e4';c.fillStyle='#1a2420';c.lineWidth=1.4;
  if(kind==='stun'){c.beginPath();c.moveTo(-5,-6);c.lineTo(0,6);c.lineTo(5,-6);c.closePath();c.fill();c.stroke();}
- else if(kind==='frozen'){c.beginPath();c.moveTo(0,-7);c.lineTo(4,0);c.lineTo(0,7);c.lineTo(-4,0);c.closePath();c.fill();c.stroke();}
  else if(kind==='sleep'){c.font='9px sans-serif';c.fillStyle='#f4f0e4';c.fillText('Z',0,3);}
  else if(kind==='silence'){c.beginPath();c.arc(0,0,5,0,Math.PI*2);c.moveTo(-3,-3);c.lineTo(3,3);c.stroke();}
- else if(kind==='cold'){c.beginPath();c.moveTo(0,-6);c.lineTo(0,6);c.moveTo(-4,-3);c.lineTo(4,3);c.stroke();}
  else if(kind==='shield'){c.beginPath();c.moveTo(0,-6);c.lineTo(5,-2);c.lineTo(4,5);c.lineTo(0,7);c.lineTo(-4,5);c.lineTo(-5,-2);c.closePath();c.fill();c.stroke();}
  else if(kind==='barrier'){c.strokeRect(-5,-5,10,10);c.beginPath();c.moveTo(-5,0);c.lineTo(5,0);c.stroke();}
  else{c.fillRect(-4,-4,8,8);}
@@ -132,8 +130,9 @@ export function drawFx(c,point,z,battle,opts={}){
  if(!reduce)for(const e of recent(s.events,t,'hit',.16)){const p=point(e.x,e.y);c.fillStyle='#fff8';c.beginPath();c.arc(p.x,p.y,11,0,Math.PI*2);c.fill();}
 }
 export function drawStatuses(c,x,y,unit,size){
+ // cold and frozen are shown by drawFrostOverlay on the actor itself, so they get no head icon here.
  const kinds=[];
- for(const s of unit.statuses||[])if(['stun','frozen','sleep','silence','cold','fear','terror','tremble','root'].includes(s.kind)&&!kinds.includes(s.kind))kinds.push(s.kind);
+ for(const s of unit.statuses||[])if(['stun','sleep','silence','fear','terror','tremble','root'].includes(s.kind)&&!kinds.includes(s.kind))kinds.push(s.kind);
  if((unit.shield||0)>0||(unit.shieldLayers||[]).some(l=>l.remaining>0))kinds.push('shield');
  if((unit.barriers||[]).some(b=>b.charges>0))kinds.push('barrier');
  kinds.slice(0,3).forEach((k,i)=>mark(c,x-size/2+6+i*13,y-size*.82,k));
@@ -147,6 +146,29 @@ export function drawElementRing(c,x,y,unit,size){
  const progress=Math.min(1,value/max),radius=size*.56;
  c.save();c.lineWidth=Math.max(2,size*.045);c.lineCap='butt';c.strokeStyle='#0b1718cc';c.beginPath();c.arc(x,y-size*.2,radius,-Math.PI/2,Math.PI*1.5);c.stroke();c.strokeStyle=ELEMENT_RING_COLORS[unit.elementalType||type]||ELEMENT_RING_COLORS.elemental;c.beginPath();c.arc(x,y-size*.2,radius,-Math.PI/2,-Math.PI/2+Math.PI*2*progress);c.stroke();
  c.restore();
+}
+// Ice tint for cold/frozen actors. Pure presentation: it only reads actor.statuses, never writes state.
+// cold and frozen use two depths of the same ice blue; frozen wins if a target somehow carries both.
+const FROST_STYLE={
+ cold:{fill:'rgba(140,205,235,0.28)',stroke:null},
+ frozen:{fill:'rgba(70,150,205,0.55)',stroke:'rgba(200,235,255,0.45)'},
+};
+export function frostKindOf(actor){
+ const list=actor?.statuses||[];
+ for(const kind of ['frozen','cold'])if(list.some(s=>s.kind===kind))return kind;
+ return null;
+}
+// box is the actor's own drawn rectangle, supplied by the caller so this layer stays unaware of
+// tile lift, flying offsets and tile geometry. Summons pass through untouched.
+export function drawFrostOverlay(c,actor,box,opts={}){
+ if(!actor||actor.kind==='summon'||!box||!(box.w>0)||!(box.h>0))return false;
+ const kind=frostKindOf(actor);if(!kind)return false;
+ const style=FROST_STYLE[kind];
+ c.save();c.fillStyle=style.fill;c.fillRect(box.x,box.y,box.w,box.h);
+ if(style.stroke&&!opts.reduceFx){c.strokeStyle=style.stroke;c.lineWidth=1;c.strokeRect(box.x+.5,box.y+.5,box.w-1,box.h-1);}
+ if(opts.decorate)opts.decorate(c,box,kind);   // extension point: frost crystals / patterns
+ c.restore();
+ return true;
 }
 export function drawDownRing(c,p,u,size,opts={}){
  const max=u.downMax||u.down||1,ratio=Math.max(0,Math.min(1,1-(u.down||0)/max));
