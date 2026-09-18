@@ -22,7 +22,8 @@ export const ENEMY_MOVEMENT_POLICIES=Object.freeze({
 function enemyText(raw={}){
  const ability=Array.isArray(raw.ability)?raw.ability.map(x=>typeof x==='string'?x:x?.text||''):[];
  const skills=Array.isArray(raw.skills)?raw.skills.flatMap(x=>[x?.description,x?.prefabKey]):[];
- return [raw.name,raw.description,...ability,...skills].filter(Boolean).join(' ');
+ // 原表描述带 <@eb.key>…</> 富文本标签，先去掉再匹配，否则「持续受到…法术伤害」会被标签切断。
+ return [raw.name,raw.description,...ability,...skills].filter(Boolean).join(' ').replace(/<[^>]*>/g,'');
 }
 
 function enemyBlackboard(raw={}){
@@ -40,11 +41,119 @@ function enemySkill(raw={}){
  return {prefab:skill.prefabKey,cooldown:Number(skill.cooldown),initCooldown:Number(skill.initCooldown),spCost:Number(skill.spCost)||0,bb};
 }
 
+// 原表把持续伤害区域写成「buff 模板名.字段」形式的 blackboard 行。这里按模板名取值，取不到就返回
+// undefined —— 宁可漏掉一个敌人，也不要为它编造半径或伤害。
+function firstTemplateField(bb,name,field){
+ const row=bb[`${name}.${field}`];
+ return row===undefined?undefined:Number(row);
+}
+
+function hasZonePayload(zone){
+ return !!zone&&(Number(zone.damage)>0||Number(zone.atkScale)>0||Number(zone.elementScale)>0);
+}
+
+// 死亡区域（PollutedDie 等）：以自身死亡位置为中心的一次性持续伤害区。
+export function inferDeathZone(raw={}){
+ const behavior=raw.enemyBehavior||raw.behavior||{};
+ if(behavior.deathZone)return behavior.deathZone;
+ const bb=enemyBlackboard(raw),skillBb={...(enemySkill(raw)?.bb||{}),...bb};
+ const damage=firstTemplateField(bb,'PollutedDie','polluted_damage_low');
+ if(!Number.isFinite(damage)||damage<=0)return null;
+ const radius=firstTemplateField(bb,'PollutedDie','projectile_range'),life=firstTemplateField(bb,'PollutedDie','projectile_life_time');
+ return {trigger:'death',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:8,interval:1,damage,damageType:'true'};
+}
+
+// 射击落点区域（ProjectileBoomRange 等）：普通攻击命中后在目标格留一片持续伤害区。
+export function inferAttackZone(raw={}){
+ const behavior=raw.enemyBehavior||raw.behavior||{};
+ if(behavior.attackZone)return behavior.attackZone;
+ const bb=enemyBlackboard(raw),text=enemyText(raw);
+ const damage=firstTemplateField(bb,'ProjectileBoomRange','attack@value');
+ if(/燃烧区域/.test(text)&&Number.isFinite(damage)&&damage>0){
+  const radius=firstTemplateField(bb,'ProjectileBoomRange','attack@projectile_range'),life=firstTemplateField(bb,'ProjectileBoomRange','attack@projectile_life_time');
+  return {trigger:'attack',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:3,interval:1,damage,damageType:'true'};
+ }
+ const skill=enemySkill(raw),skillBb=skill?.bb||{};
+ const polluted=Number(skillBb.polluted_damage_low);
+ if(skill?.prefab==='PollutedRangedAtk'&&Number.isFinite(polluted)&&polluted>0){
+  const radius=Number(skillBb.range_radius),life=Number(skillBb.projectile_life_time);
+  return {trigger:'attack',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:10,interval:1,damage:polluted,damageType:'true'};
+ }
+ return null;
+}
+
+// 常驻范围（EpDamage 等）：敌人活着时每秒对半径内我方造成法术伤害与元素损伤。
+// 只在伤害或元素损伤至少有一项有原表数值时才成立，否则宁可不做。
+export function inferSelfField(raw={}){
+ const behavior=raw.enemyBehavior||raw.behavior||{};
+ const text=enemyText(raw),talentBb=enemyTalentBlackboard(raw);
+ // 必须同时有「持续对周围造成」的描述和一个正数的自身半径，才视为常驻范围。
+ // 单看文本会把「击倒后毒雾持续对周围造成伤害」这类死亡技能误判成常驻光环；快照里留下的
+ // 空壳（半径或伤害全为 0）也不采用，交给下面的推导重新算。
+ const radius=Number(raw.rangeRadius);
+ const payload=z=>!!z&&(Number(z.damage)>0||Number(z.atkScale)>0||Number(z.elementScale)>0);
+ if(behavior.selfField&&payload(behavior.selfField)&&Number(behavior.selfField.radius)>0)return behavior.selfField;
+ if(!/持续对周围造成/.test(text)||!(Number.isFinite(radius)&&radius>0))return null;
+ const elementScale=Number(talentBb['EpDamage.ep_damage_ratio']??talentBb['epdamage.attack@ep_damage_ratio']);
+ const elementType=/神经损伤/.test(text)?'neural':/侵蚀损伤/.test(text)?'corrosion':/凋亡损伤/.test(text)?'necrosis':/灼燃损伤/.test(text)?'burn':null;
+ const atkScale=Number(talentBb['EpDamage.attack@atk_scale']??talentBb['EpDamage.damage_atk_scale']);
+ const hasElement=Number.isFinite(elementScale)&&elementScale>0&&elementType;
+ const hasDamage=Number.isFinite(atkScale)&&atkScale>0;
+ if(!hasElement&&!hasDamage)return null;
+ return {
+  radius,
+  interval:1,
+  atkScale:hasDamage?atkScale:0,
+  damage:0,
+  damageType:'arts',
+  elementScale:hasElement?elementScale:0,
+  elementType
+ };
+}
+
+// 死亡后留下的毒雾（假想敌：蚀裂等）：被击倒时向击倒者所在位置留下一片持续伤害区。
+export function inferToxicZone(raw={}){
+ const behavior=raw.enemyBehavior||raw.behavior||{};
+ if(behavior.toxicZone)return behavior.toxicZone;
+ const text=enemyText(raw),talentBb=enemyTalentBlackboard(raw);
+ if(!/击倒(?:后|时)[^。；;]*毒雾|毒雾/.test(text))return null;
+ const atkScale=Number(talentBb['1.damage_atk_scale']),radius=Number(talentBb['1.projectile_range']),life=Number(talentBb['1.projectile_life_time']),interval=Number(talentBb['1.interval']);
+ if(!Number.isFinite(atkScale)||atkScale<=0)return null;
+ return {trigger:'death-target',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:8,interval:Number.isFinite(interval)&&interval>0?interval:1,atkScale,damage:0,damageType:'arts'};
+}
+
+// 逐腐兽的流血：命中后周期性受到法术伤害，目标被治疗时提前解除。
+function inferBleeding(raw={}){
+  const behavior=raw.enemyBehavior||raw.behavior||{};
+  if(behavior.bleeding)return behavior.bleeding;
+  const text=enemyText(raw),talentBb=enemyTalentBlackboard(raw);
+  if(!/持续受到法术伤害/.test(text)||!/治疗时解除/.test(text))return null;
+  const damage=Number(talentBb['Bleeding.attack@bleeding_damage']),duration=Number(talentBb['Bleeding.attack@duration']);
+  if(!Number.isFinite(damage)||damage<=0)return null;
+  return {damage,duration:Number.isFinite(duration)&&duration>0?duration:10,interval:1,cureOnHeal:true};
+}
+
+// 抵抗：原表用 one_minus_status_resistance 的负值表示「可抵抗状态时间减半」。
+function inferStatusResistance(raw={}){
+ const behavior=raw.enemyBehavior||raw.behavior||{};
+ if(Number.isFinite(behavior.statusResistance))return Math.max(0,Math.min(1,behavior.statusResistance));
+ const value=Number(enemyTalentBlackboard(raw)['Buff.one_minus_status_resistance']);
+ return Number.isFinite(value)&&value<0?Math.min(1,-value):0;
+}
+
+function inferGroundZone(raw={}){
+ const behavior=raw.enemyBehavior||raw.behavior||{};
+ if(behavior.groundZone)return behavior.groundZone;
+ return null;
+}
+
 // Infer only safe, explicitly documented policies.  Ambiguous ranged enemies
 // use attack-only stopping; explicit page/level policies still take priority.
 export function enemyBehaviorProfile(raw={}){
  const normalized=raw.enemyBehavior;
- if(normalized?.movementPolicy&&normalized.attackWhileMoving!==undefined&&normalized.stallTimeout!==undefined)return {...normalized};
+ // 快照里已经带推导结果（behaviorInferred）时直接复用；否则重新推导，避免把上一轮的空字段
+ // 当成「已配置为关闭」而永远推不出持续伤害区域。
+ if(normalized?.behaviorInferred&&normalized.attackWhileMoving!==undefined&&normalized.stallTimeout!==undefined)return {...normalized};
  const explicit=raw.movementPolicy||raw.enemyBehavior?.movementPolicy||raw.behavior?.movementPolicy;
  const text=enemyText(raw);
  let movementPolicy=explicit||(raw.applyWay==='RANGED'?ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING:ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET);
@@ -88,6 +197,14 @@ export function enemyBehaviorProfile(raw={}){
  const firstAttackSplash=/首次攻击[^。；;]*溅射/.test(text);
  const meleeAttackScale=Number(talentBb['Empty.attack@chuang_atk_scale']);
  const pollutedDamage=Number(specialSkill?.bb?.polluted_damage_low);
+ const explicitAttack=behavior.attackZone,explicitDeath=behavior.deathZone??behavior.toxicZone;
+ const zoneAttack=explicitAttack??inferAttackZone(raw);
+ // 只认「有伤害参数」的常驻范围：旧快照里留下的空壳（无伤害也无元素损伤）当作没有，重新推导。
+ const zoneSelf=inferSelfField(raw);
+ const zoneDeath=explicitDeath??inferDeathZone(raw)??inferToxicZone(raw);
+ const bleedingTrait=inferBleeding(raw);
+ const resistValue=inferStatusResistance(raw);
+ const groundZone=behavior.groundZone??null;
  return {
   movementPolicy,
   attackWhileMoving:movementPolicy===ENEMY_MOVEMENT_POLICIES.ALWAYS_MOVE_ATTACK,
@@ -117,7 +234,14 @@ export function enemyBehaviorProfile(raw={}){
   specialAtkScale:Number.isFinite(specialAtkScale)&&specialAtkScale>0?specialAtkScale:0,
   firstAttackSplash,
   meleeAttackScale:Number.isFinite(meleeAttackScale)&&meleeAttackScale>0?meleeAttackScale:0,
-  pollutedDamage:Number.isFinite(pollutedDamage)&&pollutedDamage>0?pollutedDamage:0
+  pollutedDamage:Number.isFinite(pollutedDamage)&&pollutedDamage>0?pollutedDamage:0,
+  groundZone,
+  attackZone:zoneAttack,
+  selfField:zoneSelf,
+  deathZone:zoneDeath,
+  bleeding:bleedingTrait,
+  statusResistance:resistValue,
+  behaviorInferred:true
  };
 }
 
@@ -256,6 +380,15 @@ export function advanceEnemy(e,dt,onEvent,stopForAttack=false){
  }
  e.progress=remainingDistance(e);
  return e.cmd>=e.route.length;
+}
+// 持续伤害区域（logicEffects kind:'field'）的标识：同一名敌人的常驻光环/流血只保留一份，
+// 不同敌人各自独立；不随攻击次数变化，避免每次攻击都新开一片区域。
+export function enemySpecialTraitId(enemy){
+ return `${enemy?.id??'enemy'}-${enemy?.uid??0}-zone`;
+}
+// 逐腐兽流血的独立标识：治疗解除钩子靠它识别「可治疗解除」的持续伤害。
+export function enemyBleedingTraitId(enemy){
+ return `${enemy?.id??'enemy'}-${enemy?.uid??0}-bleeding`;
 }
 export function skillFlow(skill){
  const kind=skillKind(skill);

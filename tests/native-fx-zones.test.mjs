@@ -49,6 +49,21 @@ test('区域按逻辑层的 x/y/radius 铺格并绘制，过期或空列表不�
  assert.equal(self.ops.filter(o=>o.op==='fillRect').length,1,'自身型只画自身一格');
 });
 
+test('敌方持续伤害区域（kind:field）走危险色调绘制，空壳区域不画',()=>{
+ const field={id:9,kind:'field',sourceUid:100,x:3,y:2,radius:1,interval:1,nextAt:3.5,endsAt:6,values:{damage:150,damageType:'true'}};
+ const out=host();
+ assert.equal(drawZones(out.c,point,Z,battle([field])),true,'污染区域应当可见');
+ assert.equal(out.ops.filter(o=>o.op==='fillRect').length,9);
+ const stroke=out.ops.find(o=>o.op==='strokeRect');
+ assert.ok(/^#[0-9a-f]{8}$/i.test(String(stroke.style)),'应当使用十六进制带透明度的描边');
+ const danger=host();
+ drawZones(danger.c,point,Z,battle([field]));
+ const arts=host();
+ drawZones(arts.c,point,Z,battle([{...field,kind:'zone',talentOrSkillId:'skill-zone:x',values:{dot:true,type:'arts'}}]));
+ assert.notEqual(danger.ops.find(o=>o.op==='fillRect').style,arts.ops.find(o=>o.op==='fillRect').style,'敌方区域要有区别于普通技能区域的配色');
+ assert.equal(drawZones(host().c,point,Z,battle([{...field,values:{damage:0,atkScale:0,elementScale:0}}])),false,'没有伤害参数的区域不画');
+});
+
 test('减少动效模式仍绘制但更淡',()=>{
  const normal=host(),reduced=host();
  const fx={id:1,kind:'zone',talentOrSkillId:'saria-s3',x:3,y:2,radius:1,interval:1,nextAt:3.2,endsAt:6,values:{hot:5}};

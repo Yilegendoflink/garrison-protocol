@@ -105797,7 +105797,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -105916,7 +105923,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -106017,7 +106031,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -106128,7 +106149,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -106231,7 +106259,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -106351,7 +106386,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -106480,7 +106522,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -106605,7 +106654,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -106706,7 +106762,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -106807,7 +106870,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -106914,7 +106984,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -107031,7 +107108,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -107196,7 +107280,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -107308,7 +107399,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -107425,7 +107523,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -107538,7 +107643,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -107651,7 +107763,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -107784,7 +107903,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -107917,7 +108043,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -108059,7 +108192,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -108185,7 +108325,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -108306,7 +108453,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -108437,7 +108591,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -108549,7 +108710,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -108660,7 +108828,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -108765,7 +108940,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -108902,7 +109084,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -109010,7 +109199,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -109117,7 +109313,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -109228,7 +109431,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -109335,7 +109545,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -109440,7 +109657,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -109577,7 +109801,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -109714,7 +109945,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": true,
       "excludedModes": []
@@ -109822,7 +110060,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -109929,7 +110174,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -110075,7 +110327,14 @@
         "specialAtkScale": 0.4,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -110187,7 +110446,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -110294,7 +110560,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -110420,7 +110693,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -110550,7 +110830,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": true,
       "excludedModes": [
@@ -110684,7 +110971,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -110800,7 +111094,22 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": {
+          "radius": 1.6,
+          "interval": 1,
+          "atkScale": 0,
+          "damage": 0,
+          "damageType": "arts",
+          "elementScale": 0.05,
+          "elementType": "neural"
+        },
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0.5,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -110896,7 +111205,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -110992,7 +111308,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -111165,7 +111488,21 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 2,
-        "pollutedDamage": 50
+        "pollutedDamage": 50,
+        "groundZone": null,
+        "attackZone": {
+          "trigger": "attack",
+          "radius": 2.2,
+          "duration": 10,
+          "interval": 1,
+          "damage": 50,
+          "damageType": "true"
+        },
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -111288,7 +111625,21 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": {
+          "trigger": "death",
+          "radius": 2,
+          "duration": 8,
+          "interval": 1,
+          "damage": 50,
+          "damageType": "true"
+        },
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -111411,7 +111762,21 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": {
+          "trigger": "death",
+          "radius": 2,
+          "duration": 8,
+          "interval": 1,
+          "damage": 50,
+          "damageType": "true"
+        },
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -111522,7 +111887,19 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": {
+          "damage": 100,
+          "duration": 10,
+          "interval": 1,
+          "cureOnHeal": true
+        },
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -111638,7 +112015,22 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": {
+          "radius": 1.6,
+          "interval": 1,
+          "atkScale": 0,
+          "damage": 0,
+          "damageType": "arts",
+          "elementScale": 0.05,
+          "elementType": "neural"
+        },
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0.5,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -111762,7 +112154,21 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": {
+          "trigger": "attack",
+          "radius": 1,
+          "duration": 3,
+          "interval": 1,
+          "damage": 150,
+          "damageType": "true"
+        },
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -111940,7 +112346,21 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 2,
-        "pollutedDamage": 50
+        "pollutedDamage": 50,
+        "groundZone": null,
+        "attackZone": {
+          "trigger": "attack",
+          "radius": 2.2,
+          "duration": 10,
+          "interval": 1,
+          "damage": 50,
+          "damageType": "true"
+        },
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -112055,7 +112475,19 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": {
+          "damage": 150,
+          "duration": 10,
+          "interval": 1,
+          "cureOnHeal": true
+        },
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -112183,7 +112615,22 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": {
+          "trigger": "death-target",
+          "radius": 0.8,
+          "duration": 8,
+          "interval": 1,
+          "atkScale": 0.15,
+          "damage": 0,
+          "damageType": "arts"
+        },
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -112310,7 +112757,14 @@
         "specialAtkScale": 2,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -112412,7 +112866,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -112512,7 +112973,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -112673,7 +113141,14 @@
         "specialAtkScale": 0.2,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -112823,7 +113298,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -112938,7 +113420,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -113088,7 +113577,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -113191,7 +113687,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -113286,7 +113789,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -113385,7 +113895,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -113511,7 +114028,14 @@
         "specialAtkScale": 2,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -113613,7 +114137,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -113752,7 +114283,14 @@
         "specialAtkScale": 1,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -113852,7 +114390,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -113958,7 +114503,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -114066,7 +114618,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -114191,7 +114750,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -114372,7 +114938,14 @@
         "specialAtkScale": 0.2,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -114477,7 +115050,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -114582,7 +115162,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -114688,7 +115275,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -114793,7 +115387,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -114908,7 +115509,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -115084,7 +115692,14 @@
         "specialAtkScale": 0.2,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -115194,7 +115809,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -115300,7 +115922,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -115414,7 +116043,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -115540,7 +116176,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -115657,7 +116300,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -115766,7 +116416,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -115867,7 +116524,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -115963,7 +116627,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -116059,7 +116730,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -116186,7 +116864,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -116280,7 +116965,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -116414,7 +117106,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -116543,7 +117242,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -116672,7 +117378,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -116768,7 +117481,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -116865,7 +117585,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -116961,7 +117688,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -117099,7 +117833,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -117193,7 +117934,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -117307,7 +118055,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -117432,7 +118187,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -117537,7 +118299,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -117647,7 +118416,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -117774,7 +118550,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -117875,7 +118658,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -118010,7 +118800,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -118104,7 +118901,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -118242,7 +119046,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -118381,7 +119192,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -118520,7 +119338,14 @@
         "specialAtkScale": 1.5,
         "firstAttackSplash": true,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -118644,7 +119469,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -118754,7 +119586,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -118850,7 +119689,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -118987,7 +119833,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -119117,7 +119970,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -119227,7 +120087,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -119332,7 +120199,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -119454,7 +120328,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": [
@@ -119551,7 +120432,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -119658,7 +120546,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -119785,7 +120680,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -119892,7 +120794,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -119989,7 +120898,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -120081,7 +120997,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -120175,7 +121098,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -120282,7 +121212,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -120374,7 +121311,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -120481,7 +121425,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -120608,7 +121559,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -120725,7 +121683,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -120824,7 +121789,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -120944,7 +121916,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -121125,7 +122104,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -121304,7 +122290,14 @@
         "specialAtkScale": 3,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -121467,7 +122460,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -121585,7 +122585,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -121711,7 +122718,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -121929,7 +122943,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -122061,7 +123082,14 @@
         "specialAtkScale": 1.8,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -122250,7 +123278,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -122393,7 +123428,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -122485,7 +123527,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -122740,7 +123789,14 @@
         "specialAtkScale": 1,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -123005,7 +124061,14 @@
         "specialAtkScale": 1,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -123248,7 +124311,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -123378,7 +124448,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -123506,7 +124583,14 @@
         "specialAtkScale": 0.7,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -123639,7 +124723,14 @@
         "specialAtkScale": 1.5,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -123831,7 +124922,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -124002,7 +125100,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -124119,7 +125224,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -124302,7 +125414,14 @@
         "specialAtkScale": 0.1,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -124444,7 +125563,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -124630,7 +125756,14 @@
         "specialAtkScale": 0.6,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -124733,7 +125866,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -124836,7 +125976,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -124939,7 +126086,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -125042,7 +126196,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -125145,7 +126306,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -125248,7 +126416,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -125351,7 +126526,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -125454,7 +126636,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -125557,7 +126746,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -125660,7 +126856,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -125763,7 +126966,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -125866,7 +127076,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -125969,7 +127186,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -126072,7 +127296,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -126203,7 +127434,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -126302,7 +127540,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -126436,7 +127681,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -126560,7 +127812,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -126702,7 +127961,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -126816,7 +128082,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -126913,7 +128186,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -127016,7 +128296,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -127110,7 +128397,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -127219,7 +128513,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -127324,7 +128625,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -127437,7 +128745,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -127576,7 +128891,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -127702,7 +129024,14 @@
         "specialAtkScale": 0.55,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -127847,7 +129176,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -127970,7 +129306,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -128088,7 +129431,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -128237,7 +129587,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -128353,7 +129710,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -128608,7 +129972,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -128726,7 +130097,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -128860,7 +130238,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -128994,7 +130379,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -129116,7 +130508,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -129240,7 +130639,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -129343,7 +130749,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -129461,7 +130874,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -129564,7 +130984,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -129672,7 +131099,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -129830,7 +131264,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -129952,7 +131393,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -130055,7 +131503,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -130149,7 +131604,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -130259,7 +131721,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -130411,7 +131880,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -130514,7 +131990,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -130673,7 +132156,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -130784,7 +132274,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": true,
       "excludedModes": []
@@ -130903,7 +132400,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -131006,7 +132510,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -131199,7 +132710,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -131347,7 +132865,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -131492,7 +133017,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -131593,7 +133125,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -131734,7 +133273,14 @@
         "specialAtkScale": 1.5,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -131848,7 +133394,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -131947,7 +133500,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -132050,7 +133610,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
@@ -132180,7 +133747,14 @@
         "specialAtkScale": 0,
         "firstAttackSplash": false,
         "meleeAttackScale": 0,
-        "pollutedDamage": 0
+        "pollutedDamage": 0,
+        "groundZone": null,
+        "attackZone": null,
+        "selfField": null,
+        "deathZone": null,
+        "bleeding": null,
+        "statusResistance": 0,
+        "behaviorInferred": true
       },
       "modifiedForMode": false,
       "excludedModes": []
