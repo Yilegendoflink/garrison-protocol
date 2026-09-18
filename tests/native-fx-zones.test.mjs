@@ -12,8 +12,10 @@ function host(){
   fillRect(...a){ops.push({op:'fillRect',args:a,style:this.fillStyle});},
   strokeRect(...a){ops.push({op:'strokeRect',args:a,style:this.strokeStyle,width:this.lineWidth});},
   beginPath(){ops.push({op:'beginPath'});},moveTo(){},lineTo(){},closePath(){},quadraticCurveTo(){},
-  stroke(){ops.push({op:'stroke',style:this.strokeStyle,width:this.lineWidth});},
-  arc(){ops.push({op:'arc'});},ellipse(){ops.push({op:'ellipse'});},fill(){ops.push({op:'fill'});},
+  stroke(){ops.push({op:'stroke',style:this.strokeStyle,width:this.lineWidth,blend:this.globalCompositeOperation});},
+  arc(){ops.push({op:'arc'});},
+  ellipse(...a){ops.push({op:'ellipse',args:a,fill:this.fillStyle,stroke:this.strokeStyle,width:this.lineWidth,blend:this.globalCompositeOperation});},
+  fill(){ops.push({op:'fill',style:this.fillStyle,blend:this.globalCompositeOperation});},
   translate(){},rotate(){},drawImage(){},fillText(){}};
  return {c,ops,state};
 }
@@ -49,18 +51,22 @@ test('区域按逻辑层的 x/y/radius 铺格并绘制，过期或空列表不�
  assert.equal(self.ops.filter(o=>o.op==='fillRect').length,1,'自身型只画自身一格');
 });
 
-test('敌方持续伤害区域（kind:field）走危险色调绘制，空壳区域不画',()=>{
- const field={id:9,kind:'field',sourceUid:100,x:3,y:2,radius:1,interval:1,nextAt:3.5,endsAt:6,values:{damage:150,damageType:'true'}};
+test('敌方持续伤害区域只画一圈，且不用加成混合、不逐格描边',()=>{
+ const field={id:9,kind:'field',sourceUid:100,x:3,y:2,radius:1.5,interval:1,nextAt:5.0,endsAt:6,values:{damage:150,damageType:'true'}};
  const out=host();
  assert.equal(drawZones(out.c,point,Z,battle([field])),true,'污染区域应当可见');
- assert.equal(out.ops.filter(o=>o.op==='fillRect').length,9);
- const stroke=out.ops.find(o=>o.op==='strokeRect');
- assert.ok(/^#[0-9a-f]{8}$/i.test(String(stroke.style)),'应当使用十六进制带透明度的描边');
- const danger=host();
- drawZones(danger.c,point,Z,battle([field]));
- const arts=host();
- drawZones(arts.c,point,Z,battle([{...field,kind:'zone',talentOrSkillId:'skill-zone:x',values:{dot:true,type:'arts'}}]));
- assert.notEqual(danger.ops.find(o=>o.op==='fillRect').style,arts.ops.find(o=>o.op==='fillRect').style,'敌方区域要有区别于普通技能区域的配色');
+ const ellipses=out.ops.filter(o=>o.op==='ellipse');
+ assert.equal(ellipses.length,2,'只画一圈：一次填充 + 一次描边');
+ assert.equal(out.ops.filter(o=>o.op==='fillRect').length,0,'不能再逐格铺方块');
+ assert.equal(out.ops.filter(o=>o.op==='strokeRect').length,0,'不能再逐格描边');
+ for(const op of ellipses)assert.equal(op.blend,'source-over','污染区域不能用 lighter 加成混合');
+ assert.match(String(ellipses[0].fill),/^#[0-9a-f]{8}$/i,'填充要用带透明度的暗色');
+ const [cx,cy,rx,ry]=ellipses[0].args;
+ assert.equal(cx,point(3,2).x);assert.equal(cy,point(3,2).y);
+ assert.equal(rx,Z.tw*1.5);assert.equal(ry,Z.th*1.5,'半径按整格换算，1.5 格就是 1.5 格');
+ const zone=host();
+ drawZones(zone.c,point,Z,battle([{...field,kind:'zone',talentOrSkillId:'skill-zone:x',values:{dot:true,type:'arts'}}]));
+ assert.ok(zone.ops.filter(o=>o.op==='fillRect').length>0,'我方技能区域仍按原样铺格');
  assert.equal(drawZones(host().c,point,Z,battle([{...field,values:{damage:0,atkScale:0,elementScale:0}}])),false,'没有伤害参数的区域不画');
 });
 

@@ -342,15 +342,17 @@ export function drawAuraField(c,point,z,battle,{reduceFx=false}={}){
 const ZONE_TONE={thunder:['#bcd8ff','#7fb2ff'],blade:['#ffe9c2','#ffb877'],gold:['#ffe6a4','#f0c774'],
  holy:['#fff4d6','#f7cf8f'],water:['#bfe8ff','#79c4ee'],sand:['#f0dcae','#c9a86a'],
  burn:['#ffc79a','#ff8f57'],frost:['#d8f1ff','#8fd0ee'],shadow:['#d9c7ff','#9d84d8'],
- arts:['#dcc9ff','#a98ce0'],heal:['#c8f6dc','#7fd8a8'],time:['#e6e0ff','#a9a2e8'],
- danger:['#ffb0a0','#c85a48']};
+ arts:['#dcc9ff','#a98ce0'],heal:['#c8f6dc','#7fd8a8'],time:['#e6e0ff','#a9a2e8']};
+// 敌方持续伤害区域的配色：原作的污染是发暗的紫绿，不是亮粉。压暗后按 source-over 叠在地块上，
+// 不再像此前用加成混合那样把整片地照成粉色。
+const FIELD_TINT={fill:'#4a4160',edge:'#8f86b8'};
 export function drawZones(c,point,z,battle,{reduceFx=false}={}){
  const s=battle?.s;if(!s)return false;
  // 敌方留下的持续伤害区域（kind:'field'：污染秽蚀、燃烧区域、毒雾）和我方技能区域共用这套绘制。
  const list=(s.logicEffects||[]).filter(fx=>(fx.kind==='zone'||(fx.kind==='field'&&(Number(fx.values?.damage)>0||Number(fx.values?.atkScale)>0||Number(fx.values?.elementScale)>0)))&&(fx.endsAt==null||fx.endsAt>s.time));
  if(!list.length)return false;
  for(const fx of list){
-  const visual=fx.kind==='field'?{shape:'circle',tone:'danger'}:(battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'});
+  const visual=battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
   const [light,deep]=ZONE_TONE[visual.tone]||ZONE_TONE.arts;
   const radius=Number.isFinite(fx.radius)?fx.radius:1;
   // 剩余时间不足 1.5 秒时开始闪烁提示即将结束
@@ -367,9 +369,29 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
      // 斜线扫过的形状：沿对角线方向铺开，宽度 1 格
      if(Math.abs(dx)!==Math.abs(dy))continue;
      if(Math.abs(dx)>radius)continue;
-    }else if(Math.max(Math.abs(dx),Math.abs(dy))>radius)continue;
+    // 作用格数按向上取整：半径 2.2 覆盖 3 圈（7x7），与此前的散怪范围写法一致
+    }else if(Math.max(Math.abs(dx),Math.abs(dy))>Math.ceil(radius))continue;
     cells.push({x:(fx.x??0)+dx,y:(fx.y??0)+dy});
    }
+  }
+  const isField=fx.kind==='field';
+  // 敌方留下来的持续伤害区域只画「一圈」：铺格 + 逐格描边会变成一堆小方块，加成混合下看着像许多圈拼在一起。
+  if(isField){
+   const cx=point(fx.x??0,fx.y??0),rx=radius*z.tw,ry=radius*z.th;
+   c.save();c.globalCompositeOperation='source-over';
+   c.fillStyle=`${FIELD_TINT.fill}${Math.round(Math.min(.5,alpha*1.6)*255).toString(16).padStart(2,'0')}`;
+   c.beginPath();c.ellipse(cx.x,cx.y,rx,ry,0,0,Math.PI*2);c.fill();
+   c.strokeStyle=`${FIELD_TINT.edge}${Math.round(Math.min(.75,.34+.3*pulse)*blink*255).toString(16).padStart(2,'0')}`;
+   c.lineWidth=1.8;c.beginPath();c.ellipse(cx.x,cx.y,rx,ry,0,0,Math.PI*2);c.stroke();
+   // 周期结算的瞬间让整圈脉动一次，说明「这里每秒会结算」
+   const fieldInterval=Number(fx.interval)||0;
+   if(fieldInterval>0&&!reduceFx&&fx.nextAt!=null&&fx.nextAt-s.time<=.25){
+    const k=1-Math.max(0,fx.nextAt-s.time)/.25;
+    c.strokeStyle=`${FIELD_TINT.edge}${Math.round(.4*(1-k)*255).toString(16).padStart(2,'0')}`;c.lineWidth=2.4;
+    c.beginPath();c.ellipse(cx.x,cx.y,rx*(1+k*.14),ry*(1+k*.14),0,0,Math.PI*2);c.stroke();
+   }
+   c.restore();
+   continue;
   }
   c.save();c.globalCompositeOperation='lighter';
   for(const cell of cells){

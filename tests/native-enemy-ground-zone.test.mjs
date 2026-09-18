@@ -77,6 +77,9 @@ test('深溟巢涌者是跟随自身的法术+神经损伤光环，抵抗用来�
  b.s.time+=1;b.tickEnemyGroundZones();
  assert.equal(zones(b).length,1,'同一个敌人只保留一片常驻区域');
 });
+test('深溟巢涌者死亡后常驻区域清理，死亡区域仍按 duration 保留',()=>{
+ const b=liveBattle(),u=b.s.units[0],enemy=spawnEnemy(b,'enemy_1234_dsubrl',u.x,u.y+1);b.ensureEnemySelfField(enemy);assert.equal(zones(b).length,1);enemy.hp=0;b.s.time+=1/30;tickLogic(b,1/30);assert.equal(zones(b).length,0);
+});
 test('萨卡兹枯朽战士被击倒后留下污染区域，只结算原表半径内的我方',()=>{
  const b=liveBattle(),u=b.s.units[0];
  const enemy=spawnEnemy(b,'enemy_1267_nhpbr',u.x+3,u.y);
@@ -91,6 +94,10 @@ test('萨卡兹枯朽战士被击倒后留下污染区域，只结算原表半�
  const hp=u.hp;
  b.s.time+=1.1;b.tickEnemyGroundZones();
  assert.ok(u.hp<hp,'区域内的干员持续掉血');
+ // 同一地点再死一只只刷新同一片区域，不叠第二圈（否则加成混合下就是一地粉红）
+ const again=spawnEnemy(b,'enemy_1267_nhpbr',u.x,u.y+1);
+ b.resolveEnemyDeath(again);
+ assert.equal(zones(b).length,1,'同一地点重复死亡只保留一圈');
 });
 
 test('逐腐兽的流血是吸血式持续伤害，接受治疗后立即解除',()=>{

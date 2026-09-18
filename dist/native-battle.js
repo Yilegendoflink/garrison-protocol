@@ -238,8 +238,27 @@ export class NativeBattle {
   const a={...base,atk:combineStat(base.atk,extra.add.atk||0,atk,muls.atk,extra.finalAdd.atk||0),maxHp:combineStat(base.maxHp,extra.add.maxHp||0,hp,muls.maxHp,extra.finalAdd.maxHp||0),def:combineStat(base.def,extra.add.def||0,def,muls.def,extra.finalAdd.def||0),attackSpeed:Math.max(10,Math.min(600,base.attackSpeed+as+(u.enemyAttackSpeedMod||0))),parts};
   return a;
  }
- range(u,skill=false){const p=this.profile(u),r=skill&&p.skill?.rangeId?this.data.ranges[p.skill.rangeId]:p.range;let grids=r?.grids||[{row:0,col:1}];if(p.branch==='fortress'&&!grids.some(g=>g.row===0&&g.col===0))grids=grids.concat({row:0,col:0});return grids.map(g=>{let x=g.col,y=-g.row;for(let i=0;i<u.dir;i++)[x,y]=[-y,x];return{x:u.x+x,y:u.y+y};});}
- inside(u,e,skill=(u.skillLeft>0||u.ammo>0)){if(e.hidden)return false;if(e.trainingDummy&&e.area){const cells=this.range(u,skill);for(const cell of cells)if(cell.x>=e.area.left&&cell.x<=e.area.right&&cell.y>=e.area.top&&cell.y<=e.area.bottom)return true;return false;}return containsTarget(this.range(u,skill).map(g=>[g.x,g.y]),e);}
+ range(u,skill=false){return this.rangeWithSkill(u,skill).cells;}
+ // forceSkill=true 时无视当前是否开技，一律按技能范围算：自动释放要看的是「开技后能不能打到」。
+ rangeWithSkill(u,skill=false,forceSkill=false){const p=this.profile(u),useSkill=(skill||forceSkill)&&p.skill?.rangeId,r=useSkill?this.data.ranges[p.skill.rangeId]:p.range;let grids=r?.grids||[{row:0,col:1}];if(p.branch==='fortress'&&!grids.some(g=>g.row===0&&g.col===0))grids=grids.concat({row:0,col:0});return {skill:useSkill,rangeId:useSkill?p.skill.rangeId:p.rangeId,cells:grids.map(g=>{let x=g.col,y=-g.row;for(let i=0;i<u.dir;i++)[x,y]=[-y,x];return{x:u.x+x,y:u.y+y};})};}
+ inside(u,e,skill=(u.skillLeft>0||u.ammo>0)){if(e.hidden)return false;const cells=this.range(u,skill);if(e.trainingDummy&&e.area){for(const cell of cells)if(cell.x>=e.area.left&&cell.x<=e.area.right&&cell.y>=e.area.top&&cell.y<=e.area.bottom)return true;return false;}return containsTarget(cells.map(g=>[g.x,g.y]),e);}
+ // 自动释放专用：技能开启后这次攻击能不能真的打到它。
+ // 与 targets() 的区别是范围强制用技能范围，且不要求「当前就能选中」（飞行单位在开技前可能不可选）。
+ skillWouldHitTarget(u,p){
+  const cfg=operatorSkillConfig(this,u),behavior=this.behavior(u);
+  const sleepOk=cfg.canTargetSleep||behavior.kind==='damage-heal'||p.charId==='char_4056_titi'||(p.charId==='char_423_blemsh'&&(p.activeTalents||[]).some(t=>/优先攻击.*沉睡/.test(t.description||'')));
+  const cells=this.rangeWithSkill(u,false,true).cells;
+  if(!cells.length)return false;
+  const canReach=e=>{
+   if(e.trainingDummy&&e.area)return cells.some(cell=>cell.x>=e.area.left&&cell.x<=e.area.right&&cell.y>=e.area.top&&cell.y<=e.area.bottom);
+   return containsTarget(cells.map(g=>[g.x,g.y]),e);
+  };
+  return this.s.enemies.some(e=>e.hp>0&&!e.hidden&&!e.invulnerable&&!e.untargetable&&
+   (!e.invisible||cfg.canSeeHidden||e.block===u.uid)&&
+   (e.block===u.uid||(!e.flying||behavior.antiAir))&&
+   (sleepOk||!permissions(e).sleeping)&&
+   canReach(e));
+ }
  // 当前是否处于「范围扩大」状态：技能 rangeId 与常态 rangeId 不同即为真。纯显示标记，不参与命中判定。
  wideAttack(u){return this.wideSkillKind(this.profile(u),u.skillIndex??u.source?.skillIndex??null)!==null;}
  // none=未扩大范围；burst=瞬时自身 AoE；sweep=持续范围强化；passive=入场自动释放的大范围技能
@@ -280,9 +299,9 @@ export class NativeBattle {
   // 我方受到治疗时解除「治疗可解除」的敌方持续伤害（目前只有逐腐兽的流血）。
   cureHealCurableEffects(target){for(const fx of this.s.logicEffects||[])if(fx.kind==='dot'&&fx.targetUid===target?.uid&&String(fx.talentOrSkillId||'').endsWith('-bleeding')){fx.endsAt=this.s.time;}}
   // 敌方持续伤害区域统一入口：射击落点、跟随自身的常驻光环、死亡后留下的毒雾都走这里。
-  addEnemyGroundZone(source,spec,{x,y,follow=false,attackId=null}={}){if(!source||!spec||!(Number(spec.damage)>0||Number(spec.atkScale)>0||Number(spec.elementScale)>0))return null;const interval=Math.max(.1,Number(spec.interval)||1),duration=Number(spec.duration),radius=Number(spec.radius)||1;const row=addEffect(this,{kind:'field',sourceUid:source.uid,sourceDeployGen:source.deployGen,x,y,followUid:follow?source.uid:null,radius,interval,nextAt:this.s.time+interval,endsAt:Number.isFinite(duration)&&duration>0?this.s.time+duration:null,values:{damage:Number(spec.damage)||0,atkScale:Number(spec.atkScale)||0,damageType:spec.damageType||'true',elementScale:Number(spec.elementScale)||0,elementType:spec.elementType||null},trackSide:'ally',trackArea:true,refKind:'owner',persistAfterSourceGone:true,attackId});if(row)this.emit('enemy-skill',{uid:source.uid,x:row.x??x,y:row.y??y,skill:spec.trigger||'ground-zone',radius:row.radius,endsAt:row.endsAt});return row;}
+  addEnemyGroundZone(source,spec,{x,y,follow=false,cleanupWithSource=false,attackId=null,key=null}={}){if(!source||!spec||!(Number(spec.damage)>0||Number(spec.atkScale)>0||Number(spec.elementScale)>0))return null;const interval=Math.max(.1,Number(spec.interval)||1),duration=Number(spec.duration),radius=Number(spec.radius)||1;const row=addEffect(this,{kind:'field',sourceUid:source.uid,sourceDeployGen:source.deployGen,x,y,followUid:follow?source.uid:null,radius,interval,nextAt:this.s.time+interval,endsAt:Number.isFinite(duration)&&duration>0?this.s.time+duration:null,talentOrSkillId:key||enemySpecialTraitId(source),sharedStack:!!key,values:{damage:Number(spec.damage)||0,atkScale:Number(spec.atkScale)||0,damageType:spec.damageType||'true',elementScale:Number(spec.elementScale)||0,elementType:spec.elementType||null},trackSide:'ally',trackArea:true,refKind:cleanupWithSource?'live':'owner',persistAfterSourceGone:!cleanupWithSource,attackId});if(row)this.emit('enemy-skill',{uid:source.uid,x:row.x??x,y:row.y??y,skill:spec.trigger||'ground-zone',radius:row.radius,endsAt:row.endsAt});return row;}
   // 常驻范围（如深溟巢涌者）：敌人活着时它自己就是区域中心，每秒结算一次。
-  ensureEnemySelfField(enemy){if(!enemy?.selfField||enemy.hp<=0)return;const trait=enemySpecialTraitId(enemy);if((this.s.logicEffects||[]).some(fx=>fx.kind==='field'&&fx.talentOrSkillId===trait))return;this.addEnemyGroundZone(enemy,enemy.selfField,{x:enemy.x,y:enemy.y,follow:true});}
+  ensureEnemySelfField(enemy){if(!enemy?.selfField||enemy.hp<=0)return;const trait=enemySpecialTraitId(enemy);if((this.s.logicEffects||[]).some(fx=>fx.kind==='field'&&fx.talentOrSkillId===trait))return;this.addEnemyGroundZone(enemy,enemy.selfField,{x:enemy.x,y:enemy.y,follow:true,cleanupWithSource:true});}
   // 区域结算：1 秒一次，与其它周期效果共用同一套伤害入口（护盾、闪避、元素损伤都按常规处理）。
   tickEnemyGroundZones(){for(const fx of (this.s.logicEffects||[]).slice()){if(fx.kind!=='field'||fx.nextAt==null)continue;if(fx.endsAt!=null&&this.s.time>=fx.endsAt){fx.nextAt=null;continue;}if(this.s.time+1e-9<fx.nextAt)continue;
     if(fx.followUid!=null){const owner=getActor(this.s,fx.followUid);if(owner&&owner.hp>0){fx.x=owner.x;fx.y=owner.y;}}
@@ -301,7 +320,7 @@ export class NativeBattle {
    // 死亡区域（污秽／毒雾）：以死亡位置为中心留一片持续伤害区；死亡爆炸与区域可以同时存在。
    if(enemy.deathZone){const zone=enemy.deathZone,at=zone.trigger==='death-target'&&source&&source.hp>0?{x:source.x,y:source.y}:{x:enemy.x,y:enemy.y},radius=Number(zone.radius)||1;
     // 原表的污染落点只盖住周围的我方；半径内没有我方时不留下空区域（否则远处被击倒也会撒一片）。
-    if(attackableAllies(this.s).some(a=>Math.max(Math.abs(a.x-at.x),Math.abs(a.y-at.y))<=radius)){this.addEnemyGroundZone(enemy,zone,{...at,follow:!!zone.follow});this.emit('enemy-ability',{uid:enemy.uid,x:at.x,y:at.y,ability:'death-zone',radius,damage:Number(zone.damage)||0,atkScale:Number(zone.atkScale)||0});}}}
+    if(attackableAllies(this.s).some(a=>Math.max(Math.abs(a.x-at.x),Math.abs(a.y-at.y))<=radius)){this.addEnemyGroundZone(enemy,zone,{...at,follow:!!zone.follow,key:`zone-death-${at.x},${at.y}`});this.emit('enemy-ability',{uid:enemy.uid,x:at.x,y:at.y,ability:'death-zone',radius,damage:Number(zone.damage)||0,atkScale:Number(zone.atkScale)||0});}}}
  event(u,event){
   const p=this.profile(u);for(const g of p.garrisons){if(g.eventType!=='IN_BATTLE'||g.effectType!=='ADD_BOND')continue;const b=blackboard(g.blackboard),key=b.key||'',match=event==='kill'?/selfkillenemy/.test(key):event==='skill'?/skill/.test(key):event==='deploy'?/born|deploy|onstart/.test(key):event==='selfdead'?/selfdead/.test(key):event==='ammo'?/consume_ammo/.test(key):false;if(!match)continue;const id=g.id+':'+event;u.counters[id]=(u.counters[id]||0)+1;const threshold=b.check_cnt||b.consume_count||1;if(u.counters[id]%threshold)continue;const limit=b.max_cnt||b.max_count||b.max_trigger_count||Infinity;if(u.counters[id]/threshold>limit)continue;const amount=b.bond_add_type==='by_charlevel'?p.rank:(b.bond_add_count??1),maxTotal=Number(b.max_add_count_per_battle),appliedKey=id+':'+event+':applied',applied=u.counters[appliedKey]||0,grant=Number.isFinite(maxTotal)?Math.max(0,Math.min(amount,maxTotal-applied)):amount;if(!grant)continue;const bonds=b.bond_id?String(b.bond_id).split(','):this.economy.ownBonds(u.source);for(const bond of bonds)this.economy.addLayers(bond,grant);if(Number.isFinite(maxTotal))u.counters[appliedKey]=applied+grant;}
  }
@@ -365,7 +384,11 @@ export class NativeBattle {
    tickTimeSp(u,skill,dt,stats.spRecoveryPerSec??1,{requiresBlock:!!behavior.spRequiresBlock,blocking,cost});
    let targets=this.targets(u),heals=this.healingTargets(u),healer=behavior.kind==='heal'||u.focusHeal;
    const policy=skillPolicy(this.data.common,{id:u.id,profession:p.profession,branch:p.branch},p.skillIndex).skillTriggerType;
-   const skillReady=skill?.skillType==='AUTO'?u.sp>=cost&&(healer?heals.length>0:targets.length>0):shouldAutoSkill({policy,ready:u.sp>=cost,deployed:u.deployed,now:this.s.time,lastOperation:u.lastSkill,initialDeployment:u.deployAt,hasTarget:healer?heals.length>0:targets.length>0,hasAnyTarget:this.s.enemies.length>0,hasEnemyInInitialRange:targets.length>0,hasEnemyInSkillRange:this.s.enemies.some(e=>e.hp>0&&this.inside(u,e,true)),wasDamaged:this.s.time-(u.lastDamagedAt??-999)<.1});
+   // 自动释放的判定口径：只要「技能开启后能打到」任何敌人就该开。因此这里用的是技能范围（不是当前范围）
+   // 预判，包含飞行敌人、召唤物、以及未被阻挡的目标；被阻挡只是让单位可选，不是唯一条件。
+   const canHitAfterSkill=this.skillWouldHitTarget(u,p);
+   const readyByTargets=healer?heals.length>0:(targets.length>0||canHitAfterSkill);
+   const skillReady=skill?.skillType==='AUTO'?u.sp>=cost&&readyByTargets:shouldAutoSkill({policy,ready:u.sp>=cost,deployed:u.deployed,now:this.s.time,lastOperation:u.lastSkill,initialDeployment:u.deployAt,hasTarget:readyByTargets,hasAnyTarget:this.s.enemies.length>0,hasEnemyInInitialRange:targets.length>0,hasEnemyInSkillRange:canHitAfterSkill,wasDamaged:this.s.time-(u.lastDamagedAt??-999)<.1});
    if(skill?.skillType==='PASSIVE'&&u.coinSkillEnabled&&(skill.skillIndex??u.source?.skillIndex)===1&&u.coins>0&&targets.length)this.activate(u);
    if(skill&&skill.skillType!=='PASSIVE'&&!u.enhanced&&!this.skillActive(u)&&skillReady)this.activate(u);
    stats=this.stats(u);behavior=this.behavior(u);healer=behavior.kind==='heal'||u.focusHeal;u.branchSkillActive=this.skillActive(u);
