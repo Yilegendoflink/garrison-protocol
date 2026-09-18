@@ -80,8 +80,46 @@ function drawCombatFx(c,point,z,battle,reduce){
   else{c.translate(a.x,a.y);c.rotate(angle);line(c,{x:4,y:-3},{x:10,y:0});line(c,{x:10,y:0},{x:4,y:3});}
   c.restore();
  }
- for(const e of (s.events||[]).filter(e=>['heal','chain'].includes(e.type)&&t-e.t>=0&&t-e.t<.4)){
-  const a=point(e.x,e.y),b=point(e.targetX,e.targetY),heal=e.type==='heal',age=(t-e.t)/.4;
+ // 炎佑（炎盟约 6 人的召唤物）：普攻弹道 + 「祛恶之焰」持续期表现。只读召唤物状态与 yan-bolt 事件。
+ const YAN_BOLT=.3,YAN_SCALE=reduce?.62:1;
+ for(const s2 of s.summons||[]){
+  if(s2.type!=='yan-guardian'||!s2.deployed)continue;
+  const p=point(s2.x,s2.y),r=(z.tw*.42)*YAN_SCALE;
+  // 弹体：从炎佑飞向目标，命中瞬间炸开一圈灼燃
+  for(const e of recent(s.events,t,'yan-bolt',YAN_BOLT)){
+   if(e.uid!==s2.uid||e.targetX==null)continue;
+   const a=point(e.x,e.y),b=point(e.targetX,e.targetY),k=Math.max(0,Math.min(1,(t-e.t)/YAN_BOLT));
+   const x=a.x+(b.x-a.x)*k,y=a.y+(b.y-a.y)*k- Math.sin(k*Math.PI)*(reduce?0:z.th*.18);
+   c.save();c.globalCompositeOperation='lighter';
+   const g=c.createRadialGradient(x,y,0,x,y,r*.9);
+   g.addColorStop(0,`rgba(255,244,214,${.85*YAN_SCALE})`);g.addColorStop(.45,`rgba(255,146,74,${.6*YAN_SCALE})`);g.addColorStop(1,'rgba(255,90,40,0)');
+   c.fillStyle=g;c.beginPath();c.arc(x,y,r*.9,0,Math.PI*2);c.fill();
+   const tail={x:x-Math.cos(Math.atan2(b.y-a.y,b.x-a.x))*r*1.5,y:y-Math.sin(Math.atan2(b.y-a.y,b.x-a.x))*r*1.5};
+   c.strokeStyle=`rgba(255,170,104,${.5*YAN_SCALE})`;c.lineWidth=2.4;c.lineCap='round';
+   c.beginPath();c.moveTo(tail.x,tail.y);c.lineTo(x,y);c.stroke();
+   if(k>.72){const hit=(k-.72)/.28;c.strokeStyle=`rgba(255,206,150,${(.7*(1-hit)*YAN_SCALE).toFixed(3)})`;c.lineWidth=2;
+    c.beginPath();c.ellipse(b.x,b.y,r*(.5+hit*1.1),r*(.34+hit*.7),0,0,Math.PI*2);c.stroke();
+    c.fillStyle=`rgba(207,190,240,${(.5*(1-hit)*YAN_SCALE).toFixed(3)})`;
+    c.beginPath();c.arc(b.x,b.y,r*(.2+hit*.5),0,Math.PI*2);c.fill();}
+   c.restore();
+  }
+  // 「祛恶之焰」持续 20 秒：身上一圈旋转火轮 + 上浮火星
+  if(s2.yanSkillActive){
+   c.save();c.globalCompositeOperation='lighter';
+   const spin=reduce?0:t*2.8,left=Math.max(0,Math.min(1,(s2.yanSkillLeft??0)/20));
+   c.strokeStyle=`rgba(255,138,72,${.62*YAN_SCALE})`;c.lineWidth=2.4;c.lineCap='round';
+   for(let i=0;i<3;i++){const a0=spin+i*Math.PI*2/3;c.beginPath();c.ellipse(p.x,p.y,r*.72,r*.3,a0,.2,Math.PI*.96);c.stroke();}
+   c.strokeStyle=`rgba(255,214,150,${.4*YAN_SCALE})`;c.lineWidth=1.2;ring(c,p,r*.5,r*.2);
+   const sparks=reduce?2:5;
+   for(let i=0;i<sparks;i++){const a=spin*.8+i*Math.PI*2/sparks,rise=((t*1.6+i*.37)%1);
+    c.fillStyle=`rgba(255,196,128,${((1-rise)*.6*YAN_SCALE*left+.15).toFixed(3)})`;
+    c.beginPath();c.arc(p.x+Math.cos(a)*r*.52,p.y+Math.sin(a)*r*.24-rise*r*1.1,1.5,0,Math.PI*2);c.fill();}
+   c.restore();
+   if(s2.yanSkillTargetUid!=null){const tg=(s.enemies||[]).find(e=>e.uid===s2.yanSkillTargetUid);if(tg){const q=point(tg.x,tg.y);c.save();c.globalCompositeOperation='lighter';
+    c.strokeStyle=`rgba(255,150,90,${.4*YAN_SCALE})`;c.lineWidth=1.6;ring(c,q,z.tw*.7,z.tw*.45);c.restore();}}
+  }
+ }
+ for(const e of (s.events||[]).filter(e=>['heal','chain'].includes(e.type)&&t-e.t>=0&&t-e.t<.4)){  const a=point(e.x,e.y),b=point(e.targetX,e.targetY),heal=e.type==='heal',age=(t-e.t)/.4;
   c.save();c.globalAlpha=1-age;c.strokeStyle=heal?'#8fe8b5':'#bb9dff';c.lineWidth=heal?2:2.5;
   if(heal){c.beginPath();c.moveTo(a.x,a.y);c.quadraticCurveTo((a.x+b.x)/2,Math.min(a.y,b.y)-18,b.x,b.y);c.stroke();cross(c,b,5);ring(c,b,10,6);}
   else{const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;c.beginPath();c.moveTo(a.x,a.y);for(let i=1;i<=6;i++){const k=i/6,off=reduce||i===6?0:(i%2?5:-5);c.lineTo(a.x+dx*k-dy/len*off,a.y+dy*k+dx/len*off);}c.stroke();}
@@ -98,10 +136,8 @@ function drawCombatFx(c,point,z,battle,reduce){
 function mark(c,x,y,kind){
  c.save();c.translate(x,y);c.strokeStyle='#f4f0e4';c.fillStyle='#1a2420';c.lineWidth=1.4;
  if(kind==='stun'){c.beginPath();c.moveTo(-5,-6);c.lineTo(0,6);c.lineTo(5,-6);c.closePath();c.fill();c.stroke();}
- else if(kind==='frozen'){c.beginPath();c.moveTo(0,-7);c.lineTo(4,0);c.lineTo(0,7);c.lineTo(-4,0);c.closePath();c.fill();c.stroke();}
  else if(kind==='sleep'){c.font='9px sans-serif';c.fillStyle='#f4f0e4';c.fillText('Z',0,3);}
  else if(kind==='silence'){c.beginPath();c.arc(0,0,5,0,Math.PI*2);c.moveTo(-3,-3);c.lineTo(3,3);c.stroke();}
- else if(kind==='cold'){c.beginPath();c.moveTo(0,-6);c.lineTo(0,6);c.moveTo(-4,-3);c.lineTo(4,3);c.stroke();}
  else if(kind==='shield'){c.beginPath();c.moveTo(0,-6);c.lineTo(5,-2);c.lineTo(4,5);c.lineTo(0,7);c.lineTo(-4,5);c.lineTo(-5,-2);c.closePath();c.fill();c.stroke();}
  else if(kind==='barrier'){c.strokeRect(-5,-5,10,10);c.beginPath();c.moveTo(-5,0);c.lineTo(5,0);c.stroke();}
  else{c.fillRect(-4,-4,8,8);}
@@ -113,9 +149,83 @@ export function actorOffset(u,battle){
  if(!t)return {x:0,y:0};
  const d=Math.hypot(t.x-u.x,t.y-u.y)||1;return {x:(t.x-u.x)/d*.12,y:(t.y-u.y)/d*.12};
 }
-export function drawFx(c,point,z,battle,opts={}){
- const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
+// Full-screen Kjerag storm, played for ICE_WIND_SECONDS after each 'ice-wind' settlement event.
+// Pure presentation: it reads events and logic-effect timing only, and writes nothing to battle state.
+const ICE_WIND_SECONDS=1;
+export function drawIceWind(c,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ const [ev]=recent(s.events,s.time,'ice-wind',ICE_WIND_SECONDS);
+ if(!ev)return false;
+ const age=Math.max(0,Math.min(1,(s.time-ev.t)/ICE_WIND_SECONDS));
+ const peak=reduceFx?.06:.11,                   // 主雾峰值透明度
+  alpha=Math.round(peak*Math.sin(Math.PI*age)*1.15*1e4)/1e4, // 中段最亮，首尾归零；取整避免科学计数法
+  W=z.r.width,H=z.r.height;
+ c.save();
+ c.globalCompositeOperation='lighter';          // 只提亮、不压暗界面
+ const g=c.createLinearGradient(0,0,W*.65,H);
+ g.addColorStop(0,`rgba(238,250,255,${alpha})`);
+ g.addColorStop(.55,`rgba(212,240,252,${alpha*.85})`);
+ g.addColorStop(1,`rgba(198,232,250,${alpha*.6})`);
+ c.fillStyle=g;c.fillRect(0,0,W,H);
+ const sweep=(1-age)*W*.45-W*.12;               // 风痕整体横扫
+ c.lineCap='round';
+ const streaks=reduceFx?3:8;
+ for(let i=0;i<streaks;i++){
+  const y=H*((i+.5)/streaks);
+  const x=(i%2?-sweep:sweep)+W*.5+(i%3-1)*W*.12;
+  const a=alpha*(i%2?.9:1.25);
+  c.strokeStyle=`rgba(255,255,255,${Math.min(.5,a)})`;c.lineWidth=i%2?1.5:2.6;
+  c.beginPath();c.moveTo(x,y+H*.05);c.lineTo(x+W*.3,y-H*.05);c.stroke();
+ }
+ c.restore();
+ return true;
+}
+// 荒芜拉普兰德「终幕·浩劫」的浮游单元：逻辑上是自由飞行的独立单位（battle.s.whitwEyes），
+// 这里只给它一个占屏幕不大的浪头素材，让飞行过程肉眼可见。画法不参与任何结算。
+export function drawWhitwEyes(c,point,z,battle,{reduceFx=false}={}){
+ const eyes=battle?.s?.whitwEyes;
+ if(!eyes?.length)return false;
+ const K=reduceFx?.5:1,W=z.tw*.86,H=z.tw*.5;
+ for(const eye of eyes){
+  const p=point(eye.x,eye.y);
+  const dir=Math.atan2(eye.vy||0,eye.vx||1);
+  const bob=Math.sin((eye.x+eye.y)*2.1)*K;
+  c.save();
+  c.translate(p.x,p.y+bob*.8);
+  c.rotate(dir);
+  // 尾迹：朝来向淡出，表示正在飞
+  const g=c.createLinearGradient(-W*.95,0,W*.32,0);
+  g.addColorStop(0,'rgba(120,205,238,0)');
+  g.addColorStop(.55,`rgba(168,226,246,${.2*K})`);
+  g.addColorStop(1,`rgba(238,252,255,${.42*K})`);
+  c.fillStyle=g;
+  c.beginPath();c.moveTo(-W*.95,0);c.quadraticCurveTo(-W*.3,-H*.5,W*.1,-H*.22);c.lineTo(W*.1,H*.22);c.quadraticCurveTo(-W*.3,H*.5,-W*.95,0);c.closePath();c.fill();
+  // 浪头：一弯白色卷浪加几道浪花
+  c.fillStyle=`rgba(240,252,255,${.82*K})`;
+  c.beginPath();
+  c.moveTo(-W*.16,H*.34);
+  c.quadraticCurveTo(W*.3,-H*.5,W*.34,-H*.02);
+  c.quadraticCurveTo(W*.3,H*.3,W*.06,H*.3);
+  c.quadraticCurveTo(-W*.02,H*.12,-W*.16,H*.34);
+  c.closePath();c.fill();
+  c.strokeStyle=`rgba(140,214,242,${.75*K})`;c.lineWidth=1.6;
+  c.beginPath();
+  c.moveTo(-W*.34,H*.12);c.quadraticCurveTo(W*.06,-H*.26,W*.36,-H*.04);
+  c.stroke();
+  c.fillStyle=`rgba(255,255,255,${.7*K})`;
+  for(const [dx,dy,r] of [[W*.34,-H*.3,1.5],[W*.42,-H*.12,1.1],[W*.22,-H*.38,.9]]){c.beginPath();c.arc(dx,dy,r,0,Math.PI*2);c.fill();}
+  c.restore();
+  // 攻击瞬间的一圈涟漪
+  if(eye.nextAttackAt>battle.s.time){
+   const age=Math.max(0,Math.min(1,1-(eye.nextAttackAt-battle.s.time)/.4));
+   if(age<1){c.save();c.strokeStyle=`rgba(214,242,255,${(.5*(1-age)*K).toFixed(3)})`;c.lineWidth=1.4;c.beginPath();c.ellipse(p.x,p.y,z.tw*(.2+age*.4),z.tw*(.12+age*.26),0,0,Math.PI*2);c.stroke();c.restore();}
+  }
+ }
+ return true;
+}
+export function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
  drawCombatFx(c,point,z,battle,reduce);
+ drawIceWind(c,z,battle,{reduceFx:reduce});
  for(const e of s.effects||[]){
   if(e.type!=='healing'&&e.type!=='evade'&&e.type!=='block')continue;
   const p=point(e.x,e.y);c.fillStyle=e.type==='healing'?'#8fe8b5':'#f6e7c8';c.font='12px sans-serif';c.textAlign='center';c.fillText(opts.formatText?opts.formatText(e.text):e.text,p.x,p.y-24-(.6-e.life)*30);
@@ -132,8 +242,9 @@ export function drawFx(c,point,z,battle,opts={}){
  if(!reduce)for(const e of recent(s.events,t,'hit',.16)){const p=point(e.x,e.y);c.fillStyle='#fff8';c.beginPath();c.arc(p.x,p.y,11,0,Math.PI*2);c.fill();}
 }
 export function drawStatuses(c,x,y,unit,size){
+ // cold and frozen are shown by drawFrostOverlay on the actor itself, so they get no head icon here.
  const kinds=[];
- for(const s of unit.statuses||[])if(['stun','frozen','sleep','silence','cold','fear','terror','tremble','root'].includes(s.kind)&&!kinds.includes(s.kind))kinds.push(s.kind);
+ for(const s of unit.statuses||[])if(['stun','sleep','silence','fear','terror','tremble','root'].includes(s.kind)&&!kinds.includes(s.kind))kinds.push(s.kind);
  if((unit.shield||0)>0||(unit.shieldLayers||[]).some(l=>l.remaining>0))kinds.push('shield');
  if((unit.barriers||[]).some(b=>b.charges>0))kinds.push('barrier');
  kinds.slice(0,3).forEach((k,i)=>mark(c,x-size/2+6+i*13,y-size*.82,k));
@@ -147,6 +258,29 @@ export function drawElementRing(c,x,y,unit,size){
  const progress=Math.min(1,value/max),radius=size*.56;
  c.save();c.lineWidth=Math.max(2,size*.045);c.lineCap='butt';c.strokeStyle='#0b1718cc';c.beginPath();c.arc(x,y-size*.2,radius,-Math.PI/2,Math.PI*1.5);c.stroke();c.strokeStyle=ELEMENT_RING_COLORS[unit.elementalType||type]||ELEMENT_RING_COLORS.elemental;c.beginPath();c.arc(x,y-size*.2,radius,-Math.PI/2,-Math.PI/2+Math.PI*2*progress);c.stroke();
  c.restore();
+}
+// Ice tint for cold/frozen actors. Pure presentation: it only reads actor.statuses, never writes state.
+// cold and frozen use two depths of the same ice blue; frozen wins if a target somehow carries both.
+const FROST_STYLE={
+ cold:{fill:'rgba(140,205,235,0.28)',stroke:null},
+ frozen:{fill:'rgba(70,150,205,0.55)',stroke:'rgba(200,235,255,0.45)'},
+};
+export function frostKindOf(actor){
+ const list=actor?.statuses||[];
+ for(const kind of ['frozen','cold'])if(list.some(s=>s.kind===kind))return kind;
+ return null;
+}
+// box is the actor's own drawn rectangle, supplied by the caller so this layer stays unaware of
+// tile lift, flying offsets and tile geometry. Summons pass through untouched.
+export function drawFrostOverlay(c,actor,box,opts={}){
+ if(!actor||actor.kind==='summon'||!box||!(box.w>0)||!(box.h>0))return false;
+ const kind=frostKindOf(actor);if(!kind)return false;
+ const style=FROST_STYLE[kind];
+ c.save();c.fillStyle=style.fill;c.fillRect(box.x,box.y,box.w,box.h);
+ if(style.stroke&&!opts.reduceFx){c.strokeStyle=style.stroke;c.lineWidth=1;c.strokeRect(box.x+.5,box.y+.5,box.w-1,box.h-1);}
+ if(opts.decorate)opts.decorate(c,box,kind);   // extension point: frost crystals / patterns
+ c.restore();
+ return true;
 }
 export function drawDownRing(c,p,u,size,opts={}){
  const max=u.downMax||u.down||1,ratio=Math.max(0,Math.min(1,1-(u.down||0)/max));

@@ -38,6 +38,14 @@
 - `native-fx.js`：**只画特效**。`s.events` 会裁剪过期，禁止当规则执行依据
 - `scripts/build-native.mjs`：把固定历史库编进客户端
 
+## 对局 UI 交互约定（`native-play.js`）
+
+- **整备区装备拖放**：`pointerdown` 在 `[data-act="item"]` 上起拖（`drag.kind==='item'`、`from:'hand'`），落点由 `overUnitCard` 找干员卡；点击流程（先点装备再点干员）与拖放共用 `equipItemOnUnit(uid,itemUid)`，槽位满时它弹摧毁选择（`data-act="replace"` + `data-slot`）。
+- **拖到商店出售**：干员卡拖到 `#native-supply-shop` 上松手即出售，`overShop` 判定，`dragFeedback` 给商店加 `drop-target`。
+- **新增拖放分支必须清 `drag`**：`pointerup` 的 `d.moved` 分支里提前 `return` 的分支要显式 `drag=null; dragFeedback();`，否则下一次拖放会复用上一次的 `drag.uid`。
+- **干员档案层级**：`.native-dossier` 是覆盖在棋盘上的浮层（PC 上 z-index 8），PC 下 `max-height:calc(100vh - 556px)` 让它截止在整备区上方并自身滚动。档案高度若放到全视口，会把下方整备区卡片整片吃掉，卡片点不中、装备也拖不上；反过来把整备区抬到档案之上，档案底部的「撤回整备区／出售」按钮又会点不到。两边都要能用，只能靠限高错开。
+- **难度选择的海猫模式**：`mode_cat_all` 只是 lobby 下拉里的选项，底层仍跑 `mode_single_normal`（`state.draft.cat` → `s.cat`）。它把 `s.funds` 顶到 `Number.MAX_SAFE_INTEGER`，让 `spend`/`upgrade`/`refresh` 的原判定全部通过；界面上一律用 `fundsMarkup()` 显示彩色 `ALL`，不要直接印 `s.funds`。
+
 资料：`data/prts/` 参考底库；`data/normalized/` 规范化；`data/modes/alliance-lower/` 本期包（历史提交 `86da4cfa…`）。客户端规模仍是 112 可见预设、266 养成状态、23 盟约、40 策略、215 敌人引用、376 头像。
 
 无第三方 JS。开发 Node.js 22+；Pages 用 24。`npm run build` 只编译。`npm test` 跑 `tests/*.test.mjs`。

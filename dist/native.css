@@ -15,6 +15,27 @@
 .native-dossier-close{position:absolute;top:4px;right:4px;z-index:1;width:32px;height:32px;padding:0;border-color:#5d7a70;color:#cfe6dc}
 .native-dossier-art{position:absolute;left:4px;top:8px;width:250px;height:340px;pointer-events:none;opacity:.5;-webkit-mask-image:linear-gradient(90deg,#000 42%,transparent 92%),linear-gradient(#000 72%,transparent);mask-image:linear-gradient(90deg,#000 42%,transparent 92%),linear-gradient(#000 72%,transparent);-webkit-mask-composite:source-in;mask-composite:intersect}
 .native-dossier-art img{width:100%;height:100%;object-fit:contain;object-position:left center;filter:drop-shadow(0 12px 28px #000c)}
+/* PC：档案高度截止在整备区上方并自身滚动。档案若压到下方整备区，会把干员卡和装备卡一起挡住 */
+.native-dossier{max-height:calc(100vh - 556px);min-height:180px;overflow:hidden}
+.native-dossier-body{overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+/* 海猫模式：资金显示为彩色 ALL */
+.native-funds-all{background-image:linear-gradient(90deg,#ff6b6b,#ffd166,#7af0bd,#63dce4,#b28dff,#ff8fd0);background-clip:text;-webkit-background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;font-weight:800;letter-spacing:.08em}
+/* 装备上的销毁按钮：手牌卡片与干员装备位共用 */
+.native-item-destroy{position:absolute;top:2px;right:2px;z-index:2;width:18px;height:18px;padding:0;line-height:1;font-size:13px;border-radius:50%;border:1px solid #a8606a;background:#2b1418e0;color:#ffb9c2;display:grid;place-content:center;cursor:pointer}
+.native-item-destroy:hover{border-color:#ff9aa8;background:#54212a;color:#fff}
+.native-bench>[data-act="item"]{position:relative}
+.native-equipment-slot.filled{position:relative;padding-right:22px}
+.native-equipment-slot .native-item-destroy{top:3px;right:3px}
+/* 海猫模式的库存面板 */
+.native-stock{max-height:52vh;overflow:auto;margin-top:6px;padding-right:4px}
+.native-stock-tier{margin:12px 0 6px!important;color:#8eb4a7}
+.native-stock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:4px 8px}
+.native-stock-row{display:flex;align-items:baseline;gap:5px;padding:3px 6px;border:1px solid #2f4d45;background:#0d1f1c;font-size:12px}
+.native-stock-row b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:#d9ece4}
+.native-stock-row i{font-style:normal;color:#8fe0bd;font-variant-numeric:tabular-nums}
+.native-stock-row small{color:#7e9c92;font-size:10px}
+.native-stock-row.is-empty{border-color:#6b3038;background:#220f13}
+.native-stock-row.is-empty i{color:#f08a94}
 .native-dossier-item{position:static;opacity:1;width:auto;height:120px;margin:4px 0 8px;display:grid;place-content:center;font-size:72px;color:#e4d39a;-webkit-mask-image:none;mask-image:none}
 .native-dossier h2{margin:0 0 2px;font-size:28px;letter-spacing:.06em;color:#f3fff9}
 .native-dossier-kicker{margin:0 0 8px;color:#9ec4b6;font-size:12px}

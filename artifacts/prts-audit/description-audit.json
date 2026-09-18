@@ -1,0 +1,741 @@
+{
+  "summary": {
+    "generatedAt": "2026-09-18T02:59:36.718Z",
+    "compared": 301,
+    "descriptionMatched": 234,
+    "remaining": 67,
+    "formatOnly": 33,
+    "realTextDiff": 17,
+    "missingBlackboardKeyEntries": 17,
+    "missingBlackboardKeys": [
+      "HP_RECOVERY_PER_SEC",
+      "-atk",
+      "-attack_speed",
+      "-def",
+      "-magic_resistance",
+      "-move_speed",
+      "HP_RECOVERY_PER_SEC_BY_MAX_HP_RATIO",
+      "-demkni_s_3.move_speed",
+      "-max_atk",
+      "-max_def",
+      "-max_magic_resistance"
+    ]
+  },
+  "formatOnly": [
+    {
+      "name": "隐现",
+      "skill": "“解决麻烦”",
+      "skillId": "skchr_inside_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击力+80%，攻击间隔略微缩短(-30%)，优先攻击使用远程武器的敌人并且不容易成为敌人的攻击目标\n攻击装有14发弹药，打完后结束（可随时停止技能）",
+      "runtimePlain": "攻击力+80%，攻击间隔略微缩短，优先攻击使用远程武器的敌人并且不容易成为敌人的攻击目标\n攻击装有14发弹药，打完后结束（可随时停止技能）"
+    },
+    {
+      "name": "红豆",
+      "skill": "槌音",
+      "skillId": "skchr_vigna_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔略微增大(+0.5)，攻击力+120%",
+      "runtimePlain": "攻击间隔略微增大，攻击力+120%"
+    },
+    {
+      "name": "深靛",
+      "skill": "灯塔守卫者",
+      "skillId": "skchr_indigo_1",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击范围改变，攻击间隔大幅度缩短(-80%)，每次攻击造成相当于攻击力35%的法术伤害",
+      "runtimePlain": "攻击范围改变，攻击间隔大幅度缩短，每次攻击造成相当于攻击力35%的法术伤害"
+    },
+    {
+      "name": "雷蛇",
+      "skill": "反击电弧",
+      "skillId": "skchr_liskam_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔增大(+70%)，攻击力+105%，每次攻击对最多3个敌人造成法术伤害，并有15%概率使命中目标晕眩1秒\n持续时间结束后雷蛇晕眩5秒",
+      "runtimePlain": "攻击间隔增大，攻击力+105%，每次攻击对最多3个敌人造成法术伤害，并有15%概率使命中目标晕眩1秒\n持续时间结束后雷蛇晕眩5秒"
+    },
+    {
+      "name": "送葬人",
+      "skill": "最终旅程",
+      "skillId": "skchr_excu_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "普通攻击变为二连击，且攻击间隔少量缩短(-0.5)",
+      "runtimePlain": "普通攻击变为二连击，且攻击间隔少量缩短"
+    },
+    {
+      "name": "莎草",
+      "skill": "临考发挥",
+      "skillId": "skchr_papyrs_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "立刻锁定攻击范围内除自身外生命值上限最高的干员，技能期间莎草仅可以该干员作为治疗主目标，攻击间隔缩短(-1.1)，攻击力+20%，每次治疗跳跃次数+1",
+      "runtimePlain": "立刻锁定攻击范围内除自身外生命值上限最高的干员，技能期间莎草仅可以该干员作为治疗主目标，攻击间隔缩短，攻击力+20%，每次治疗跳跃次数+1 "
+    },
+    {
+      "name": "灰毫",
+      "skill": "专注轰击",
+      "skillId": "skchr_ashlok_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "阻挡数变为0，只进行远程攻击，攻击间隔一定程度缩短(-40%)，攻击力+25%",
+      "runtimePlain": "阻挡数变为0，只进行远程攻击，攻击间隔一定程度缩短，攻击力+25%"
+    },
+    {
+      "name": "能天使",
+      "skill": "过载模式",
+      "skillId": "skchr_angel_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击变为5连射，攻击间隔略微缩短(-0.10)\n技能会自动开启",
+      "runtimePlain": "攻击变为5连射，攻击间隔略微缩短\n技能会自动开启"
+    },
+    {
+      "name": "寒芒克洛丝",
+      "skill": "封喉",
+      "skillId": "skchr_kroos2_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔少量缩短(-0.22)，攻击变为2连射，击中目标40次后技能剩余时间内攻击变为4连射",
+      "runtimePlain": "攻击间隔少量缩短，攻击变为2连射，击中目标40次后技能剩余时间内攻击变为4连射"
+    },
+    {
+      "name": "风笛",
+      "skill": "闭膛连发",
+      "skillId": "skchr_bpipe_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔增大(+70%)，阻挡数+1，攻击力和防御力+60%，攻击变为三连击",
+      "runtimePlain": "攻击间隔增大，阻挡数+1，攻击力和防御力+60%，攻击变为三连击"
+    },
+    {
+      "name": "瑰盐",
+      "skill": "绝妙的长效药呀",
+      "skillId": "skchr_rosesa_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔小幅度缩短(-1.05)，攻击范围内的友方干员受到的物理与法术伤害的20%变为持续5秒的生命流失",
+      "runtimePlain": "攻击间隔小幅度缩短，攻击范围内的友方干员受到的物理与法术伤害的20%变为持续5秒的生命流失"
+    },
+    {
+      "name": "水月",
+      "skill": "囚徒困境",
+      "skillId": "skchr_mizuki_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔小幅度缩短(-0.7s)，攻击力+15%，第一天赋额外攻击1个目标并附加0.8秒束缚",
+      "runtimePlain": "攻击间隔小幅度缩短，攻击力+15%，第一天赋额外攻击1个目标并附加0.8秒束缚"
+    },
+    {
+      "name": "歌蕾蒂娅",
+      "skill": "缺水的掌握怒海",
+      "skillId": "skchr_glady_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔增大(+50%)，攻击范围扩大，每次攻击优先对被阻挡的两个目标造成相当于攻击力135%的物理伤害且以中等力度地拖拽至自己面前",
+      "runtimePlain": "攻击间隔增大，攻击范围扩大，每次攻击优先对被阻挡的两个目标造成相当于攻击力135%的物理伤害且以中等力度地拖拽至自己面前"
+    },
+    {
+      "name": "焰尾",
+      "skill": "焰心",
+      "skillId": "skchr_flamtl_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "技能持续时间内逐渐获得8点部署费用，攻击间隔缩短(*70%)，攻击力+45%，阻挡数+1，获得60%的物理和法术闪避",
+      "runtimePlain": "技能持续时间内逐渐获得8点部署费用，攻击间隔缩短，攻击力+45%，阻挡数+1，获得60%的物理和法术闪避"
+    },
+    {
+      "name": "白面鸮",
+      "skill": "脑啡肽",
+      "skillId": "skchr_plosis_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击范围扩大，攻击间隔较大幅度缩短(-1.8)",
+      "runtimePlain": "攻击范围扩大，攻击间隔较大幅度缩短"
+    },
+    {
+      "name": "卡涅利安",
+      "skill": "沙缚镣锁",
+      "skillId": "skchr_billro_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔缩短(-0.6)，每次攻击对目标造成0.3秒停顿；\n蓄力额外效果：攻击力+10%且停顿变为束缚0.3秒",
+      "runtimePlain": "攻击间隔缩短，每次攻击对目标造成0.3秒停顿；\n蓄力额外效果：攻击力+10%且停顿变为束缚0.3秒"
+    },
+    {
+      "name": "圣约送葬人",
+      "skill": "圣约决裁",
+      "skillId": "skchr_excu2_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔略微增大(+0.5)，攻击范围扩大，攻击力+120%，每消耗1颗弹药攻击力额外+4%（最多30层），特性的回复生命效果提高至2倍；技能结束时，对技能期间攻击过的目标造成相当于攻击力200%的物理伤害\n攻击装有16发弹药，打完后结束（可随时停止技能）",
+      "runtimePlain": "攻击间隔略微增大，攻击范围扩大，攻击力+120%，每消耗1颗弹药攻击力额外+4%（最多30层），特性的回复生命效果提高至2倍；技能结束时，对技能期间攻击过的目标造成相当于攻击力200%的物理伤害\n攻击装有16发弹药，打完后结束（可随时停止技能）"
+    },
+    {
+      "name": "烛煌",
+      "skill": "沸血燎原",
+      "skillId": "skchr_blaze2_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击范围改变，攻击间隔增大(+0.9)，攻击力+90%，同时攻击3名敌人；攻击时流失5%的生命并在目标所在位置留下灼烧地段：经过的敌人移动速度-50%，每秒受到烛煌攻击力35%的法术伤害和相当于法术伤害30%的灼燃损伤",
+      "runtimePlain": "攻击范围改变，攻击间隔增大，攻击力+90%，同时攻击3名敌人；攻击时流失5%的生命并在目标所在位置留下灼烧地段：经过的敌人移动速度-50%，每秒受到烛煌攻击力35%的法术伤害和相当于法术伤害30%的灼燃损伤"
+    },
+    {
+      "name": "烛煌",
+      "skill": "众恶的焚场",
+      "skillId": "skchr_blaze2_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击范围改变，攻击力+70%，攻击间隔大幅缩短(-1.3)，攻击变为群体攻击；若目标处于灼燃损伤爆发期间则额外造成攻击力60%的元素伤害\n自身每秒流失最大生命的3%，攻击装有18发弹药，全场有敌人进入灼燃损伤爆发时获得2颗额外弹药，弹药打完后结束（可随时停止技能）",
+      "runtimePlain": "攻击范围改变，攻击力+70%，攻击间隔大幅缩短，攻击变为群体攻击；若目标处于灼燃损伤爆发期间则额外造成攻击力60%的元素伤害\n自身每秒流失最大生命的3%，攻击装有18发弹药，全场有敌人进入灼燃损伤爆发时获得2颗额外弹药，弹药打完后结束（可随时停止技能）"
+    },
+    {
+      "name": "号角",
+      "skill": "终极防线",
+      "skillId": "skchr_horn_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击力+25%，攻击间隔缩短(-1.2)\n过载：攻击力改为+50%，逐渐流失生命（12秒后到达最大生命12%/秒）该技能可随时主动关闭",
+      "runtimePlain": "攻击力+25%，攻击间隔缩短\n过载：攻击力改为+50%，逐渐流失生命（12秒后到达最大生命12%/秒）该技能可随时主动关闭"
+    },
+    {
+      "name": "夕",
+      "skill": "写意胜形",
+      "skillId": "skchr_dusk_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔增大(+40%)，优先攻击未阻挡的敌人，攻击范围与溅射范围扩大，攻击力+70%，每次攻击时在目标位置（可部署地面）召唤/刷新一个\"小自在\"（持续25秒）",
+      "runtimePlain": "攻击间隔增大，优先攻击未阻挡的敌人，攻击范围与溅射范围扩大，攻击力+70%，每次攻击时在目标位置（可部署地面）召唤/刷新一个\"小自在\"（持续25秒）"
+    },
+    {
+      "name": "归溟幽灵鲨",
+      "skill": "生存的重压",
+      "skillId": "skchr_ghost2_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔延长(+1.0)，攻击所有阻挡的敌人，攻击力+170%，生命上限+130%，攻击生命比例高于或等于自身的敌人时额外造成一次攻击力50%的物理伤害，否则自身流失3%生命",
+      "runtimePlain": "攻击间隔延长，攻击所有阻挡的敌人，攻击力+170%，生命上限+130%，攻击生命比例高于或等于自身的敌人时额外造成一次攻击力50%的物理伤害，否则自身流失3%生命"
+    },
+    {
+      "name": "山",
+      "skill": "震地碎岩击",
+      "skillId": "skchr_f12yin_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔增大(+70%)，攻击力+55%，攻击变为2连击，第一天赋的发动几率提升至48%，每次攻击周围最多3个敌人并将其中等力度地推动",
+      "runtimePlain": "攻击间隔增大，攻击力+55%，攻击变为2连击，第一天赋的发动几率提升至48%，每次攻击周围最多3个敌人并将其中等力度地推动"
+    },
+    {
+      "name": "玛恩纳",
+      "skill": "未宽解的悲哀",
+      "skillId": "skchr_mlynar_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔延长(+0.3)，攻击范围扩大，攻击造成相当于130%攻击力的二连击。\n技能期间若击倒敌人，技能结束时特性效果不重置，可主动关闭（期间可随时停止技能）",
+      "runtimePlain": "攻击间隔延长，攻击范围扩大，攻击造成相当于130%攻击力的二连击。\n技能期间若击倒敌人，技能结束时特性效果不重置，可主动关闭（期间可随时停止技能）"
+    },
+    {
+      "name": "安洁莉娜",
+      "skill": "秘杖·微粒模式",
+      "skillId": "skchr_aglina_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔极大幅度缩短(*0.15)，但每次攻击只能造成相当于攻击力35%的法术伤害\n技能未开启时无法普通攻击",
+      "runtimePlain": "攻击间隔极大幅度缩短，但每次攻击只能造成相当于攻击力35%的法术伤害\n技能未开启时无法普通攻击"
+    },
+    {
+      "name": "寒檀",
+      "skill": "“女巫之泪”",
+      "skillId": "skchr_sntlla_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击范围扩大，攻击间隔超大幅度缩短(-2.4)，攻击变为向攻击范围内的随机地块召唤冰凌，冰凌落地后对周围所有敌人造成1秒寒冷和相当于寒檀攻击力65%的法术伤害",
+      "runtimePlain": "攻击范围扩大，攻击间隔超大幅度缩短，攻击变为向攻击范围内的随机地块召唤冰凌，冰凌落地后对周围所有敌人造成1秒寒冷和相当于寒檀攻击力65%的法术伤害"
+    },
+    {
+      "name": "异客",
+      "skill": "聚焦指令",
+      "skillId": "skchr_pasngr_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击距离+1，攻击力+15%，攻击间隔小幅度缩短(-30%)，攻击最大弹跳次数提升至5",
+      "runtimePlain": "攻击距离+1，攻击力+15%，攻击间隔小幅度缩短，攻击最大弹跳次数提升至5"
+    },
+    {
+      "name": "佩佩",
+      "skill": "时光震荡",
+      "skillId": "skchr_pepe_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔略微增大(+0.2)，攻击力+150%，攻击使命中的目标晕眩0.8秒，对主目标提升至1秒，每次攻击后使溅射范围扩大且攻击力额外+13%，最多叠加4层",
+      "runtimePlain": "攻击间隔略微增大，攻击力+150%，攻击使命中的目标晕眩0.8秒，对主目标提升至1秒，每次攻击后使溅射范围扩大且攻击力额外+13%，最多叠加4层"
+    },
+    {
+      "name": "维娜·维多利亚",
+      "skill": "俱以我之名",
+      "skillId": "skchr_siege2_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "立即在天赋一生效范围内可部署地面召唤“黄金盟誓”；技能期间可攻击被天赋一生效范围友方单位阻挡的敌人，攻击力+145%，攻击目标数+1，攻击间隔缩短(-0.25)，攻击时伤害类型变为真实",
+      "runtimePlain": "立即在天赋一生效范围内可部署地面召唤“黄金盟誓”；技能期间可攻击被天赋一生效范围友方单位阻挡的敌人，攻击力+145%，攻击目标数+1，攻击间隔缩短，攻击时伤害类型变为真实"
+    },
+    {
+      "name": "迷迭香",
+      "skill": "末梢阻断",
+      "skillId": "skchr_rosmon_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔增大(+50%)，攻击力+20%，溅射范围扩大，每次攻击额外造成2次余震；受到攻击和余震的目标有20%的几率晕眩0.9秒",
+      "runtimePlain": "攻击间隔增大，攻击力+20%，溅射范围扩大，每次攻击额外造成2次余震；受到攻击和余震的目标有20%的几率晕眩0.9秒"
+    },
+    {
+      "name": "迷迭香",
+      "skill": "“如你所愿”",
+      "skillId": "skchr_rosmon_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔缩短(-50%)，攻击力+25%，同时攻击2个敌人但仅选择被阻挡的敌人作为目标；立即在攻击范围内的近战位部署两个战术装备（部署后晕眩周围敌人2秒，阻挡的敌人防御力-160)",
+      "runtimePlain": "攻击间隔缩短，攻击力+25%，同时攻击2个敌人但仅选择被阻挡的敌人作为目标；立即在攻击范围内的近战位部署两个战术装备（部署后晕眩周围敌人2秒，阻挡的敌人防御力-160）"
+    },
+    {
+      "name": "新约能天使",
+      "skill": "开火成瘾症",
+      "skillId": "skchr_angel2_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "立即偷取攻击范围内1名友方干员70点攻击速度（持续至技能结束或新约能天使离场），自身与其获得最大生命值180%的屏障，该屏障会持续衰减，攻击间隔降低(-0.7)，每次攻击造成攻击力230%的物理伤害\n攻击装有35发弹药，打完后结束（可随时停止技能），如果成功偷取攻击速度则额外获得5发弹药",
+      "runtimePlain": "立即偷取攻击范围内1名友方干员70点攻击速度（持续至技能结束或新约能天使离场），自身与其获得最大生命值180%的屏障，该屏障会持续衰减，攻击间隔降低，每次攻击造成攻击力230%的物理伤害\n攻击装有35发弹药，打完后结束（可随时停止技能），如果成功偷取攻击速度则额外获得5发弹药"
+    },
+    {
+      "name": "溯光星源",
+      "skill": "并流连锁",
+      "skillId": "skchr_halo2_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击范围扩大，攻击力+35%，攻击间隔缩短(-0.7)，持续锁定2个敌人进行攻击，被锁定的敌人会互相链接；每个被链接的敌人会把即将受到法术伤害的15%额外传导给其他链接目标",
+      "runtimePlain": "攻击范围扩大，攻击力+35%，攻击间隔缩短，持续锁定2个敌人进行攻击，被锁定的敌人会互相链接；每个被链接的敌人会把即将受到法术伤害的15%额外传导给其他链接目标"
+    }
+  ],
+  "realTextDiff": [
+    {
+      "name": "刺玫",
+      "skill": "荆藤庇荫",
+      "skillId": "skchr_vendla_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击力+55%，使攻击范围内生命上限最高的友方角色嘲讽等级]]更容易受到敌人攻击，且该角色受到攻击时刺玫对目标造成攻击力20%的法术伤害并仅对该角色触发刺玫特性",
+      "runtimePlain": "攻击力+55%，使攻击范围内生命上限最高的友方角色更容易受到敌人攻击，且该角色受到攻击时刺玫对目标造成攻击力20%的法术伤害并仅对该角色触发刺玫特性"
+    },
+    {
+      "name": "深靛",
+      "skill": "光影迷宫",
+      "skillId": "skchr_indigo_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击间隔略微缩短(*0.7)，天赋的触发几率提升至2.0倍，攻击范围内处于束缚状态的敌人每0.5秒受到相当于深靛攻击力12%的法术伤害",
+      "runtimePlain": "攻击间隔略微缩短，天赋的触发几率提升至2倍，攻击范围内处于束缚状态的敌人每0.5秒受到相当于深靛攻击力12%的法术伤害"
+    },
+    {
+      "name": "小满",
+      "skill": "乡音沉沉",
+      "skillId": "skchr_grabds_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "停止攻击敌人并使攻击范围内3个敌方单位沉睡4秒，之后攻击速度+45，且同时攻击3个敌人",
+      "runtimePlain": "停止攻击敌人并使攻击范围内3个敌方单位沉睡4秒，之后攻击速度+45，且攻击3个敌人"
+    },
+    {
+      "name": "泡泡",
+      "skill": "“挨打”",
+      "skillId": "skchr_bubble_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "停止攻击敌人；防御力+65%，自身嘲讽等级]]更易受敌人攻击，每次受到攻击时对目标造成相当于泡泡防御力40%的物理伤害",
+      "runtimePlain": "停止攻击敌人；防御力+65%，自身更易受敌人攻击，每次受到攻击时对目标造成相当于泡泡防御力40%的物理伤害"
+    },
+    {
+      "name": "蒂比",
+      "skill": "紧急赶场通知",
+      "skillId": "skchr_tippi_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "立刻起飞，攻击范围扩大，攻击力+20%，攻击变为3连射\n受到伤害前触发，并闪避本次物理或法术伤害",
+      "runtimePlain": "立刻起飞，攻击范围扩大，攻击力+20%，攻击变为3连射\n受到攻击后触发，并闪避本次物理或法术伤害"
+    },
+    {
+      "name": "拉普兰德",
+      "skill": "日晷",
+      "skillId": "skchr_whitew_1",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击力+43%，有25%的概率闪避物理伤害\n持续时间无限",
+      "runtimePlain": "攻击力+43%，有25%的概率抵挡物理伤害\n持续时间无限"
+    },
+    {
+      "name": "断崖",
+      "skill": "浮游刃启动",
+      "skillId": "skchr_ayer_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击范围扩大，伤害类型变为法术；每次攻击时，额外对自身与周围8格友方单位阻挡的所有敌人造成相当于攻击力100%的法术伤害(均视为近战攻击）",
+      "runtimePlain": "攻击范围扩大，伤害类型变为法术；每次攻击时，额外对周围8格友方单位阻挡的所有敌人造成相当于攻击力100%的法术伤害(均视为近战攻击）"
+    },
+    {
+      "name": "忍冬",
+      "skill": "隐狐之艺",
+      "skillId": "skchr_vulpis_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "技能开启时立即获得7点部署费用，攻击范围扩大，攻击力+65%，攻击速度从+160逐渐衰减至+0，同时攻击阻挡的所有敌人，每次攻击晕眩敌人0.2秒\n若技能期间击倒敌人，则技能结束时进入迷彩状态，直至下一次开启技能",
+      "runtimePlain": "技能开启时立即获得7点部署费用，攻击距离+1，攻击力+65%，攻击速度从+160逐渐衰减至+0，同时攻击阻挡的所有敌人，每次攻击晕眩敌人0.2秒\n若技能期间击倒敌人，则技能结束时进入迷彩状态，直至下一次开启技能"
+    },
+    {
+      "name": "隐德来希",
+      "skill": "灵与欲的惜别",
+      "skillId": "skchr_etlchi_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击范围扩大，攻击力+80%，攻击速度+100，立刻为攻击范围内最多3名生命值最高的地面敌人召唤对应的心烛，每次攻击对心烛至少造成35%攻击力的伤害，心烛继承原敌人当前60%的生命值，受到伤害时原敌人也会受到等量的真实伤害\n心烛只受隐德来希攻击的影响",
+      "runtimePlain": "攻击范围扩大，攻击力+80%，攻击速度+100，立刻为攻击范围内最多3名生命值最高的地面敌人召唤对应的心烛，每次攻击对心烛至少造成35%攻击力的伤害，心烛继承原敌人当前60%的生命值，被攻击时原敌人也会流失同等生命值\n心烛只受隐德来希攻击的影响"
+    },
+    {
+      "name": "史尔特尔",
+      "skill": "黄昏",
+      "skillId": "skchr_surtr_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "立即恢复所有生命；攻击力+210%，攻击距离+2，攻击目标数+2，生命上限+5000，逐渐失去生命（60秒后到达最大生命20%/秒）；持续时间无限",
+      "runtimePlain": "立即恢复所有生命；攻击力+210%，攻击距离+2，攻击目标数+2，生命上限+5000，逐渐流失生命（60秒后到达最大生命20%/秒）；持续时间无限"
+    },
+    {
+      "name": "塞雷娅",
+      "skill": "急救",
+      "skillId": "skchr_demkni_1",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "下一次攻击会为周围血量小于等于一半的一名友方单位恢复相当于攻击力130%的生命\n可充能1次",
+      "runtimePlain": "下一次攻击会为周围血量不足一半的一名友方单位恢复相当于攻击力130%的生命\n可充能1次"
+    },
+    {
+      "name": "归溟幽灵鲨",
+      "skill": "生存的渴望",
+      "skillId": "skchr_ghost2_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击力+70%，攻击速度+22，技能持续期间内干员的生命值不会低于1\n技能结束后立刻切换为",
+      "runtimePlain": "攻击力+70%，攻击速度+22，技能持续期间内干员的生命值不会低于1\n技能结束后视为被击倒"
+    },
+    {
+      "name": "蕾缪安",
+      "skill": "归乡邀约",
+      "skillId": "skchr_lemuen_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击速度+50，攻击力+40%，场上有被通缉敌人时会消耗1发弹药对其瞄准最多2.5秒后进行无视闪避的狙击（期间攻击力从180%逐渐提升至355%，攻击力高于或等于敌人剩余生命值和防御力之和时停止瞄准并立刻攻击）\n攻击装有6发弹药，打完后结束（可随时停止技能）",
+      "runtimePlain": "攻击速度+50，攻击力+40%，场上有被通缉敌人时会消耗子弹对其瞄准最多2.5秒后进行无视闪避的狙击（期间攻击力从180%逐渐提升至355%，攻击力高于敌人剩余生命值和防御力之和时停止瞄准并立刻攻击）\n攻击装有6发弹药，打完后结束（可随时停止技能）"
+    },
+    {
+      "name": "蕾缪安",
+      "skill": "礼炮·强制追思",
+      "skillId": "skchr_lemuen_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "停止攻击，每0.5秒消耗1发弹药依次锁定敌人，技能结束时对每名被锁定的敌人所在位置进行轰炸，轰炸造成攻击力240%的范围物理伤害（中心伤害提升至攻击力的360%）\n攻击装有5发弹药，打完后结束（可随时停止技能）",
+      "runtimePlain": "停止攻击，每0.5秒消耗1发子弹依次锁定敌人，技能结束时对每名被锁定的敌人所在位置进行轰炸，轰炸造成攻击力240%的范围物理伤害（中心伤害提升至攻击力的360%）\n攻击装有5发弹药，打完后结束（可随时停止技能）"
+    },
+    {
+      "name": "维娜·维多利亚",
+      "skill": "进赴故土",
+      "skillId": "skchr_siege2_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "被动效果：天赋一生效范围内若有2个及以上友方单位，维娜技力回复速度+0.3/秒\n自动开启：攻击范围扩大，攻击力+135%，攻击目标数+1 \n持续时间无限",
+      "runtimePlain": "被动效果：天赋一生效范围内若有2个及以上友方单位，维娜技力回复速度+0.3/秒\n自动开启：攻击距离+1，攻击力+135%，攻击目标数+1 \n持续时间无限"
+    },
+    {
+      "name": "新约能天使",
+      "skill": "使命必达！",
+      "skillId": "skchr_angel2_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "攻击力+15%，每次攻击变为相当于攻击力115%的5连击，若存在投递坐标，立刻对该处造成一次相当于攻击力250%的物理溅射伤害并将一名再部署时间最长的地面干员部署至该处，使其获得6点技力\n部署后获得投递坐标，攻击装有50发弹药，每次攻击消耗5发，打完后结束（可随时停止技能）",
+      "runtimePlain": "攻击力+15%，每次攻击变为相当于攻击力115%的5连击，若存在投递坐标，立即对该处造成一次相当于攻击力250%的物理溅射伤害并将一名再部署时间最长的地面干员部署至该处，使其获得6点技力\n部署后获得投递坐标，攻击装有50发弹药，每次攻击消耗5发，打完后结束（可随时停止技能）"
+    },
+    {
+      "name": "Touch",
+      "skill": "宛如天启",
+      "skillId": "skchr_acmedc_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [],
+      "prtsPlain": "自身攻击距离+1，每次治疗2个目标，所有医疗干员攻击力+15%",
+      "runtimePlain": "自身攻击距离+1，每次治疗2个目标，所有医疗干员攻击力+12%"
+    }
+  ],
+  "missingBlackboardKey": [
+    {
+      "name": "角峰",
+      "skill": "体能强化",
+      "skillId": "skchr_yak_1",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "HP_RECOVERY_PER_SEC"
+      ],
+      "prtsPlain": "生命上限+30%，每秒恢复25点生命",
+      "runtimePlain": "生命上限+30%，每秒恢复«HP_RECOVERY_PER_SEC»点生命"
+    },
+    {
+      "name": "锡人",
+      "skill": "“老科利”",
+      "skillId": "skchr_tinman_1",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-atk"
+      ],
+      "prtsPlain": "投掷一个炼金单元，在8秒内使落点周围的地面敌人获得-20%的虚弱效果且每秒受到相当于攻击力45%的法术伤害",
+      "runtimePlain": "投掷一个炼金单元，在8秒内使落点周围的地面敌人获得«-atk»的虚弱效果且每秒受到相当于攻击力45%的法术伤害"
+    },
+    {
+      "name": "调香师",
+      "skill": "精调",
+      "skillId": "skchr_flower_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-attack_speed"
+      ],
+      "prtsPlain": "攻击速度-50，攻击力+180%",
+      "runtimePlain": "攻击速度-«-attack_speed»，攻击力+180%"
+    },
+    {
+      "name": "初雪",
+      "skill": "传音回响",
+      "skillId": "skchr_slbell_1",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-attack_speed"
+      ],
+      "prtsPlain": "同时攻击2个目标，攻击范围内所有敌人攻击速度-40",
+      "runtimePlain": "同时攻击2个目标，攻击范围内所有敌人攻击速度-«-attack_speed»"
+    },
+    {
+      "name": "初雪",
+      "skill": "自然震慑",
+      "skillId": "skchr_slbell_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-def",
+        "-magic_resistance"
+      ],
+      "prtsPlain": "攻击范围内所有敌人防御力-40%，法术抗性-23%",
+      "runtimePlain": "攻击范围内所有敌人防御力-«-def»，法术抗性-«-magic_resistance»"
+    },
+    {
+      "name": "巫恋",
+      "skill": "诅咒娃娃",
+      "skillId": "skchr_vodfox_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-atk"
+      ],
+      "prtsPlain": "获得一个诅咒娃娃（最多可库存1个）\n诅咒娃娃周围敌人的攻击力和防御力-25%，15秒后自动销毁",
+      "runtimePlain": "获得一个诅咒娃娃（最多可库存1个）\n诅咒娃娃周围敌人的攻击力和防御力-«-atk»，15秒后自动销毁"
+    },
+    {
+      "name": "流星",
+      "skill": "碎甲击",
+      "skillId": "skchr_shotst_1",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-def"
+      ],
+      "prtsPlain": "下一次攻击造成相当于攻击力135%的物理伤害，5秒内使命中目标的防御力-25%",
+      "runtimePlain": "下一次攻击造成相当于攻击力135%的物理伤害，5秒内使命中目标的防御力-«-def»"
+    },
+    {
+      "name": "流星",
+      "skill": "碎甲击·扩散",
+      "skillId": "skchr_shotst_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-def"
+      ],
+      "prtsPlain": "立即对攻击范围内至多5个敌人造成相当于攻击力155%的物理伤害，5秒内使命中目标的防御力-30%",
+      "runtimePlain": "立即对攻击范围内至多5个敌人造成相当于攻击力155%的物理伤害，5秒内使命中目标的防御力-«-def»"
+    },
+    {
+      "name": "歌蕾蒂娅",
+      "skill": "缺水的碎漩狂舞",
+      "skillId": "skchr_glady_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-move_speed"
+      ],
+      "prtsPlain": "对一个远处目标束缚并制造一个龙卷风使周围敌人移动速度-50%，每1.5秒造成85%攻击力的法术伤害并小力地拖拽至中心。技能结束时把目标地点周围的敌人小力地拖拽至面前",
+      "runtimePlain": "对一个远处目标束缚并制造一个龙卷风使周围敌人移动速度-«-move_speed»，每1.5秒造成85%攻击力的法术伤害并小力地拖拽至中心。技能结束时把目标地点周围的敌人小力地拖拽至面前"
+    },
+    {
+      "name": "莱恩哈特",
+      "skill": "解构与爆破",
+      "skillId": "skchr_lionhd_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-magic_resistance"
+      ],
+      "prtsPlain": "攻击范围扩大，立即对攻击范围内的所有敌人造成相当于攻击力170%的法术伤害且使其在6秒内法术抗性-8%\n可充能2次",
+      "runtimePlain": "攻击范围扩大，立即对攻击范围内的所有敌人造成相当于攻击力170%的法术伤害且使其在6秒内法术抗性-«-magic_resistance»\n可充能2次"
+    },
+    {
+      "name": "缄默德克萨斯",
+      "skill": "阵雨连绵",
+      "skillId": "skchr_texas2_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-magic_resistance"
+      ],
+      "prtsPlain": "部署后立即对周围所有敌人造成相当于攻击力150%的法术伤害，并使命中目标在8秒内法术抗性-15%；攻击力+30%，攻击变为二连击并造成法术伤害",
+      "runtimePlain": "部署后立即对周围所有敌人造成相当于攻击力150%的法术伤害，并使命中目标在8秒内法术抗性-«-magic_resistance»；攻击力+30%，攻击变为二连击并造成法术伤害"
+    },
+    {
+      "name": "泥岩",
+      "skill": "秽壤的血脉",
+      "skillId": "skchr_mudrok_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-move_speed"
+      ],
+      "prtsPlain": "技能开启后无法行动且不受到伤害10秒并使周围敌人移动速度-60%；该状态结束后晕眩周围地面敌人3秒，攻击间隔缩短(-30%)，攻击力+85%，防御力+40%，攻击阻挡的所有敌人",
+      "runtimePlain": "技能开启后无法行动且不受到伤害10秒并使周围敌人移动速度-«-move_speed»；该状态结束后晕眩周围地面敌人3秒，攻击间隔缩短，攻击力+85%，防御力+40%，攻击阻挡的所有敌人"
+    },
+    {
+      "name": "银灰",
+      "skill": "雪境生存法则",
+      "skillId": "skchr_svrash_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "HP_RECOVERY_PER_SEC_BY_MAX_HP_RATIO"
+      ],
+      "prtsPlain": "可以在下列状态和初始状态间切换：\n攻击范围缩小，防御力+50%，每秒恢复最大生命的3.5%",
+      "runtimePlain": "可以在下列状态和初始状态间切换：\n攻击范围缩小，防御力+50%，每秒恢复最大生命的«HP_RECOVERY_PER_SEC_BY_MAX_HP_RATIO»"
+    },
+    {
+      "name": "银灰",
+      "skill": "真银斩",
+      "skillId": "skchr_svrash_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-def"
+      ],
+      "prtsPlain": "防御力-70%，攻击力+125%，攻击范围扩大，同时攻击至多4个目标（视为近距离攻击）",
+      "runtimePlain": "防御力-«-def»，攻击力+125%，攻击范围扩大，同时攻击至多4个目标（视为近距离攻击）"
+    },
+    {
+      "name": "塞雷娅",
+      "skill": "钙质化",
+      "skillId": "skchr_demkni_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-demkni_s_3.move_speed"
+      ],
+      "prtsPlain": "附近所有友军每秒回复相当于塞雷娅攻击力15%的生命\n附近所有敌军受到的法术伤害+30%，移动速度-60%",
+      "runtimePlain": "附近所有友军每秒回复相当于塞雷娅攻击力15%的生命\n附近所有敌军受到的法术伤害+30%，移动速度-«-demkni_s_3.move_speed»"
+    },
+    {
+      "name": "引星棘刺",
+      "skill": "“我的海疆”",
+      "skillId": "skchr_thorn2_3",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-atk",
+        "-def",
+        "-magic_resistance",
+        "-max_atk",
+        "-max_def",
+        "-max_magic_resistance"
+      ],
+      "prtsPlain": "被动效果：攻击范围扩大\n主动开启：向阻挡数最低的3名干员投掷炼金单元，在19秒内使围绕区域内的敌人攻击力-12%，防御力-32%，法术抗性-32%（不叠加），每秒受到攻击力120%的法术伤害，效果逐渐提升（15秒后达到最大，攻击力-21%，防御力-41%，法术抗性-41%，每秒伤害300%）",
+      "runtimePlain": "被动效果：攻击范围扩大\n主动开启：向阻挡数最低的3名干员投掷炼金单元，在19秒内使围绕区域内的敌人攻击力-«-atk»，防御力-«-def»，法术抗性-«-magic_resistance»（不叠加），每秒受到攻击力120%的法术伤害，效果逐渐提升（15秒后达到最大，攻击力-«-max_atk»，防御力-«-max_def»，法术抗性-«-max_magic_resistance»，每秒伤害300%）"
+    },
+    {
+      "name": "山",
+      "skill": "横扫架势",
+      "skillId": "skchr_f12yin_2",
+      "level": "none",
+      "match": false,
+      "missingKeys": [
+        "-def",
+        "HP_RECOVERY_PER_SEC_BY_MAX_HP_RATIO"
+      ],
+      "prtsPlain": "可以在下列状态和初始状态间切换：\n防御力-30%，攻击距离缩短，攻击力+35%，阻挡数+1，同时攻击阻挡的所有敌人，每秒恢复最大生命的4.0%",
+      "runtimePlain": "可以在下列状态和初始状态间切换：\n防御力-«-def»，攻击距离缩短，攻击力+35%，阻挡数+1，同时攻击阻挡的所有敌人，每秒恢复最大生命的«HP_RECOVERY_PER_SEC_BY_MAX_HP_RATIO»"
+    }
+  ]
+}

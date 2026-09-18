@@ -353,7 +353,7 @@ test('华法琳紧急包扎只在半血以下的下一次治疗追加生命比�
 });
 
 test('浮游单元技能按黑板数量生成多枚投射，并保留概率寒冷',()=>{
- const {b}=openBattle({chessId:'chess_char_3_20_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.equal(u.floatUnits,2);assert.equal(u.floatTarget,e.uid);b.economy.random=()=>0;b.hit(u,e,10,'arts');assert.ok(e.statuses.some(s=>s.kind==='cold'||s.kind==='frozen'));assert.ok(b.stats(u).atk>b.profile(u).attributes.atk);
+ const {b}=openBattle({chessId:'chess_char_3_20_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.equal(u.floatUnits,3);assert.equal(u.floatTarget,e.uid);b.economy.random=()=>0;b.hit(u,e,10,'arts');assert.ok(e.statuses.some(s=>s.kind==='cold'||s.kind==='frozen'));assert.ok(b.stats(u).atk>b.profile(u).attributes.atk);
 });
 
 test('洛洛浮游过载在技能结束按实际持续时间眩晕自身',()=>{
