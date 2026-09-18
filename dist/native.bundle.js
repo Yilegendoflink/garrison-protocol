@@ -3368,7 +3368,7 @@ function operatorSkillStart(battle,u,ctx){
  if(profile.charId==='char_4211_snhunt'&&profile.skillIndex===1){const target=battle.targets(u)[0];if(target){const scale=target.speed===0||target.stationary?Number(bb.atk_scale_2)||2.1:Number(bb.atk_scale_1)||1.8;for(let hit=0;hit<2;hit++)ctx.dealDamage(battle,{source:u,target,amount:battle.stats(u).atk*scale,type:'physical',cause:'skill',skill:true});applyStatus(target,'cold',3,{source:u.uid,resistible:false});}return true;}
  if(profile.charId==='char_206_gnosis'&&profile.skillIndex===2){u.gnosisFrozenUids=[];for(const e of allTargets(battle,u,true)){applyStatus(e,'frozen',Math.max(1,Number(duration)||5),{source:u.uid,resistible:false});u.gnosisFrozenUids.push(e.uid);} }
  if(profile.charId==='char_4122_grabds'&&profile.skillIndex===1){const sleepUntil=battle.s.time+(Number(bb.sleep)||4);u.grabdsSleepUntil=sleepUntil;u.skillDisarmUntil=sleepUntil;for(const e of allTargets(battle,u,true).slice(0,Number(bb.maxTarget)||3))applyStatus(e,'sleep',Number(bb.sleep)||4,{source:u.uid,resistible:false});}
- if(profile.charId==='char_1023_ghost2'&&profile.skillIndex===0){const target=allAllies(battle,u,true).filter(v=>v.uid!==u.uid).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.uid-b.uid)[0];if(target){const ratio=u.hp/u.maxHp,other=target.hp/target.maxHp;u.hp=u.maxHp*other;target.hp=target.maxHp*ratio;}}
+ if(profile.charId==='char_1023_ghost2'&&profile.skillIndex===0){const target=allAllies(battle,u,true).filter(v=>v.uid!==u.uid).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.uid-b.uid)[0];if(target){const ratio=u.hp/u.maxHp,other=target.hp/target.maxHp;u.hp=u.maxHp*other;target.hp=target.maxHp*ratio;battle.emit('hp-swap',{uid:u.uid,x:u.x,y:u.y,targetUid:target.uid,targetX:target.x,targetY:target.y});}}
  if(profile.charId==='char_174_slbell'&&profile.skillIndex===0)for(const e of allTargets(battle,u,true)){const value=Number(bb.attack_speed)||-50;e.attackSpeedMod=(e.attackSpeedMod||0)+value;applyStatus(e,'attackSpeedDown',Math.max(1,Number(duration)||5),{source:u.uid,value});}
  if(profile.charId==='char_373_lionhd'&&profile.skillIndex===1){for(const e of allTargets(battle,u,true)){ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(bb.atk_scale)||2),type:'arts',cause:'skill',skill:true});if(Number(bb.magic_resistance)<0)applyStatus(e,'resDown',Number(duration)||6,{source:u.uid,value:Number(bb.magic_resistance),resistible:false});}return true;}
  if(profile.charId==='char_4148_philae'&&profile.skillIndex===0){u.elemental={};u.elementalType=null;u.elementalStartedAt=null;u.elementalBatch=null;u.elementInjury=0;if(ctx.grantShield)ctx.grantShield(battle,u,{amount:Number(bb.shield_value)||1200,sourceUid:u.uid,id:'philae-s1'});}
@@ -4250,7 +4250,7 @@ function validMoveTile(battle,target,x,y,{allowOccupied=false,allowFlyOnly=false
 function teleportActor(battle,target,{x,y,source=null,mode='teleport',allowOccupied=false}={}){
  if(!target||target.hp<=0||target.hidden||x==null||y==null)return false;
  const nx=Math.round(x),ny=Math.round(y);if(!validMoveTile(battle,target,nx,ny,{allowOccupied,allowFlyOnly:true}))return false;
- target.x=nx;target.y=ny;target.block=null;target.action=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode});battle.emit('move',{uid:target.uid,x:nx,y:ny,mode});return true;
+ const fx0=target.x,fy0=target.y;target.x=nx;target.y=ny;target.block=null;target.action=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode});battle.emit('move',{uid:target.uid,x:nx,y:ny,fromX:fx0,fromY:fy0,mode});return true;
 }
 function moveActor(battle,target,source,description=''){
  if(!target||target.hp<=0||target.hidden||target.levitated)return false;
@@ -5629,6 +5629,42 @@ function drawSkillFan(c,point,z,battle,{reduceFx=false}={}){
  }
  return drew;
 }
+// 位移类效果：拖拽／推退／传送／换位。坐标由逻辑层的 move 事件给出（含起点 fromX/fromY），
+// 特效只画起终点轨迹与落点环，不参与任何位置判定。
+function drawDisplace(c,point,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ let drew=false;
+ for(const e of recent(s.events,s.time,'move',.45)){
+  if(e.fromX==null||e.fromY==null)continue;
+  const a=point(e.fromX,e.fromY),b=point(e.x,e.y);
+  if(Math.abs(a.x-b.x)<1&&Math.abs(a.y-b.y)<1)continue;   // 原地换位不画
+  const k=Math.max(0,Math.min(1,(s.time-e.t)/.45)),fade=(1-k)*(reduceFx?.55:.9);
+  const pull=e.mode==='pull'||e.mode==='yu-pull';
+  c.save();c.globalCompositeOperation='lighter';
+  c.strokeStyle='rgba(206,232,255,'+fade.toFixed(3)+')';c.lineWidth=2.4;c.lineCap='round';
+  c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();
+  // 沿轨迹的箭头，方向指实际移动方向
+  const ang=Math.atan2(b.y-a.y,b.x-a.x),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+  c.strokeStyle='rgba(255,255,255,'+(fade*.8).toFixed(3)+')';c.lineWidth=2;
+  c.beginPath();c.moveTo(mid.x-Math.cos(ang-.5)*7,mid.y-Math.sin(ang-.5)*7);c.lineTo(mid.x,mid.y);c.lineTo(mid.x-Math.cos(ang+.5)*7,mid.y-Math.sin(ang+.5)*7);c.stroke();
+  // 落点环：向外扩散，拖拽/传送用冷色，推退用暖色
+  c.strokeStyle=(pull?'rgba(180,222,255,':'rgba(255,206,158,')+fade.toFixed(3)+')';c.lineWidth=2;
+  c.beginPath();c.ellipse(b.x,b.y,z.tw*(.22+k*.34),z.th*(.22+k*.34),0,0,Math.PI*2);c.stroke();
+  c.restore();drew=true;
+ }
+ // 换血（归溟幽灵鲨 S1）：两端各一圈脉动 + 连接线，表示生命上限比例互换
+ for(const e of recent(s.events,s.time,'hp-swap',.6)){
+  if(e.targetX==null)continue;
+  const a=point(e.x,e.y),b=point(e.targetX,e.targetY);
+  const k=Math.max(0,Math.min(1,(s.time-e.t)/.6)),fade=(1-k)*(reduceFx?.6:1);
+  c.save();c.globalCompositeOperation='lighter';
+  c.strokeStyle='rgba(198,246,220,'+(fade*.85).toFixed(3)+')';c.lineWidth=2;
+  c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();
+  for(const p of [a,b]){c.strokeStyle='rgba(255,255,255,'+(fade*.6).toFixed(3)+')';c.beginPath();c.ellipse(p.x,p.y,z.tw*(.2+k*.3),z.th*(.2+k*.3),0,0,Math.PI*2);c.stroke();}
+  c.restore();drew=true;
+ }
+ return drew;
+}
 function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
  drawCombatFx(c,point,z,battle,reduce);
  drawZones(c,point,z,battle,{reduceFx:reduce});
@@ -5636,6 +5672,7 @@ function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,reduce=!!op
  drawSelfBurst(c,point,z,battle,{reduceFx:reduce});
  drawWideSweep(c,point,z,battle,{reduceFx:reduce});
  drawSkillFan(c,point,z,battle,{reduceFx:reduce});
+ drawDisplace(c,point,z,battle,{reduceFx:reduce});
  drawIceWind(c,z,battle,{reduceFx:reduce});
  for(const e of s.effects||[]){
   if(e.type!=='healing'&&e.type!=='evade'&&e.type!=='block')continue;
@@ -5700,7 +5737,7 @@ function drawDownRing(c,p,u,size,opts={}){
  c.fillStyle='#e9fff7';c.font='11px sans-serif';c.textAlign='center';c.fillText((opts.formatNumber?opts.formatNumber(n):n)+'s',p.x,p.y+4);
 }
 
-return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawWhitwEyes,drawWideSweep,drawSelfBurst,drawAuraField,drawZones,drawSkillFan,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing};
+return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawWhitwEyes,drawWideSweep,drawSelfBurst,drawAuraField,drawZones,drawSkillFan,drawDisplace,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing};
 },
 "native-flight.js": function(load) {
 // 自由飞行移动原语（连续坐标，不做格子吸附、不走路网）。

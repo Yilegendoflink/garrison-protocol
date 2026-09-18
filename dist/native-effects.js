@@ -669,7 +669,7 @@ function validMoveTile(battle,target,x,y,{allowOccupied=false,allowFlyOnly=false
 export function teleportActor(battle,target,{x,y,source=null,mode='teleport',allowOccupied=false}={}){
  if(!target||target.hp<=0||target.hidden||x==null||y==null)return false;
  const nx=Math.round(x),ny=Math.round(y);if(!validMoveTile(battle,target,nx,ny,{allowOccupied,allowFlyOnly:true}))return false;
- target.x=nx;target.y=ny;target.block=null;target.action=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode});battle.emit('move',{uid:target.uid,x:nx,y:ny,mode});return true;
+ const fx0=target.x,fy0=target.y;target.x=nx;target.y=ny;target.block=null;target.action=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode});battle.emit('move',{uid:target.uid,x:nx,y:ny,fromX:fx0,fromY:fy0,mode});return true;
 }
 export function moveActor(battle,target,source,description=''){
  if(!target||target.hp<=0||target.hidden||target.levitated)return false;
