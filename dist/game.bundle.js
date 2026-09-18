@@ -5174,6 +5174,69 @@ function drawDownRing(c,p,u,size,opts={}){
 
 return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing};
 },
+"native-skill-text.js": function(load) {
+// 技能描述文本渲染。纯函数，不读写战斗状态。
+//
+// 原作描述里的 {key:format} 占位符与技能黑板取值存在两类命名不一致，原先精确匹配会让
+// 界面把这些位置渲染成「—」：
+//   1. 大小写不同：HP_RECOVERY_PER_SEC vs 黑板 hp_recovery_per_sec
+//   2. 大小写无差异但多一个前导符号：{-def:0%} 对应黑板 def
+// 注意占位符里的前导「-」是**字面显示符号**（游戏内显示「-40%」），不能删；
+// 只有黑板键本身确实带负号时（如 -demkni_s_3.move_speed）才由键承担该符号。
+//
+// 数值口径：:0% 表示按百分数显示（黑板存小数，乘 100）；其余按原样输出。
+function plainText(value){
+ return String(value??'').replace(/<[^>]+>/g,'').replace(/\\n/g,'\n');
+}
+function normalizeKey(key){
+ return String(key??'').replace(/^[-+]/,'').toLowerCase();
+}
+function blackboardIndex(blackboard){
+ const exact=new Map(),normalized=new Map();
+ for(const entry of blackboard||[]){
+  if(!entry||entry.key==null)continue;
+  const value=entry.valueStr??entry.value,key=String(entry.key);
+  if(!exact.has(key))exact.set(key,value);
+  const norm=normalizeKey(key);
+  if(!normalized.has(norm))normalized.set(norm,value);
+ }
+ return {exact,normalized};
+}
+function blackboardValue(index,key){
+ if(!index)return undefined;
+ const raw=String(key??'');
+ if(index.exact.has(raw))return index.exact.get(raw);
+ const stripped=raw.replace(/^[-+]/,'');
+ if(stripped!==raw){
+  const found=index.normalized.get(normalizeKey(stripped));
+  if(found!==undefined)return found;
+ }
+ return index.normalized.get(normalizeKey(raw));
+}
+function renderSkillDescription(skill){
+ if(!skill)return '';
+ const index=blackboardIndex(skill.blackboard);
+ // 前导 "+"/"-" 属于字面显示，不并入键名
+ return plainText(skill.description).replace(/\{([+-]?)([^}:]+)(?::([^}]+))?\}/g,(all,sign,key,format)=>{
+  const value=blackboardValue(index,key);
+  if(value===undefined)return '—';
+  const signed=sign==='-';
+  if(format?.includes('%')&&Number.isFinite(Number(value))){
+   const number=Number(value);
+   // 带前导「-」的占位符表示“降低”，前缀负号是字面显示，需保留。黑板值有两种存法：
+   //   已是负数（塞雷娅「钙质化」demkni_s_3.move_speed=-0.6）→ 取绝对值
+   //   仍是剩余比例（初雪「自然震慑」def=0.6 即降低 40%）→ 取补数
+   // 不带符号时按原值显示（角峰「抗寒体质」def=0.1 → +10%）。
+   const shown=!signed?Math.round(number*100):(number<0?Math.round(-number*100):Math.round((1-number)*100));
+   return (signed?'-':'')+String(shown)+'%';
+  }
+  // 非百分比或非数值（如 valueStr 文本）按原样输出
+  return sign+String(value);
+ });
+}
+
+return {plainText,normalizeKey,blackboardIndex,blackboardValue,renderSkillDescription};
+},
 "native-325.js": function(load) {
 // 325 display rewrite. Algorithm and lookup table from
 // https://github.com/ophixation/325calculator (MIT), itself based on
@@ -6197,10 +6260,10 @@ const {buildPhasePlan} = load("protocol.js");
 const {strategyCoverage} = load("strategy.js");
 const {spBarFill} = load("native-sp.js");
 const {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay} = load("native-fx.js");
+const {renderSkillDescription} = load("native-skill-text.js");
 const {EGG_BASE_MODE,EGG_MODE_ID,apply325Display,egg325Active,format325,rewrite325Text} = load("native-325.js");
 const data=NATIVE_DATA,root=document.getElementById('app'),strategyCoverageById=Object.fromEntries(strategyCoverage(data).map(x=>[x.id,x])),SAVE='garrison-native-manual-v1',CHECKPOINT_SAVE='garrison-native-safe-v1',VIEW_SAVE='garrison-native-view-v1';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const skillDescription=skill=>{const values=Object.fromEntries((skill?.blackboard||[]).map(b=>[b.key,b.valueStr??b.value]));return plain(skill?.description).replace(/\{([^}:]+)(?::([^}]+))?\}/g,(all,key,format)=>{const value=values[key];return value===undefined?'—':format?.includes('%')?Math.round(value*100)+'%':String(value);});};
 const plain=s=>String(s||'').replace(/<[^>]+>/g,'').replace(/\\n/g,'\n');
 const imageCache=new Map(),img=id=>{const file=data.assets[id];if(!file)return null;if(!imageCache.has(file)){const im=new Image();im.src='./'+file;imageCache.set(file,im);}return imageCache.get(file);};
 function preference(key,fallback){try{return localStorage.getItem(key)??fallback;}catch{return fallback;}}
@@ -6365,7 +6428,7 @@ function dossier(){
  const statuses=(live?.statuses||[]).map(s=>s.kind).join('、')||'无';
  const bondIds=[...new Set(p.bonds||data.season.charChessDataDict[owned?.chessId||p.chessId]?.bondIds||[])];
  const equipment=owned?.equipment||[],equipmentSlots=Array.from({length:2},(_,i)=>equipment[i]?`<div class="native-equipment-slot filled"><span>装备位 ${i+1}</span><b>${esc(itemName(equipment[i].chessId))}</b><small>已装备</small></div>`:`<div class="native-equipment-slot"><span>装备位 ${i+1}</span><b>空槽</b><small>${owned?'可装备':'获得干员后可用'}</small></div>`).join('');
- return `<aside class="native-dossier" aria-label="干员档案"><div class="native-dossier-art">${avatar(p.charId)}</div><div class="native-dossier-body"><button data-act="inspect-close" class="native-dossier-close" aria-label="关闭">×</button><h2>${esc(p.name)}${p.isGolden?' · 精锐':''}</h2><p class="native-dossier-kicker">${esc(data.branchRules.records.find(r=>r.id===p.branch)?.name||p.branch||'')} · ${p.rank} 阶${t.reward?' · 三合一奖励候选':''}</p><p id="native-dossier-hp" class="native-dossier-hp">生命 <b>${hp}</b><i>/${max}</i></p><div class="native-dossier-stats"><span>攻击 ${Math.round(a.atk)}</span><span>防御 ${Math.round(a.def)}</span><span>法抗 ${Math.round(a.magicResistance)}</span><span>攻速 ${Math.round(a.attackSpeed)}</span></div><div id="native-dossier-live" class="native-dossier-live"><p>阶段 ${esc(phase)}</p><p>状态 ${esc(statuses)}</p><h3>属性来源</h3><p>${parts}</p></div><h3>所属盟约</h3><div class="native-dossier-bonds">${bondIds.map(id=>`<span>${esc(data.season.bondInfoDict[id]?.name||id)}</span>`).join('')||'<small>暂无盟约</small>'}</div><h3>技能</h3>${owned?`<label>携带技能<select data-uid="${owned.uid}" id="native-skill" ${g.s.phase!=='prep'?'disabled':''}>${data.profiles[owned.chessId].skillChoices.map((v,i)=>`<option value="${i}" ${(owned.skillIndex??data.profiles[owned.chessId].skillIndex)===i?'selected':''}>${esc(v.skill?.name||'无主动技能')}</option>`).join('')}</select></label>`:`<p class="native-dossier-skill-name">${esc(p.skill?.name||'无主动技能')}</p>`}<p>${esc(skillDescription(p.skill)||'无主动技能')}</p><h3>卫戍</h3>${(p.garrisons||[]).map(x=>`<p>${esc(plain(x.description||x.garrisonDesc))}</p>`).join('')||'<p>无卫戍效果</p>'}<h3>装备栏</h3><div class="native-dossier-equipment">${equipmentSlots}</div>${t.shop?`<p class="native-dossier-buy">再次点击卡片购买 · ${t.price} ◆</p>`:''}${owned&&g.s.phase==='prep'?`<div class="native-dossier-acts"><button data-act="withdraw" data-uid="${owned.uid}">撤回整备区</button><button data-act="sell" data-uid="${owned.uid}">出售 +1 ◆</button></div>`:''}</div></aside>`;
+ return `<aside class="native-dossier" aria-label="干员档案"><div class="native-dossier-art">${avatar(p.charId)}</div><div class="native-dossier-body"><button data-act="inspect-close" class="native-dossier-close" aria-label="关闭">×</button><h2>${esc(p.name)}${p.isGolden?' · 精锐':''}</h2><p class="native-dossier-kicker">${esc(data.branchRules.records.find(r=>r.id===p.branch)?.name||p.branch||'')} · ${p.rank} 阶${t.reward?' · 三合一奖励候选':''}</p><p id="native-dossier-hp" class="native-dossier-hp">生命 <b>${hp}</b><i>/${max}</i></p><div class="native-dossier-stats"><span>攻击 ${Math.round(a.atk)}</span><span>防御 ${Math.round(a.def)}</span><span>法抗 ${Math.round(a.magicResistance)}</span><span>攻速 ${Math.round(a.attackSpeed)}</span></div><div id="native-dossier-live" class="native-dossier-live"><p>阶段 ${esc(phase)}</p><p>状态 ${esc(statuses)}</p><h3>属性来源</h3><p>${parts}</p></div><h3>所属盟约</h3><div class="native-dossier-bonds">${bondIds.map(id=>`<span>${esc(data.season.bondInfoDict[id]?.name||id)}</span>`).join('')||'<small>暂无盟约</small>'}</div><h3>技能</h3>${owned?`<label>携带技能<select data-uid="${owned.uid}" id="native-skill" ${g.s.phase!=='prep'?'disabled':''}>${data.profiles[owned.chessId].skillChoices.map((v,i)=>`<option value="${i}" ${(owned.skillIndex??data.profiles[owned.chessId].skillIndex)===i?'selected':''}>${esc(v.skill?.name||'无主动技能')}</option>`).join('')}</select></label>`:`<p class="native-dossier-skill-name">${esc(p.skill?.name||'无主动技能')}</p>`}<p>${esc(renderSkillDescription(p.skill)||'无主动技能')}</p><h3>卫戍</h3>${(p.garrisons||[]).map(x=>`<p>${esc(plain(x.description||x.garrisonDesc))}</p>`).join('')||'<p>无卫戍效果</p>'}<h3>装备栏</h3><div class="native-dossier-equipment">${equipmentSlots}</div>${t.shop?`<p class="native-dossier-buy">再次点击卡片购买 · ${t.price} ◆</p>`:''}${owned&&g.s.phase==='prep'?`<div class="native-dossier-acts"><button data-act="withdraw" data-uid="${owned.uid}">撤回整备区</button><button data-act="sell" data-uid="${owned.uid}">出售 +1 ◆</button></div>`:''}</div></aside>`;
 }
 function detail(){return state.inspect?'':'<h3>阵地指令</h3><p>点击干员或商店卡片查看档案。商店需再点一次才购买。</p>';}
 function showRequired(){const g=state.game,r=g.s.rewardPending;if(r&&!r.tier){if(r.kind==='bounty')modal(`<h2>悬赏决策</h2><p>选择一项悬赏加入下一场战斗</p><div class="native-rewards">${r.offers.map(id=>{const e=data.season.effectInfoDataDict[id];return `<button data-act="reward" data-id="${id}"><b>${esc(e?.effectName||id)}</b><p>${esc(plain(e?.effectDesc||''))}</p></button>`;}).join('')}</div>`);else{g.ensureRewards();modal(`<h2>晋升／特殊调配</h2><p>选择获得一项奖励</p><div class="native-rewards">${r.offers.map(id=>`<button data-act="reward" data-id="${id}">${r.kind==='item'?'◇':avatar(data.profiles[id].charId)}<b>${esc(r.kind==='item'?itemName(id):data.profiles[id].name)}</b></button>`).join('')}</div>`);}}else if(g.s.phase==='decision')modal(`<h2>机变决策</h2><div class="native-rewards">${g.s.roundDecisions.map(id=>{const e=data.season.effectInfoDataDict[id];return `<button data-act="decision" data-id="${id}"><b>${esc(e.effectName)}</b><p>${esc(plain(e.effectDesc))}</p></button>`;}).join('')}</div>`);}

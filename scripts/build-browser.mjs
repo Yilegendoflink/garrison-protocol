@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const names = ['data.js', 'benchmark.js', 'combat.js', 'status.js', 'targeting.js', 'actions.js', 'content.js', 'protocol.js', 'protocol-data.js', 'engine.js', 'renderer.js', 'session.js', 'catalog.js', 'screens.js', 'app.js','garrison.js','strategy.js','native-economy.js','runtime-data.js','native-branches.js','native-wave-defaults.js','native-wave-fill.js','native-wave-random.js','native-waves.js','native-wave-editor.js','native-sp.js','native-combat.js','native-operator-effects.js','native-effects.js','native-battle.js','native-session.js','native-fx.js','native-325.js','native-lobby.js','native-play.js'];
+const names = ['data.js', 'benchmark.js', 'combat.js', 'status.js', 'targeting.js', 'actions.js', 'content.js', 'protocol.js', 'protocol-data.js', 'engine.js', 'renderer.js', 'session.js', 'catalog.js', 'screens.js', 'app.js','garrison.js','strategy.js','native-economy.js','runtime-data.js','native-branches.js','native-wave-defaults.js','native-wave-fill.js','native-wave-random.js','native-waves.js','native-wave-editor.js','native-sp.js','native-combat.js','native-operator-effects.js','native-effects.js','native-battle.js','native-session.js','native-fx.js','native-skill-text.js','native-325.js','native-lobby.js','native-play.js'];
 const factories = [];
 async function writeRetry(file,content){
   let last;
