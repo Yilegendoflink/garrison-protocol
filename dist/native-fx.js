@@ -142,8 +142,50 @@ export function drawIceWind(c,z,battle,{reduceFx=false}={}){
  c.restore();
  return true;
 }
-export function drawFx(c,point,z,battle,opts={}){
- const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
+// 荒芜拉普兰德「终幕·浩劫」的浮游单元：逻辑上是自由飞行的独立单位（battle.s.whitwEyes），
+// 这里只给它一个占屏幕不大的浪头素材，让飞行过程肉眼可见。画法不参与任何结算。
+export function drawWhitwEyes(c,point,z,battle,{reduceFx=false}={}){
+ const eyes=battle?.s?.whitwEyes;
+ if(!eyes?.length)return false;
+ const K=reduceFx?.5:1,W=z.tw*.86,H=z.tw*.5;
+ for(const eye of eyes){
+  const p=point(eye.x,eye.y);
+  const dir=Math.atan2(eye.vy||0,eye.vx||1);
+  const bob=Math.sin((eye.x+eye.y)*2.1)*K;
+  c.save();
+  c.translate(p.x,p.y+bob*.8);
+  c.rotate(dir);
+  // 尾迹：朝来向淡出，表示正在飞
+  const g=c.createLinearGradient(-W*.95,0,W*.32,0);
+  g.addColorStop(0,'rgba(120,205,238,0)');
+  g.addColorStop(.55,`rgba(168,226,246,${.2*K})`);
+  g.addColorStop(1,`rgba(238,252,255,${.42*K})`);
+  c.fillStyle=g;
+  c.beginPath();c.moveTo(-W*.95,0);c.quadraticCurveTo(-W*.3,-H*.5,W*.1,-H*.22);c.lineTo(W*.1,H*.22);c.quadraticCurveTo(-W*.3,H*.5,-W*.95,0);c.closePath();c.fill();
+  // 浪头：一弯白色卷浪加几道浪花
+  c.fillStyle=`rgba(240,252,255,${.82*K})`;
+  c.beginPath();
+  c.moveTo(-W*.16,H*.34);
+  c.quadraticCurveTo(W*.3,-H*.5,W*.34,-H*.02);
+  c.quadraticCurveTo(W*.3,H*.3,W*.06,H*.3);
+  c.quadraticCurveTo(-W*.02,H*.12,-W*.16,H*.34);
+  c.closePath();c.fill();
+  c.strokeStyle=`rgba(140,214,242,${.75*K})`;c.lineWidth=1.6;
+  c.beginPath();
+  c.moveTo(-W*.34,H*.12);c.quadraticCurveTo(W*.06,-H*.26,W*.36,-H*.04);
+  c.stroke();
+  c.fillStyle=`rgba(255,255,255,${.7*K})`;
+  for(const [dx,dy,r] of [[W*.34,-H*.3,1.5],[W*.42,-H*.12,1.1],[W*.22,-H*.38,.9]]){c.beginPath();c.arc(dx,dy,r,0,Math.PI*2);c.fill();}
+  c.restore();
+  // 攻击瞬间的一圈涟漪
+  if(eye.nextAttackAt>battle.s.time){
+   const age=Math.max(0,Math.min(1,1-(eye.nextAttackAt-battle.s.time)/.4));
+   if(age<1){c.save();c.strokeStyle=`rgba(214,242,255,${(.5*(1-age)*K).toFixed(3)})`;c.lineWidth=1.4;c.beginPath();c.ellipse(p.x,p.y,z.tw*(.2+age*.4),z.tw*(.12+age*.26),0,0,Math.PI*2);c.stroke();c.restore();}
+  }
+ }
+ return true;
+}
+export function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
  drawCombatFx(c,point,z,battle,reduce);
  drawIceWind(c,z,battle,{reduceFx:reduce});
  for(const e of s.effects||[]){
