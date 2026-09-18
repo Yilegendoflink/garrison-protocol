@@ -3268,7 +3268,14 @@ function operatorSkillStart(battle,u,ctx){
   const dirs=[[1,0],[0,-1],[-1,0],[0,1]],dir=dirs[(u.dir||0)%4],range=Math.max(1,Math.round(Number(bb.projectile_range)||1.8));
   for(let n=range;n>=1;n--)if(ctx.teleportActor(battle,u,{x:u.x+dir[0]*n,y:u.y+dir[1]*n,source:u,mode:'anchor-move'}))break;
  }
- if(profile.branch==='funnel'&&has(text,/浮游单元/)){const count=Number(bb['attack@cnt']??bb.attack_cnt??0);u.floatUnits=Math.max(1,1+(Number.isFinite(count)?count:0));u.floatTarget=battle.targets(u)[0]?.uid??null;u.floatStartedAt=battle.s.time;u.floatOverdrive=has(text,/过载/);}
+ if(profile.branch==='funnel'&&has(text,/浮游单元/)){
+  // attack@cnt 是「+N」而不是总数：基础数量来自干员天赋黑板（键名 cnt / attack_cnt / attack@cnt）。
+  // 天赋显式给出 0 表示该干员平时没有浮游单元（荒芜拉普兰德），缺失时才默认 1。
+  const talentCounts=(profile.activeTalents||[]).map(t=>{const values=talentValues(t).raw||{};return values.cnt??values.attack_cnt??values['attack@cnt'];}).filter(v=>v!==undefined).map(Number).filter(Number.isFinite);
+  const baseCount=talentCounts.length?Math.max(...talentCounts):1;
+  const added=Number(bb['attack@cnt']??bb.attack_cnt??0);
+  const total=Math.max(1,baseCount+(Number.isFinite(added)?added:0));
+  u.floatUnits=total;u.floatTarget=battle.targets(u)[0]?.uid??null;u.floatStartedAt=battle.s.time;u.floatOverdrive=has(text,/过载/);if(profile.charId==='char_1038_whitw2'){u.whitwEyeCount=u.floatUnits;u.whitwEyeScatter=Number(bb['attack@projectile_move_speed'])||1;u.whitwEyeRadius=Number(bb['attack@range_radius'])||.9;u.whitwEyeSlow=Math.abs(Number(bb['attack@move_speed'])||.3);u.whitwEyeMagic=Number(bb['attack@magic_atk_scale'])||1;u.whitwEyeTimes=Number(bb['attack@times'])||1;u.whitwEyeFear=Number(bb['attack@fear'])||2;battle.s.whitwEyes=(battle.s.whitwEyes||[]).filter(e=>e.ownerUid!==u.uid||e.skillCount===(u.skillCount??0));}}
  const cost=costValueForText(config,text,'immediate'),immediateText=has(text,/立即获得|技能开启时立即获得/),genericGain=has(text,/获得.*费用|获得.*部署费用/);if(Number.isFinite(cost)&&(immediateText||genericGain)&&(!has(text,/下次攻击|每次|持续|逐渐|击杀|击倒|攻击时/ )||immediateText))battle.gainCost?.(cost);if(Number.isFinite(cost)&&has(text,/获得.*金币/))grantCoins(u,cost,config.coinCap);
  if(profile.charId==='char_1045_svash2'&&battle.adjustReserveCost){const eligible=v=>['WARRIOR','CASTER','SNIPER'].includes(battle.profile(v)?.profession);if(profile.skillIndex===0){const amount=Number(bb['svash2_s_1[deck].cost']);if(amount>0)battle.adjustReserveCost(-amount,{predicate:eligible});}else if(profile.skillIndex===1){const amount=Number(bb.cost);if(amount>0)battle.adjustReserveCost(-amount,{predicate:eligible});}else if(profile.skillIndex===2&&!u.svashCostSwapped){battle.swapReserveBaseCosts(eligible);u.svashCostSwapped=true;}}
  if(Number.isFinite(bb.hp_ratio)&&has(text,/生命/)&&has(text,/流失|损失/)){const base=/当前生命/.test(text)?u.hp:u.maxHp;ctx.applyLoss(battle,{target:u,source:u,amount:base*Math.abs(bb.hp_ratio),minHp:1,cause:'loss'});}
@@ -3485,10 +3492,10 @@ function periodicMods(battle,u,ctx){
  if(u.id==='char_4056_titi'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){u.titiSleepState??={};const bb=skillBB(battle,u);for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden)){const sleeping=e.statuses?.find(s=>s.kind==='sleep'&&s.source===u.uid),prev=u.titiSleepState[e.uid];if(sleeping){u.titiSleepState[e.uid]=prev??battle.s.time;}else if(prev!=null){const scale=Math.min(Number(bb.max_atk_scale)||3.7,Math.max(Number(bb.min_atk_scale)||1,1+(battle.s.time-prev)));ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*scale,type:'arts',cause:'skill'});const next=battle.s.enemies.filter(x=>x.hp>0&&x.uid!==e.uid&&!x.hidden&&Math.max(Math.abs(x.x-e.x),Math.abs(x.y-e.y))<=(Number(bb.range_radius)||1))[0];if(next)applyStatus(next,'sleep',Number(bb.sleep)||5,{source:u.uid,resistible:false});delete u.titiSleepState[e.uid];}}}
  if(u.id==='char_4193_lemuen'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2&&u.ammo>0&&battle.s.time>=(u.lemuenNextAt||0)){const bb=skillBB(battle,u);u.lemuenNextAt=battle.s.time+(Number(bb['attack@aim_interval'])||.5);const target=battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.untargetable).sort((a,b)=>a.uid-b.uid)[0];if(target){u.lemuenTargets??=[];u.lemuenTargets.push(target.uid);u.ammo=Math.max(0,u.ammo-1);}}
  if(u.id==='char_4193_lemuen'){u.lemuenWanted??={};for(const e of battle.s.enemies.filter(e=>e.hp>0&&(e.elite===true||e.leader===true))){if(!u.lemuenWanted[e.uid])u.lemuenWanted[e.uid]=battle.s.time;else if(battle.s.time-u.lemuenWanted[e.uid]>=8)e.wantedByLemuen=true;}}
- if(u.id==='char_1038_whitw2'&&battle.skillActive(u)&&u.floatUnits){const target=battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.invisible).sort((a,b)=>a.uid-b.uid)[0];if(target&&battle.s.time>=(u.whitwNextAt||0)){const bb=skillBB(battle,u);u.whitwNextAt=battle.s.time+1;for(let n=0;n<u.floatUnits;n++){ctx.dealDamage(battle,{source:u,target,amount:battle.stats(u).atk*(Number(bb['attack@times'])||Number(bb.attack_magic_atk_scale)||1),type:'arts',cause:'skill',skill:true});if(Number(bb['attack@prob'])>0&&battle.economy.random()<Number(bb['attack@prob']))applyStatus(target,'fear',Number(bb['attack@fear'])||1,{source:u.uid,resistible:false});}}}
+ // 荒芜拉普兰德「终幕·浩劫」由眼睛实体自行飞行与攻击，见 native-effects 的 tickWhitwEyes
  if(u.id==='char_4013_kjera'&&battle.skillActive(u)&&u.floatUnits){const target=battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.invisible).sort((a,b)=>a.uid-b.uid)[0];if(target&&battle.s.time>=(u.kjeraNextAt||0)){const bb=skillBB(battle,u);u.kjeraNextAt=battle.s.time+1;for(let n=0;n<u.floatUnits;n++){ctx.dealDamage(battle,{source:u,target,amount:battle.stats(u).atk,type:'arts',cause:'skill',skill:true});if(Number(bb['attack@prob'])>0&&battle.economy.random()<Number(bb['attack@prob']))applyStatus(target,'cold',Number(bb['attack@cold'])||2.5,{source:u.uid,resistible:false});}}}
  if(u.id==='char_4146_nymph'&&battle.s.time>=(u.nymphNextAt||0)){u.nymphNextAt=battle.s.time+1;const talent=activeTalents(battle,u).find(t=>t.name==='失魂'),tb=talent&&talentValues(talent);if(talent)for(const e of battle.s.enemies.filter(e=>e.hp>0&&e.elementBurstUntil>battle.s.time))ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(tb.element_atk_scale)||.4),type:'arts',cause:'dot'});}
- if(u.id==='char_1038_whitw2'){const talent=activeTalents(battle,u).find(t=>t.name==='头狼'),tb=talent&&talentValues(talent);if(talent&&battle.s.time-(u.deployAt||0)>=(Number(tb.interval)||20)*(Number(u.whitwTalentStage||0)+1)){u.whitwTalentStage=(u.whitwTalentStage||0)+1;if(u.whitwTalentStage>=3)u.floatUnits=(u.floatUnits||1)+1;}}
+ if(u.id==='char_1038_whitw2'){const talent=activeTalents(battle,u).find(t=>t.name==='头狼'),tb=talent&&talentValues(talent);if(talent&&battle.s.time-(u.deployAt||0)>=(Number(tb.interval)||20)*(Number(u.whitwTalentStage||0)+1)){u.whitwTalentStage=(u.whitwTalentStage||0)+1;if(u.whitwTalentStage>=3){u.floatUnits=(u.floatUnits||1)+1;if(u.id==='char_1038_whitw2')u.whitwEyeCount=u.floatUnits;}}}
  if(u.id==='char_1047_halo2'){u.haloStay??={};const talent=activeTalents(battle,u).find(t=>t.name==='能源解析'),tb=talent&&talentValues(talent);if(talent)for(const e of battle.s.enemies.filter(e=>e.hp>0&&battle.inside(u,e,true))){u.haloStay[e.uid]=(u.haloStay[e.uid]||0)+1/30;const scale=u.haloStay[e.uid]>=(Number(tb.interval)||7)?Number(tb.damage_scale_max)||1.14:Number(tb.damage_scale)||1.1;applyStatus(e,'fragile',1.1,{source:u.uid,value:scale,resistible:false});}}
  if(u.id==='char_427_vigil'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2&&u.pendingVigilCost){const p=u.pendingVigilCost;if(battle.s.time>=p.nextAt&&p.remaining>0){battle.gainCost?.(Math.min(p.perTick,p.remaining));p.remaining-=p.perTick;p.nextAt+=p.interval;}}
  if(u.id==='char_1045_svash2'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2&&u.svashCostRemaining>0&&battle.s.time+1e-9>=u.svashCostAt){battle.gainCost?.(1);u.svashCostRemaining-=1;u.svashCostAt+=Number(skillBB(battle,u)['svash2_s_3[cost].interval'])||2;}
@@ -3512,7 +3519,7 @@ const {applyStatus,permissions} = load("status.js");
 const {blackboard,resolveActiveTalents,nativeAttributes} = load("protocol.js");
 const {gainSp} = load("native-sp.js");
 const {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor,talentValues,grantCoins,coinCapFor,coinGainAtSkillStart,tokenCostFor} = load("native-operator-effects.js");
-const {FLIGHT_PRESETS,stepFlight,faceTarget,setFlightVelocity,distanceBetween,ensureFlight} = load("native-flight.js");
+const {FLIGHT_PRESETS,FLIGHT_MODES,stepFlight,faceTarget,setFlightVelocity,distanceBetween,ensureFlight,orbitStep,fanHeadings,randomPointInSquare} = load("native-flight.js");
 const BATTLE_SCHEMA_VERSION=1;
 const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','attached','aura','guard','barrier','lock','stat']);
 const ELEMENT_TYPES=new Set(['neural','burn','necrosis','corrosion','elemental']);
@@ -3923,9 +3930,10 @@ function tickLogic(battle,dt){
  tickAuras(battle);
  for(const u of battle.s.units){periodicMods(battle,u,ctxFor(battle));bondPeriodic(battle,u);}
  tickSummons(battle,dt);
+ tickWhitwEyes(battle,dt);
 }
 
-function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,log:(b,t,p)=>log(b,t,p)};}
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,spawnWhitwEyes,tickWhitwEyes,log:(b,t,p)=>log(b,t,p)};}
 
 function bondUnits(battle,id,{deployedOnly=false}={}){return battle.s.units.filter(u=>(!deployedOnly||u.deployed&&u.hp>0)&&battle.owns?.(u,id));}
 function yanUnits(battle){return battle.s.units.filter(u=>battle.economy.ownBonds(u.source).includes('yanShip'));}
@@ -4418,6 +4426,110 @@ function onOperatorExit(battle,u,reason){
 }
 
 const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
+// 荒芜拉普兰德「终幕·浩劫」的特种浮游单元（“风雪之眼”式自由飞行单位）。
+// 完整流程见 PRTS：散开 1.3s（初速0.1/加速1.9/上限2.0）→ 索敌飞向（初速2.0/加速1.0/上限4.0/转向1/6每帧）
+// → 抵达后持续攻击 → 目标消失则在目标为中心 1.5 边长正方形内随机重定位 → 无可选目标时绕本体左半圆巡航
+// （半径0.9、线速1.0、逆时针）→ 技能结束返回干员身边。全程连续坐标，不按格子移动。
+function spawnWhitwEyes(battle,owner,options={}){
+ if(!battle?.s||!owner)return [];
+ const count=Math.max(0,Math.trunc(Number(options.count)||0));
+ if(!count)return [];
+ const opts={
+  scatter:Number(options.scatter)||1,
+  radius:Number(options.radius)||.9,
+  moveSlow:Math.abs(Number(options.moveSlow)||.3),
+  magicScale:Number(options.magicScale)||1,
+  atkTimes:Number(options.atkTimes)||1,
+  fear:Number(options.fear)||2,
+ };
+ const eyes=battle.s.whitwEyes??=[];
+ const headings=fanHeadings(Number(owner.dir)||0,count);
+ for(let i=0;i<count;i++){
+  const eye={uid:battle.s.nextId++,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,x:owner.x,y:owner.y,skillCount:owner.skillCount??0,targetUid:null,nextAttackAt:0,retargetAt:0,startedAt:battle.s.time,...opts};
+  setFlightVelocity(eye,FLIGHT_PRESETS.litter.scatter.speed,headings[i]);
+  eye.travel.phase=FLIGHT_MODES.SCATTER;eye.travel.phaseLeft=FLIGHT_PRESETS.litter.scatterSeconds;
+  eyes.push(eye);
+ }
+ battle.emit('summon',{uid:owner.uid,x:owner.x,y:owner.y,type:'whitw-eye',count});
+ return eyes;
+}
+function whitwEyesOf(battle,owner){return (battle?.s?.whitwEyes||[]).filter(e=>e.ownerUid===owner.uid&&e.skillCount===(owner.skillCount??0));}
+function whitwEyeTarget(battle,eye,owner){
+ const candidates=enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable&&!e.invisible);
+ if(!candidates.length)return null;
+ const self=distanceBetween(eye,{x:eye.x,y:eye.y});
+ let best=null,bestKey=Infinity;
+ for(const e of candidates){
+  const selfDistance=Math.hypot(e.x-(eye.x??0),e.y-(eye.y??0));
+  const ownerDistance=Math.hypot(e.x-(owner.x??0),e.y-(owner.y??0));
+  const key=selfDistance+(ownerDistance<=selfDistance?0:1e3);
+  if(key<bestKey){bestKey=key;best=e;}
+ }
+ return best;
+}
+ function whitwEyeOptions(u){return {count:u.whitwEyeCount||0,scatter:u.whitwEyeScatter??1,radius:u.whitwEyeRadius??.9,moveSlow:u.whitwEyeSlow??.3,magicScale:u.whitwEyeMagic??1,atkTimes:u.whitwEyeTimes??1,fear:u.whitwEyeFear??2};}
+function tickWhitwEyes(battle,dt){
+ const eyes=battle?.s?.whitwEyes;
+ const unit=(battle?.s?.units||[]).find(u=>u.id==='char_1038_whitw2'&&u.deployed&&u.hp>0&&battle.skillActive(u));
+ if(unit){
+  const live=(eyes||[]).filter(e=>e.ownerUid===unit.uid&&e.skillCount===(unit.skillCount??0));
+  if(!live.length)spawnWhitwEyes(battle,unit,whitwEyeOptions(unit));
+ }
+ if(!eyes?.length)return;
+ const now=battle.s.time;
+ for(const eye of eyes){
+  const owner=getActor(battle.s,eye.ownerUid);
+  if(!owner){eye.dead=true;continue;}
+  const active=(owner.skillCount??0)===eye.skillCount&&battle.skillActive(owner);
+  eye.ownerX=owner.x;eye.ownerY=owner.y;
+  if(!active){
+   // 技能结束：返回干员身边，抵达后消失
+   const arrival=stepFlight(eye,dt,{accel:FLIGHT_PRESETS.litter.chase.accel,maxSpeed:FLIGHT_PRESETS.litter.chase.maxSpeed,destination:owner});
+   if(arrival.arrived)eye.dead=true;
+   continue;
+  }
+  // 周围敌人减速 + 每秒法术伤害（不叠加）
+  const radius=eye.radius;
+  for(const e of enemyActors(battle.s)){
+   if(Math.hypot(e.x-eye.x,e.y-eye.y)>radius)continue;
+   applyStatus(e,'sluggish',.6,{source:owner.uid,value:-eye.moveSlow,resistible:false});
+   eye.nextAuraAt??=now;
+   if(now+1e-9>=eye.nextAuraAt)dealDamage(battle,{source:owner,target:e,amount:battle.stats(owner).atk*eye.magicScale,type:'arts',cause:'skill',skill:true});
+  }
+  if(now+1e-9>=eye.nextAuraAt)eye.nextAuraAt=now+1;
+  const travel=eye.travel;
+  if(travel.phase===FLIGHT_MODES.SCATTER){
+   stepFlight(eye,dt,{accel:FLIGHT_PRESETS.litter.scatter.accel,maxSpeed:FLIGHT_PRESETS.litter.scatter.maxSpeed,bounds:flightBounds(battle)});
+   travel.phaseLeft-=dt;
+   if(travel.phaseLeft<=0){travel.phase=FLIGHT_MODES.CHASE;travel.phaseLeft=0;}
+   continue;
+  }
+  let target=eye.targetUid!=null?getActor(battle.s,eye.targetUid):null;
+  if(target&&(target.hp<=0||target.hidden||target.untargetable))target=null;
+  if(!target&&now+1e-9>=eye.retargetAt){target=whitwEyeTarget(battle,eye,owner);eye.targetUid=target?.uid??null;eye.retargetAt=now+1;}
+  if(!target){
+   orbitStep(eye,owner,dt,{radius:.9,lineSpeed:1,direction:1});
+   continue;
+  }
+  const beforeX=eye.x,beforeY=eye.y;
+  faceTarget(eye,target,{turnPerFrame:FLIGHT_PRESETS.litter.chase.turnPerFrame,dt});
+  const arrival=stepFlight(eye,dt,{accel:FLIGHT_PRESETS.litter.chase.accel,maxSpeed:FLIGHT_PRESETS.litter.chase.maxSpeed,destination:target,bounds:flightBounds(battle),arrive:FLIGHT_PRESETS.litter.arrive});
+  // 目标在地图边界外时会被边界夹住，此时按“已抵达”处理，避免永远追不上而不攻击
+  const pinned=Math.hypot(eye.x-beforeX,eye.y-beforeY)<1e-6&&distanceBetween(eye,target)>FLIGHT_PRESETS.litter.arrive;
+  if((arrival.arrived||pinned)&&now+1e-9>=eye.nextAttackAt){
+   eye.nextAttackAt=now+Math.max(.1,1/(eye.atkTimes||1));
+   dealDamage(battle,{source:owner,target,amount:battle.stats(owner).atk*(eye.atkTimes||1),type:'arts',cause:'skill',skill:true});
+   applyStatus(target,'fear',eye.fear,{source:owner.uid,resistible:false});
+  }
+  if(target.hp<=0){
+   const spot=randomPointInSquare(target,.75,()=>battle.economy.random());
+   eye.x=spot.x;eye.y=spot.y;eye.targetUid=null;eye.retargetAt=0;
+   setFlightVelocity(eye,FLIGHT_PRESETS.litter.chase.speed,travel.heading);
+  }
+ }
+ for(const eye of eyes)if(eye.dead)log(battle,'exit',{uid:eye.uid,reason:'skill-end',kind:'summon'});
+ battle.s.whitwEyes=eyes.filter(e=>!e.dead);
+}
 function spawnSummon(battle,owner,spec){
  const tokenId=spec.tokenId||TOKEN_IDS[spec.type]||('synthetic_'+spec.type);let entity=battle.data.tokens?.[tokenId];if(!entity&&spec.synthetic){const attributes={maxHp:Math.max(1,owner.maxHp*.2),atk:Math.max(1,battle.stats(owner).atk*.3),def:0,magicResistance:0,blockCnt:0,baseAttackTime:1,attackSpeed:100,cost:0};entity={name:spec.name||spec.type,phases:[{maxLevel:1,rangeId:null,attributesKeyFrames:[{level:1,data:attributes}]}],skillRefs:[]};}
  if(!entity)throw Error('缺少固定召唤物数据 '+spec.type);
@@ -4496,7 +4608,7 @@ function blockingActors(battle){
  return attackableAllies(battle.s).filter(u=>u.canBlock!==false&&(u.kind!=='summon'||u.canBlock));
 }
 
-return {BATTLE_SCHEMA_VERSION,EFFECT_KINDS,ELEMENT_TYPES,emptySettle,ensureBattleShape,migrateBattle,validateBattle,getActor,operators,alliedActors,enemyActors,attackableAllies,lifeKey,chebyshev,activeTalentsOf,operatorSkillConfig,enqueue,drainQueue,commitExit,reviveActor,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addDamageRedirect,queueDelayedDamage,addEffect,tickLogic,effectStatMods,teleportActor,moveActor,dispatch,grantShield,spawnSummon,newAttackId,blockingActors};
+return {BATTLE_SCHEMA_VERSION,EFFECT_KINDS,ELEMENT_TYPES,emptySettle,ensureBattleShape,migrateBattle,validateBattle,getActor,operators,alliedActors,enemyActors,attackableAllies,lifeKey,chebyshev,activeTalentsOf,operatorSkillConfig,enqueue,drainQueue,commitExit,reviveActor,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addDamageRedirect,queueDelayedDamage,addEffect,tickLogic,effectStatMods,teleportActor,moveActor,dispatch,grantShield,spawnWhitwEyes,tickWhitwEyes,spawnSummon,newAttackId,blockingActors};
 },
 "native-battle.js": function(load) {
 const {branchBehavior,branchTrait} = load("native-branches.js");
@@ -6717,7 +6829,7 @@ function draw(){
   c.fillStyle='#e9fff7';c.font='10px sans-serif';c.textAlign='center';c.fillText(s.name||s.type,p.x,p.y-size*.65);
   });
  }
- if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),im=img(e.id),size=z.tw*.55;if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);drawFrostOverlay(c,e,{x:p.x-20,y:p.y-20,w:40,h:40},{reduceFx:state.reduceFx});}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{drawElementRing(c,p.x,p.y-(e.flying?15:0),e,size);drawFrostOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx});c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);});}if(g.battle.s.summons?.some(s=>s.type==='svash2-float'&&s.svashPursuit&&s.svashTargetUid===e.uid)){c.fillStyle='#ef566b';c.font='bold 14px sans-serif';c.textAlign='center';c.fillText('狼眼',p.x,p.y-size*.8);}}
+ if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),im=img(e.id),size=z.tw*.55;if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);drawFrostOverlay(c,e,{x:p.x-20,y:p.y-20,w:40,h:40},{reduceFx:state.reduceFx});}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{drawElementRing(c,p.x,p.y-(e.flying?15:0),e,size);drawFrostOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx});c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);});}if(g.battle.s.summons?.some(s=>s.type==='svash2-float'&&s.svashPursuit&&s.svashTargetUid===e.uid)){c.fillStyle='#ef566b';c.font='bold 14px sans-serif';c.textAlign='center';c.fillText('狼眼',p.x,p.y-size*.8);}if(g.battle.s.whitwEyes?.some(x=>x.targetUid===e.uid)){const y=p.y-size*.8-(e.flying?15:0);c.save();c.strokeStyle='#ff4f5e';c.fillStyle='#ff4f5e';c.lineWidth=2;c.beginPath();c.ellipse(p.x,y,7,4.5,0,0,Math.PI*2);c.stroke();c.beginPath();c.arc(p.x,y,2,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(p.x-11,y);c.lineTo(p.x-8,y);c.moveTo(p.x+8,y);c.lineTo(p.x+11,y);c.stroke();c.restore();}}
  if(g.battle&&g.s.phase==='battle')drawFx(c,point,z,g.battle,{reduceFx:state.reduceFx,formatText:eggOn()?rewrite325Text:null});
   if(drag?.moved&&overCanvas(drag.x,drag.y)){const cell=cellAt(drag.x,drag.y);if(g.map.grid[cell.y]?.[cell.x]){const can=drag.kind==='summon-card'?g.canDeploySummonCard(drag.uid,cell.x,cell.y):g.canDeploy(drag.uid,cell.x,cell.y);c.strokeStyle=can?'#78f1bd':'#f88c78';c.lineWidth=3;c.strokeRect(z.ox+cell.x*z.tw+2,z.oy+cell.y*z.th+2,z.tw-4,z.th-4);}}
  if(state.preview){const p=point(state.preview.x,state.preview.y);c.fillStyle='#08151195';c.fillRect(0,0,z.r.width,z.r.height);c.strokeStyle='#70e4c1';c.lineWidth=2;c.beginPath();c.moveTo(p.x,p.y-62);c.lineTo(p.x+62,p.y);c.lineTo(p.x,p.y+62);c.lineTo(p.x-62,p.y);c.closePath();c.stroke();c.fillStyle='#e9fff7';c.font='bold 32px sans-serif';c.fillText(state.preview.dir===null?'✥':['→','↓','←','↑'][state.preview.dir],p.x,p.y+10);}

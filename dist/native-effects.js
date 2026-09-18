@@ -3,7 +3,7 @@ import {applyStatus,permissions} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes} from './protocol.js';
 import {gainSp} from './native-sp.js';
 import {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor,talentValues,grantCoins,coinCapFor,coinGainAtSkillStart,tokenCostFor} from './native-operator-effects.js';
-import {FLIGHT_PRESETS,stepFlight,faceTarget,setFlightVelocity,distanceBetween,ensureFlight} from './native-flight.js';
+import {FLIGHT_PRESETS,FLIGHT_MODES,stepFlight,faceTarget,setFlightVelocity,distanceBetween,ensureFlight,orbitStep,fanHeadings,randomPointInSquare} from './native-flight.js';
 
 export const BATTLE_SCHEMA_VERSION=1;
 export const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','attached','aura','guard','barrier','lock','stat']);
@@ -415,9 +415,10 @@ export function tickLogic(battle,dt){
  tickAuras(battle);
  for(const u of battle.s.units){periodicMods(battle,u,ctxFor(battle));bondPeriodic(battle,u);}
  tickSummons(battle,dt);
+ tickWhitwEyes(battle,dt);
 }
 
-function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,log:(b,t,p)=>log(b,t,p)};}
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,spawnWhitwEyes,tickWhitwEyes,log:(b,t,p)=>log(b,t,p)};}
 
 function bondUnits(battle,id,{deployedOnly=false}={}){return battle.s.units.filter(u=>(!deployedOnly||u.deployed&&u.hp>0)&&battle.owns?.(u,id));}
 function yanUnits(battle){return battle.s.units.filter(u=>battle.economy.ownBonds(u.source).includes('yanShip'));}
@@ -910,6 +911,110 @@ function onOperatorExit(battle,u,reason){
 }
 
 const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
+// 荒芜拉普兰德「终幕·浩劫」的特种浮游单元（“风雪之眼”式自由飞行单位）。
+// 完整流程见 PRTS：散开 1.3s（初速0.1/加速1.9/上限2.0）→ 索敌飞向（初速2.0/加速1.0/上限4.0/转向1/6每帧）
+// → 抵达后持续攻击 → 目标消失则在目标为中心 1.5 边长正方形内随机重定位 → 无可选目标时绕本体左半圆巡航
+// （半径0.9、线速1.0、逆时针）→ 技能结束返回干员身边。全程连续坐标，不按格子移动。
+export function spawnWhitwEyes(battle,owner,options={}){
+ if(!battle?.s||!owner)return [];
+ const count=Math.max(0,Math.trunc(Number(options.count)||0));
+ if(!count)return [];
+ const opts={
+  scatter:Number(options.scatter)||1,
+  radius:Number(options.radius)||.9,
+  moveSlow:Math.abs(Number(options.moveSlow)||.3),
+  magicScale:Number(options.magicScale)||1,
+  atkTimes:Number(options.atkTimes)||1,
+  fear:Number(options.fear)||2,
+ };
+ const eyes=battle.s.whitwEyes??=[];
+ const headings=fanHeadings(Number(owner.dir)||0,count);
+ for(let i=0;i<count;i++){
+  const eye={uid:battle.s.nextId++,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,x:owner.x,y:owner.y,skillCount:owner.skillCount??0,targetUid:null,nextAttackAt:0,retargetAt:0,startedAt:battle.s.time,...opts};
+  setFlightVelocity(eye,FLIGHT_PRESETS.litter.scatter.speed,headings[i]);
+  eye.travel.phase=FLIGHT_MODES.SCATTER;eye.travel.phaseLeft=FLIGHT_PRESETS.litter.scatterSeconds;
+  eyes.push(eye);
+ }
+ battle.emit('summon',{uid:owner.uid,x:owner.x,y:owner.y,type:'whitw-eye',count});
+ return eyes;
+}
+function whitwEyesOf(battle,owner){return (battle?.s?.whitwEyes||[]).filter(e=>e.ownerUid===owner.uid&&e.skillCount===(owner.skillCount??0));}
+function whitwEyeTarget(battle,eye,owner){
+ const candidates=enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable&&!e.invisible);
+ if(!candidates.length)return null;
+ const self=distanceBetween(eye,{x:eye.x,y:eye.y});
+ let best=null,bestKey=Infinity;
+ for(const e of candidates){
+  const selfDistance=Math.hypot(e.x-(eye.x??0),e.y-(eye.y??0));
+  const ownerDistance=Math.hypot(e.x-(owner.x??0),e.y-(owner.y??0));
+  const key=selfDistance+(ownerDistance<=selfDistance?0:1e3);
+  if(key<bestKey){bestKey=key;best=e;}
+ }
+ return best;
+}
+ function whitwEyeOptions(u){return {count:u.whitwEyeCount||0,scatter:u.whitwEyeScatter??1,radius:u.whitwEyeRadius??.9,moveSlow:u.whitwEyeSlow??.3,magicScale:u.whitwEyeMagic??1,atkTimes:u.whitwEyeTimes??1,fear:u.whitwEyeFear??2};}
+export function tickWhitwEyes(battle,dt){
+ const eyes=battle?.s?.whitwEyes;
+ const unit=(battle?.s?.units||[]).find(u=>u.id==='char_1038_whitw2'&&u.deployed&&u.hp>0&&battle.skillActive(u));
+ if(unit){
+  const live=(eyes||[]).filter(e=>e.ownerUid===unit.uid&&e.skillCount===(unit.skillCount??0));
+  if(!live.length)spawnWhitwEyes(battle,unit,whitwEyeOptions(unit));
+ }
+ if(!eyes?.length)return;
+ const now=battle.s.time;
+ for(const eye of eyes){
+  const owner=getActor(battle.s,eye.ownerUid);
+  if(!owner){eye.dead=true;continue;}
+  const active=(owner.skillCount??0)===eye.skillCount&&battle.skillActive(owner);
+  eye.ownerX=owner.x;eye.ownerY=owner.y;
+  if(!active){
+   // 技能结束：返回干员身边，抵达后消失
+   const arrival=stepFlight(eye,dt,{accel:FLIGHT_PRESETS.litter.chase.accel,maxSpeed:FLIGHT_PRESETS.litter.chase.maxSpeed,destination:owner});
+   if(arrival.arrived)eye.dead=true;
+   continue;
+  }
+  // 周围敌人减速 + 每秒法术伤害（不叠加）
+  const radius=eye.radius;
+  for(const e of enemyActors(battle.s)){
+   if(Math.hypot(e.x-eye.x,e.y-eye.y)>radius)continue;
+   applyStatus(e,'sluggish',.6,{source:owner.uid,value:-eye.moveSlow,resistible:false});
+   eye.nextAuraAt??=now;
+   if(now+1e-9>=eye.nextAuraAt)dealDamage(battle,{source:owner,target:e,amount:battle.stats(owner).atk*eye.magicScale,type:'arts',cause:'skill',skill:true});
+  }
+  if(now+1e-9>=eye.nextAuraAt)eye.nextAuraAt=now+1;
+  const travel=eye.travel;
+  if(travel.phase===FLIGHT_MODES.SCATTER){
+   stepFlight(eye,dt,{accel:FLIGHT_PRESETS.litter.scatter.accel,maxSpeed:FLIGHT_PRESETS.litter.scatter.maxSpeed,bounds:flightBounds(battle)});
+   travel.phaseLeft-=dt;
+   if(travel.phaseLeft<=0){travel.phase=FLIGHT_MODES.CHASE;travel.phaseLeft=0;}
+   continue;
+  }
+  let target=eye.targetUid!=null?getActor(battle.s,eye.targetUid):null;
+  if(target&&(target.hp<=0||target.hidden||target.untargetable))target=null;
+  if(!target&&now+1e-9>=eye.retargetAt){target=whitwEyeTarget(battle,eye,owner);eye.targetUid=target?.uid??null;eye.retargetAt=now+1;}
+  if(!target){
+   orbitStep(eye,owner,dt,{radius:.9,lineSpeed:1,direction:1});
+   continue;
+  }
+  const beforeX=eye.x,beforeY=eye.y;
+  faceTarget(eye,target,{turnPerFrame:FLIGHT_PRESETS.litter.chase.turnPerFrame,dt});
+  const arrival=stepFlight(eye,dt,{accel:FLIGHT_PRESETS.litter.chase.accel,maxSpeed:FLIGHT_PRESETS.litter.chase.maxSpeed,destination:target,bounds:flightBounds(battle),arrive:FLIGHT_PRESETS.litter.arrive});
+  // 目标在地图边界外时会被边界夹住，此时按“已抵达”处理，避免永远追不上而不攻击
+  const pinned=Math.hypot(eye.x-beforeX,eye.y-beforeY)<1e-6&&distanceBetween(eye,target)>FLIGHT_PRESETS.litter.arrive;
+  if((arrival.arrived||pinned)&&now+1e-9>=eye.nextAttackAt){
+   eye.nextAttackAt=now+Math.max(.1,1/(eye.atkTimes||1));
+   dealDamage(battle,{source:owner,target,amount:battle.stats(owner).atk*(eye.atkTimes||1),type:'arts',cause:'skill',skill:true});
+   applyStatus(target,'fear',eye.fear,{source:owner.uid,resistible:false});
+  }
+  if(target.hp<=0){
+   const spot=randomPointInSquare(target,.75,()=>battle.economy.random());
+   eye.x=spot.x;eye.y=spot.y;eye.targetUid=null;eye.retargetAt=0;
+   setFlightVelocity(eye,FLIGHT_PRESETS.litter.chase.speed,travel.heading);
+  }
+ }
+ for(const eye of eyes)if(eye.dead)log(battle,'exit',{uid:eye.uid,reason:'skill-end',kind:'summon'});
+ battle.s.whitwEyes=eyes.filter(e=>!e.dead);
+}
 export function spawnSummon(battle,owner,spec){
  const tokenId=spec.tokenId||TOKEN_IDS[spec.type]||('synthetic_'+spec.type);let entity=battle.data.tokens?.[tokenId];if(!entity&&spec.synthetic){const attributes={maxHp:Math.max(1,owner.maxHp*.2),atk:Math.max(1,battle.stats(owner).atk*.3),def:0,magicResistance:0,blockCnt:0,baseAttackTime:1,attackSpeed:100,cost:0};entity={name:spec.name||spec.type,phases:[{maxLevel:1,rangeId:null,attributesKeyFrames:[{level:1,data:attributes}]}],skillRefs:[]};}
  if(!entity)throw Error('缺少固定召唤物数据 '+spec.type);
