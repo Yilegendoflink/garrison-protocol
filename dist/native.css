@@ -20,12 +20,10 @@
 .native-dossier-body{overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 /* 海猫模式：资金显示为彩色 ALL */
 .native-funds-all{background-image:linear-gradient(90deg,#ff6b6b,#ffd166,#7af0bd,#63dce4,#b28dff,#ff8fd0);background-clip:text;-webkit-background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;font-weight:800;letter-spacing:.08em}
-/* 装备上的销毁按钮：手牌卡片与干员装备位共用 */
-.native-item-destroy{position:absolute;top:2px;right:2px;z-index:2;width:18px;height:18px;padding:0;line-height:1;font-size:13px;border-radius:50%;border:1px solid #a8606a;background:#2b1418e0;color:#ffb9c2;display:grid;place-content:center;cursor:pointer}
-.native-item-destroy:hover{border-color:#ff9aa8;background:#54212a;color:#fff}
+/* 装备位可以点开道具详情；销毁按钮统一在道具详情里（.native-dossier-acts 的方形按钮） */
 .native-bench>[data-act="item"]{position:relative}
-.native-equipment-slot.filled{position:relative;padding-right:22px}
-.native-equipment-slot .native-item-destroy{top:3px;right:3px}
+button.native-equipment-slot{font:inherit;text-align:left;white-space:normal;color:#c4dcd2}
+button.native-equipment-slot:hover{border-color:#78e6bd;background:#17362d}
 /* 海猫模式的库存面板 */
 .native-stock{max-height:52vh;overflow:auto;margin-top:6px;padding-right:4px}
 .native-stock-tier{margin:12px 0 6px!important;color:#8eb4a7}
