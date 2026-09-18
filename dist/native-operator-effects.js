@@ -58,6 +58,35 @@ function moduleRows(profile){
  }
  return rows;
 }
+// 区域/领域类效果的视觉分类：形状与色调。键为 effect 的 talentOrSkillId 前缀。
+// 逻辑层（zone 的 x/y/radius/trackArea/values）已经是权威数据，这里只补"怎么画"。
+const ZONE_VISUALS={
+ 'pasngr-s3':{shape:'circle',tone:'thunder'},      // 辉煌裂片：目标位置雷暴
+ 'blkkgt-s3':{shape:'circle',tone:'blade'},        // 归于宁静：以自身为中心的斩击领域
+ 'saria-s3':{shape:'circle',tone:'gold'},          // 钙质化：金色领域，治疗+易伤
+ 'yu-firewall':{shape:'self',tone:'holy'},         // 全场结界
+ 'glady-s3':{shape:'circle',tone:'water'},         // 涌潮悲歌：吸附水涡
+ 'cetsyr-dust':{shape:'circle',tone:'sand'},       // 沙尘
+ 'etlchi-s1':{shape:'circle',tone:'blade'},        // 刀光领域
+ 'blaze2-s1':{shape:'circle',tone:'burn'},         // 灼燃领域
+ 'sntlla-s2':{shape:'circle',tone:'frost'},        // 寒冷领域
+ 'sbell2-s2':{shape:'circle',tone:'frost'},        // 睡眠+寒冷领域
+ 'ines-shadow':{shape:'circle',tone:'shadow'},     // 影子分身
+ 'qiubai-s1':{shape:'circle',tone:'arts'},         // 束缚领域
+ 'agoat2-s1':{shape:'circle',tone:'heal'},         // 元素回复光环
+ 'mostma-s2':{shape:'self',tone:'time'},           // 荒时之锁：自身范围时停
+ 'horn-light':{shape:'circle',tone:'gold'}         // 照明弹
+};
+export function zoneVisual(talentOrSkillId,values={}){
+ const id=String(talentOrSkillId||'');
+ const hit=Object.keys(ZONE_VISUALS).find(k=>id.startsWith(k));
+ if(hit)return ZONE_VISUALS[hit];
+ if(values.elementRegen!=null)return {shape:'circle',tone:'heal'};
+ if(values.hot!=null)return {shape:'circle',tone:'heal'};
+ if(values.reveal)return {shape:'circle',tone:'gold'};
+ if(values.dot)return {shape:'circle',tone:values.type==='arts'?'arts':'blade'};
+ return {shape:'circle',tone:'arts'};
+}
 export function moduleCostData(profile){
  let runtimeCost=0,runtimeCostActive=false,refundRatio=null,refundIgnoresCap=false,chargerKillCost=null,merchantCost=null,merchantInterval=null;
  for(const row of moduleRows(profile)){

@@ -3093,6 +3093,35 @@ function moduleRows(profile){
  }
  return rows;
 }
+// 区域/领域类效果的视觉分类：形状与色调。键为 effect 的 talentOrSkillId 前缀。
+// 逻辑层（zone 的 x/y/radius/trackArea/values）已经是权威数据，这里只补"怎么画"。
+const ZONE_VISUALS={
+ 'pasngr-s3':{shape:'circle',tone:'thunder'},      // 辉煌裂片：目标位置雷暴
+ 'blkkgt-s3':{shape:'circle',tone:'blade'},        // 归于宁静：以自身为中心的斩击领域
+ 'saria-s3':{shape:'circle',tone:'gold'},          // 钙质化：金色领域，治疗+易伤
+ 'yu-firewall':{shape:'self',tone:'holy'},         // 全场结界
+ 'glady-s3':{shape:'circle',tone:'water'},         // 涌潮悲歌：吸附水涡
+ 'cetsyr-dust':{shape:'circle',tone:'sand'},       // 沙尘
+ 'etlchi-s1':{shape:'circle',tone:'blade'},        // 刀光领域
+ 'blaze2-s1':{shape:'circle',tone:'burn'},         // 灼燃领域
+ 'sntlla-s2':{shape:'circle',tone:'frost'},        // 寒冷领域
+ 'sbell2-s2':{shape:'circle',tone:'frost'},        // 睡眠+寒冷领域
+ 'ines-shadow':{shape:'circle',tone:'shadow'},     // 影子分身
+ 'qiubai-s1':{shape:'circle',tone:'arts'},         // 束缚领域
+ 'agoat2-s1':{shape:'circle',tone:'heal'},         // 元素回复光环
+ 'mostma-s2':{shape:'self',tone:'time'},           // 荒时之锁：自身范围时停
+ 'horn-light':{shape:'circle',tone:'gold'}         // 照明弹
+};
+function zoneVisual(talentOrSkillId,values={}){
+ const id=String(talentOrSkillId||'');
+ const hit=Object.keys(ZONE_VISUALS).find(k=>id.startsWith(k));
+ if(hit)return ZONE_VISUALS[hit];
+ if(values.elementRegen!=null)return {shape:'circle',tone:'heal'};
+ if(values.hot!=null)return {shape:'circle',tone:'heal'};
+ if(values.reveal)return {shape:'circle',tone:'gold'};
+ if(values.dot)return {shape:'circle',tone:values.type==='arts'?'arts':'blade'};
+ return {shape:'circle',tone:'arts'};
+}
 function moduleCostData(profile){
  let runtimeCost=0,runtimeCostActive=false,refundRatio=null,refundIgnoresCap=false,chargerKillCost=null,merchantCost=null,merchantInterval=null;
  for(const row of moduleRows(profile)){
@@ -3548,7 +3577,7 @@ function periodicMods(battle,u,ctx){
  }
 }
 
-return {blackboardValues,talentValues,coinCapFor,grantCoins,spendCoins,coinGainAtSkillStart,moduleCostData,tokenCostFor,targetFilter,operatorRegistry,skillConfig,costValue,textCostValue,costValueForText,statMods,attackModifier,attackPenetration,damageReductionFor,operatorSkillStart,onEvent,periodicMods};
+return {blackboardValues,talentValues,coinCapFor,grantCoins,spendCoins,coinGainAtSkillStart,zoneVisual,moduleCostData,tokenCostFor,targetFilter,operatorRegistry,skillConfig,costValue,textCostValue,costValueForText,statMods,attackModifier,attackPenetration,damageReductionFor,operatorSkillStart,onEvent,periodicMods};
 },
 "native-effects.js": function(load) {
 const {applyDamage,recoverHP,damage} = load("combat.js");
@@ -5525,11 +5554,88 @@ function drawAuraField(c,point,z,battle,{reduceFx=false}={}){
  }
  return drew;
 }
+// ── 区域／领域类效果统一绘制 ─────────────────────────────────────────
+// 逻辑层的 s.logicEffects（kind:'zone'）本来就带 x/y/radius/trackArea/values，
+// 之前完全没画；这里按 zoneVisual 的色调与形状统一渲染，雷暴、领域、光环一次覆盖。
+const ZONE_TONE={thunder:['#bcd8ff','#7fb2ff'],blade:['#ffe9c2','#ffb877'],gold:['#ffe6a4','#f0c774'],
+ holy:['#fff4d6','#f7cf8f'],water:['#bfe8ff','#79c4ee'],sand:['#f0dcae','#c9a86a'],
+ burn:['#ffc79a','#ff8f57'],frost:['#d8f1ff','#8fd0ee'],shadow:['#d9c7ff','#9d84d8'],
+ arts:['#dcc9ff','#a98ce0'],heal:['#c8f6dc','#7fd8a8'],time:['#e6e0ff','#a9a2e8']};
+function drawZones(c,point,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ const list=(s.logicEffects||[]).filter(fx=>fx.kind==='zone'&&(fx.endsAt==null||fx.endsAt>s.time));
+ if(!list.length)return false;
+ for(const fx of list){
+  const visual=battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
+  const [light,deep]=ZONE_TONE[visual.tone]||ZONE_TONE.arts;
+  const radius=Number.isFinite(fx.radius)?fx.radius:1;
+  // 剩余时间不足 1.5 秒时开始闪烁提示即将结束
+  const remain=fx.endsAt==null?null:fx.endsAt-s.time;
+  const blink=remain==null?1:(remain<1.5?(Math.sin(s.time*14)>0?1:.35):1);
+  const pulse=reduceFx?0:(.5+.5*Math.sin(s.time*2.4));
+  const alpha=(.1+.07*pulse)*blink*(reduceFx?.6:1);
+  const cells=[];
+  if(visual.shape==='self'){
+   for(const u of s.units||[])if(u.uid===fx.sourceUid&&u.deployed)cells.push({x:u.x,y:u.y});
+  }else{
+   for(let dy=-Math.ceil(radius);dy<=Math.ceil(radius);dy++)for(let dx=-Math.ceil(radius);dx<=Math.ceil(radius);dx++){
+    if(visual.shape==='line'){
+     // 斜线扫过的形状：沿对角线方向铺开，宽度 1 格
+     if(Math.abs(dx)!==Math.abs(dy))continue;
+     if(Math.abs(dx)>radius)continue;
+    }else if(Math.max(Math.abs(dx),Math.abs(dy))>radius)continue;
+    cells.push({x:(fx.x??0)+dx,y:(fx.y??0)+dy});
+   }
+  }
+  c.save();c.globalCompositeOperation='lighter';
+  for(const cell of cells){
+   const p=point(cell.x,cell.y);
+   c.fillStyle=`${light}${Math.round(alpha*255).toString(16).padStart(2,'0')}`;
+   c.fillRect(p.x-z.tw/2,p.y-z.th/2,z.tw,z.th);
+   c.strokeStyle=`${deep}${Math.round(Math.min(1,alpha*2.4)*255).toString(16).padStart(2,'0')}`;
+   c.lineWidth=1.2;c.strokeRect(p.x-z.tw/2+.5,p.y-z.th/2+.5,z.tw-1,z.th-1);
+  }
+  // 周期结算的瞬间补一圈脉冲，让"每 N 秒结算一次"看得见
+  const interval=Number(fx.interval)||0;
+  if(interval>0&&!reduceFx&&fx.nextAt!=null){
+   const since=Math.max(0,Math.min(1,(interval-(fx.nextAt-s.time))/Math.max(.001,interval)));
+   if(fx.nextAt-s.time<=.25){const k=1-Math.max(0,(fx.nextAt-s.time))/.25;
+    for(const cell of cells){const p=point(cell.x,cell.y);c.strokeStyle=`${deep}${Math.round(.55*(1-k)*255).toString(16).padStart(2,'0')}`;c.lineWidth=2;c.beginPath();c.ellipse(p.x,p.y,z.tw*.5*(1+k*.4),z.th*.5*(1+k*.4),0,0,Math.PI*2);c.stroke();}}
+  }
+  c.restore();
+ }
+ return true;
+}
+// 瞬时多目标（辉煌裂片、御敌的锋锐等）：技能瞬间打中多个目标，走的是 dealDamage 而不是挥砍，
+// 没有 strike 事件可画。这里用「开技后短时间内落在技能范围内的 hit 事件」连成扇面。
+function drawSkillFan(c,point,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ let drew=false;
+ for(const start of recent(s.events,s.time,'skill-start',.3)){
+  const info=rangeCells(point,z,battle,start.uid);
+  if(!info)continue;
+  const hits=recent(s.events,s.time,'hit',.3).filter(e=>e.t>=start.t&&e.uid!==start.uid&&e.x!=null&&e.y!=null);
+  if(hits.length<2)continue;
+  const origin=point(info.unit.x,info.unit.y);
+  const toward=Math.atan2((hits[0].y)-(start.y??hits[0].y),(hits[0].x)-(start.x??hits[0].x));
+  const k=Math.max(0,Math.min(1,(s.time-start.t)/.3)),fade=(1-k)*(reduceFx?.5:.85);
+  const reach=Math.max(info.geo.reachX,info.geo.reachY)*z.tw*.72+z.tw*.3;
+  c.save();c.globalCompositeOperation='lighter';c.translate(origin.x,origin.y);
+  c.strokeStyle='rgba(255,240,206,'+fade.toFixed(3)+')';c.lineWidth=2.4;c.lineCap='round';
+  c.beginPath();c.arc(0,0,reach,toward-.55,toward+.55);c.stroke();
+  c.strokeStyle='rgba(255,255,255,'+(fade*.6).toFixed(3)+')';c.lineWidth=1.4;
+  for(const h of hits){const b=point(h.x,h.y);c.beginPath();c.moveTo(0,0);c.lineTo(b.x-origin.x,b.y-origin.y);c.stroke();}
+  c.restore();drew=true;
+ }
+ return drew;
+}
 function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
  drawCombatFx(c,point,z,battle,reduce);
+ drawZones(c,point,z,battle,{reduceFx:reduce});
  drawAuraField(c,point,z,battle,{reduceFx:reduce});
  drawSelfBurst(c,point,z,battle,{reduceFx:reduce});
  drawWideSweep(c,point,z,battle,{reduceFx:reduce});
+ drawSkillFan(c,point,z,battle,{reduceFx:reduce});
  drawIceWind(c,z,battle,{reduceFx:reduce});
  for(const e of s.effects||[]){
   if(e.type!=='healing'&&e.type!=='evade'&&e.type!=='block')continue;
@@ -5594,7 +5700,7 @@ function drawDownRing(c,p,u,size,opts={}){
  c.fillStyle='#e9fff7';c.font='11px sans-serif';c.textAlign='center';c.fillText((opts.formatNumber?opts.formatNumber(n):n)+'s',p.x,p.y+4);
 }
 
-return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawWhitwEyes,drawWideSweep,drawSelfBurst,drawAuraField,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing};
+return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawWhitwEyes,drawWideSweep,drawSelfBurst,drawAuraField,drawZones,drawSkillFan,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing};
 },
 "native-flight.js": function(load) {
 // 自由飞行移动原语（连续坐标，不做格子吸附、不走路网）。
@@ -6786,6 +6892,7 @@ const {strategyCoverage} = load("strategy.js");
 const {spBarFill} = load("native-sp.js");
 const {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay,drawWhitwEyes} = load("native-fx.js");
 const {renderSkillDescription} = load("native-skill-text.js");
+const {zoneVisual} = load("native-operator-effects.js");
 const {EGG_BASE_MODE,EGG_MODE_ID,apply325Display,egg325Active,format325,rewrite325Text} = load("native-325.js");
 const CAT_MODE_ID='mode_cat_all',CAT_BASE_MODE='mode_single_normal';
 const data=NATIVE_DATA,root=document.getElementById('app'),strategyCoverageById=Object.fromEntries(strategyCoverage(data).map(x=>[x.id,x])),SAVE='garrison-native-manual-v1',CHECKPOINT_SAVE='garrison-native-safe-v1',VIEW_SAVE='garrison-native-view-v1';
@@ -6845,6 +6952,8 @@ function eggOn(){return egg325Active(state);}
 function catOn(){return !!(state.draft?.cat||state.game?.s?.cat);}
 function fundsMarkup(funds){return catOn()?'<b class="funds native-funds-all">ALL</b>':`<b class="funds">${funds}<i> ◆</i></b>`;}
 function canvasNumber(n){return eggOn()?format325(n):String(n);}
+// 区域/领域特效的视觉分类由 operator-effects 提供，挂到战斗对象上供特效层读取
+function attachZoneVisual(battle){if(battle)battle.zoneVisual=zoneVisual;return battle;}
 function paint325(target=root){
  const on=eggOn();
  document.documentElement.classList.toggle('egg-325',on);
@@ -6862,7 +6971,7 @@ function newSandbox(){const economy=new NativeSession(data,{modeId:'mode_single_
 function openSandbox(){if(!state.sandbox){state.sandbox=newSandbox();state.sandbox.previousGame=state.game;state.sandbox.previousView='lobby';}state.game=state.sandbox.economy;state.view='game';state.paused=true;state.modal=null;render();}
 function sandboxAddOperator(id){const sb=state.sandbox,p=data.profiles[id],shop=data.season.charShopChessDatas[id]||data.season.charShopChessDatas[data.season.chessNormalIdLookupDict[id]];if(!sb||sb.phase!=='setup'||!p||!shop)return;const u={uid:++sb.nextUid,chessId:id,charId:p.charId,rank:p.rank||shop.chessLevel,position:null,dir:0,equipment:[],bondIds:data.season.charChessDataDict[id]?.bondIds||[]};sb.economy.s.units.push(u);sb.selectedUid=u.uid;state.selected=u.uid;state.item=null;render();}
 function sandboxSpawnEnemy(id,dummy=false){const sb=state.sandbox;if(!sb)return;if(sb.phase==='setup'){sb.enemyDrafts.push({id,dummy,uid:++sb.enemySeq});render();return;}if(!sb.battle)return;const raw=data.enemies[id];if(!raw)return;const flying=raw.motion==='FLY',route=Math.max(0,sb.battle.level.routes.findIndex(r=>r.motionMode===(flying?'FLY':'WALK')));try{sb.battle.spawn({id,route});const e=sb.battle.s.enemies.at(-1),i=sb.enemySeq++;const spots=[[8,1],[8,2],[8,3],[7,1],[7,2],[7,3],[6,1],[6,2]];const spot=spots[i%spots.length];e.x=spot[0];e.y=spot[1];e.progress=0;e.cmd=0;if(dummy){e.trainingDummy=true;e.canAttack=false;e.ranged=false;e.speed=0;e.interval=999;e.route=[];e.leak=0;e.block=null;e.name='测试木桩';e.def=0;e.res=0;e.baseDef=0;e.baseRes=0;e.damageResistance=0;}sb.enemyDrafts.push({id,dummy,uid:e.uid});sb.battle.s.total=sb.battle.s.enemies.length;render();}catch(error){notice(error.message||'无法生成敌人');}}
-function sandboxStart(){const sb=state.sandbox;if(!sb||sb.phase!=='setup')return;if(!sb.economy.s.units.some(u=>u.position)){notice('请先添加并放置至少一名干员');return;}if(!sb.economy.beginBattle()){notice('无法开始测试场景');return;}const turn=buildPhasePlan(data,'mode_single_normal')[0],b=new NativeBattle(data,sb.economy,sb.economy.map,turn);b.s.queue=[];b.s.enemies=[];b.s.total=0;b.s.limit=1e9;for(const u of b.s.units){u.deployAt=0;b.deploy(u);}sb.battle=b;sb.economy.battle=b;sb.phase='battle';state.game=sb.economy;const drafts=sb.enemyDrafts.slice();sb.enemyDrafts=[];for(const draft of drafts)sandboxSpawnEnemy(draft.id,draft.dummy);state.paused=true;render();}
+function sandboxStart(){const sb=state.sandbox;if(!sb||sb.phase!=='setup')return;if(!sb.economy.s.units.some(u=>u.position)){notice('请先添加并放置至少一名干员');return;}if(!sb.economy.beginBattle()){notice('无法开始测试场景');return;}const turn=buildPhasePlan(data,'mode_single_normal')[0],b=attachZoneVisual(new NativeBattle(data,sb.economy,sb.economy.map,turn));b.s.queue=[];b.s.enemies=[];b.s.total=0;b.s.limit=1e9;for(const u of b.s.units){u.deployAt=0;b.deploy(u);}sb.battle=b;sb.economy.battle=b;sb.phase='battle';state.game=sb.economy;const drafts=sb.enemyDrafts.slice();sb.enemyDrafts=[];for(const draft of drafts)sandboxSpawnEnemy(draft.id,draft.dummy);state.paused=true;render();}
 function sandboxRemoveEnemy(uid){const sb=state.sandbox;if(!sb)return;sb.enemyDrafts=sb.enemyDrafts.filter(e=>e.uid!==uid);if(sb.battle)sb.battle.s.enemies=sb.battle.s.enemies.filter(e=>e.uid!==uid);render();}
 function sandboxReset(){const previous=state.sandbox?.previousGame||null;state.sandbox=newSandbox();state.sandbox.previousGame=previous;state.sandbox.previousView='lobby';state.game=state.sandbox.economy;state.view='game';state.paused=true;render();}
 function sandboxDetail(){const sb=state.sandbox,b=sb?.battle,ops=sandboxOperators,ens=sandboxEnemies;return `<section class="sandbox-inline"><div class="sandbox-inline-head"><b>技能测试内容</b><small>${sb?.phase==='setup'?'按正式场景方式选择干员、拖拽/点击地块并确认朝向':'沿用正式战斗控制器，可暂停、单步和手动释放技能'}</small></div><details open><summary>添加干员</summary><input id="sandbox-op-search" type="search" value="${esc(sb?.opQuery||'')}" placeholder="搜索名称或 ID" aria-label="搜索测试干员"><div class="sandbox-inline-results">${ops.map(o=>`<button data-act="sandbox-add-op" data-id="${o.id}" data-sandbox-op="${esc((o.name+' '+o.id).toLowerCase())}" ${sb?.opQuery&&!((o.name+' '+o.id).toLowerCase().includes(sb.opQuery.toLowerCase()))?'hidden':''}>${avatar(o.charId)}<span><b>${esc(o.name)}</b><small>${o.rank} 阶${o.isGolden?' · 精锐':''}</small></span></button>`).join('')}</div></details><details open><summary>添加敌人</summary><input id="sandbox-enemy-search" type="search" value="${esc(sb?.enemyQuery||'')}" placeholder="搜索敌人名称或 ID" aria-label="搜索测试敌人"><button class="sandbox-dummy" data-act="sandbox-add-dummy">＋ 不行动木桩</button><div class="sandbox-inline-results">${ens.map(e=>`<button data-act="sandbox-add-enemy" data-id="${e.id}" data-sandbox-enemy="${esc((e.name+' '+e.id).toLowerCase())}" ${sb?.enemyQuery&&!((e.name+' '+e.id).toLowerCase().includes(sb.enemyQuery.toLowerCase()))?'hidden':''}><span class="sandbox-enemy-glyph">◆</span><span><b>${esc(e.name)}</b><small>${e.applyWay==='RANGED'?'远程':'近战'} · ${e.motion==='FLY'?'飞行':'地面'}</small></span></button>`).join('')}</div></details><div class="sandbox-inline-picked"><b>已选敌人</b>${(sb?.enemyDrafts||[]).map(d=>`<div><span>${d.dummy?'∞':'◆'} ${esc(d.dummy?'不行动木桩':data.enemies[d.id]?.name||d.id)}</span><button data-act="sandbox-remove-enemy" data-uid="${d.uid}">移除</button></div>`).join('')||'<small>暂无敌人</small>'}</div><div class="sandbox-inline-actions"><button data-act="sandbox-start" ${sb?.phase!=='setup'?'disabled':''}>开始测试</button><button data-act="sandbox-step" ${sb?.phase!=='battle'?'disabled':''}>单步</button><button data-act="sandbox-clear-enemies">清空敌人</button><button data-act="sandbox-reset">重置</button><button data-act="sandbox-exit">退出</button></div>${sb?.battle?`<div class="sandbox-inline-live"><b>测试干员</b>${sb.economy.s.units.map(u=>{const live=b.s.units.find(v=>v.uid===u.uid),p=data.profiles[u.chessId];return live?`<div><span>${esc(p.name)} · ${Math.round(live.hp)}/${Math.round(live.maxHp)}</span><button data-act="sandbox-fill-sp" data-uid="${u.uid}">充能</button><button data-act="sandbox-skill" data-uid="${u.uid}">${live.skillLeft>0||live.ammo>0?'结束技能':'释放技能'}</button></div>`:''}).join('')||'<small>暂无已部署干员</small>'}<b>测试敌人</b>${(sb.enemyDrafts||[]).map(d=>`<div><span>${d.dummy?'∞':'◆'} ${esc(d.dummy?'不行动木桩':data.enemies[d.id]?.name||d.id)}</span><button data-act="sandbox-remove-enemy" data-uid="${d.uid}">移除</button></div>`).join('')||'<small>暂无敌人</small>'}</div>`:''}</section>`;}
@@ -7011,7 +7120,7 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
  if(a==='stockview'){modal(stockPanel());return;}
  if(a==='destroy'||a==='destroyEquip'){const slot=Number(button.dataset.slot),name=itemName(a==='destroy'?g.s.items.find(i=>i.uid===uid)?.chessId:g.s.units.find(u=>u.uid===uid)?.equipment?.[slot]?.chessId);if(!g.perform(a,uid,slot)){notice('当前阶段无法销毁装备。');return;}if(state.item===uid)state.item=null;notice('已销毁 '+name+'。');save();render();return;}
  if(a==='bond-info'){const id=button.dataset.id,b=data.season.bondInfoDict[id],members=bondOperators(id),live=new Set((g?.s.units||[]).filter(u=>u.position).map(u=>u.charId)),layer=g?.s.bondLayers?.[id]||0,active=g?.bonds?.()?.[id]?.active;modal(`<h2>${esc(b.name)}</h2><p>${esc(plain(b.desc))}</p>${bondCurrentPreview(id,layer)}<p class="muted small">${active?'当前盟约已激活，动态数值生效中。':'当前盟约尚未激活，动态数值仅作预览。'}</p><div class="native-bond-roster" aria-label="盟约干员">${members.map(m=>{const active=live.has(m.charId);return `<div class="native-bond-member${active?' active':''}">${avatar(m.charId)}<span><b>${esc(m.name)}</b><small>${m.rank} 阶${active?' · 场上':''}</small></span></div>`;}).join('')||'<small>暂无可用干员</small>'}</div>`);return;}if(a==='aim'){if(state.preview){state.preview.dir=Number(button.dataset.dir);draw();}return;}if(a==='cancel'){state.preview=null;render();return;}if(a==='place-confirm'){commitPreview();return;}
- let ok;if(a==='buy'||a==='buyItem'){const kind=a==='buy'?'shop':'shopItem',index=Number(button.dataset.index);if(!inspectSame(kind,index)){state.inspect={kind,index};state.selected=null;state.item=null;render();return;}if(g.s.phase!=='prep'){notice('当前阶段不能购买');return;}ok=g.perform(a,index);if(ok){state.inspect=null;if(a==='buy')state.selected=g.s.units.at(-1)?.uid??null;}}else if(a==='reward'){const reward=g.s.rewardPending,index=Number(button.dataset.index),id=reward?.tier?reward.offers?.[index]:button.dataset.id;if(reward?.tier&&!inspectSame('reward',index)){state.inspect={kind:'reward',index};state.selected=null;state.item=null;render();return;}ok=id?g.perform(reward?.kind==='bounty'?'bounty':'takePromotion',id):false;state.modal=null;if(ok)state.inspect=null;}else if(a==='decision'){ok=g.perform(a,button.dataset.id);state.modal=null;}else if(a==='sell'){ok=g.perform(a,uid);if(ok){state.selected=null;state.inspect=null;}}else if(a==='withdraw'){ok=g.perform(a,uid);}else if(['upgrade','refresh','lock','start','next','stop'].includes(a)){ok=g.perform(a);if(a==='start'){state.paused=false;resetFxClock();unlockAudio();}state.preview=null;if(a==='refresh')state.inspect=null;}else return;
+ let ok;if(a==='buy'||a==='buyItem'){const kind=a==='buy'?'shop':'shopItem',index=Number(button.dataset.index);if(!inspectSame(kind,index)){state.inspect={kind,index};state.selected=null;state.item=null;render();return;}if(g.s.phase!=='prep'){notice('当前阶段不能购买');return;}ok=g.perform(a,index);if(ok){state.inspect=null;if(a==='buy')state.selected=g.s.units.at(-1)?.uid??null;}}else if(a==='reward'){const reward=g.s.rewardPending,index=Number(button.dataset.index),id=reward?.tier?reward.offers?.[index]:button.dataset.id;if(reward?.tier&&!inspectSame('reward',index)){state.inspect={kind:'reward',index};state.selected=null;state.item=null;render();return;}ok=id?g.perform(reward?.kind==='bounty'?'bounty':'takePromotion',id):false;state.modal=null;if(ok)state.inspect=null;}else if(a==='decision'){ok=g.perform(a,button.dataset.id);state.modal=null;}else if(a==='sell'){ok=g.perform(a,uid);if(ok){state.selected=null;state.inspect=null;}}else if(a==='withdraw'){ok=g.perform(a,uid);}else if(['upgrade','refresh','lock','start','next','stop'].includes(a)){ok=g.perform(a);if(a==='start'){state.paused=false;resetFxClock();unlockAudio();attachZoneVisual(g.battle);}state.preview=null;if(a==='refresh')state.inspect=null;}else return;
  if(!ok)notice(g.lastError||'当前资金、位置或阶段不允许此操作');if(ok&&(a==='next'||a==='decision'))saveCheckpoint();save();render();if(g.s.phase==='finished')showResult();
 }
  function renderSummonCards(){const game=state.game;if(game?.s.phase==='prep')game.syncSummonCards?.();const bench=document.getElementById('native-hand'),cards=game?.s.phase==='prep'?(game.s.summonCards||[]).filter(c=>c.position===null):[];if(!bench)return;bench.querySelectorAll('[data-act="summon-select"]').forEach(node=>node.remove());for(const card of cards){const button=document.createElement('button');button.dataset.act='summon-select';button.dataset.uid=String(card.uid);button.dataset.mode=card.mode||'manual';button.disabled=card.mode!=='manual';button.className=`native-summon-card${state.summonSelected===card.uid?' chosen':''}`;const hint=card.mode==='skill'?'技能转好后自动出现':card.mode==='auto'?'开战时自动出现':'可拖动放置并选择朝向';button.innerHTML=`<span class="native-summon-icon">◈</span><b>${esc(card.name)}</b><small>${hint}</small>`;bench.append(button);}}

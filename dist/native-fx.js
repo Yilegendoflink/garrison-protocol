@@ -336,11 +336,88 @@ export function drawAuraField(c,point,z,battle,{reduceFx=false}={}){
  }
  return drew;
 }
+// ── 区域／领域类效果统一绘制 ─────────────────────────────────────────
+// 逻辑层的 s.logicEffects（kind:'zone'）本来就带 x/y/radius/trackArea/values，
+// 之前完全没画；这里按 zoneVisual 的色调与形状统一渲染，雷暴、领域、光环一次覆盖。
+const ZONE_TONE={thunder:['#bcd8ff','#7fb2ff'],blade:['#ffe9c2','#ffb877'],gold:['#ffe6a4','#f0c774'],
+ holy:['#fff4d6','#f7cf8f'],water:['#bfe8ff','#79c4ee'],sand:['#f0dcae','#c9a86a'],
+ burn:['#ffc79a','#ff8f57'],frost:['#d8f1ff','#8fd0ee'],shadow:['#d9c7ff','#9d84d8'],
+ arts:['#dcc9ff','#a98ce0'],heal:['#c8f6dc','#7fd8a8'],time:['#e6e0ff','#a9a2e8']};
+export function drawZones(c,point,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ const list=(s.logicEffects||[]).filter(fx=>fx.kind==='zone'&&(fx.endsAt==null||fx.endsAt>s.time));
+ if(!list.length)return false;
+ for(const fx of list){
+  const visual=battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
+  const [light,deep]=ZONE_TONE[visual.tone]||ZONE_TONE.arts;
+  const radius=Number.isFinite(fx.radius)?fx.radius:1;
+  // 剩余时间不足 1.5 秒时开始闪烁提示即将结束
+  const remain=fx.endsAt==null?null:fx.endsAt-s.time;
+  const blink=remain==null?1:(remain<1.5?(Math.sin(s.time*14)>0?1:.35):1);
+  const pulse=reduceFx?0:(.5+.5*Math.sin(s.time*2.4));
+  const alpha=(.1+.07*pulse)*blink*(reduceFx?.6:1);
+  const cells=[];
+  if(visual.shape==='self'){
+   for(const u of s.units||[])if(u.uid===fx.sourceUid&&u.deployed)cells.push({x:u.x,y:u.y});
+  }else{
+   for(let dy=-Math.ceil(radius);dy<=Math.ceil(radius);dy++)for(let dx=-Math.ceil(radius);dx<=Math.ceil(radius);dx++){
+    if(visual.shape==='line'){
+     // 斜线扫过的形状：沿对角线方向铺开，宽度 1 格
+     if(Math.abs(dx)!==Math.abs(dy))continue;
+     if(Math.abs(dx)>radius)continue;
+    }else if(Math.max(Math.abs(dx),Math.abs(dy))>radius)continue;
+    cells.push({x:(fx.x??0)+dx,y:(fx.y??0)+dy});
+   }
+  }
+  c.save();c.globalCompositeOperation='lighter';
+  for(const cell of cells){
+   const p=point(cell.x,cell.y);
+   c.fillStyle=`${light}${Math.round(alpha*255).toString(16).padStart(2,'0')}`;
+   c.fillRect(p.x-z.tw/2,p.y-z.th/2,z.tw,z.th);
+   c.strokeStyle=`${deep}${Math.round(Math.min(1,alpha*2.4)*255).toString(16).padStart(2,'0')}`;
+   c.lineWidth=1.2;c.strokeRect(p.x-z.tw/2+.5,p.y-z.th/2+.5,z.tw-1,z.th-1);
+  }
+  // 周期结算的瞬间补一圈脉冲，让"每 N 秒结算一次"看得见
+  const interval=Number(fx.interval)||0;
+  if(interval>0&&!reduceFx&&fx.nextAt!=null){
+   const since=Math.max(0,Math.min(1,(interval-(fx.nextAt-s.time))/Math.max(.001,interval)));
+   if(fx.nextAt-s.time<=.25){const k=1-Math.max(0,(fx.nextAt-s.time))/.25;
+    for(const cell of cells){const p=point(cell.x,cell.y);c.strokeStyle=`${deep}${Math.round(.55*(1-k)*255).toString(16).padStart(2,'0')}`;c.lineWidth=2;c.beginPath();c.ellipse(p.x,p.y,z.tw*.5*(1+k*.4),z.th*.5*(1+k*.4),0,0,Math.PI*2);c.stroke();}}
+  }
+  c.restore();
+ }
+ return true;
+}
+// 瞬时多目标（辉煌裂片、御敌的锋锐等）：技能瞬间打中多个目标，走的是 dealDamage 而不是挥砍，
+// 没有 strike 事件可画。这里用「开技后短时间内落在技能范围内的 hit 事件」连成扇面。
+export function drawSkillFan(c,point,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ let drew=false;
+ for(const start of recent(s.events,s.time,'skill-start',.3)){
+  const info=rangeCells(point,z,battle,start.uid);
+  if(!info)continue;
+  const hits=recent(s.events,s.time,'hit',.3).filter(e=>e.t>=start.t&&e.uid!==start.uid&&e.x!=null&&e.y!=null);
+  if(hits.length<2)continue;
+  const origin=point(info.unit.x,info.unit.y);
+  const toward=Math.atan2((hits[0].y)-(start.y??hits[0].y),(hits[0].x)-(start.x??hits[0].x));
+  const k=Math.max(0,Math.min(1,(s.time-start.t)/.3)),fade=(1-k)*(reduceFx?.5:.85);
+  const reach=Math.max(info.geo.reachX,info.geo.reachY)*z.tw*.72+z.tw*.3;
+  c.save();c.globalCompositeOperation='lighter';c.translate(origin.x,origin.y);
+  c.strokeStyle='rgba(255,240,206,'+fade.toFixed(3)+')';c.lineWidth=2.4;c.lineCap='round';
+  c.beginPath();c.arc(0,0,reach,toward-.55,toward+.55);c.stroke();
+  c.strokeStyle='rgba(255,255,255,'+(fade*.6).toFixed(3)+')';c.lineWidth=1.4;
+  for(const h of hits){const b=point(h.x,h.y);c.beginPath();c.moveTo(0,0);c.lineTo(b.x-origin.x,b.y-origin.y);c.stroke();}
+  c.restore();drew=true;
+ }
+ return drew;
+}
 export function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
  drawCombatFx(c,point,z,battle,reduce);
+ drawZones(c,point,z,battle,{reduceFx:reduce});
  drawAuraField(c,point,z,battle,{reduceFx:reduce});
  drawSelfBurst(c,point,z,battle,{reduceFx:reduce});
  drawWideSweep(c,point,z,battle,{reduceFx:reduce});
+ drawSkillFan(c,point,z,battle,{reduceFx:reduce});
  drawIceWind(c,z,battle,{reduceFx:reduce});
  for(const e of s.effects||[]){
   if(e.type!=='healing'&&e.type!=='evade'&&e.type!=='block')continue;
