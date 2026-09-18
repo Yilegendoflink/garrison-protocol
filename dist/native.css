@@ -388,3 +388,5 @@ html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px
  html.native-landscape-ui .native-shop:has(.native-reward-shop-card)>div:first-child .native-reward-shop-hint{display:block;flex:1 1 100%;min-width:0;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0;line-height:1.2;color:#e0c98c}
  html.native-landscape-ui .native-shop:has(.native-reward-shop-card)>div:first-child .native-reward-shop-hint:after{content:'三合一：先预览，再次点击确认';font-size:9px;letter-spacing:0}
 }
+
+.native-bench-label.is-over{color:#f2b3a4}.native-hand-warn{font-style:normal;color:#ffb9a6;border:1px solid #f28e79;background:#713c3940;padding:1px 6px;font-size:11px;white-space:nowrap}.native-reward-shop-hint.is-over{color:#ffb9a6;border-color:#f28e79}

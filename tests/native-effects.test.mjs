@@ -168,22 +168,47 @@ test('冲锋手击杀回费使用战斗费用账本',()=>{
  const u=byId(b,'char_222_bpipe'),e=enemy(b,{x:u.x+1,y:u.y,hp:100,def:0});b.s.cost=0;b.s.costRecoveryInterval=999999;b.hit(u,e,1000,'physical');assert.equal(e.hp,0);assert.equal(b.s.cost,1);
 });
 
-test('模组费用字段参与首次部署、冲锋手回费和返费上限',()=>{
- const texas=openBattle({chessId:'chess_char_1_08_b',skillIndex:1}).b,tx=texas.s.units[0];assert.equal(texas.deploymentCost(tx),tx.baseCost-4);deployNow(texas);assert.equal(tx.runtimeCostUsed,true);
+test('战斗开始全体入场不扣费但算一次入场，模组运行费用只在再部署结算',()=>{
+ // 开局所有摆好位的单位随战斗开始一起入场：算一次入场（runtimeCostUsed 置真、触发部署效果），但不支付费用。
+ const texas=openBattle({chessId:'chess_char_1_08_b',skillIndex:1}).b,tx=texas.s.units[0];
+ assert.equal(tx.deployed,true);assert.equal(tx.runtimeCostUsed,true,'开局入场即视为已用掉首次部署');
+ assert.equal(tx.runtimeCost, -4,'模组提供了 -4 的运行费用修正');
+ assert.equal(texas.deploymentCost(tx),tx.baseCost,'首次入场不扣费，也不叠加模组修正');
+ deployNow(texas);assert.equal(texas.deploymentCost(tx),tx.baseCost,'重复入场不应重复计算');
+ // 再部署才把模组修正算进去
+ tx.redeployPenalty=0;assert.equal(texas.deploymentCost(tx),tx.baseCost);
+ tx.runtimeCostUsed=false;assert.equal(texas.deploymentCost(tx),tx.baseCost-4,'一次性再部署时模组运行费用生效');
+ tx.runtimeCostUsed=true;
  const pipe=openBattle({chessId:'chess_char_4_07_b',skillIndex:0}).b;deployNow(pipe);const p=byId(pipe,'char_222_bpipe'),e=enemy(pipe,{x:p.x+1,y:p.y,hp:100,def:0});pipe.s.cost=0;pipe.hit(p,e,1000,'physical');assert.equal(pipe.s.cost,2);pipe.s.cost=0;p.deploymentCost=12;p.refundCap=8;p.refundEligible=true;commitExit(pipe,{target:p,reason:'retreat'});assert.equal(pipe.s.cost,12);
  const gravel=openBattle({chessId:'chess_char_2_12_b',skillIndex:0}).b;deployNow(gravel);const g=byId(gravel,'char_237_gravel');gravel.s.cost=0;g.deploymentCost=12;g.refundCap=10;g.refundEligible=true;commitExit(gravel,{target:g,reason:'retreat'});assert.equal(gravel.s.cost,9);
 });
 
-test('野鬃待部署近卫减费按每名干员最多五费累计',()=>{
- const {b}=openBattle([{chessId:'chess_char_1_19_b',skillIndex:1},reps.operators.swire]);const wild=byId(b,'char_496_wildmn'),guard=byId(b,'char_308_swire');for(let i=0;i<6;i++)dispatch(b,'deploy',{target:wild});assert.equal(guard.wildmaneCostDelta,-5);assert.equal(b.deploymentCost(guard),Math.max(0,guard.baseCost-5));
+test('野鬃待部署近卫减费只作用于尚未入场的近卫，每名最多五费',()=>{
+ // 战斗开始时摆好位的单位全部入场，此时没有待部署近卫，减费自然不累积
+ const {b}=openBattle([{chessId:'chess_char_1_19_b',skillIndex:1},reps.operators.swire]);const wild=byId(b,'char_496_wildmn'),guard=byId(b,'char_308_swire');
+ for(let i=0;i<6;i++)dispatch(b,'deploy',{target:wild});
+ assert.equal(guard.wildmaneCostDelta,0,'已入场的近卫不在待部署列表里');
+ // 战斗中新获得的近卫还没入场，才会吃到减费
+ guard.deployed=false;
+ for(let i=0;i<6;i++)dispatch(b,'deploy',{target:wild});
+ assert.equal(guard.wildmaneCostDelta,-5,'每名待部署近卫最多累计五费');
+ assert.equal(b.deploymentCost(guard),Math.max(0,guard.baseCost-5));
 });
 
 test('野鬃 S2 命中后按攻击方向推动目标',()=>{
  const {b}=openBattle({chessId:'chess_char_1_19_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);const before=e.x;b.hit(u,e,10,'physical');assert.ok(e.x>before);
 });
 
-test('缪尔赛思首名莱茵生命单位获得额外一费减免',()=>{
- const {b}=openBattle([{chessId:'chess_char_6_11_b',skillIndex:0},{chessId:'chess_char_2_02_b',skillIndex:0}]);const m=byId(b,'char_249_mlyss'),silent=byId(b,'char_108_silent');b.deploy(m);assert.equal(b.s.mlyssFirstRhineDiscountUsed,false);assert.equal(b.deploymentCost(silent),silent.baseCost-3);b.s.cost=99;b.deploy(silent,{reentry:true});assert.equal(b.s.mlyssFirstRhineDiscountUsed,true);commitExit(b,{target:silent,reason:'knockdown'});silent.down=0;assert.equal(b.deploymentCost(silent),Math.floor((silent.baseCost-2)*1.5));
+test('缪尔赛思的莱茵生命减费对开局入场单位只结算一次',()=>{
+ // 战斗开始时缪尔赛思与目标单位同时入场，所以「首名莱茵生命额外一费」在开局就被用掉
+ const {b}=openBattle([{chessId:'chess_char_6_11_b',skillIndex:0},{chessId:'chess_char_2_02_b',skillIndex:0}]);const m=byId(b,'char_249_mlyss'),silent=byId(b,'char_108_silent');
+ assert.equal(b.s.mlyssFirstRhineDiscountUsed,true,'开局入场即消耗首名莱茵减免');
+ assert.equal(b.deploymentCost(silent),Math.max(0,silent.baseCost-2),'只剩莱茵生命天赋本身的减费');
+ // 再部署时不再有首名减免，按基础费用乘再部署系数
+ b.s.cost=99;b.deploy(silent,{reentry:true});
+ assert.equal(b.s.mlyssFirstRhineDiscountUsed,true);
+ commitExit(b,{target:silent,reason:'knockdown'});silent.down=0;
+ assert.equal(b.deploymentCost(silent),Math.floor((silent.baseCost-2)*1.5));
 });
 
 test('再部署在冷却结束后按当前实例部署费用扣除战斗费用',()=>{
@@ -207,9 +232,18 @@ test('撤退返费按实例部署费用、上限和分支倍率结算',()=>{
  const charger=openBattle({chessId:'chess_char_4_07_a',skillIndex:0}).b;deployNow(charger);const p=byId(charger,'char_222_bpipe');charger.s.cost=0;p.deploymentCost=12;p.refundCap=8;p.refundEligible=true;commitExit(charger,{target:p,reason:'retreat'});assert.equal(charger.s.cost,8);
 });
 
-test('凛御银灰技能会修改尚未自动部署单位的费用属性',()=>{
+test('凛御银灰技能只对尚未入场的单位改费用属性',()=>{
  const {b}=openBattle([{chessId:'chess_char_5_14_b',skillIndex:0},{chessId:'chess_char_3_03_b',skillIndex:0}]);
- const svash=byId(b,'char_1045_svash2'),guard=byId(b,'char_308_swire');b.deploy(svash);svash.sp=b.spCost(svash);const base=guard.baseCost;b.activate(svash);assert.equal(guard.costRealtimeDelta,-5);assert.equal(b.deploymentCost(guard),Math.max(0,base-5));
+ const svash=byId(b,'char_1045_svash2'),guard=byId(b,'char_308_swire');
+ // 开局入场时没有待部署单位，技能不给任何单位改费用
+ svash.sp=b.spCost(svash);b.activate(svash);
+ assert.equal(guard.costRealtimeDelta,undefined,'已入场单位不受技能影响');
+ assert.equal(b.deploymentCost(guard),guard.baseCost);
+ // 战斗中新获得、尚未入场的单位才会被改
+ guard.deployed=false;
+ svash.sp=b.spCost(svash);svash.lastSkill=-999;b.activate(svash);
+ assert.equal(guard.costRealtimeDelta,-5);
+ assert.equal(b.deploymentCost(guard),Math.max(0,guard.baseCost-5));
 });
 
 test('荒芜拉普兰德三技能开启后浮游单元显示并飞行索敌',()=>{
@@ -785,7 +819,7 @@ test('幽灵鲨天赋提高生命上限并持续自愈',()=>{
 
 test('宴 S1 按最大生命回复，S2 按当前生命流失并转为法术攻击',()=>{
  const {b}=openBattle({chessId:'chess_char_1_18_b',skillIndex:0});deployNow(b);const u=b.s.units[0];u.hp=u.maxHp-1000;u.sp=b.spCost(u);b.activate(u);const before=u.hp;for(let i=0;i<30;i++)b.step();assert.ok(Math.abs((u.hp-before)-u.maxHp*.08)<1e-6);
- const {b:b2}=openBattle({chessId:'chess_char_1_18_b',skillIndex:1});deployNow(b2);const v=b2.s.units[0];assert.equal(v.hp,v.maxHp*.5);assert.equal(b2.baseDamageType(v),'arts');assert.ok(b2.stats(v).atk>b2.profile(v).attributes.atk);
+ const {b:b2}=openBattle({chessId:'chess_char_1_18_b',skillIndex:1});const v=b2.s.units[0];assert.equal(v.hp,v.maxHp*.5,'被动随开局入场结算，流失一半生命');assert.equal(v.deployed,true);assert.equal(b2.baseDamageType(v),'arts');assert.ok(b2.stats(v).atk>b2.profile(v).attributes.atk);
 });
 
 test('雷蛇 S2 命中多目标法术并在结束时自晕',()=>{

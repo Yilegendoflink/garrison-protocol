@@ -58,6 +58,35 @@ function moduleRows(profile){
  }
  return rows;
 }
+// 区域/领域类效果的视觉分类：形状与色调。键为 effect 的 talentOrSkillId 前缀。
+// 逻辑层（zone 的 x/y/radius/trackArea/values）已经是权威数据，这里只补"怎么画"。
+const ZONE_VISUALS={
+ 'pasngr-s3':{shape:'circle',tone:'thunder'},      // 辉煌裂片：目标位置雷暴
+ 'blkkgt-s3':{shape:'circle',tone:'blade'},        // 归于宁静：以自身为中心的斩击领域
+ 'saria-s3':{shape:'circle',tone:'gold'},          // 钙质化：金色领域，治疗+易伤
+ 'yu-firewall':{shape:'self',tone:'holy'},         // 全场结界
+ 'glady-s3':{shape:'circle',tone:'water'},         // 涌潮悲歌：吸附水涡
+ 'cetsyr-dust':{shape:'circle',tone:'sand'},       // 沙尘
+ 'etlchi-s1':{shape:'circle',tone:'blade'},        // 刀光领域
+ 'blaze2-s1':{shape:'circle',tone:'burn'},         // 灼燃领域
+ 'sntlla-s2':{shape:'circle',tone:'frost'},        // 寒冷领域
+ 'sbell2-s2':{shape:'circle',tone:'frost'},        // 睡眠+寒冷领域
+ 'ines-shadow':{shape:'circle',tone:'shadow'},     // 影子分身
+ 'qiubai-s1':{shape:'circle',tone:'arts'},         // 束缚领域
+ 'agoat2-s1':{shape:'circle',tone:'heal'},         // 元素回复光环
+ 'mostma-s2':{shape:'self',tone:'time'},           // 荒时之锁：自身范围时停
+ 'horn-light':{shape:'circle',tone:'gold'}         // 照明弹
+};
+export function zoneVisual(talentOrSkillId,values={}){
+ const id=String(talentOrSkillId||'');
+ const hit=Object.keys(ZONE_VISUALS).find(k=>id.startsWith(k));
+ if(hit)return ZONE_VISUALS[hit];
+ if(values.elementRegen!=null)return {shape:'circle',tone:'heal'};
+ if(values.hot!=null)return {shape:'circle',tone:'heal'};
+ if(values.reveal)return {shape:'circle',tone:'gold'};
+ if(values.dot)return {shape:'circle',tone:values.type==='arts'?'arts':'blade'};
+ return {shape:'circle',tone:'arts'};
+}
 export function moduleCostData(profile){
  let runtimeCost=0,runtimeCostActive=false,refundRatio=null,refundIgnoresCap=false,chargerKillCost=null,merchantCost=null,merchantInterval=null;
  for(const row of moduleRows(profile)){
@@ -304,7 +333,7 @@ export function operatorSkillStart(battle,u,ctx){
  if(profile.charId==='char_4211_snhunt'&&profile.skillIndex===1){const target=battle.targets(u)[0];if(target){const scale=target.speed===0||target.stationary?Number(bb.atk_scale_2)||2.1:Number(bb.atk_scale_1)||1.8;for(let hit=0;hit<2;hit++)ctx.dealDamage(battle,{source:u,target,amount:battle.stats(u).atk*scale,type:'physical',cause:'skill',skill:true});applyStatus(target,'cold',3,{source:u.uid,resistible:false});}return true;}
  if(profile.charId==='char_206_gnosis'&&profile.skillIndex===2){u.gnosisFrozenUids=[];for(const e of allTargets(battle,u,true)){applyStatus(e,'frozen',Math.max(1,Number(duration)||5),{source:u.uid,resistible:false});u.gnosisFrozenUids.push(e.uid);} }
  if(profile.charId==='char_4122_grabds'&&profile.skillIndex===1){const sleepUntil=battle.s.time+(Number(bb.sleep)||4);u.grabdsSleepUntil=sleepUntil;u.skillDisarmUntil=sleepUntil;for(const e of allTargets(battle,u,true).slice(0,Number(bb.maxTarget)||3))applyStatus(e,'sleep',Number(bb.sleep)||4,{source:u.uid,resistible:false});}
- if(profile.charId==='char_1023_ghost2'&&profile.skillIndex===0){const target=allAllies(battle,u,true).filter(v=>v.uid!==u.uid).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.uid-b.uid)[0];if(target){const ratio=u.hp/u.maxHp,other=target.hp/target.maxHp;u.hp=u.maxHp*other;target.hp=target.maxHp*ratio;}}
+ if(profile.charId==='char_1023_ghost2'&&profile.skillIndex===0){const target=allAllies(battle,u,true).filter(v=>v.uid!==u.uid).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.uid-b.uid)[0];if(target){const ratio=u.hp/u.maxHp,other=target.hp/target.maxHp;u.hp=u.maxHp*other;target.hp=target.maxHp*ratio;battle.emit('hp-swap',{uid:u.uid,x:u.x,y:u.y,targetUid:target.uid,targetX:target.x,targetY:target.y});}}
  if(profile.charId==='char_174_slbell'&&profile.skillIndex===0)for(const e of allTargets(battle,u,true)){const value=Number(bb.attack_speed)||-50;e.attackSpeedMod=(e.attackSpeedMod||0)+value;applyStatus(e,'attackSpeedDown',Math.max(1,Number(duration)||5),{source:u.uid,value});}
  if(profile.charId==='char_373_lionhd'&&profile.skillIndex===1){for(const e of allTargets(battle,u,true)){ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(bb.atk_scale)||2),type:'arts',cause:'skill',skill:true});if(Number(bb.magic_resistance)<0)applyStatus(e,'resDown',Number(duration)||6,{source:u.uid,value:Number(bb.magic_resistance),resistible:false});}return true;}
  if(profile.charId==='char_4148_philae'&&profile.skillIndex===0){u.elemental={};u.elementalType=null;u.elementalStartedAt=null;u.elementalBatch=null;u.elementInjury=0;if(ctx.grantShield)ctx.grantShield(battle,u,{amount:Number(bb.shield_value)||1200,sourceUid:u.uid,id:'philae-s1'});}

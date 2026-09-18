@@ -14,7 +14,7 @@ export class NativeSession extends NativeEconomy {
  summonCardRange(card,x,y){const owner=this.s.units.find(u=>u.uid===card.ownerUid);if(!owner?.position)return false;const grids=this.data.profiles[owner.chessId]?.range?.grids||[];return grids.some(g=>{let dx=g.col,dy=-g.row;for(let i=0;i<(owner.dir||0);i++)[dx,dy]=[-dy,dx];return owner.position.x+dx===x&&owner.position.y+dy===y;});}
  canDeploySummonCard(cardUid,x,y){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid),cell=this.map.grid[y]?.[x];if(!card||!cell||cell.buildableType==='NONE'||cell.obstacle||!this.summonCardRange(card,x,y))return false;if(card.type==='cathy-device'&&this.s.summonCards.filter(c=>c.uid!==card.uid&&c.ownerUid===card.ownerUid&&c.type===card.type&&c.position).length>=2)return false;if(['vigil-wolf','skadi2-seaborn'].includes(card.type)&&cell.heightType==='HIGHLAND')return false;return card.type==='cathy-device'||(!this.s.units.some(u=>u.position?.x===x&&u.position?.y===y)&&!this.s.summonCards.some(c=>c.uid!==card.uid&&c.position?.x===x&&c.position?.y===y));}
  deploySummonCard(cardUid,x,y,dir=0){if(!this.canDeploySummonCard(cardUid,x,y))return false;const card=this.s.summonCards.find(c=>c.uid===cardUid);card.position={x,y};card.dir=dir;return true;}
- withdrawSummonCard(cardUid){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid&&c.position);if(!card)return false;card.position=null;return true;}
+ withdrawSummonCard(cardUid){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid&&c.position);if(!card||this.handFull())return false;card.position=null;return true;}
  eligible(){return Object.values(this.data.season.charShopChessDatas).filter(o=>o.charId&&!o.isHidden);}
  // used 只在商店刷新时传入：同一家店对库存无放回，避免给出比库存更多的同名卡
  drawFromPool(r,used=null){
@@ -77,7 +77,7 @@ export class NativeSession extends NativeEconomy {
    // 升级只解锁更高阶的干员候选，不动装备商品槽：装备槽只按回合刷新（advanceRound 里的 fillItems）
    else if(type==='upgrade'){result=this.upgrade();}
    else if(type==='lock'){if(this.s.phase!=='prep')return false;this.s.locked=!this.s.locked;result=true;}
-  else if(type==='withdraw'){const u=this.s.units.find(u=>u.uid===args[0]);if(this.s.phase!=='prep'||!u?.position||this.hand().length>=10)return false;u.position=null;this.settleBondRewards();result=true;}
+  else if(type==='withdraw'){const u=this.s.units.find(u=>u.uid===args[0]);if(this.s.phase!=='prep'||!u?.position||this.handFull())return false;u.position=null;this.settleBondRewards();result=true;}
   else if(type==='withdrawSummon')result=this.withdrawSummonCard(args[0]);
    else if(type==='skill'){const u=this.s.units.find(u=>u.uid===args[0]),p=this.data.profiles[u?.chessId];if(this.s.phase!=='prep'||!u||!p.skillChoices[args[1]])return false;u.skillIndex=args[1];result=true;}
    else if(type==='buyItem')result=this.buyItem(args[0]);
@@ -95,7 +95,7 @@ export class NativeSession extends NativeEconomy {
    if(result===false){this.s=before;return false;}if(this.s.phase==='prep')this.syncSummonCards();this.ensureRewards();this.s.commands.push({round:this.s.round,type,args});if(type==='takePromotion'&&this.s.prepApplied&&!this.s.rewardPending)this.startBattle();return true;
   }catch(error){this.s=before;this.triggerChain=[];this.lastError=error.message;return false;}
  }
- buyItem(index){if(this.s.phase!=='prep'||this.s.rewardPending)return false;const id=this.s.itemOffers[index],item=this.data.season.trapChessDataDict[id];if(!item||this.hand().length>=10||!this.spend(item.purchasePrice))return false;this.s.itemOffers[index]=null;this.gainItem(id);return true;}
+ buyItem(index){if(this.s.phase!=='prep'||this.s.rewardPending)return false;const id=this.s.itemOffers[index],item=this.data.season.trapChessDataDict[id];if(!item||this.handFull()||!this.spend(item.purchasePrice))return false;this.s.itemOffers[index]=null;this.gainItem(id);return true;}
  // 主动销毁：手牌里的装备直接移除；干员身上的装备从槽位移除（不退回手牌）。
  destroyItem(itemUid){if(this.s.phase!=='prep')return false;const item=this.s.items.find(i=>i.uid===itemUid);if(!item)return false;this.s.items=this.s.items.filter(i=>i.uid!==itemUid);this.s.events.push({type:'destroyItem',uid:itemUid,chessId:item.chessId});return true;}
  destroyEquipment(unitUid,slot){if(this.s.phase!=='prep')return false;const u=this.s.units.find(x=>x.uid===unitUid);if(!u||!Number.isInteger(slot))return false;const item=u.equipment[slot];if(!item)return false;u.equipment.splice(slot,1);this.refreshEquipmentBonds(u);this.s.events.push({type:'destroyItem',uid:item.uid,chessId:item.chessId});return true;}

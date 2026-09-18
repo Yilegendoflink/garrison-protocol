@@ -13,6 +13,28 @@ export function stockOf(data,s,chessId){ensureStock(data,s);return Number.isFini
 // 购买记录用 map 计数，卖出时按记录回补；三合一合并时把各份记录累加，所以卖出精锐恢复的是合成时买走的全部份数
 function addPurchases(into,from){if(!from)return into;for(const [id,n] of Object.entries(from))into[id]=(into[id]||0)+Number(n||0);return into;}
 export function restoreStock(s,unit){const owned=unit?.purchases;if(!owned)return;s.stock??={};for(const [id,n] of Object.entries(owned)){if(s.stock[id]===undefined)continue;s.stock[id]+=Number(n||0);}}
+// 技能范围几何：范围形状是权威数据（data.ranges[rangeId].grids），特效据此贴合真实形状，
+// 不靠像素半径估算。spanX/spanY 是相对施法者的最大横/纵跨度，cells 是原始格子。
+const RANGE_GEOMETRY=new Map();
+export function rangeGeometry(data,rangeId){
+ if(!rangeId)return null;
+ const key=rangeId;
+ if(RANGE_GEOMETRY.has(key))return RANGE_GEOMETRY.get(key);
+ const grids=data?.ranges?.[rangeId]?.grids;
+ if(!grids?.length){RANGE_GEOMETRY.set(key,null);return null;}
+ const cols=grids.map(g=>Number(g.col)||0),rows=grids.map(g=>Number(g.row)||0);
+ const geometry={rangeId,cells:grids.map(g=>({col:Number(g.col)||0,row:Number(g.row)||0})),count:grids.length,
+  spanX:Math.max(...cols)-Math.min(...cols),spanY:Math.max(...rows)-Math.min(...rows),
+  reachX:Math.max(...cols.map(Math.abs)),reachY:Math.max(...rows.map(Math.abs))};
+ RANGE_GEOMETRY.set(key,geometry);
+ return geometry;
+}
+// 技能是否比常态范围更大（真银斩这类"范围扩大"技能）。用于攻击特效的 wide 标记。
+export function skillWidensRange(profile,skillIndex=null){
+ const skill=skillIndex!=null?(profile?.skillChoices?.[skillIndex]?.skill??profile?.skill):profile?.skill;
+ if(!skill?.rangeId||!profile?.rangeId)return false;
+ return skill.rangeId!==profile.rangeId;
+}
 export function baseFunding(round){if(!Number.isInteger(round)||round<1)throw Error('Invalid round');return round+3;}
 // Versioned native data helpers. No missing rule is guessed or silently simulated.
 export function blackboard(entries=[]){return Object.fromEntries((entries||[]).map(e=>[e.key,e.valueStr??e.value]));}
@@ -84,14 +106,22 @@ export function applyEnemyOverrides(base,override){
  if(Array.isArray(override)||typeof override!=='object')return structuredClone(override);
  const out={...structuredClone(base||{})};for(const[k,v]of Object.entries(override))out[k]=applyEnemyOverrides(base?.[k],v);return out;
 }
+// 整备区（手牌）上限：干员、装备、召唤物卡一律占格。干员／策略效果发放的卡牌允许
+// 临时超出（handLength>HAND_LIMIT），但超出期间不允许再购入干员和装备，必须先清出空余。
+export const HAND_LIMIT=10;
 export function suspendState(state,now=Date.now()){return {schemaVersion:1,savedAt:now,expiresAt:now+86400000,state:JSON.parse(JSON.stringify(state))};}
 export function resumeState(save,now=Date.now()){if(save.schemaVersion!==1||now>=save.expiresAt||!save.state)return {ok:false,reason:'expired-or-invalid'};return {ok:true,state:JSON.parse(JSON.stringify(save.state))};}
 export class PreparationState {
  constructor(data,modeId,{round=1,funds,offers=[],board=null}={}){funds??=baseFunding(round);if(!Number.isFinite(funds)||funds<0)throw Error('Invalid funding');this.data=data;this.board=board;this.s={modeId,phase:'prep',round,funds,level:1,discount:Math.max(0,round-1),units:[],items:[],offers:offers.slice(),locked:false,seq:0,rewardPending:null,events:[],stock:{}};ensureStock(data,this.s);}
  terms(){return shopTerms(this.data,this.s.modeId,this.s.level,this.s.discount);}
- hand(){return [...this.s.units.filter(u=>u.position===null),...this.s.items];}
+ // 整备区（手牌）＝未上场干员 → 未装备装备 → 未放置的召唤物卡，三者同序，只认这个总数。
+ // 已经放到场上的召唤物卡不占格（它已经在阵地上了），未放置的在整备区里显示一格。
+ hand(){const deployed=u=>u.position!==null,c=this.s.summonCards;return [...this.s.units.filter(u=>!deployed(u)),...this.s.items,...(Array.isArray(c)?c.filter(x=>!deployed(x)):[])];}
+ handLength(){return this.hand().length;}
+ // 达到或超过上限即禁止购入干员／装备；效果发放的卡牌不经过这里，所以能临时超出。
+ handFull(){return this.handLength()>=HAND_LIMIT;}
  gain(chessId){ensureStock(this.data,this.s);const shop=this.data.season.charShopChessDatas[chessId],chess=this.data.season.charChessDataDict[chessId];if(!shop||!chess)throw Error('Unknown operator chess');const u={uid:++this.s.seq,chessId,charId:shop.charId,rank:shop.chessLevel,position:null,dir:0,equipment:[]};this.s.units.push(u);this.s.events.push({type:'gain',uid:u.uid,chessId});const copies=this.s.units.filter(x=>x.chessId===chessId);if(copies.length>=chess.upgradeNum&&chess.upgradeChessId){const group=copies.slice(0,chess.upgradeNum),anchor=group.find(x=>x.position!==null)||group[0];for(const x of group)this.s.items.push(...x.equipment);this.s.units=this.s.units.filter(x=>!group.includes(x));const merged={...anchor,uid:++this.s.seq,chessId:chess.upgradeChessId,equipment:[],purchases:{}};for(const x of group)addPurchases(merged.purchases,x.purchases);this.s.units.push(merged);this.s.rewardPending={tier:Math.min(6,this.s.level+1)};this.s.events.push({type:'promote',uid:merged.uid});return merged;}return u;}
- buy(index){if(this.s.phase!=='prep'||this.s.rewardPending)return {ok:false,code:'WRONG_PHASE'};const id=this.s.offers[index],shop=this.data.season.charShopChessDatas[id];if(!shop||shop.chessLevel>this.s.level)return {ok:false,code:'INVALID_OFFER'};const cost=purchasePrice(this.data,id),copies=this.s.units.filter(u=>u.chessId===id).length;if(this.s.funds<cost)return {ok:false,code:'NO_FUNDS'};if(this.hand().length>=10&&copies<2)return {ok:false,code:'FULL_HAND'};if(stockOf(this.data,this.s,id)<=0)return {ok:false,code:'NO_STOCK'};this.s.stock[id]-=1;this.s.funds-=cost;this.s.offers[index]=null;const unit=this.gain(id);unit.purchases??={};unit.purchases[id]=(unit.purchases[id]||0)+1;return {ok:true};}
+ buy(index){if(this.s.phase!=='prep'||this.s.rewardPending)return {ok:false,code:'WRONG_PHASE'};const id=this.s.offers[index],shop=this.data.season.charShopChessDatas[id];if(!shop||shop.chessLevel>this.s.level)return {ok:false,code:'INVALID_OFFER'};const cost=purchasePrice(this.data,id),copies=this.s.units.filter(u=>u.chessId===id).length;if(this.s.funds<cost)return {ok:false,code:'NO_FUNDS'};if(this.handFull()&&copies<2)return {ok:false,code:'FULL_HAND'};if(stockOf(this.data,this.s,id)<=0)return {ok:false,code:'NO_STOCK'};this.s.stock[id]-=1;this.s.funds-=cost;this.s.offers[index]=null;const unit=this.gain(id);unit.purchases??={};unit.purchases[id]=(unit.purchases[id]||0)+1;return {ok:true};}
  deploy(uid,x,y,dir){if(!this.board||!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=this.board.cols||y>=this.board.rows||this.board.grid[y][x].buildableType==='NONE')return false;if(this.s.phase!=='prep'||!Number.isInteger(dir)||dir<0||dir>3)return false;const u=this.s.units.find(u=>u.uid===uid);if(!u)return false;const other=this.s.units.find(v=>v.uid!==uid&&v.position?.x===x&&v.position?.y===y);if(!other&&u.position===null&&this.s.units.filter(v=>v.position!==null).length>=8)return false;const old=u.position;if(other)other.position=old;u.position={x,y};if(old===null)u.dir=dir;return true;}
  upgrade(){const price=this.terms().upgradeCost;if(this.s.phase!=='prep'||price===null||this.s.funds<price||this.s.rewardPending)return false;this.s.funds-=price;this.s.level++;this.s.discount=0;return true;}
  refresh(offers){if(this.s.phase!=='prep'||this.s.rewardPending||this.s.funds<this.terms().refreshCost)return false;if(offers.some(id=>!this.data.season.charShopChessDatas[id]||this.data.season.charShopChessDatas[id].chessLevel>this.s.level))return false;this.s.funds-=this.terms().refreshCost;this.s.offers=offers.slice();this.s.locked=false;return true;}
@@ -99,5 +129,6 @@ export class PreparationState {
  sell(uid){if(this.s.phase!=='prep'||this.s.rewardPending)return false;const unit=this.s.units.find(u=>u.uid===uid);if(!unit)return false;this.s.units=this.s.units.filter(u=>u.uid!==uid);this.s.items.push(...unit.equipment);this.s.funds+=this.data.season.shopCharChessInfoData[unit.rank][this.data.season.charChessDataDict[unit.chessId].isGolden?1:0].chessSoldPrice;restoreStock(this.s,unit);this.s.events.push({type:'sell',uid});return true;}
  finishBattle({success,leaks=0}){if(this.s.phase!=='battle'||typeof success!=='boolean'||!Number.isInteger(leaks)||leaks<0)return false;this.s.lastBattle={success,leaks};this.s.phase=success?'intermission':'finished';return true;}
  nextRound(offers=[],{hiddenQualified=false}={}){if(this.s.phase!=='intermission'||!Array.isArray(offers)||offers.some(id=>!this.data.season.charShopChessDatas[id]))return false;const rounds=buildPhasePlan(this.data,this.s.modeId),next=rounds.find(r=>r.round===this.s.round+1);if(this.s.round>=rounds.length||(next?.isConditional&&!hiddenQualified)){this.s.phase='finished';return true;}this.s.round++;this.s.discount++;this.s.funds=baseFunding(this.s.round);if(!this.s.locked)this.s.offers=offers.slice();this.s.locked=false;this.s.decisionRequired=next?.battles.some(b=>b.isSpPrepare)||false;this.s.phase=this.s.decisionRequired?'decision':'prep';return true;}
- beginBattle(){if(this.s.phase!=='prep'||this.s.rewardPending)return false;this.s.funds=0;if(!this.s.locked)this.s.offers=[];const overflow=new Set(this.hand().slice(10).map(i=>i.uid));this.s.units=this.s.units.filter(u=>!overflow.has(u.uid));this.s.items=this.s.items.filter(i=>!overflow.has(i.uid));this.s.phase='battle';return true;}
+ // 开战前丢掉超过上限的整备区卡牌：判定顺序与整备区显示一致（未上场干员 → 装备 → 未放置的召唤物卡）。
+ beginBattle(){if(this.s.phase!=='prep'||this.s.rewardPending)return false;this.s.funds=0;if(!this.s.locked)this.s.offers=[];const cards=this.hand(),overflow=new Set(cards.slice(HAND_LIMIT).map(i=>i.uid));this.s.units=this.s.units.filter(u=>!overflow.has(u.uid));this.s.items=this.s.items.filter(i=>!overflow.has(i.uid));if(Array.isArray(this.s.summonCards))this.s.summonCards=this.s.summonCards.filter(c=>!overflow.has(c.uid));this.s.phase='battle';return true;}
 }
