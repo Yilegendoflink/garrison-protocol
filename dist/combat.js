@@ -31,6 +31,8 @@ export function applyDamage(target, amount, {immortal = false, minHp = 0, type =
   const barrier = (target.barriers || []).find(b => b.charges > 0 && (!b.types || b.types.includes(type)));
   if(barrier && amount > 0){
     barrier.charges--;
+    // 层数护盾用尽即移除，避免消耗过的空壳一直留在数组里（敌方也复用这套屏障）。
+    target.barriers=(target.barriers||[]).filter(b=>b.charges>0);
     return {hp:0,shield:0,total:0,blocked:true,consumedGuard:barrier,depletedLayers:[]};
   }
   const depletedLayers=[];
@@ -51,9 +53,17 @@ export function applyDamage(target, amount, {immortal = false, minHp = 0, type =
     target.shield=Math.max(0, (target.shield || 0) - shield);
     leftover-=shield;
   }
-  const hp=Math.min(Math.max(0, target.hp - floor), leftover);
+  // 「特殊生命值机制」：成功受到伤害时生命值只降低 1 点（不论伤害多少）；部分单位仅接受部分伤害类型，
+  // 类型不符时生命值完全不降低。被屏障／护盾全额吸收（leftover 为 0）时不算「受到伤害」，同样不减。
+  let hp;
+  if(target.hitCountHp){
+    const allowed=!Array.isArray(target.hitCountTypes)||target.hitCountTypes.includes(type);
+    hp=allowed&&leftover>0?Math.min(1,Math.max(0, target.hp - floor)):0;
+  }else{
+    hp=Math.min(Math.max(0, target.hp - floor), leftover);
+  }
   target.hp-=hp;
-  return {hp, shield, total: hp + shield, blocked:false, consumedGuard:null, depletedLayers};
+  return {hp, shield, total: hp + shield, blocked:false, consumedGuard:null, depletedLayers, hitCount:!!target.hitCountHp, raw:leftover};
 }
 export function recoverHP(target, amount) {
   if (target.hp <= 0) return 0;

@@ -33,6 +33,20 @@ function enemyBlackboard(raw={}){
 function enemyTalentBlackboard(raw={}){
  const out={};for(const row of raw.talentBlackboard||[])if(row?.key!=null)out[row.key]=Number.isFinite(Number(row.value))?Number(row.value):row.value;return out;
 }
+// 原表里字符串型天赋参数（例如 DeadSpawn.enemy_key 的敌人 key）只存在 valueStr 上。
+function enemyTalentString(raw={},key){
+ const row=(raw.talentBlackboard||[]).find(x=>x?.key===key);
+ if(!row)return undefined;
+ const value=row.valueStr??row.value;
+ return typeof value==='string'&&value?value:undefined;
+}
+// 推导结果可以被 overrides 里的对象增量覆盖（写 false 表示显式关闭）。
+function mergeInferred(inferred,override){
+ if(override===undefined||override===null)return inferred;
+ if(override===false)return null;
+ if(inferred&&typeof inferred==='object'&&typeof override==='object')return {...inferred,...override};
+ return override;
+}
 
 function enemySkill(raw={}){
  const skill=(raw.skills||[]).find(x=>x?.prefabKey&&!['BornAnim','StartRun','EndAnim','BeginAnim'].includes(x.prefabKey));
@@ -182,8 +196,7 @@ export function enemyBehaviorProfile(raw={}){
  const elementScale=Number(talentBb['epdamage.attack@ep_damage_ratio']??talentBb['EpDamage.attack@ep_damage_ratio']??talentBb['empty.attack@ep_damage_ratio']??talentBb['ep_damage_ratio']);
  const explosion= /死亡[^。；;]*(?:产生|造成|爆炸)/.test(text)?{type:/法术/.test(text)?'arts':'physical',scale:Number(bb['boom.atk_scale'])||1,radius:Number(behavior.deathExplosionRadius??raw.deathExplosionRadius)||1,requiresFire:/点燃状态/.test(text)}:null;
  const auraDef=Number(bb['defup.def']);
- const auraRadius=Number(bb['defup.range_radius']??bb['aura.range_radius']);
- const auraDamageResistance=Number(bb['aura.damage_resistance']);
+ const auraRadius=Number(bb['defup.range_radius']);
  const magicResistanceBonus=Number(bb['refracting.magic_resistance']);
  const lowHpRatio=Number(bb['atkup.hp_ratio']??bb['enrage.hp_ratio']??behavior.lowHpRatio??(/生命值降至一半以下|生命值低于50%|生命值低于一半/.test(text)?0.5:0));
  const lowHpAttackAdd=Number(bb['atkup.atk']??bb['AtkUp.atk']);
@@ -193,6 +206,38 @@ export function enemyBehaviorProfile(raw={}){
  const initialInvisible=behavior.initialInvisible??/^\s*(?:<[^>]+>)*隐匿/.test(String(raw.description||''));
  const initialUnblockable=behavior.initialUnblockable??/无法被阻挡/.test(text);
  const initialShield=Number(bb['shield.dynamic']??behavior.initialShield);
+ // 「特殊生命值机制」：图鉴描述为「需要 N 次伤害击倒」，生命值即为所需次数。碎片敌人（applyWay=NONE）
+ // 才会命中；带「法术或真实」限定语的（青瓷／彩瓷茶器）只接受这两种伤害类型。
+ const hitCountMatch=/需要(\d+)次(法术或真实)?伤害击倒/.exec(text);
+ const inferredHitCount=Boolean(hitCountMatch)&&raw.applyWay==='NONE'
+  ?{hitCountHp:true,hitCountTypes:hitCountMatch[2]?['arts','true']:null}
+  :null;
+ const hitCount=mergeInferred(inferredHitCount,behavior.hitCount);
+ // 解压缩：以自身路径召唤 N 个碎片敌人；cnt_add 为负数时按「每消耗 1 个持有物少生成 1 个」（沉沙的断刃）。
+ const deadSpawnKey=enemyTalentString(raw,'DeadSpawn.enemy_key');
+ const deadSpawnCount=Number(talentBb['DeadSpawn.cnt']);
+ const inferredDeadSpawn=deadSpawnKey&&Number.isFinite(deadSpawnCount)&&deadSpawnCount>0
+  ?{enemyKey:deadSpawnKey,cnt:Math.floor(deadSpawnCount),cntAdd:Number.isFinite(Number(talentBb['DeadSpawn.cnt_add']))?Number(talentBb['DeadSpawn.cnt_add']):0}
+  :null;
+ const deadSpawn=mergeInferred(inferredDeadSpawn,behavior.deadSpawn);
+ // 断刃（沉沙／新硎）：持有若干个，持有期间攻击力 +Atkup.atk，每次成功攻击消耗 1 个，
+ // 耗尽后立刻失去加成；被击倒时未消耗的断刃决定解压缩个数（DeadSpawn.cnt_add=-1）。
+ const daggerAtkAdd=Number(talentBb['Atkup.atk']??talentBb['AtkUp.atk']);
+ const inferredDaggers=deadSpawn&&Number.isFinite(daggerAtkAdd)&&daggerAtkAdd>0
+  ?{count:Math.max(1,Math.floor(deadSpawn.cnt)),atkAdd:daggerAtkAdd,perAttack:1}
+  :null;
+ const daggers=mergeInferred(inferredDaggers,behavior.daggers);
+ // 再生：被击倒后 1s 无敌+不可阻挡（不移动），随后进入以 prop_max_hp 为次数血条的第二形态，
+ // interval 秒内未被击倒则回满血。余烬／火灰形态另有「不进行攻击、获得隐匿」（图鉴 ability 文本），
+ // 再生状态（假想敌）只标了不可阻挡，仍会攻击，并在进入时给周围其他敌人若干层次数护盾。
+ const reviveHitCount=Number(talentBb['Revive[Trigger].prop_max_hp']);
+ const reviveInterval=Number(talentBb['Revive[Trigger].interval']);
+ const reviveFormName=(/(?:变为|进入)([^，。；;、]{2,8}?)(?:状态|并使|且|，|。|；|;|$)/.exec(text)||[])[1];
+ const reviveInvisible=/变为隐匿|获得隐匿/.test(text);
+ const inferredRevive=Number.isFinite(reviveHitCount)&&reviveHitCount>0&&Number.isFinite(reviveInterval)&&reviveInterval>0
+  ?{hitCount:Math.floor(reviveHitCount),interval:reviveInterval,formName:reviveFormName||'重生形态',invisible:reviveInvisible,noAttack:reviveInvisible,unblockable:!reviveInvisible&&/不可被阻挡/.test(text),guardLayers:Number(talentBb['Aura.max_damage_block_cnt'])||0,guardRadius:1.8}
+  :null;
+ const revive=mergeInferred(inferredRevive,behavior.revive);
  const specialAtkScale=Number(specialSkill?.bb?.atk_scale??specialSkill?.bb?.damage_scale);
  const firstAttackSplash=/首次攻击[^。；;]*溅射/.test(text);
  const meleeAttackScale=Number(talentBb['Empty.attack@chuang_atk_scale']);
@@ -221,7 +266,10 @@ export function enemyBehaviorProfile(raw={}){
   attackElement:elementKey,
   attackElementScale:Number.isFinite(elementScale)&&elementScale>0?elementScale:0,
   deathExplosion:explosion,
-  aura:auraDef>0||auraDamageResistance>0?{def:auraDef>0?auraDef:0,damageResistance:auraDamageResistance>0?Math.min(1,auraDamageResistance):0,radius:Number.isFinite(auraRadius)&&auraRadius>0?auraRadius:1}:null,
+  // 只认 defup.* 这类「给周围友军加防」的真光环。aura.* 前缀是自身条件判定
+  // （例如「周围半径1.5内存在燃烧的芦苇丛时自身减伤」），不是发给别人的光环，
+  // 之前把 aura.damage_resistance 当光环发出去，等于把减伤白送给周围所有敌人。
+  aura:auraDef>0?{def:auraDef,damageResistance:0,radius:Number.isFinite(auraRadius)&&auraRadius>0?auraRadius:1}:null,
   magicResistanceBonus:Number.isFinite(magicResistanceBonus)&&magicResistanceBonus>0?magicResistanceBonus:0,
   lowHpRatio:Number.isFinite(lowHpRatio)&&lowHpRatio>0&&lowHpRatio<1?lowHpRatio:0,
   lowHpAttackMultiplier:Number.isFinite(lowHpAttackScale)&&lowHpAttackScale>0?lowHpAttackScale:Number.isFinite(lowHpAttackAdd)&&lowHpAttackAdd>0?1+lowHpAttackAdd:0,
@@ -230,6 +278,14 @@ export function enemyBehaviorProfile(raw={}){
   initialInvisible:Boolean(initialInvisible),
   initialUnblockable:Boolean(initialUnblockable),
   initialShield:Number.isFinite(initialShield)&&initialShield>0?initialShield:0,
+  hitCountHp:Boolean(hitCount?.hitCountHp),
+  hitCountTypes:Array.isArray(hitCount?.hitCountTypes)&&hitCount.hitCountTypes.length?hitCount.hitCountTypes:null,
+  // 解压缩出来的碎片（器皿、镜、茶器、矛头一类）体型远小于本体，画面上按比例缩小，
+  // 免得一堆锅碗瓢盆和精英怪一样大。只在生成时生效，形态切换不会改这个值。
+  spriteScale:hitCount?.hitCountHp?0.6:1,
+  deadSpawn:deadSpawn||null,
+  daggers:daggers||null,
+  revive:revive||null,
   specialSkill,
   specialAtkScale:Number.isFinite(specialAtkScale)&&specialAtkScale>0?specialAtkScale:0,
   firstAttackSplash,

@@ -140,6 +140,9 @@ export function commitExit(battle,{target,reason='knockdown',killer=null,event=n
   const credit=killer?.kind==='summon'?getActor(battle.s,killer.ownerUid):killer;
   if(credit&&battle.s.units.includes(credit))battle.event?.(credit,'kill');
   log(battle,'death',{uid:target.uid,reason,killerUid:killer?.uid,x:target.x,y:target.y,eventId:event?.eventId});
+  // 死亡类敌方能力（死亡爆炸／死亡区域／解压缩）统一在这里触发，覆盖全部死因
+  // （干员击杀、持续伤害区域、额外伤害、生命流失），不再只在干员攻击路径里结算一次。
+  if(typeof battle.onEnemyDeath==='function')battle.onEnemyDeath(target,{reason,killer,event});
   dispatch(battle,'enemy-death',{target,killer,reason,event});
   return true;
  }
@@ -766,7 +769,7 @@ export function grantShield(battle,target,spec){
  log(battle,'barrier-add',{uid:target.uid,amount:spec.amount,id:layer.id});
  return layer;
 }
-function grantGuard(battle,target,spec){
+export function grantGuard(battle,target,spec){
  target.barriers??=[];
  const g={id:spec.id||('g-'+battle.s.settle.nextEffectId++),charges:spec.charges??1,types:spec.types||null,sourceUid:spec.sourceUid,endsAt:spec.endsAt};
  target.barriers.push(g);log(battle,'guard-add',{uid:target.uid,id:g.id,charges:g.charges});return g;

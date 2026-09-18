@@ -57,7 +57,7 @@ DOT 词条池共 12 名敌人（`data/modes/alliance-lower/default-wave-table.js
 
 ### 第三批：频次（TIMES）
 
-「需一定攻击次数击破」：护盾层数型（`initialShield` 已有）+ 次数型（受击 N 次后才掉血/变形态）。目前只有前者，需要补次数护盾与对应的 UI 提示。
+「需一定攻击次数击破」：护盾层数型（`initialShield` 已有）+ 次数型（受击 N 次后才掉血/变形态）。**已落地**：次数护盾（`barriers`，含 `types` 过滤）、碎片与再生的「特殊生命值机制」、「解压缩」（受击次数血条的碎片小怪）、以及 `Revive[Trigger]` 的形态切换。细节、数值来源与遗留项见 `DECOMPRESS_ENEMY_PLAN.md`。
 
 ### 第四批：隐匿（INVISIBLE）+ 折射（REFLECTION）
 

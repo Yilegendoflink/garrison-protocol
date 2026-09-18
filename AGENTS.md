@@ -46,6 +46,14 @@
 - **召唤物卡占格口径（已确认，别当 bug 修）**：只在「未放置」时占一格，放到场上后不占。因此满手时场上召唤卡收不回来，只能等持有者离场或先清其他格——这是用户确认过的玩法设计，不要为了「流畅」改成「场上召唤卡也占格」或给收回开例外。
 - **干员档案层级**：`.native-dossier` 是覆盖在棋盘上的浮层（PC 上 z-index 8），PC 下 `max-height:calc(100vh - 556px)` 让它截止在整备区上方并自身滚动。档案高度若放到全视口，会把下方整备区卡片整片吃掉，卡片点不中、装备也拖不上；反过来把整备区抬到档案之上，档案底部的「撤回整备区／出售」按钮又会点不到。两边都要能用，只能靠限高错开。
 - **难度选择的海猫模式**：`mode_cat_all` 只是 lobby 下拉里的选项，底层仍跑 `mode_single_normal`（`state.draft.cat` → `s.cat`）。它把 `s.funds` 顶到 `Number.MAX_SAFE_INTEGER`，让 `spend`/`upgrade`/`refresh` 的原判定全部通过；界面上一律用 `fundsMarkup()` 显示彩色 `ALL`，不要直接印 `s.funds`。
+- **敌方小怪体型**：解压缩出来的碎片（器皿／镜／茶器／矛头一类，即 `enemyBehavior.hitCountHp` 的敌人）画面上按 `e.spriteScale`（0.6）缩小，免得和精英怪一样大。缩放必须在生成时定死：`hitCountHp` 是运行时状态，余烬／再生形态也会置真，不能拿它当缩放依据。
+- **次数血条不吃战斗缩放**：`combatScale` 只作用于常规血量，`hitCountHp` 敌人的生命值就是「需要击倒的伤害次数」，生成时取原表数值、不乘倍率，否则 0.7 倍会把「2 次」变成 1.4。
+
+## 敌人能力口径
+
+- **死亡类能力只有一个入口**：死亡爆炸、死亡区域、解压缩都走 `native-effects` 的 `commitExit` → `battle.onEnemyDeath`，不要再挂在干员攻击路径上（那样被持续伤害击杀就漏触发）。生成的敌人先入队（`queueEnemySpawn`），在敌人状态结算后与战斗结束判定前各刷一次，别在遍历 `s.enemies` 时直接 push。
+- **反推原表字段**：`DeadSpawn.*`、`Revive[Trigger].*`、`Atkup.atk`／`AtkUp.atk`、`shield.dynamic` 等一律从 `talentBlackboard` 取，取不到就不给这个能力，并在 `enemy-behavior-overrides.json` 里显式关闭。`aura.*` 前缀是**自身条件判定**，不是发给周围敌人的光环（真光环是 `defup.*`）。
+- **放开随机池要走流程**：复杂敌人先在 `enemy-behavior-overrides.json` 里 `randomPoolEligible:false`，补完专属实现并写了定向测试后再逐条放开；`filterRandomPoolTable` 会把不合格的敌人从词条池里剔掉，没放开就等于没上场。
 
 资料：`data/prts/` 参考底库；`data/normalized/` 规范化；`data/modes/alliance-lower/` 本期包（历史提交 `86da4cfa…`）。客户端规模仍是 112 可见预设、266 养成状态、23 盟约、40 策略、215 敌人引用、376 头像。
 

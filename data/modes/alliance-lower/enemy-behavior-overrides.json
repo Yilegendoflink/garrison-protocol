@@ -11,6 +11,22 @@
       "burstShots": 3,
       "randomPoolEligible": false,
       "reason": "自制投石机的三连击先固定波次验证"
+    },
+    "enemy_1288_duskls": {
+      "randomPoolEligible": true,
+      "reason": "怨恨的余烬再生（Revive[Trigger]）已实现并通过定向测试，回到 TIMES 词条池"
+    },
+    "enemy_1288_duskls_2": {
+      "randomPoolEligible": true,
+      "reason": "暴怒的余烬再生已实现并通过定向测试，回到 TIMES 词条池"
+    },
+    "enemy_1292_duskld": {
+      "randomPoolEligible": true,
+      "reason": "贪欲的火灰再生已实现并通过定向测试，回到 TIMES 词条池"
+    },
+    "enemy_9010_acpupp": {
+      "randomPoolEligible": true,
+      "reason": "傀儡再生与 5 层物法次数护盾已实现并通过定向测试，回到 TIMES 词条池"
     }
   }
 }
