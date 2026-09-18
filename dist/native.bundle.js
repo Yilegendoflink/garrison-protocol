@@ -5657,6 +5657,12 @@ function attackVisual(p){
 function line(c,a,b){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();}
 function cross(c,p,r=6){line(c,{x:p.x-r,y:p.y},{x:p.x+r,y:p.y});line(c,{x:p.x,y:p.y-r},{x:p.x,y:p.y+r});}
 function ring(c,p,rx,ry){c.beginPath();c.ellipse(p.x,p.y,rx,ry,0,0,Math.PI*2);c.stroke();}
+// 技能表现色：默认是暖金／暖白；水月这类水属性干员的技能在游戏里是蓝色的，按干员覆盖一层色调。
+// 只影响绘制，不参与任何命中或数值判定。
+const SKILL_FX_TINT={char_437_mizuki:{main:[122,198,255],soft:[190,230,255]}};
+const FX_MAIN=[255,246,214],FX_SOFT=[255,240,200],FX_RING=[244,211,139],FX_GLOW=[255,236,190];
+const rgba=(rgb,a)=>`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+function fxTint(battle,uid){const u=(battle?.s?.units||[]).find(x=>x.uid===uid);return u?SKILL_FX_TINT[u.id]||null:null;}
 function drawCombatFx(c,point,z,battle,reduce){
  const s=battle.s,t=s.time;
  c.save();c.lineCap='round';
@@ -5888,7 +5894,8 @@ function drawWideSweep(c,point,z,battle,{reduceFx=false}={}){
   c.rotate(facing);
   for(let i=0;i<2;i++){
    const a0=-.95+k*1.9*(i?1:1)-(i?.22:0),a1=a0+(i?.5:.72);
-   c.strokeStyle=`rgba(228,244,255,${((1-k)*(i?.5:.85)*(reduceFx?.6:1)).toFixed(3)})`;
+   const tint=fxTint(battle,e.uid);
+   c.strokeStyle=rgba(tint?.soft||[228,244,255],(1-k)*(i?.5:.85)*(reduceFx?.6:1));
    c.lineWidth=i?2:4;c.lineCap='round';
    c.beginPath();c.arc(0,0,r,a0,a1);c.stroke();
   }
@@ -5905,7 +5912,7 @@ function drawWideSweep(c,point,z,battle,{reduceFx=false}={}){
   const r=info.geo.reachX*z.tw*.7+z.tw*.3;
   c.save();c.globalCompositeOperation='lighter';
   c.translate(a.x,a.y);c.rotate(ang);
-  c.strokeStyle=`rgba(232,246,255,${((1-k)*(reduceFx?.5:.85)).toFixed(3)})`;
+  c.strokeStyle=rgba(fxTint(battle,e.uid)?.main||[232,246,255],(1-k)*(reduceFx?.5:.85));
   c.lineWidth=3;c.lineCap='round';
   c.beginPath();c.arc(0,0,r,-.5+k*.25,.5+k*.25);c.stroke();
   c.restore();drew=true;
@@ -5923,16 +5930,16 @@ function drawSelfBurst(c,point,z,battle,{reduceFx=false}={}){
   if(!info)continue;
   const geo=info.geo,round=geo.spanX<=2&&geo.spanY<=2&&geo.count<=9;   // 近身范围画圆环，否则按格描边
   const k=Math.max(0,Math.min(1,(s.time-e.t)/.55)),fade=(1-k)*(reduceFx?.55:1);
-  const p=point(info.unit.x,info.unit.y);
+  const p=point(info.unit.x,info.unit.y),tint=fxTint(battle,e.uid);
   c.save();c.globalCompositeOperation='lighter';
   if(round){
    const r=(geo.reachX||1)*z.tw*(.5+k*.75);
-   c.strokeStyle=`rgba(255,246,214,${(.85*fade).toFixed(3)})`;c.lineWidth=3;
+   c.strokeStyle=rgba(tint?.main||FX_MAIN,.85*fade);c.lineWidth=3;
    c.beginPath();c.ellipse(p.x,p.y,r,r*.62,0,0,Math.PI*2);c.stroke();
    c.strokeStyle=`rgba(255,255,255,${(.5*fade).toFixed(3)})`;c.lineWidth=1.4;
    c.beginPath();c.ellipse(p.x,p.y,r*.62,r*.4,0,0,Math.PI*2);c.stroke();
   }else{
-   strokeRange(c,z,info.cells,{stroke:`rgba(255,240,200,${(.8*fade).toFixed(3)})`,width:2});
+   strokeRange(c,z,info.cells,{stroke:rgba(tint?.soft||FX_SOFT,.8*fade),width:2});
   }
   c.restore();drew=true;
  }
@@ -5946,11 +5953,11 @@ function drawAuraField(c,point,z,battle,{reduceFx=false}={}){
   if(!u.deployed||u.hp<=0||!(u.skillLeft>0))continue;
   const info=rangeCells(point,z,battle,u.uid);
   if(!info||info.geo.count<6)continue;
-  const pulse=reduceFx?0:(.5+.5*Math.sin(s.time*2.2));
-  strokeRange(c,z,info.cells,{stroke:`rgba(244,211,139,${(.16+.14*pulse).toFixed(3)})`,width:1.5});
+  const pulse=reduceFx?0:(.5+.5*Math.sin(s.time*2.2)),tint=fxTint(battle,u.uid);
+  strokeRange(c,z,info.cells,{stroke:rgba(tint?.main||FX_RING,.16+.14*pulse),width:1.5});
   const p=point(u.x,u.y),r=(info.geo.reachX||1)*z.tw;
   c.save();c.globalCompositeOperation='lighter';
-  c.strokeStyle=`rgba(255,236,190,${(.1+.08*pulse).toFixed(3)})`;c.lineWidth=2;
+  c.strokeStyle=rgba(tint?.soft||FX_GLOW,.1+.08*pulse);c.lineWidth=2;
   c.beginPath();c.ellipse(p.x,p.y,r*.55,r*.34,0,0,Math.PI*2);c.stroke();
   c.restore();drew=true;
  }
@@ -6044,10 +6051,10 @@ function drawSkillFan(c,point,z,battle,{reduceFx=false}={}){
   if(hits.length<2)continue;
   const origin=point(info.unit.x,info.unit.y);
   const toward=Math.atan2((hits[0].y)-(start.y??hits[0].y),(hits[0].x)-(start.x??hits[0].x));
-  const k=Math.max(0,Math.min(1,(s.time-start.t)/.3)),fade=(1-k)*(reduceFx?.5:.85);
+  const k=Math.max(0,Math.min(1,(s.time-start.t)/.3)),fade=(1-k)*(reduceFx?.5:.85),tint=fxTint(battle,start.uid);
   const reach=Math.max(info.geo.reachX,info.geo.reachY)*z.tw*.72+z.tw*.3;
   c.save();c.globalCompositeOperation='lighter';c.translate(origin.x,origin.y);
-  c.strokeStyle='rgba(255,240,206,'+fade.toFixed(3)+')';c.lineWidth=2.4;c.lineCap='round';
+  c.strokeStyle=rgba(tint?.soft||[255,240,206],fade);c.lineWidth=2.4;c.lineCap='round';
   c.beginPath();c.arc(0,0,reach,toward-.55,toward+.55);c.stroke();
   c.strokeStyle='rgba(255,255,255,'+(fade*.6).toFixed(3)+')';c.lineWidth=1.4;
   for(const h of hits){const b=point(h.x,h.y);c.beginPath();c.moveTo(0,0);c.lineTo(b.x-origin.x,b.y-origin.y);c.stroke();}
@@ -6105,9 +6112,11 @@ function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,reduce=!!op
   const p=point(e.x,e.y);c.fillStyle=e.type==='healing'?'#8fe8b5':'#f6e7c8';c.font='12px sans-serif';c.textAlign='center';c.fillText(opts.formatText?opts.formatText(e.text):e.text,p.x,p.y-24-(.6-e.life)*30);
  }
  for(const e of recent(s.events,t,'deploy',.4)){const p=point(e.x,e.y);c.strokeStyle='#8fe8b5';c.lineWidth=2;c.beginPath();c.ellipse(p.x,p.y+8,reduce?12:12+18*(t-e.t),5,0,0,Math.PI*2);c.stroke();}
- for(const e of recent(s.events,t,'skill-end',.3)){const p=point(e.x,e.y);c.strokeStyle='#f4d38b';c.strokeRect(p.x-12,p.y-12,24,24);}
+ for(const e of recent(s.events,t,'skill-end',.3)){const p=point(e.x,e.y);c.strokeStyle=rgba(fxTint(battle,e.uid)?.main||FX_RING,1);c.strokeRect(p.x-12,p.y-12,24,24);}
  for(const e of recent(s.events,t,'skill-start',.45)){
-  const p=point(e.x,e.y),k=1-(t-e.t)/.45;c.strokeStyle=`rgba(244,211,139,${.8*k})`;c.lineWidth=2;c.beginPath();c.arc(p.x,p.y,14+8*(1-k),0,Math.PI*2);c.stroke();c.fillStyle=`rgba(244,211,139,${.9*k})`;c.font='11px sans-serif';c.textAlign='center';c.fillText(e.name||'技能',p.x,p.y-22);
+  const p=point(e.x,e.y),k=1-(t-e.t)/.45,tint=fxTint(battle,e.uid);
+  c.strokeStyle=rgba(tint?.main||FX_RING,.8*k);c.lineWidth=2;c.beginPath();c.arc(p.x,p.y,14+8*(1-k),0,Math.PI*2);c.stroke();
+  c.fillStyle=rgba(tint?.main||FX_RING,.9*k);c.font='11px sans-serif';c.textAlign='center';c.fillText(e.name||'技能',p.x,p.y-22);
  }
  for(const e of recent(s.events,t,'leak',1.2)){
   const p=point(e.x,e.y);c.fillStyle='#ffb48c';c.font='bold 14px sans-serif';c.textAlign='center';c.fillText('漏怪',p.x,p.y-18);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {rangeGeometry,skillWidensRange} from '../dist/protocol.js';
 import {openBattle,deployNow,byId,enemy} from './effects-harness.mjs';
-import {drawWideSweep,drawSelfBurst,drawAuraField} from '../dist/native-fx.js';
+import {drawWideSweep,drawSelfBurst,drawAuraField,drawSkillFan,drawFx} from '../dist/native-fx.js';
 
 function host(){
  const ops=[],state={saves:0,restores:0};
@@ -89,4 +89,28 @@ test('wide 扫弧、自身震波、领域描边都真的画了东西',()=>{
  u.skillLeft=10;
  assert.equal(drawAuraField(aura.c,point,Z,b),true,'持续期应描出领域');
  assert.ok(aura.ops.some(o=>o.op==='strokeRect'),'领域按格描边');
+});
+
+test('水月的技能特效走蓝色，其他干员保持暖金',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_09_a',skillIndex:2});
+ const u=byId(b,'char_437_mizuki');deployNow(b);u.skillLeft=10;
+ const tinted=op=>/rgba\(122,198,255|rgba\(190,230,255/.test(String(op.style));
+ b.emit('skill-start',{uid:u.uid,kind:'duration',name:'镜花水月',x:u.x,y:u.y,wide:true,wideKind:'sweep'});
+ const sweep=host();
+ assert.equal(drawWideSweep(sweep.c,point,Z,b),true);
+ assert.ok(sweep.ops.some(tinted),'水月的持续范围弧应为蓝色');
+ const aura=host();
+ assert.equal(drawAuraField(aura.c,point,Z,b),true);
+ assert.ok(aura.ops.some(tinted),'水月的领域描边应为蓝色');
+ const fx=host();
+ b.emit('skill-start',{uid:u.uid,kind:'duration',name:'镜花水月',x:u.x,y:u.y});
+ drawFx(fx.c,point,Z,b,{});
+ assert.ok(fx.ops.some(tinted),'技能开启提示环与名字也应是蓝色');
+ // 对照：别的干员仍然暖金
+ const other=openBattle({chessId:'chess_char_4_22_a',skillIndex:2});
+ const v=byId(other.b,'char_172_svrash');deployNow(other.b);v.skillLeft=10;
+ const plain=host();
+ assert.equal(drawAuraField(plain.c,point,Z,other.b),true);
+ assert.ok(plain.ops.some(o=>/rgba\(244,211,139/.test(String(o.style))),'其他干员的领域仍是暖金');
+ assert.equal(plain.ops.some(tinted),false,'暖金路径不能混进蓝色');
 });
