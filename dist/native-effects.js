@@ -432,6 +432,8 @@ function flightBounds(battle){const cols=Math.max(1,battle.map?.cols||1),rows=Ma
 function yanWanderPoint(battle){const cols=Math.max(1,battle.map?.cols||1),rows=Math.max(1,battle.map?.rows||1);return {x:battle.economy.random()*cols,y:battle.economy.random()*rows};}
 function yanDamage(battle,guardian,target,scale,cause='attack'){
  if(!target||target.hp<=0)return;
+ // 只为表现层补一条弹道事件：炎佑走的是自己的攻击循环，不会发通用的 attack/strike 事件
+ if(cause==='attack')battle.emit('yan-bolt',{uid:guardian.uid,x:guardian.x,y:guardian.y,targetUid:target.uid,targetX:target.x,targetY:target.y});
  dealDamage(battle,{source:guardian,target,amount:guardian.atk*scale,type:'arts',cause,skill:cause==='skill'});
  applyElementDamage(battle,{source:guardian,target,amount:guardian.atk*.2,type:'burn',cause});
 }

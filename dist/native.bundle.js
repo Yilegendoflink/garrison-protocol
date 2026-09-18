@@ -3947,6 +3947,8 @@ function flightBounds(battle){const cols=Math.max(1,battle.map?.cols||1),rows=Ma
 function yanWanderPoint(battle){const cols=Math.max(1,battle.map?.cols||1),rows=Math.max(1,battle.map?.rows||1);return {x:battle.economy.random()*cols,y:battle.economy.random()*rows};}
 function yanDamage(battle,guardian,target,scale,cause='attack'){
  if(!target||target.hp<=0)return;
+ // 只为表现层补一条弹道事件：炎佑走的是自己的攻击循环，不会发通用的 attack/strike 事件
+ if(cause==='attack')battle.emit('yan-bolt',{uid:guardian.uid,x:guardian.x,y:guardian.y,targetUid:target.uid,targetX:target.x,targetY:target.y});
  dealDamage(battle,{source:guardian,target,amount:guardian.atk*scale,type:'arts',cause,skill:cause==='skill'});
  applyElementDamage(battle,{source:guardian,target,amount:guardian.atk*.2,type:'burn',cause});
 }
@@ -5209,8 +5211,46 @@ function drawCombatFx(c,point,z,battle,reduce){
   else{c.translate(a.x,a.y);c.rotate(angle);line(c,{x:4,y:-3},{x:10,y:0});line(c,{x:10,y:0},{x:4,y:3});}
   c.restore();
  }
- for(const e of (s.events||[]).filter(e=>['heal','chain'].includes(e.type)&&t-e.t>=0&&t-e.t<.4)){
-  const a=point(e.x,e.y),b=point(e.targetX,e.targetY),heal=e.type==='heal',age=(t-e.t)/.4;
+ // 炎佑（炎盟约 6 人的召唤物）：普攻弹道 + 「祛恶之焰」持续期表现。只读召唤物状态与 yan-bolt 事件。
+ const YAN_BOLT=.3,YAN_SCALE=reduce?.62:1;
+ for(const s2 of s.summons||[]){
+  if(s2.type!=='yan-guardian'||!s2.deployed)continue;
+  const p=point(s2.x,s2.y),r=(z.tw*.42)*YAN_SCALE;
+  // 弹体：从炎佑飞向目标，命中瞬间炸开一圈灼燃
+  for(const e of recent(s.events,t,'yan-bolt',YAN_BOLT)){
+   if(e.uid!==s2.uid||e.targetX==null)continue;
+   const a=point(e.x,e.y),b=point(e.targetX,e.targetY),k=Math.max(0,Math.min(1,(t-e.t)/YAN_BOLT));
+   const x=a.x+(b.x-a.x)*k,y=a.y+(b.y-a.y)*k- Math.sin(k*Math.PI)*(reduce?0:z.th*.18);
+   c.save();c.globalCompositeOperation='lighter';
+   const g=c.createRadialGradient(x,y,0,x,y,r*.9);
+   g.addColorStop(0,`rgba(255,244,214,${.85*YAN_SCALE})`);g.addColorStop(.45,`rgba(255,146,74,${.6*YAN_SCALE})`);g.addColorStop(1,'rgba(255,90,40,0)');
+   c.fillStyle=g;c.beginPath();c.arc(x,y,r*.9,0,Math.PI*2);c.fill();
+   const tail={x:x-Math.cos(Math.atan2(b.y-a.y,b.x-a.x))*r*1.5,y:y-Math.sin(Math.atan2(b.y-a.y,b.x-a.x))*r*1.5};
+   c.strokeStyle=`rgba(255,170,104,${.5*YAN_SCALE})`;c.lineWidth=2.4;c.lineCap='round';
+   c.beginPath();c.moveTo(tail.x,tail.y);c.lineTo(x,y);c.stroke();
+   if(k>.72){const hit=(k-.72)/.28;c.strokeStyle=`rgba(255,206,150,${(.7*(1-hit)*YAN_SCALE).toFixed(3)})`;c.lineWidth=2;
+    c.beginPath();c.ellipse(b.x,b.y,r*(.5+hit*1.1),r*(.34+hit*.7),0,0,Math.PI*2);c.stroke();
+    c.fillStyle=`rgba(207,190,240,${(.5*(1-hit)*YAN_SCALE).toFixed(3)})`;
+    c.beginPath();c.arc(b.x,b.y,r*(.2+hit*.5),0,Math.PI*2);c.fill();}
+   c.restore();
+  }
+  // 「祛恶之焰」持续 20 秒：身上一圈旋转火轮 + 上浮火星
+  if(s2.yanSkillActive){
+   c.save();c.globalCompositeOperation='lighter';
+   const spin=reduce?0:t*2.8,left=Math.max(0,Math.min(1,(s2.yanSkillLeft??0)/20));
+   c.strokeStyle=`rgba(255,138,72,${.62*YAN_SCALE})`;c.lineWidth=2.4;c.lineCap='round';
+   for(let i=0;i<3;i++){const a0=spin+i*Math.PI*2/3;c.beginPath();c.ellipse(p.x,p.y,r*.72,r*.3,a0,.2,Math.PI*.96);c.stroke();}
+   c.strokeStyle=`rgba(255,214,150,${.4*YAN_SCALE})`;c.lineWidth=1.2;ring(c,p,r*.5,r*.2);
+   const sparks=reduce?2:5;
+   for(let i=0;i<sparks;i++){const a=spin*.8+i*Math.PI*2/sparks,rise=((t*1.6+i*.37)%1);
+    c.fillStyle=`rgba(255,196,128,${((1-rise)*.6*YAN_SCALE*left+.15).toFixed(3)})`;
+    c.beginPath();c.arc(p.x+Math.cos(a)*r*.52,p.y+Math.sin(a)*r*.24-rise*r*1.1,1.5,0,Math.PI*2);c.fill();}
+   c.restore();
+   if(s2.yanSkillTargetUid!=null){const tg=(s.enemies||[]).find(e=>e.uid===s2.yanSkillTargetUid);if(tg){const q=point(tg.x,tg.y);c.save();c.globalCompositeOperation='lighter';
+    c.strokeStyle=`rgba(255,150,90,${.4*YAN_SCALE})`;c.lineWidth=1.6;ring(c,q,z.tw*.7,z.tw*.45);c.restore();}}
+  }
+ }
+ for(const e of (s.events||[]).filter(e=>['heal','chain'].includes(e.type)&&t-e.t>=0&&t-e.t<.4)){  const a=point(e.x,e.y),b=point(e.targetX,e.targetY),heal=e.type==='heal',age=(t-e.t)/.4;
   c.save();c.globalAlpha=1-age;c.strokeStyle=heal?'#8fe8b5':'#bb9dff';c.lineWidth=heal?2:2.5;
   if(heal){c.beginPath();c.moveTo(a.x,a.y);c.quadraticCurveTo((a.x+b.x)/2,Math.min(a.y,b.y)-18,b.x,b.y);c.stroke();cross(c,b,5);ring(c,b,10,6);}
   else{const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;c.beginPath();c.moveTo(a.x,a.y);for(let i=1;i<=6;i++){const k=i/6,off=reduce||i===6?0:(i%2?5:-5);c.lineTo(a.x+dx*k-dy/len*off,a.y+dy*k+dx/len*off);}c.stroke();}
