@@ -5010,13 +5010,14 @@ class NativeSession extends NativeEconomy {
   if(pool.includes('later'))rows=this.eligible().filter(o=>o.chessLevel>=4&&this.data.season.charChessDataDict[o.chessId].bondIds.includes('lateranoShip'));
   if(!rows.length)throw Error('当前候选池没有匹配干员');
   if(!fixedTier&&r.maxTier&&!pool.includes('later')){
+   // 阶级权重：最高阶 30%、次高阶 40%、其余所有低阶共用 30%（档内等权）
    const maxTier=Math.max(...rows.map(o=>o.chessLevel)),previous=maxTier-1;
    const top=rows.filter(o=>o.chessLevel===maxTier),prev=rows.filter(o=>o.chessLevel===previous),lower=rows.filter(o=>o.chessLevel<previous);
    let candidates,roll=this.random();
    if(maxTier<=1)candidates=top;
-   else if(maxTier===2)candidates=roll<.7?top:prev;
-   else if(roll<.6)candidates=top;
-   else if(roll<.9)candidates=prev;
+   else if(!prev.length)candidates=top.length?top:lower;
+   else if(roll<.3)candidates=top;
+   else if(roll<.7)candidates=prev;
    else candidates=lower;
    if(!candidates?.length)candidates=top.length?top:prev.length?prev:lower;
    if(!candidates.length)throw Error('当前候选池没有匹配阶级');
@@ -5031,7 +5032,7 @@ class NativeSession extends NativeEconomy {
  rewardFromTier(tier,count){this.s.rewardPending={offers:Array.from({length:count},()=>this.drawFromPool({kind:'operator',tier:Math.min(6,tier)})),choice:1,kind:'operator'};return true;}
  applyPostBattleTransforms(){for(const u of this.s.units.filter(x=>x.transformAfterBattle)){const id=this.drawFromPool({kind:'operator',tier:Math.min(6,(u.rank||1)+1)}),shop=this.data.season.charShopChessDatas[id];u.chessId=id;u.charId=shop.charId;u.rank=shop.chessLevel;delete u.transformAfterBattle;}}
   // 装备增减后重算盟约：以干员自身盟约为底，叠加装备给出的盟约。战略层加过的盟约层不在 u.bondIds 里，不受影响。
- refreshEquipmentBonds(u){const base=this.data.season.charChessDataDict[u.chessId]?.bondIds||[];const extra=u.equipment.map(i=>this.data.season.trapChessDataDict[i.chessId]).filter(d=>d?.canGiveBond&&d.giveBondId).map(d=>d.giveBondId);const next=[...new Set([...base,...extra])];const cur=this.ownBonds(u);if(next.length!==cur.length||next.some((id,i)=>cur[i]!==id))u.bondIds=next;}
+ refreshEquipmentBonds(u){const base=this.data.season.charChessDataDict[u.chessId]?.bondIds||[];const extra=u.equipment.map(i=>this.data.season.trapChessDataDict[i.chessId]).map(d=>d?.giveBondId).filter(Boolean);const next=[...new Set([...base,...extra])];const cur=this.ownBonds(u);if(next.length!==cur.length||next.some(id=>!cur.includes(id)))u.bondIds=next;}
   // 获取装备时，若干员身上已有同名未进阶装备，则连身上那件一起收走，合成的进阶装备留在手牌（盟约页说明的口径）。
   gainItem(chessId){
    const def=this.data.season.trapChessDataDict[chessId];if(!def)throw Error('Unknown item '+chessId);const item={uid:++this.s.seq,chessId};this.s.items.push(item);
