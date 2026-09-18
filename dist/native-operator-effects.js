@@ -357,6 +357,17 @@ export function operatorSkillStart(battle,u,ctx){
 }
 export function onEvent(battle,type,payload,ctx){
  const source=payload.source,target=payload.target;
+ // 深靛·柔光缚目：攻击时按几率使目标束缚，且「每个攻击能量独立计算触发概率」。
+ // 特性积攒的每条能量弹道都会各发一次 after-damage，所以这里天然是按弹道掷概率；
+ // 技能 2 的持续区域伤害 cause 是 dot，不经过 after-damage 的 attack 分支，因此不会触发天赋。
+ if(type==='after-damage'&&source?.id==='char_469_indigo'&&target&&target !== source && source.kind!=='summon'&&payload.cause==='attack'&&payload.result?.total>0){
+  const talent=activeTalents(battle,source).find(t=>/柔光缚目/.test(String(t.name||''))||/不以束缚状态的敌人为攻击目标/.test(String(t.description||'')));
+  const tb=talent&&talentValues(talent);
+  if(tb){
+   const skill=skillConfig(battle.profile(source)),mult=battle.skillActive(source)?(Number(skill.bb.talent_scale)||1):1;
+   if(battle.economy.random()<Math.min(1,(Number(tb.prob)||0)*mult))applyStatus(target,'root',Number(tb.duration)||4,{source:source.uid,resistible:false});
+  }
+ }
  if(type==='element-burst'&&target){for(const u of battle.s.units.filter(v=>v.deployed&&v.hp>0&&v.id==='char_4146_nymph')){const talent=activeTalents(battle,u).find(t=>t.name==='窥心钥'),bb=talent&&talentValues(talent);if(talent){u.nymphStacks=Math.min(Number(bb.max_stack_cnt)||10,(u.nymphStacks||0)+1);}if(u.id==='char_1040_blaze2'){const t=activeTalents(battle,u).find(x=>x.name==='熔点引爆'),tb=t&&talentValues(t);if(tb){ctx.dealDamage(battle,{source:u,target,amount:battle.stats(u).atk*(Number(tb.ep_damage_scale)||3.5),type:'true',cause:'extra'});ctx.applyHeal(battle,{source:u,target:u,amount:u.maxHp*(Number(tb.hp_ratio)||.12)});if(battle.skillActive(u))u.ammo=Math.min(u.ammoMax||Infinity,(u.ammo||0)+2);}}}}
  if(type==='skill-start'&&target&&target.id!=='char_4196_reckpr')for(const u of battle.s.units.filter(v=>v.deployed&&v.hp>0&&v.id==='char_4196_reckpr'&&battle.inside(v,target,true))){const talent=activeTalents(battle,u).find(t=>t.name==='学成于聚'),tb=talent&&talentValues(talent);if(talent){ctx.gainSp(u,battle.profile(u).skill,Number(tb.sp)||1,battle.spCost(u));u.reckprAspdUntil=battle.s.time+(Number(tb.duration)||8);}}
  if(type==='after-heal'&&source?.id==='char_4196_reckpr'&&target&&source.kind!=='summon'&&source.reckprBuffUntil>battle.s.time)target.reckprHitHeal={sourceUid:source.uid,amount:source.reckprHealValue,endsAt:source.reckprBuffUntil};
