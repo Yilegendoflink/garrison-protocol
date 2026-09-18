@@ -9,6 +9,17 @@ import {createWaveRoster} from './native-wave-random.js';
 // 商店只有 1 个可及阶级时全部落在最高阶；只有 2 个阶级时「更低阶」为空，按下面的兜底并回最高阶。
 const SHOP_TIER_ROLL=[[.3,'top'],[.7,'prev'],[Infinity,'lower']];
 
+// 原表只给了具名卡池的名字、没给成员表（模式包里搜不到 pool_chess_glady 的定义），
+// 成员只能从卫戍描述本身取：
+//   garrison_39（歌蕾蒂娅）「若同一行有3名干员，获得1个斯卡蒂、幽灵鲨或深巡」
+//   garrison_149（焰尾）  「获得1个野鬃或灰毫，小概率获得远牙」——「小概率」没有具体数值，
+//                         宁可不做也不编一个，这里只放野鬃／灰毫（远牙待补）。
+// 命中具名池时就是这几个人的等概率抽取，不再套商店的阶级与库存规则。
+const NAMED_POOLS={
+ pool_chess_glady:['chess_char_3_05_a','chess_char_2_07_a','chess_char_1_04_a'],
+ pool_char_pinus:['chess_char_1_19_a','chess_char_2_18_a']
+};
+
 export class NativeSession extends NativeEconomy {
  constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,egg325=false,cat=false,playerId='local',teamPeers=[],teamTransport=null}={}){
   const map=data.maps.find(m=>m.stageId===mapId)||data.maps.find(m=>m.weight>0);super(data,modeId,{bandId,board:map,seed,manualPreview:true,playerId,teamPeers});this.map=map;this.teamTransport=teamTransport;this.battle=null;this.s.mapId=map.stageId;this.s.itemOffers=[];this.s.summonCards=[];this.s.capacity=8;this.s.passiveIncome=0;this.s.history=[];this.s.runResult=null;this.s.frozenSlots=[];this.s.roundDecisions=[];this.s.enemyModifiers=[];this.s.operatorModifiers=[];this.s.commands=[];
@@ -36,7 +47,10 @@ export class NativeSession extends NativeEconomy {
  // used 只在商店刷新时传入：同一家店对库存无放回，避免给出比库存更多的同名卡
  drawFromPool(r,used=null){
   if(r.kind==='item'){let items=this.data.items.filter(i=>!i.hidden&&i.rank<=this.s.level);const tier=Number(String(r.pool||'').match(/shop_(\d)/)?.[1]);if(tier)items=this.data.items.filter(i=>!i.hidden&&i.rank===tier);if(String(r.pool||'').includes('equip_vict'))items=items.filter(i=>i.normal?.giveBondId==='victoriaShip'||this.data.season.trapChessDataDict[i.id]?.giveBondId==='victoriaShip');if(!items.length)throw Error('没有可用装备');return this.pick(items).id;}
-  const pool=String(r.pool||''),fixedTier=r.tier||Number(pool.match(/shop_(\d)/)?.[1]);let rows=this.eligible();if(fixedTier)rows=rows.filter(o=>o.chessLevel===fixedTier);else rows=rows.filter(o=>o.chessLevel<=(r.maxTier||this.s.level));
+  const pool=String(r.pool||''),fixedTier=r.tier||Number(pool.match(/shop_(\d)/)?.[1]);
+  const named=NAMED_POOLS[pool];
+  if(named){const skip=new Set((r.exclude||[]).filter(Boolean)),members=this.eligible().filter(o=>named.includes(o.chessId)&&!skip.has(o.chessId));if(!members.length)throw Error('具名卡池没有可用干员：'+pool);return this.pick(members).chessId;}
+  let rows=this.eligible();if(fixedTier)rows=rows.filter(o=>o.chessLevel===fixedTier);else rows=rows.filter(o=>o.chessLevel<=(r.maxTier||this.s.level));
   // 有库存系统时（对局内），候选池按各干员剩余库存铺成多份后等权抽；used 让同一次刷新无放回
   // exclude 用于奖励这一类「本次候选之间不能重复」的场景：直接从候选里剔除，而不是靠重抽碰运气。
   const exclude=new Set((r.exclude||[]).filter(Boolean));

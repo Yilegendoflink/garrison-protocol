@@ -892,7 +892,7 @@ function onSkillStart(battle,u){
  if(u.id==='char_143_ghost'&&idx===1){
   u.lockHp=null;applyStatus(u,'stun',skillBB(battle,u).stun||10,{source:u.uid,resistible:false});
  }
- if(u.id==='char_474_glady'&&u.gladyVortex){const center=u.gladyVortex;for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&chebyshev(e,center)<=2))moveActor(battle,e,{x:center.x,y:center.y,uid:u.uid},'拖拽');u.gladyVortex=null;}
+ if(u.id==='char_474_glady'&&u.gladyVortex){const center=u.gladyVortex;for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&chebyshev(e,center)<=1.5))moveActor(battle,e,{x:center.x,y:center.y,uid:u.uid},'拖拽');u.gladyVortex=null;}
  if(u.id==='char_4191_tippi')u.flying=false;
  if(u.id==='char_206_gnosis'&&u.gnosisFrozenUids?.length){const bb=skillBB(battle,u);for(const uid of u.gnosisFrozenUids){const target=battle.s.enemies.find(e=>e.uid===uid&&e.hp>0);if(target)dealDamage(battle,{source:u,target,amount:battle.stats(u).atk*(Number(bb.atk_scale)||4),type:'arts',cause:'skill'});}u.gnosisFrozenUids=[];}
  if(u.id==='char_4122_grabds')u.grabdsSleepUntil=null;

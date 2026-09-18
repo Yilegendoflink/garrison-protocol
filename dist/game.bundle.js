@@ -3575,7 +3575,7 @@ function operatorSkillStart(battle,u,ctx){
   if(has(text,/下次攻击.*(?:回复|恢复)自身/)&&(Number(bb.value)>0||Number(bb.hp_ratio)>0))u.pendingAttackSelfHeal={skillCount:u.skillCount,amount:Number(bb.value)>0?Number(bb.value):u.maxHp*Number(bb.hp_ratio)};
  if(has(text,/每[^，。；]*秒.*(?:受到|造成|伤害|损伤)|持续.*(?:受到|造成|伤害|损伤)|周期.*(?:受到|造成|伤害|损伤)/)&&Number.isFinite(periodicScale)&&has(text,/伤害|法术|攻击/)){const requiresStatus=has(text,/处于.*束缚|束缚状态/)?'root':null;ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:Number(bb.projectile_range)|| (config.multiTarget===Infinity?2:1),interval:Math.max(.1,periodicInterval),nextAt:battle.s.time+Math.max(.1,periodicInterval),endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),trackArea:has(text,/区域|影响范围|火墙/),trackSide:has(text,/友方单位|友方干员/)?'all':'enemy',values:{dot:true,atk_scale:periodicScale,type:config.damageType||'arts',requiresStatus},snapshot:{damage:battle.stats(u).atk*periodicScale},refKind:'owner',persistAfterSourceGone:false});}
  if(profile.charId==='char_213_mostma'&&profile.skillIndex===1){const radius=Math.max(1,...(battle.range(u,true)||[]).map(p=>Math.max(Math.abs(p.x-u.x),Math.abs(p.y-u.y))));ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'mostma-s2',x:u.x,y:u.y,radius,interval:.5,nextAt:battle.s.time+.5,endsAt:battle.s.time+(duration>0?duration:5),values:{dot:true,stun:1.1,type:'arts',atk_scale:Number(bb.atk_scale)||1.2},snapshot:{damage:battle.stats(u).atk*(Number(bb.atk_scale)||1.2)},refKind:'owner',persistAfterSourceGone:false});return true;}
- if(profile.charId==='char_474_glady'&&profile.skillIndex===2){const target=battle.targets(u)[0]||u,center={x:target.x,y:target.y};u.gladyVortex=center;const hitDuration=Number(bb.hit_duration)||9;if(target!==u)applyStatus(target,'root',hitDuration,{source:u.uid,resistible:false});ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'glady-s3',x:center.x,y:center.y,radius:2,interval:Number(bb.interval)||1.5,nextAt:battle.s.time+(Number(bb.interval)||1.5),endsAt:battle.s.time+(duration>0?duration:9),values:{dot:true,sluggish:true,pull:true,type:'arts',atk_scale:Number(bb.atk_scale)||1},snapshot:{damage:battle.stats(u).atk*(Number(bb.atk_scale)||1)},refKind:'owner',persistAfterSourceGone:false});return true;}
+ if(profile.charId==='char_474_glady'&&profile.skillIndex===2){const target=battle.targets(u)[0]||u,center={x:target.x,y:target.y};u.gladyVortex=center;const hitDuration=Number(bb.hit_duration)||9;if(target!==u)applyStatus(target,'root',hitDuration,{source:u.uid,resistible:false});ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'glady-s3',x:center.x,y:center.y,radius:1.5,interval:Number(bb.interval)||1.5,nextAt:battle.s.time+(Number(bb.interval)||1.5),endsAt:battle.s.time+(duration>0?duration:9),values:{dot:true,sluggish:true,pull:true,type:'arts',atk_scale:Number(bb.atk_scale)||1},snapshot:{damage:battle.stats(u).atk*(Number(bb.atk_scale)||1)},refKind:'owner',persistAfterSourceGone:false});return true;}
  if(profile.charId==='char_171_bldsk'&&profile.skillIndex===1){const candidates=allAllies(battle,u,true).filter(a=>a.uid!==u.uid),target=candidates.length?candidates[Math.floor(battle.economy.random()*candidates.length)]:null;if(target){u.warfarinTargetUid=target.uid;target.warfarinBuff={atk:Number(bb.atk)||0,endsAt:battle.s.time+(Number(bb.duration)||15),sourceUid:u.uid};ctx.addEffect(battle,{kind:'loss',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:target.uid,talentOrSkillId:'warfarin-s2-ally',interval:Number(bb.interval)||1,nextAt:battle.s.time+(Number(bb.interval)||1),endsAt:battle.s.time+(Number(bb.duration)||15),values:{amount:target.maxHp*(Number(bb.hp_ratio)||0)},refKind:'owner',persistAfterSourceGone:false});} }
  if(profile.charId==='char_202_demkni'&&profile.skillIndex===2){const radius=Math.max(1,...(battle.range(u,true)||[]).map(p=>Math.max(Math.abs(p.x-u.x),Math.abs(p.y-u.y))));ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'saria-s3',x:u.x,y:u.y,radius,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+(duration>0?duration:5),trackSide:'all',values:{sluggish:true,hot:battle.stats(u).atk*(Number(bb['attack@heal_scale'])||.2),fragile:Number(bb['demkni_s_3.damage_scale'])||1.4},snapshot:{},refKind:'owner',persistAfterSourceGone:false});}
  if(profile.charId==='char_4151_tinman'){const zone=battle.s.logicEffects.find(f=>f.sourceUid===u.uid&&f.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`),talent=activeTalents(battle,u).find(t=>t.name==='凋敝魂灵');if(zone){if(Number(bb.atk)<0)zone.values.attackDown=Number(bb.atk);if(talent)zone.values.fragile=Number(talent.values?.['skill@damage_scale'])||1.2;}}
@@ -4699,7 +4699,7 @@ function onSkillStart(battle,u){
  if(u.id==='char_143_ghost'&&idx===1){
   u.lockHp=null;applyStatus(u,'stun',skillBB(battle,u).stun||10,{source:u.uid,resistible:false});
  }
- if(u.id==='char_474_glady'&&u.gladyVortex){const center=u.gladyVortex;for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&chebyshev(e,center)<=2))moveActor(battle,e,{x:center.x,y:center.y,uid:u.uid},'拖拽');u.gladyVortex=null;}
+ if(u.id==='char_474_glady'&&u.gladyVortex){const center=u.gladyVortex;for(const e of enemyActors(battle.s).filter(e=>e.hp>0&&chebyshev(e,center)<=1.5))moveActor(battle,e,{x:center.x,y:center.y,uid:u.uid},'拖拽');u.gladyVortex=null;}
  if(u.id==='char_4191_tippi')u.flying=false;
  if(u.id==='char_206_gnosis'&&u.gnosisFrozenUids?.length){const bb=skillBB(battle,u);for(const uid of u.gnosisFrozenUids){const target=battle.s.enemies.find(e=>e.uid===uid&&e.hp>0);if(target)dealDamage(battle,{source:u,target,amount:battle.stats(u).atk*(Number(bb.atk_scale)||4),type:'arts',cause:'skill'});}u.gnosisFrozenUids=[];}
  if(u.id==='char_4122_grabds')u.grabdsSleepUntil=null;
@@ -5434,6 +5434,17 @@ const {createWaveRoster} = load("native-wave-random.js");
 // 商店只有 1 个可及阶级时全部落在最高阶；只有 2 个阶级时「更低阶」为空，按下面的兜底并回最高阶。
 const SHOP_TIER_ROLL=[[.3,'top'],[.7,'prev'],[Infinity,'lower']];
 
+// 原表只给了具名卡池的名字、没给成员表（模式包里搜不到 pool_chess_glady 的定义），
+// 成员只能从卫戍描述本身取：
+//   garrison_39（歌蕾蒂娅）「若同一行有3名干员，获得1个斯卡蒂、幽灵鲨或深巡」
+//   garrison_149（焰尾）  「获得1个野鬃或灰毫，小概率获得远牙」——「小概率」没有具体数值，
+//                         宁可不做也不编一个，这里只放野鬃／灰毫（远牙待补）。
+// 命中具名池时就是这几个人的等概率抽取，不再套商店的阶级与库存规则。
+const NAMED_POOLS={
+ pool_chess_glady:['chess_char_3_05_a','chess_char_2_07_a','chess_char_1_04_a'],
+ pool_char_pinus:['chess_char_1_19_a','chess_char_2_18_a']
+};
+
 class NativeSession extends NativeEconomy {
  constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,egg325=false,cat=false,playerId='local',teamPeers=[],teamTransport=null}={}){
   const map=data.maps.find(m=>m.stageId===mapId)||data.maps.find(m=>m.weight>0);super(data,modeId,{bandId,board:map,seed,manualPreview:true,playerId,teamPeers});this.map=map;this.teamTransport=teamTransport;this.battle=null;this.s.mapId=map.stageId;this.s.itemOffers=[];this.s.summonCards=[];this.s.capacity=8;this.s.passiveIncome=0;this.s.history=[];this.s.runResult=null;this.s.frozenSlots=[];this.s.roundDecisions=[];this.s.enemyModifiers=[];this.s.operatorModifiers=[];this.s.commands=[];
@@ -5461,7 +5472,10 @@ class NativeSession extends NativeEconomy {
  // used 只在商店刷新时传入：同一家店对库存无放回，避免给出比库存更多的同名卡
  drawFromPool(r,used=null){
   if(r.kind==='item'){let items=this.data.items.filter(i=>!i.hidden&&i.rank<=this.s.level);const tier=Number(String(r.pool||'').match(/shop_(\d)/)?.[1]);if(tier)items=this.data.items.filter(i=>!i.hidden&&i.rank===tier);if(String(r.pool||'').includes('equip_vict'))items=items.filter(i=>i.normal?.giveBondId==='victoriaShip'||this.data.season.trapChessDataDict[i.id]?.giveBondId==='victoriaShip');if(!items.length)throw Error('没有可用装备');return this.pick(items).id;}
-  const pool=String(r.pool||''),fixedTier=r.tier||Number(pool.match(/shop_(\d)/)?.[1]);let rows=this.eligible();if(fixedTier)rows=rows.filter(o=>o.chessLevel===fixedTier);else rows=rows.filter(o=>o.chessLevel<=(r.maxTier||this.s.level));
+  const pool=String(r.pool||''),fixedTier=r.tier||Number(pool.match(/shop_(\d)/)?.[1]);
+  const named=NAMED_POOLS[pool];
+  if(named){const skip=new Set((r.exclude||[]).filter(Boolean)),members=this.eligible().filter(o=>named.includes(o.chessId)&&!skip.has(o.chessId));if(!members.length)throw Error('具名卡池没有可用干员：'+pool);return this.pick(members).chessId;}
+  let rows=this.eligible();if(fixedTier)rows=rows.filter(o=>o.chessLevel===fixedTier);else rows=rows.filter(o=>o.chessLevel<=(r.maxTier||this.s.level));
   // 有库存系统时（对局内），候选池按各干员剩余库存铺成多份后等权抽；used 让同一次刷新无放回
   // exclude 用于奖励这一类「本次候选之间不能重复」的场景：直接从候选里剔除，而不是靠重抽碰运气。
   const exclude=new Set((r.exclude||[]).filter(Boolean));

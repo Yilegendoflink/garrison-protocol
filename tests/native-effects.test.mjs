@@ -835,6 +835,21 @@ test('莫斯提马天赋对范围敌人施加停顿，歌蕾蒂娅重量条件�
  const {b:b2}=openBattle({chessId:'chess_char_4_12_b',skillIndex:0});deployNow(b2);const v=b2.s.units[0],light=enemy(b2,{x:v.x+1,y:v.y,hp:100000,weight:1}),heavy=enemy(b2,{x:v.x+1,y:v.y+1,hp:100000,weight:4});const base=b2.stats(v).atk;v.sp=b2.spCost(v);b2.activate(v);b2.hit(v,light,base,'physical',{skill:true});const lightLoss=100000-light.hp;v.sp=0;b2.hit(v,heavy,base,'physical',{skill:true});assert.ok(lightLoss>100000-heavy.hp);
 });
 
+test('歌蕾蒂娅 S3 龙卷半径 1.5 格：结算与结束拖拽都不碰 2 格外的敌人',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_12_b',skillIndex:2});deployNow(b);const glady=byId(b,'char_474_glady');
+ const center=enemy(b,{x:glady.x+1,y:glady.y,hp:1e6}),outside=enemy(b,{x:glady.x+1,y:glady.y+2,hp:1e6});
+ glady.sp=b.spCost(glady);b.activate(glady);
+ const zone=(b.s.logicEffects||[]).find(f=>f.talentOrSkillId==='glady-s3');
+ assert.ok(zone,'技能要留下龙卷区域');
+ assert.equal(zone.radius,1.5,'3技能半径是 1.5 格');
+ assert.equal(zone.x,center.x);assert.equal(zone.y,center.y);
+ steps(b,50);
+ assert.ok(center.statuses.some(s=>s.kind==='sluggish'),'半径内的敌人被减速');
+ assert.equal(outside.statuses.some(s=>s.kind==='sluggish'),false,'2 格外的敌人不在龙卷范围内');
+ const pos={x:outside.x,y:outside.y};
+ glady.skillLeft=.01;b.step();
+ assert.deepEqual({x:outside.x,y:outside.y},pos,'结束时的拖拽同样只覆盖半径 1.5');
+});
 test('歌蕾蒂娅 S3 龙卷区域牵引，深海猎人获得最大生命回复与海怪减伤',()=>{
  const {b}=openBattle([{chessId:'chess_char_4_12_b',skillIndex:2},{chessId:'chess_char_2_07_b',skillIndex:0}]);deployNow(b);const glady=b.s.units.find(u=>u.id==='char_474_glady'),ghost=b.s.units.find(u=>u.id==='char_143_ghost'),e=enemy(b,{x:glady.x+1,y:glady.y,hp:100000,tags:['seamonster']});ghost.hp=ghost.maxHp-100;const before=ghost.hp;glady.sp=b.spCost(glady);b.activate(glady);assert.ok(e.statuses.some(s=>s.kind==='root'));for(let i=0;i<30;i++)b.step();assert.ok(ghost.hp>before);const hp=ghost.hp;dealDamage(b,{source:e,target:ghost,amount:100,type:'physical'});assert.ok(ghost.hp>=hp-75);
 });
