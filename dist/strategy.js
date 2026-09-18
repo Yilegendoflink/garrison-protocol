@@ -15,7 +15,10 @@ const effects={
  prep_finish_char_bond_add_layer:{event:'prepEnd',run:(c,p)=>{const units=c.s.units.filter(u=>u.position);for(const rank of new Set(units.map(u=>u.rank))){const u=c.pick(units.filter(u=>u.rank===rank));for(const id of c.ownBonds(u))c.addLayers(id,p.layer,false);}}},
  coin_carry_over:{event:'prepEnd',run:(c,p)=>{c.s.carryFunds=c.s.funds+Math.min(p.max,Math.floor(c.s.funds/p.capital))*p.interest;}},
  up_shop_add_special_goods:{event:'upgrade',run:(c,p)=>c.rewardFromPool(p.pool,p.count,p.choice,'item')},
- up_shop_next_refresh_must_present_bond_char:{event:'upgrade',run:(c,p,k)=>{const level=Number(c.s.level);if(!list(p.lvlist).map(Number).includes(level))return;const claim=k+':level:'+level;if(c.s.strategyClaims[claim])return;c.s.strategyClaims[claim]=1;c.s.forcedRefresh={bond:p.bond,price:p.price};}},
+ // 佩佩【博学多通】：升级到指定等级后，下一次主动刷新变成「特殊刷新」，出现的干员优先为该盟约干员。
+ // 原表还带一个 price=0，但特殊刷新并不免费（图鉴文案没有「免费」字样），刷新费按常规价走，
+ // 所以这里只记盟约、不记价格，免得又把 0 当成免单。
+ up_shop_next_refresh_must_present_bond_char:{event:'upgrade',run:(c,p,k)=>{const level=Number(c.s.level);if(!list(p.lvlist).map(Number).includes(level))return;const claim=k+':level:'+level;if(c.s.strategyClaims[claim])return;c.s.strategyClaims[claim]=1;c.s.forcedRefresh={bond:p.bond,count:(c.s.forcedRefresh?.bond===p.bond?c.s.forcedRefresh.count||1:0)+1};}},
  band_coin_cost_gain_random_char_by_shop_level:{event:'spent',run:(c,p,k)=>{const earned=Math.floor(c.s.totalSpent/p.coin_cnt),claimed=c.s.strategyClaims[k]||0;for(let i=claimed;i<earned;i++)for(let n=0;n<p.count;n++)c.gain(c.draw({kind:'operator',maxTier:c.s.level}));c.s.strategyClaims[k]=earned;}},
  band_cost_coin_reach_cnt_gain_chess_from_pool:{event:'spent',run:(c,p,k)=>{if(c.s.totalSpent>=p.coin_cnt&&!c.s.strategyClaims[k]){randomGain(c,p);c.s.strategyClaims[k]=1;}}},
  round_start_gain_coin_by_bond_char_chess_buy:{event:'bought',run:(c,p,k,u)=>{if(c.ownBonds(u).includes(p.bond)){const key=k+':'+c.s.round,claimed=c.s.strategyClaims[key]||0;if(claimed<p.max_count){c.s.nextRoundBonus+=p.count;c.s.strategyClaims[key]=claimed+1;}}}},
