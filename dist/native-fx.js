@@ -223,8 +223,124 @@ export function drawWhitwEyes(c,point,z,battle,{reduceFx=false}={}){
  }
  return true;
 }
+// ── 「范围扩大」技能特效 ──────────────────────────────────────────────
+// 数据来源：技能的 rangeId 与干员常态 rangeId 不同即为范围扩大（skillWidensRange）。
+// 形状一律取自 data.ranges[rangeId].grids，不靠像素半径估算。
+// 三种画法：wideSlash（持续强化型，逐次攻击扫弧）、selfBurst（瞬时自身 AoE）、auraRing（持续领域描边）。
+
+function rangeCells(point,z,battle,uid){
+ const unit=battle?.s?.units?.find(u=>u.uid===uid);
+ if(!unit||!battle.rangeGeometry)return null;
+ const geo=battle.rangeGeometry(unit);
+ if(!geo)return null;
+ const cells=[];
+ for(let row=-geo.reachY;row<=geo.reachY;row++)for(let col=-geo.reachX;col<=geo.reachX;col++){
+  const mine=geo.cells.some(g=>g.row===row&&g.col===col);
+  if(!mine)continue;
+  let x=col,y=-row;
+  for(let i=0;i<(unit.dir||0);i++)[x,y]=[-y,x];
+  const cell={gx:unit.x+x,gy:unit.y+y};
+  cell.p=point(cell.gx,cell.gy);
+  cells.push(cell);
+ }
+ return {geo,unit,cells};
+}
+// 逐格描出技能范围轮廓（只描边不填充，避免糊住棋盘）
+function strokeRange(c,z,cells,{stroke,width=1.5,dash=null}={}){
+ if(!cells?.length)return;
+ c.save();if(stroke)c.strokeStyle=stroke;c.lineWidth=width;if(dash)c.setLineDash(dash);
+ for(const cell of cells)c.strokeRect(cell.p.x-z.tw/2+1,cell.p.y-z.th/2+1,z.tw-2,z.th-2);
+ c.restore();
+}
+// 持续范围强化：开启时大弧线扫过整个技能范围，之后每次攻击沿范围扫出弧
+export function drawWideSweep(c,point,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ let drew=false;
+ for(const e of recent(s.events,s.time,'skill-start',.6)){
+  if(e.wideKind!=='sweep')continue;
+  const info=rangeCells(point,z,battle,e.uid);
+  const k=Math.max(0,Math.min(1,(s.time-e.t)/.6)),u=info.unit;
+  const r=info.geo.cells.reduce((m,g)=>Math.max(m,Math.hypot(g.col,g.row)),1)*z.tw*.72;
+  const facing=-(u.dir||0)*Math.PI/2;
+  c.save();c.globalCompositeOperation='lighter';
+  const origin=point(u.x,u.y);
+  c.translate(origin.x,origin.y);
+  c.rotate(facing);
+  for(let i=0;i<2;i++){
+   const a0=-.95+k*1.9*(i?1:1)-(i?.22:0),a1=a0+(i?.5:.72);
+   c.strokeStyle=`rgba(228,244,255,${((1-k)*(i?.5:.85)*(reduceFx?.6:1)).toFixed(3)})`;
+   c.lineWidth=i?2:4;c.lineCap='round';
+   c.beginPath();c.arc(0,0,r,a0,a1);c.stroke();
+  }
+  c.restore();drew=true;
+ }
+ // 攻击瞬间：从施法者朝范围扫出的弧（每次 strike 一条，按 wide 过滤）
+ for(const e of recent(s.events,s.time,'strike',.3)){
+  if(!e.wide)continue;
+  const info=rangeCells(point,z,battle,e.uid);
+  if(!info)continue;
+  const k=Math.max(0,Math.min(1,(s.time-e.t)/.3)),u=info.unit;
+  const a=point(u.x,u.y),b=point(e.targetX,e.targetY);
+  const ang=Math.atan2(b.y-a.y,b.x-a.x);
+  const r=info.geo.reachX*z.tw*.7+z.tw*.3;
+  c.save();c.globalCompositeOperation='lighter';
+  c.translate(a.x,a.y);c.rotate(ang);
+  c.strokeStyle=`rgba(232,246,255,${((1-k)*(reduceFx?.5:.85)).toFixed(3)})`;
+  c.lineWidth=3;c.lineCap='round';
+  c.beginPath();c.arc(0,0,r,-.5+k*.25,.5+k*.25);c.stroke();
+  c.restore();drew=true;
+ }
+ return drew;
+}
+// 瞬时自身 AoE（含入场自动释放的被动）：以自身为中心的扩散震波，半径按技能范围跨度
+export function drawSelfBurst(c,point,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ let drew=false;
+ for(const e of recent(s.events,s.time,'skill-start',.55)){
+  // 只看「瞬时自身 AoE」与「入场自动释放」的被动大范围技能：前者是主动爆发，后者按你的定义就是入场自动放技能
+  if(e.wideKind!=='burst'&&e.wideKind!=='passive')continue;
+  const info=rangeCells(point,z,battle,e.uid);
+  if(!info)continue;
+  const geo=info.geo,round=geo.spanX<=2&&geo.spanY<=2&&geo.count<=9;   // 近身范围画圆环，否则按格描边
+  const k=Math.max(0,Math.min(1,(s.time-e.t)/.55)),fade=(1-k)*(reduceFx?.55:1);
+  const p=point(info.unit.x,info.unit.y);
+  c.save();c.globalCompositeOperation='lighter';
+  if(round){
+   const r=(geo.reachX||1)*z.tw*(.5+k*.75);
+   c.strokeStyle=`rgba(255,246,214,${(.85*fade).toFixed(3)})`;c.lineWidth=3;
+   c.beginPath();c.ellipse(p.x,p.y,r,r*.62,0,0,Math.PI*2);c.stroke();
+   c.strokeStyle=`rgba(255,255,255,${(.5*fade).toFixed(3)})`;c.lineWidth=1.4;
+   c.beginPath();c.ellipse(p.x,p.y,r*.62,r*.4,0,0,Math.PI*2);c.stroke();
+  }else{
+   strokeRange(c,z,info.cells,{stroke:`rgba(255,240,200,${(.8*fade).toFixed(3)})`,width:2});
+  }
+  c.restore();drew=true;
+ }
+ return drew;
+}
+// 持续领域（光环／停攻结界）：技能持续期内描出范围边界，低频流光脉动
+export function drawAuraField(c,point,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ let drew=false;
+ for(const u of s.units||[]){
+  if(!u.deployed||u.hp<=0||!(u.skillLeft>0))continue;
+  const info=rangeCells(point,z,battle,u.uid);
+  if(!info||info.geo.count<6)continue;
+  const pulse=reduceFx?0:(.5+.5*Math.sin(s.time*2.2));
+  strokeRange(c,z,info.cells,{stroke:`rgba(244,211,139,${(.16+.14*pulse).toFixed(3)})`,width:1.5});
+  const p=point(u.x,u.y),r=(info.geo.reachX||1)*z.tw;
+  c.save();c.globalCompositeOperation='lighter';
+  c.strokeStyle=`rgba(255,236,190,${(.1+.08*pulse).toFixed(3)})`;c.lineWidth=2;
+  c.beginPath();c.ellipse(p.x,p.y,r*.55,r*.34,0,0,Math.PI*2);c.stroke();
+  c.restore();drew=true;
+ }
+ return drew;
+}
 export function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
  drawCombatFx(c,point,z,battle,reduce);
+ drawAuraField(c,point,z,battle,{reduceFx:reduce});
+ drawSelfBurst(c,point,z,battle,{reduceFx:reduce});
+ drawWideSweep(c,point,z,battle,{reduceFx:reduce});
  drawIceWind(c,z,battle,{reduceFx:reduce});
  for(const e of s.effects||[]){
   if(e.type!=='healing'&&e.type!=='evade'&&e.type!=='block')continue;

@@ -13,6 +13,28 @@ export function stockOf(data,s,chessId){ensureStock(data,s);return Number.isFini
 // 购买记录用 map 计数，卖出时按记录回补；三合一合并时把各份记录累加，所以卖出精锐恢复的是合成时买走的全部份数
 function addPurchases(into,from){if(!from)return into;for(const [id,n] of Object.entries(from))into[id]=(into[id]||0)+Number(n||0);return into;}
 export function restoreStock(s,unit){const owned=unit?.purchases;if(!owned)return;s.stock??={};for(const [id,n] of Object.entries(owned)){if(s.stock[id]===undefined)continue;s.stock[id]+=Number(n||0);}}
+// 技能范围几何：范围形状是权威数据（data.ranges[rangeId].grids），特效据此贴合真实形状，
+// 不靠像素半径估算。spanX/spanY 是相对施法者的最大横/纵跨度，cells 是原始格子。
+const RANGE_GEOMETRY=new Map();
+export function rangeGeometry(data,rangeId){
+ if(!rangeId)return null;
+ const key=rangeId;
+ if(RANGE_GEOMETRY.has(key))return RANGE_GEOMETRY.get(key);
+ const grids=data?.ranges?.[rangeId]?.grids;
+ if(!grids?.length){RANGE_GEOMETRY.set(key,null);return null;}
+ const cols=grids.map(g=>Number(g.col)||0),rows=grids.map(g=>Number(g.row)||0);
+ const geometry={rangeId,cells:grids.map(g=>({col:Number(g.col)||0,row:Number(g.row)||0})),count:grids.length,
+  spanX:Math.max(...cols)-Math.min(...cols),spanY:Math.max(...rows)-Math.min(...rows),
+  reachX:Math.max(...cols.map(Math.abs)),reachY:Math.max(...rows.map(Math.abs))};
+ RANGE_GEOMETRY.set(key,geometry);
+ return geometry;
+}
+// 技能是否比常态范围更大（真银斩这类"范围扩大"技能）。用于攻击特效的 wide 标记。
+export function skillWidensRange(profile,skillIndex=null){
+ const skill=skillIndex!=null?(profile?.skillChoices?.[skillIndex]?.skill??profile?.skill):profile?.skill;
+ if(!skill?.rangeId||!profile?.rangeId)return false;
+ return skill.rangeId!==profile.rangeId;
+}
 export function baseFunding(round){if(!Number.isInteger(round)||round<1)throw Error('Invalid round');return round+3;}
 // Versioned native data helpers. No missing rule is guessed or silently simulated.
 export function blackboard(entries=[]){return Object.fromEntries((entries||[]).map(e=>[e.key,e.valueStr??e.value]));}

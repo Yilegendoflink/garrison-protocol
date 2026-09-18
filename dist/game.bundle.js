@@ -373,6 +373,28 @@ function stockOf(data,s,chessId){ensureStock(data,s);return Number.isFinite(s.st
 // 购买记录用 map 计数，卖出时按记录回补；三合一合并时把各份记录累加，所以卖出精锐恢复的是合成时买走的全部份数
 function addPurchases(into,from){if(!from)return into;for(const [id,n] of Object.entries(from))into[id]=(into[id]||0)+Number(n||0);return into;}
 function restoreStock(s,unit){const owned=unit?.purchases;if(!owned)return;s.stock??={};for(const [id,n] of Object.entries(owned)){if(s.stock[id]===undefined)continue;s.stock[id]+=Number(n||0);}}
+// 技能范围几何：范围形状是权威数据（data.ranges[rangeId].grids），特效据此贴合真实形状，
+// 不靠像素半径估算。spanX/spanY 是相对施法者的最大横/纵跨度，cells 是原始格子。
+const RANGE_GEOMETRY=new Map();
+function rangeGeometry(data,rangeId){
+ if(!rangeId)return null;
+ const key=rangeId;
+ if(RANGE_GEOMETRY.has(key))return RANGE_GEOMETRY.get(key);
+ const grids=data?.ranges?.[rangeId]?.grids;
+ if(!grids?.length){RANGE_GEOMETRY.set(key,null);return null;}
+ const cols=grids.map(g=>Number(g.col)||0),rows=grids.map(g=>Number(g.row)||0);
+ const geometry={rangeId,cells:grids.map(g=>({col:Number(g.col)||0,row:Number(g.row)||0})),count:grids.length,
+  spanX:Math.max(...cols)-Math.min(...cols),spanY:Math.max(...rows)-Math.min(...rows),
+  reachX:Math.max(...cols.map(Math.abs)),reachY:Math.max(...rows.map(Math.abs))};
+ RANGE_GEOMETRY.set(key,geometry);
+ return geometry;
+}
+// 技能是否比常态范围更大（真银斩这类"范围扩大"技能）。用于攻击特效的 wide 标记。
+function skillWidensRange(profile,skillIndex=null){
+ const skill=skillIndex!=null?(profile?.skillChoices?.[skillIndex]?.skill??profile?.skill):profile?.skill;
+ if(!skill?.rangeId||!profile?.rangeId)return false;
+ return skill.rangeId!==profile.rangeId;
+}
 function baseFunding(round){if(!Number.isInteger(round)||round<1)throw Error('Invalid round');return round+3;}
 // Versioned native data helpers. No missing rule is guessed or silently simulated.
 function blackboard(entries=[]){return Object.fromEntries((entries||[]).map(e=>[e.key,e.valueStr??e.value]));}
@@ -462,7 +484,7 @@ class PreparationState {
  beginBattle(){if(this.s.phase!=='prep'||this.s.rewardPending)return false;this.s.funds=0;if(!this.s.locked)this.s.offers=[];const overflow=new Set(this.hand().slice(10).map(i=>i.uid));this.s.units=this.s.units.filter(u=>!overflow.has(u.uid));this.s.items=this.s.items.filter(i=>!overflow.has(i.uid));this.s.phase='battle';return true;}
 }
 
-return {STOCK_BY_TIER,initialStock,ensureStock,stockOf,restoreStock,baseFunding,blackboard,talentCandidateOpen,resolveActiveTalents,nativeAttributes,resolveChess,skillPolicy,shouldAutoSkill,buildPhasePlan,shopTerms,purchasePrice,activeBonds,applyEnemyOverrides,suspendState,resumeState,PreparationState};
+return {STOCK_BY_TIER,initialStock,ensureStock,stockOf,restoreStock,rangeGeometry,skillWidensRange,baseFunding,blackboard,talentCandidateOpen,resolveActiveTalents,nativeAttributes,resolveChess,skillPolicy,shouldAutoSkill,buildPhasePlan,shopTerms,purchasePrice,activeBonds,applyEnemyOverrides,suspendState,resumeState,PreparationState};
 },
 "protocol-data.js": function(load) {
 // Generated from fixed act2autochess snapshot.
@@ -4637,6 +4659,7 @@ const {createTrainingDummy,dummySummary} = load("benchmark.js");
 const {usesSp,spTypeOf,skillKind,ammoCount,initSpOf,gainSp,tickTimeSp} = load("native-sp.js");
 const {containsTarget} = load("targeting.js");
 const {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds,TENTATIVE_PROJECTILE_SPEED,enemyBehaviorProfile,enemyTargetValid,enemyTargetInRange,enemyShouldHoldPosition,ENEMY_MOVEMENT_POLICIES} = load("native-combat.js");
+const {skillWidensRange,rangeGeometry} = load("protocol.js");
 const {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,tokenCostFor} = load("native-operator-effects.js");
 const {ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,spawnSummon} = load("native-effects.js");
 class NativeBattle {
@@ -4742,7 +4765,7 @@ class NativeBattle {
   }
   let released=0;for(const id of action.targets){const target=this.s.enemies.find(e=>e.uid===id&&e.hp>0);if(!target)continue;const ranged=p.position==='RANGED'||(['lord','agent','hookmaster','shotprotector','fortress'].includes(p.branch)&&target.block!==u.uid);
    const hits=Math.max(1,action.hits||1);u.lockId=id;
-   scheduleStrikes(this.s,hits,{owner:u.uid,target:id,x:u.x,y:u.y,amount:action.amount*this.branchAttackScale(u,target),baseAmount:action.baseAmount??action.amount,type:action.type,skill:!!action.enhanced||this.skillActive(u),style:behavior.style,radius:behavior.radius||0,antiAir:behavior.antiAir,ownerDeployment:u.deployAt,ranged,branch:p.branch,returns:!!behavior.returnProjectile,storedEnergy:id===action.targets[0]?(action.storedEnergy||0):0,drone:!!behavior.drone});for(let extra=0;extra<(action.extraProjectiles||0);extra++)scheduleStrikes(this.s,1,{owner:u.uid,target:id,x:u.x,y:u.y,amount:action.amount*this.branchAttackScale(u,target),baseAmount:action.baseAmount??action.amount,type:action.type,skill:!!action.enhanced||this.skillActive(u),style:behavior.style,radius:behavior.radius||0,antiAir:behavior.antiAir,ownerDeployment:u.deployAt,ranged,branch:p.branch,returns:!!behavior.returnProjectile,drone:!!behavior.drone});
+   const wide=this.wideAttack(u);scheduleStrikes(this.s,hits,{owner:u.uid,target:id,x:u.x,y:u.y,amount:action.amount*this.branchAttackScale(u,target),baseAmount:action.baseAmount??action.amount,type:action.type,skill:!!action.enhanced||this.skillActive(u),style:behavior.style,radius:behavior.radius||0,antiAir:behavior.antiAir,ownerDeployment:u.deployAt,ranged,branch:p.branch,wide,returns:!!behavior.returnProjectile,storedEnergy:id===action.targets[0]?(action.storedEnergy||0):0,drone:!!behavior.drone});for(let extra=0;extra<(action.extraProjectiles||0);extra++)scheduleStrikes(this.s,1,{owner:u.uid,target:id,x:u.x,y:u.y,amount:action.amount*this.branchAttackScale(u,target),baseAmount:action.baseAmount??action.amount,type:action.type,skill:!!action.enhanced||this.skillActive(u),style:behavior.style,radius:behavior.radius||0,antiAir:behavior.antiAir,ownerDeployment:u.deployAt,ranged,branch:p.branch,wide,returns:!!behavior.returnProjectile,drone:!!behavior.drone});
    released+=hits;
   }this.emit('attack',{uid:u.uid,x:u.x,y:u.y,kind:'damage',targetX:this.s.enemies.find(e=>e.uid===action.targets[0])?.x,targetY:this.s.enemies.find(e=>e.uid===action.targets[0])?.y,type:action.type,style:behavior.style,skill:this.skillActive(u),radius:behavior.radius||0});return released;
  }
@@ -4752,7 +4775,7 @@ class NativeBattle {
   if(packet.aftershock){const target=this.s.enemies.find(e=>e.uid===packet.target&&e.hp>0&&!e.hidden);if(target)this.hit(u,target,packet.amount,packet.type,{skill:packet.skill});return;}
   if(!u.deployed||u.hp<=0||packet.ownerDeployment!==u.deployAt||!permissions(u).attack)return;
   const target=this.s.enemies.find(e=>e.uid===packet.target&&e.hp>0);if(!target)return;
-  this.emit('strike',{uid:u.uid,x:u.x,y:u.y,targetX:target.x,targetY:target.y,branch:packet.branch,style:packet.style,ranged:packet.ranged,hit:packet.hit,type:packet.type});
+  this.emit('strike',{uid:u.uid,x:u.x,y:u.y,targetX:target.x,targetY:target.y,branch:packet.branch,style:packet.style,ranged:packet.ranged,hit:packet.hit,type:packet.type,wide:!!packet.wide});
   const shot={...packet,startX:packet.x,startY:packet.y,speed:TENTATIVE_PROJECTILE_SPEED,returning:false};
   if(packet.ranged){this.s.projectiles.push(shot);if(packet.returns)u.pendingReturns=(u.pendingReturns||0)+1;}
   else this.impactNativeAttack(u,target,shot);
@@ -4868,6 +4891,13 @@ class NativeBattle {
  }
  range(u,skill=false){const p=this.profile(u),r=skill&&p.skill?.rangeId?this.data.ranges[p.skill.rangeId]:p.range;let grids=r?.grids||[{row:0,col:1}];if(p.branch==='fortress'&&!grids.some(g=>g.row===0&&g.col===0))grids=grids.concat({row:0,col:0});return grids.map(g=>{let x=g.col,y=-g.row;for(let i=0;i<u.dir;i++)[x,y]=[-y,x];return{x:u.x+x,y:u.y+y};});}
  inside(u,e,skill=(u.skillLeft>0||u.ammo>0)){if(e.hidden)return false;if(e.trainingDummy&&e.area){const cells=this.range(u,skill);for(const cell of cells)if(cell.x>=e.area.left&&cell.x<=e.area.right&&cell.y>=e.area.top&&cell.y<=e.area.bottom)return true;return false;}return containsTarget(this.range(u,skill).map(g=>[g.x,g.y]),e);}
+ // 当前是否处于「范围扩大」状态：技能 rangeId 与常态 rangeId 不同即为真。纯显示标记，不参与命中判定。
+ wideAttack(u){return this.wideSkillKind(this.profile(u),u.skillIndex??u.source?.skillIndex??null)!==null;}
+ // none=未扩大范围；burst=瞬时自身 AoE；sweep=持续范围强化；passive=入场自动释放的大范围技能
+ wideSkillKind(p,skillIndex=null){const skill=skillIndex!=null?(p?.skillChoices?.[skillIndex]?.skill??p?.skill):p?.skill;if(!skill?.rangeId||!p?.rangeId||skill.rangeId===p.rangeId)return null;if(skill.skillType==='PASSIVE')return 'passive';return Number(skill.duration)>0?'sweep':'burst';}
+ wideKind(u){return this.wideSkillKind(this.profile(u),u.skillIndex??u.source?.skillIndex??null);}
+ // 特效层用：取该单位当前生效范围的几何（技能激活且有 rangeId 时用技能范围，否则用常态范围）
+ rangeGeometry(u){const p=this.profile(u);const sid=(u.skillLeft>0||u.ammo>0)&&p.skill?.rangeId?p.skill.rangeId:p.rangeId;return rangeGeometry(this.data,sid);}
  targets(u){const behavior=this.behavior(u),p=this.profile(u),cfg=operatorSkillConfig(this,u),sleepOk=cfg.canTargetSleep||behavior.kind==='damage-heal'||p.charId==='char_4056_titi'||(p.charId==='char_423_blemsh'&&(p.activeTalents||[]).some(t=>/优先攻击.*沉睡/.test(t.description||'')));if(p.charId==='char_291_aglina'&&!this.skillActive(u))return [];if(p.charId==='char_245_cello'&&!this.skillActive(u))return [];let targets=this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&(!e.invisible||cfg.canSeeHidden||e.block===u.uid)&&!e.invulnerable&&!e.untargetable&&(sleepOk||!permissions(e).sleeping)&&(e.block===u.uid||((!e.flying||behavior.antiAir)&&(!behavior.airOnlyIdle||this.skillActive(u)||e.flying)&&this.inside(u,e))));if(p.charId==='char_391_rosmon'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u))targets=targets.filter(e=>e.block!=null);if(p.charId==='char_1019_siege2'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u))targets=targets.filter(e=>e.block!=null);if(p.charId==='char_4193_lemuen'){const wanted=targets.filter(e=>e.wantedByLemuen);if(wanted.length)targets=wanted;}if(u.floatTarget!=null){const locked=targets.find(e=>e.uid===u.floatTarget);if(locked)targets=[locked];else u.floatTarget=null;}
   if(p.charId==='char_430_fartth'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u)){const dir=[[1,0],[0,-1],[-1,0],[0,1]][u.dir||0];targets=this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.invisible&&!e.invulnerable&&!e.untargetable&&((e.y===u.y&&dir[0]!==0&&Math.sign(e.x-u.x)===dir[0])||(e.x===u.x&&dir[1]!==0&&Math.sign(e.y-u.y)===dir[1])));}
   const talentTargetRule=(p.activeTalents||[]).some(t=>/不以束缚状态的敌人为攻击目标/.test(t.description||''))?'rooted':null;
@@ -4904,7 +4934,7 @@ class NativeBattle {
   swapReserveBaseCosts(predicate=()=>true){const rows=this.reserveUnits(predicate).sort((a,b)=>(a.baseCostOverride??a.baseCost??0)-(b.baseCostOverride??b.baseCost??0)||a.uid-b.uid);if(rows.length<2)return false;const first=rows[0],last=rows.at(-1),a=first.baseCostOverride??first.baseCost,b=last.baseCostOverride??last.baseCost;first.baseCostOverride=b;last.baseCostOverride=a;return true;}
   deploymentCost(u){const p=this.profile(u),base=Math.max(0,Number(u.baseCostOverride??u.baseCost??p.attributes.cost)||0),runtime=!u.runtimeCostUsed&&u.runtimeCostActive?Number(u.runtimeCost)||0:0;let baseDelta=Number(u.costBaseDelta||0)+Number(u.wildmaneCostDelta||0),realtime=Number(u.costRealtimeDelta)||0;if(u.id==='char_237_gravel')baseDelta-=1;for(const source of this.s.units.filter(v=>v.deployed&&v.hp>0)){const sp=this.profile(source);if(source.id==='char_249_mlyss'&&p.groupId==='rhine'&&sp.activeTalents?.some(t=>/莱茵生命.*部署费用/.test(t.description||''))){baseDelta-=2;if(!this.s.mlyssFirstRhineDiscountUsed&&u.id!=='char_249_mlyss')baseDelta-=1;}}const multiplier=Math.pow(1.5,Math.min(2,Math.max(0,Number(u.redeployPenalty)||0)));return Math.max(0,Math.floor((base+baseDelta)*multiplier+realtime+runtime));}
   deploy(u,{reentry=false}={}){if(reentry){const cost=this.deploymentCost(u);if(cost>0&&!this.spendCost(cost,{considerNegativeCost:true}))return false;u.deploymentCost=cost;u.lastDeploymentCost=cost;u.refundCap=Math.max(0,Math.floor(Number(u.baseCostOverride??u.baseCost)||0)+(Number(u.costBaseDelta)||0));u.refundEligible=true;u.waitingCost=false;}u.runtimeCostUsed=true;u.wildmaneCostDelta=0;if(u.id!=='char_249_mlyss'&&this.s.mlyssFirstRhineDiscountUsed===false&&this.profile(u).groupId==='rhine'&&this.s.units.some(v=>v.id==='char_249_mlyss'&&v.deployed&&v.hp>0))this.s.mlyssFirstRhineDiscountUsed=true;u.hornBuff=null;u.etlchiSaved=false;u.sbellRevived=false;u.pasngrNext=null;u.cetsyrNextShare=0;u.svashCostAt=0;u.svashCostRemaining=0;u.svashCostHandled=false;u.etlchiCandles=[];u.pendingAttackHits=0;u.invulnerableUntil=0;u.mudrokSleepUntil=0;u.mudrokAwake=false;u.mudrokS1=null;u.titiSleepUid=null;u.titiSleepState={};u.lumenEmergencyAt=-Infinity;u.blaze2AnchorUid=null;u.ulpiaKills=0;u.nymphStacks=0;u.nymphNextAt=0;u.haloStacks=0;u.haloStay={};u.qiubaiNext=null;u.blkkgtNext=null;u.pepeStacks=0;u.pepeSkillUses=0;u.pepeKillSp=0;u.excu2Targets=[];u.lemuenTargets=[];u.lemuenNextAt=0;u.lemuenWanted={};u.whitwNextAt=0;u.whitwTalentStage=0;u.kjeraNextAt=0;u.siege2Next=null;u.siege2Marks={};u.duskNext=null;u.archetNext=null;u.inesStealAt=0;u.surtrS1=false;u.lockHp=null;u.damageProtection=null;u.returnPosition=null;u.pendingAttackHeal=null;u.pendingAttackSelfHeal=null;u.pendingHealBonus=null;u.pendingHealScale=null;u.papyrsShieldScale=null;u.skillDisarmUntil=null;u.focusHealAfter=null;u.focusHeal=false;u.statusResistance=0;u.skillEndHealRatio=0;u.talentSpRecoveryUntil=0;u.talentSpRecovery=0;u.pineSkillUses=0;u.philaeNextAt=0;u.philaeElementBoost=false;u.elementDamageResistance=0;u.downed=false;u.blazeDownUsed=false;u.healable=true;u.talentTime=0;u.talentAmmoTimers={};u.talentAmmoFlags={};u.talentAmmoBonus=0;u.merchantDeployGen=null;u.merchantNextFeeAt=null;u.merchantTalentStacks=0;u.wildmaneAspdUntil=0;u.gravelDefBuff=null;u.physicalEvadeOnce=false;u.physicalEvadeUntil=0;u.physicalEvadeProb=0;u.skillEvasionProb=0;u.vulpisMarks={};u.vulpisKilled=false;u.hainiTalentScale=1;u.kroosHits=0;u.kroosQuad=false;u.aromaSeen={};u.aromaPending=null;u.texas2Killed=false;u.duskTalentStacks=0;u.aromaLevitateSeen={};u.aromaLevitateFired={};u.shield=0;u.shieldLayers=[];u.barriers=[];u.deployed=true;u.deployCount=(u.deployCount||0)+1;u.deployGen=(u.deployGen||0)+1;u.exitLife=null;u.branchCharge=0;u.branchSkillActive=false;u.pendingReturns=0;u.energy=0;u.magazine=branchTrait(this.profile(u)).values.value??8;u.pendingSelfHeals=[];u.droneTarget=null;u.droneScale=0;u.reaperWindowStart=-999;u.reaperWindowCount=0;u.nextSelfHealAt=0;u.hp=u.maxHp=this.stats(u).maxHp;u.sp=initSpOf(this.profile(u).skill);u.spCd=0;u.spLock=0;u.ammo=0;u.ammoMax=0;u.lockId=null;if(this.on('soloShip')&&this.owns(u,'soloShip'))u.sp+=15;u.deployAt=this.s.time;this.event(u,'deploy');this.emit('deploy',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'deploy',{target:u});}
-  activate(u){const p=this.profile(u),sk=p.skill,cfg=operatorSkillConfig(this,u);if(!sk||!permissions(u).skill||(!usesSp(sk)&&!cfg.coinCost))return;const b=blackboard(sk.blackboard),cost=this.spCost(u),kind=skillKind(sk)||(cfg.coinCost?'instant':null),flow=skillFlow(sk),passiveCoinSkill=sk.skillType==='PASSIVE'&&u.coinSkillEnabled,openingCoins=passiveCoinSkill?0:coinGainAtSkillStart(this,u),coinCap=coinCapFor(p);if(cfg.coinCost&&(u.coins||0)+openingCoins<cfg.coinCost)return;if(u.sp<cost||(usesSp(sk)&&sk.skillType!=='AUTO'&&this.s.time-u.lastSkill<3))return;if(kind==='instant'&&sk.skillType==='AUTO'&&(u.action||u.attackCooldown>0))return;if(flow.resetAttack){u.action=null;u.attackCooldown=0;}if(openingCoins)grantCoins(u,openingCoins,coinCap);if(cfg.coinCost&&!spendCoins(u,cfg.coinCost))return;u.sp=Math.max(0,Math.trunc(u.sp)-cost);u.lastSkill=this.s.time;u.skillCount++;const lateranoBonus=this.on('lateranoShip')&&this.owns(u,'lateranoShip')?this.params('lateranoShip'):null,baseAmmo=ammoCount(sk),bondAmmo=lateranoBonus?Math.max(0,Math.floor(baseAmmo*(Number(lateranoBonus.base_ammo_percent||0)+Number(lateranoBonus.ammo_percent_per_stack||0)*(this.layers.lateranoShip||0)))):0;u.ammo=kind==='ammo'?baseAmmo+cfg.ammoBonus+(u.talentAmmoBonus||0)+bondAmmo+(p.charId==='char_1032_excu2'?Math.min(4,this.s.units.filter(v=>v.deployed&&v.hp>0&&this.profile(v)?.bonds?.includes('lateranoShip')).length):0):0;u.ammoMax=u.ammo;u.ammoPerAttack=cfg.ammoPerAttack;u.skillLeft=kind==='ammo'?0:this.skillTimeLeft(sk);if(kind==='instant'){const t=attackTiming(this.stats(u).baseAttackTime,this.stats(u).attackSpeed,windupSeconds(this.stats(u).baseAttackTime,p.attackWindup));u.spLock=t.seconds;}this.event(u,'skill');this.emit('skill-start',{uid:u.uid,kind,name:sk.name,x:u.x,y:u.y});if(dispatch(this,'skill-start',{target:u}))return;if(kind==='instant'&&sk.skillType==='AUTO'&&spTypeOf(sk)==='INCREASE_WHEN_ATTACK'){u.enhanced=true;return;}if(kind==='instant'){const targets=this.targets(u);if(p.branch!=='incantationmedic'&&/回复.*生命|治疗/.test(sk.description||'')){for(const v of this.healingTargets(u))this.heal(u,v,this.stats(u).atk*(cfg.bb.healScale??b.heal_scale??b.atk_scale??1));}else if(cfg.atkScale!=null||b.atk_scale){for(const e of targets.slice(0,cfg.multiTarget===Infinity?targets.length:(cfg.multiTarget??b.max_target??999)))for(let hit=0;hit<Math.max(1,cfg.hits||1);hit++)this.hit(u,e,this.stats(u).atk*(cfg.atkScale??b.atk_scale??1),this.baseDamageType(u),{skill:true});}if(b.stun||cfg.bb.stun)for(const e of targets){if(applyStatus(e,'stun',b.stun??cfg.bb.stun,{source:u.uid}))this.emit('control',{uid:e.uid,kind:'stun',x:e.x,y:e.y});}}}
+  activate(u){const p=this.profile(u),sk=p.skill,cfg=operatorSkillConfig(this,u);if(!sk||!permissions(u).skill||(!usesSp(sk)&&!cfg.coinCost))return;const b=blackboard(sk.blackboard),cost=this.spCost(u),kind=skillKind(sk)||(cfg.coinCost?'instant':null),flow=skillFlow(sk),passiveCoinSkill=sk.skillType==='PASSIVE'&&u.coinSkillEnabled,openingCoins=passiveCoinSkill?0:coinGainAtSkillStart(this,u),coinCap=coinCapFor(p);if(cfg.coinCost&&(u.coins||0)+openingCoins<cfg.coinCost)return;if(u.sp<cost||(usesSp(sk)&&sk.skillType!=='AUTO'&&this.s.time-u.lastSkill<3))return;if(kind==='instant'&&sk.skillType==='AUTO'&&(u.action||u.attackCooldown>0))return;if(flow.resetAttack){u.action=null;u.attackCooldown=0;}if(openingCoins)grantCoins(u,openingCoins,coinCap);if(cfg.coinCost&&!spendCoins(u,cfg.coinCost))return;u.sp=Math.max(0,Math.trunc(u.sp)-cost);u.lastSkill=this.s.time;u.skillCount++;const lateranoBonus=this.on('lateranoShip')&&this.owns(u,'lateranoShip')?this.params('lateranoShip'):null,baseAmmo=ammoCount(sk),bondAmmo=lateranoBonus?Math.max(0,Math.floor(baseAmmo*(Number(lateranoBonus.base_ammo_percent||0)+Number(lateranoBonus.ammo_percent_per_stack||0)*(this.layers.lateranoShip||0)))):0;u.ammo=kind==='ammo'?baseAmmo+cfg.ammoBonus+(u.talentAmmoBonus||0)+bondAmmo+(p.charId==='char_1032_excu2'?Math.min(4,this.s.units.filter(v=>v.deployed&&v.hp>0&&this.profile(v)?.bonds?.includes('lateranoShip')).length):0):0;u.ammoMax=u.ammo;u.ammoPerAttack=cfg.ammoPerAttack;u.skillLeft=kind==='ammo'?0:this.skillTimeLeft(sk);if(kind==='instant'){const t=attackTiming(this.stats(u).baseAttackTime,this.stats(u).attackSpeed,windupSeconds(this.stats(u).baseAttackTime,p.attackWindup));u.spLock=t.seconds;}this.event(u,'skill');this.emit('skill-start',{uid:u.uid,kind,name:sk.name,x:u.x,y:u.y,wide:this.wideAttack(u),wideKind:this.wideKind(u)});if(dispatch(this,'skill-start',{target:u}))return;if(kind==='instant'&&sk.skillType==='AUTO'&&spTypeOf(sk)==='INCREASE_WHEN_ATTACK'){u.enhanced=true;return;}if(kind==='instant'){const targets=this.targets(u);if(p.branch!=='incantationmedic'&&/回复.*生命|治疗/.test(sk.description||'')){for(const v of this.healingTargets(u))this.heal(u,v,this.stats(u).atk*(cfg.bb.healScale??b.heal_scale??b.atk_scale??1));}else if(cfg.atkScale!=null||b.atk_scale){for(const e of targets.slice(0,cfg.multiTarget===Infinity?targets.length:(cfg.multiTarget??b.max_target??999)))for(let hit=0;hit<Math.max(1,cfg.hits||1);hit++)this.hit(u,e,this.stats(u).atk*(cfg.atkScale??b.atk_scale??1),this.baseDamageType(u),{skill:true});}if(b.stun||cfg.bb.stun)for(const e of targets){if(applyStatus(e,'stun',b.stun??cfg.bb.stun,{source:u.uid}))this.emit('control',{uid:e.uid,kind:'stun',x:e.x,y:e.y});}}}
  deactivate(u){const p=this.profile(u),sk=p.skill;if(!sk||!this.skillActive(u))return false;const idx=sk.skillIndex??u.source?.skillIndex;if(u.id==='char_1033_swire2'&&idx===2){const cfg=operatorSkillConfig(this,u),coins=Math.max(0,Math.trunc(u.coins||0));for(let i=0;i<coins;i++){const targets=this.targets(u);if(!targets.length)break;const target=targets[Math.floor(this.economy.random()*targets.length)];this.hit(u,target,this.stats(u).atk*(cfg.atkScale||1),'physical');moveActor(this,target,u,sk.description||'');}u.coins=0;}if(u.id==='char_4039_horn'&&idx===1&&u.ammo>0){const cfg=operatorSkillConfig(this,u),targets=this.targets(u);for(let i=0;i<u.ammo;i++)for(const target of targets)this.hit(u,target,this.stats(u).atk*(Number(cfg.bb['attack@s2.atk_scale'])||1.6),'physical',{skill:true});u.hp=Math.max(1,u.hp-u.maxHp*(Number(cfg.bb['attack@s2.hp_ratio'])||.6));u.ammo=0;}u.skillLeft=0;u.ammo=0;u.action=null;this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'skill-end',{target:u});return true;}
  spCost(u){const p=this.profile(u),base=p.skill?.spData.spCost||0;return this.on('suntShip')&&this.rows.suntShip.count>=5&&p.isGolden?Math.floor(base*.7):base;}
  gainCost(amount){const value=Number(amount);if(!Number.isFinite(value)||value<=0)return 0;const before=this.s.cost;this.s.cost=Math.min(this.s.costMax,before+value);const gained=this.s.cost-before;if(gained>0)this.emit('cost-gain',{amount:gained,total:this.s.cost});return gained;}
@@ -5382,8 +5412,124 @@ function drawWhitwEyes(c,point,z,battle,{reduceFx=false}={}){
  }
  return true;
 }
+// ── 「范围扩大」技能特效 ──────────────────────────────────────────────
+// 数据来源：技能的 rangeId 与干员常态 rangeId 不同即为范围扩大（skillWidensRange）。
+// 形状一律取自 data.ranges[rangeId].grids，不靠像素半径估算。
+// 三种画法：wideSlash（持续强化型，逐次攻击扫弧）、selfBurst（瞬时自身 AoE）、auraRing（持续领域描边）。
+
+function rangeCells(point,z,battle,uid){
+ const unit=battle?.s?.units?.find(u=>u.uid===uid);
+ if(!unit||!battle.rangeGeometry)return null;
+ const geo=battle.rangeGeometry(unit);
+ if(!geo)return null;
+ const cells=[];
+ for(let row=-geo.reachY;row<=geo.reachY;row++)for(let col=-geo.reachX;col<=geo.reachX;col++){
+  const mine=geo.cells.some(g=>g.row===row&&g.col===col);
+  if(!mine)continue;
+  let x=col,y=-row;
+  for(let i=0;i<(unit.dir||0);i++)[x,y]=[-y,x];
+  const cell={gx:unit.x+x,gy:unit.y+y};
+  cell.p=point(cell.gx,cell.gy);
+  cells.push(cell);
+ }
+ return {geo,unit,cells};
+}
+// 逐格描出技能范围轮廓（只描边不填充，避免糊住棋盘）
+function strokeRange(c,z,cells,{stroke,width=1.5,dash=null}={}){
+ if(!cells?.length)return;
+ c.save();if(stroke)c.strokeStyle=stroke;c.lineWidth=width;if(dash)c.setLineDash(dash);
+ for(const cell of cells)c.strokeRect(cell.p.x-z.tw/2+1,cell.p.y-z.th/2+1,z.tw-2,z.th-2);
+ c.restore();
+}
+// 持续范围强化：开启时大弧线扫过整个技能范围，之后每次攻击沿范围扫出弧
+function drawWideSweep(c,point,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ let drew=false;
+ for(const e of recent(s.events,s.time,'skill-start',.6)){
+  if(e.wideKind!=='sweep')continue;
+  const info=rangeCells(point,z,battle,e.uid);
+  const k=Math.max(0,Math.min(1,(s.time-e.t)/.6)),u=info.unit;
+  const r=info.geo.cells.reduce((m,g)=>Math.max(m,Math.hypot(g.col,g.row)),1)*z.tw*.72;
+  const facing=-(u.dir||0)*Math.PI/2;
+  c.save();c.globalCompositeOperation='lighter';
+  const origin=point(u.x,u.y);
+  c.translate(origin.x,origin.y);
+  c.rotate(facing);
+  for(let i=0;i<2;i++){
+   const a0=-.95+k*1.9*(i?1:1)-(i?.22:0),a1=a0+(i?.5:.72);
+   c.strokeStyle=`rgba(228,244,255,${((1-k)*(i?.5:.85)*(reduceFx?.6:1)).toFixed(3)})`;
+   c.lineWidth=i?2:4;c.lineCap='round';
+   c.beginPath();c.arc(0,0,r,a0,a1);c.stroke();
+  }
+  c.restore();drew=true;
+ }
+ // 攻击瞬间：从施法者朝范围扫出的弧（每次 strike 一条，按 wide 过滤）
+ for(const e of recent(s.events,s.time,'strike',.3)){
+  if(!e.wide)continue;
+  const info=rangeCells(point,z,battle,e.uid);
+  if(!info)continue;
+  const k=Math.max(0,Math.min(1,(s.time-e.t)/.3)),u=info.unit;
+  const a=point(u.x,u.y),b=point(e.targetX,e.targetY);
+  const ang=Math.atan2(b.y-a.y,b.x-a.x);
+  const r=info.geo.reachX*z.tw*.7+z.tw*.3;
+  c.save();c.globalCompositeOperation='lighter';
+  c.translate(a.x,a.y);c.rotate(ang);
+  c.strokeStyle=`rgba(232,246,255,${((1-k)*(reduceFx?.5:.85)).toFixed(3)})`;
+  c.lineWidth=3;c.lineCap='round';
+  c.beginPath();c.arc(0,0,r,-.5+k*.25,.5+k*.25);c.stroke();
+  c.restore();drew=true;
+ }
+ return drew;
+}
+// 瞬时自身 AoE（含入场自动释放的被动）：以自身为中心的扩散震波，半径按技能范围跨度
+function drawSelfBurst(c,point,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ let drew=false;
+ for(const e of recent(s.events,s.time,'skill-start',.55)){
+  // 只看「瞬时自身 AoE」与「入场自动释放」的被动大范围技能：前者是主动爆发，后者按你的定义就是入场自动放技能
+  if(e.wideKind!=='burst'&&e.wideKind!=='passive')continue;
+  const info=rangeCells(point,z,battle,e.uid);
+  if(!info)continue;
+  const geo=info.geo,round=geo.spanX<=2&&geo.spanY<=2&&geo.count<=9;   // 近身范围画圆环，否则按格描边
+  const k=Math.max(0,Math.min(1,(s.time-e.t)/.55)),fade=(1-k)*(reduceFx?.55:1);
+  const p=point(info.unit.x,info.unit.y);
+  c.save();c.globalCompositeOperation='lighter';
+  if(round){
+   const r=(geo.reachX||1)*z.tw*(.5+k*.75);
+   c.strokeStyle=`rgba(255,246,214,${(.85*fade).toFixed(3)})`;c.lineWidth=3;
+   c.beginPath();c.ellipse(p.x,p.y,r,r*.62,0,0,Math.PI*2);c.stroke();
+   c.strokeStyle=`rgba(255,255,255,${(.5*fade).toFixed(3)})`;c.lineWidth=1.4;
+   c.beginPath();c.ellipse(p.x,p.y,r*.62,r*.4,0,0,Math.PI*2);c.stroke();
+  }else{
+   strokeRange(c,z,info.cells,{stroke:`rgba(255,240,200,${(.8*fade).toFixed(3)})`,width:2});
+  }
+  c.restore();drew=true;
+ }
+ return drew;
+}
+// 持续领域（光环／停攻结界）：技能持续期内描出范围边界，低频流光脉动
+function drawAuraField(c,point,z,battle,{reduceFx=false}={}){
+ const s=battle?.s;if(!s)return false;
+ let drew=false;
+ for(const u of s.units||[]){
+  if(!u.deployed||u.hp<=0||!(u.skillLeft>0))continue;
+  const info=rangeCells(point,z,battle,u.uid);
+  if(!info||info.geo.count<6)continue;
+  const pulse=reduceFx?0:(.5+.5*Math.sin(s.time*2.2));
+  strokeRange(c,z,info.cells,{stroke:`rgba(244,211,139,${(.16+.14*pulse).toFixed(3)})`,width:1.5});
+  const p=point(u.x,u.y),r=(info.geo.reachX||1)*z.tw;
+  c.save();c.globalCompositeOperation='lighter';
+  c.strokeStyle=`rgba(255,236,190,${(.1+.08*pulse).toFixed(3)})`;c.lineWidth=2;
+  c.beginPath();c.ellipse(p.x,p.y,r*.55,r*.34,0,0,Math.PI*2);c.stroke();
+  c.restore();drew=true;
+ }
+ return drew;
+}
 function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,reduce=!!opts.reduceFx;
  drawCombatFx(c,point,z,battle,reduce);
+ drawAuraField(c,point,z,battle,{reduceFx:reduce});
+ drawSelfBurst(c,point,z,battle,{reduceFx:reduce});
+ drawWideSweep(c,point,z,battle,{reduceFx:reduce});
  drawIceWind(c,z,battle,{reduceFx:reduce});
  for(const e of s.effects||[]){
   if(e.type!=='healing'&&e.type!=='evade'&&e.type!=='block')continue;
@@ -5448,7 +5594,7 @@ function drawDownRing(c,p,u,size,opts={}){
  c.fillStyle='#e9fff7';c.font='11px sans-serif';c.textAlign='center';c.fillText((opts.formatNumber?opts.formatNumber(n):n)+'s',p.x,p.y+4);
 }
 
-return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawWhitwEyes,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing};
+return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawWhitwEyes,drawWideSweep,drawSelfBurst,drawAuraField,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing};
 },
 "native-flight.js": function(load) {
 // 自由飞行移动原语（连续坐标，不做格子吸附、不走路网）。
