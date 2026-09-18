@@ -98,25 +98,25 @@ test('冰风绘制：窗口外不画、reduceFx 减量、不写入战斗状态',
  const alpha=Number(grad.stops[0][1].match(/,([\d.]+)\)$/)[1]);
  assert.ok(alpha>0,'减少动效仍保留可见提示');
 
- // 0.5 秒视觉窗口之外自然消失
- runTo(b,25.9);
+ // 1 秒视觉窗口之外自然消失
+ runTo(b,26.4);
  const gone=host();
  assert.equal(drawIceWind(gone.c,Z,b),false);
  assert.equal(gone.ops.length,0);
 });
 
-test('冰风窗口以 0.5 秒为界，中途最亮',()=>{
+test('冰风窗口以 1 秒为界，中途最亮',()=>{
  const b=kjeragBattle(6);
  const alphaAt=()=>{const {c,ops}=host();if(!drawIceWind(c,Z,b))return 0;const g=ops.find(o=>o.op==='gradient');const m=g.stops[0][1].match(/,([\d.]+)\)$/);if(!m)throw Error('unparsable stop colour: '+JSON.stringify(g.stops));return Number(m[1]);};
  const stepTo=t=>{while(b.s.time<t-1e-9&&!b.s.finished)b.step();};
  stepTo(24.9);
  assert.equal(alphaAt(),0,'25 秒前不应有冰风');
  const samples=[];
- for(const t of [25.015,25.12,25.25,25.38,25.45]){stepTo(t);samples.push(alphaAt());}
+ for(const t of [25.03,25.25,25.5,25.75,25.95]){stepTo(t);samples.push(alphaAt());}
  const [in1,in2,mid,out2,out1]=samples;
  assert.ok(samples.every(v=>v>0),'窗口内应有可见强度 '+JSON.stringify(samples));
  assert.ok(mid>=in2&&in2>=in1,'渐入：越接近中段越亮');
  assert.ok(mid>=out2&&out2>=out1,'渐出：越接近结尾越淡');
- stepTo(25.6);
- assert.equal(alphaAt(),0,'0.5 秒之后必须完全消失');
+ stepTo(26.1);
+ assert.equal(alphaAt(),0,'1 秒之后必须完全消失');
 });

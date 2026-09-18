@@ -113,7 +113,7 @@ export function actorOffset(u,battle){
 }
 // Full-screen Kjerag storm, played for ICE_WIND_SECONDS after each 'ice-wind' settlement event.
 // Pure presentation: it reads events and logic-effect timing only, and writes nothing to battle state.
-const ICE_WIND_SECONDS=.5;
+const ICE_WIND_SECONDS=1;
 export function drawIceWind(c,z,battle,{reduceFx=false}={}){
  const s=battle?.s;if(!s)return false;
  const [ev]=recent(s.events,s.time,'ice-wind',ICE_WIND_SECONDS);
