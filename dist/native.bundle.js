@@ -6706,7 +6706,7 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
  if(a==='reduce-fx'){state.reduceFx=!state.reduceFx;savePreference('garrison-reduce-fx',state.reduceFx?'1':'0');render();return;}
  if(a==='inspect-close'){state.inspect=null;render();return;}
  if(a==='summon-select'){state.summonSelected=uid;state.selected=null;state.item=null;state.inspect={kind:'summon-card',uid};state.preview=null;render();return;}
- if(a==='select'){if(state.item){if(!g.perform('equip',state.item,uid)){const u=g.s.units.find(u=>u.uid===uid);if(u?.equipment.length>=2){modal(`<h2>选择替换的装备</h2>${u.equipment.map((e,i)=>`<button data-act="replace" data-uid="${uid}" data-slot="${i}">${esc(itemName(e.chessId))}</button>`).join('')}`);return;}}state.item=null;}state.summonSelected=null;state.selected=uid;state.inspect={kind:'unit',uid};state.preview=null;save();render();return;}
+ if(a==='select'){if(state.item)equipItemOnUnit(uid);state.summonSelected=null;state.selected=uid;state.inspect={kind:'unit',uid};state.preview=null;save();render();return;}
  if(a==='item'){state.summonSelected=null;if(inspectSame('pack',uid)){state.item=uid;notice('点击一名场上或整备区干员以装备／使用。');}else{state.item=null;state.selected=null;state.inspect={kind:'pack',uid};}render();return;}
  if(a==='replace'){g.perform('equip',state.item,uid,Number(button.dataset.slot));state.item=null;state.modal=null;save();render();return;}
  if(a==='bond-info'){const id=button.dataset.id,b=data.season.bondInfoDict[id],members=bondOperators(id),live=new Set((g?.s.units||[]).filter(u=>u.position).map(u=>u.charId)),layer=g?.s.bondLayers?.[id]||0,active=g?.bonds?.()?.[id]?.active;modal(`<h2>${esc(b.name)}</h2><p>${esc(plain(b.desc))}</p>${bondCurrentPreview(id,layer)}<p class="muted small">${active?'当前盟约已激活，动态数值生效中。':'当前盟约尚未激活，动态数值仅作预览。'}</p><div class="native-bond-roster" aria-label="盟约干员">${members.map(m=>{const active=live.has(m.charId);return `<div class="native-bond-member${active?' active':''}">${avatar(m.charId)}<span><b>${esc(m.name)}</b><small>${m.rank} 阶${active?' · 场上':''}</small></span></div>`;}).join('')||'<small>暂无可用干员</small>'}</div>`);return;}if(a==='aim'){if(state.preview){state.preview.dir=Number(button.dataset.dir);draw();}return;}if(a==='cancel'){state.preview=null;render();return;}if(a==='place-confirm'){commitPreview();return;}
@@ -6755,6 +6755,10 @@ function commitPreview(){
 function insideRect(r,x,y){return !!r&&x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}
 function overCanvas(x,y){return canvas?.isConnected&&insideRect(canvas.getBoundingClientRect(),x,y);}
 function overBench(x,y){return ['.native-bench','.native-bench-label'].some(selector=>insideRect(root.querySelector(selector)?.getBoundingClientRect(),x,y));}
+function overShop(x,y){const shop=document.getElementById('native-supply-shop');if(!shop||!shop.offsetParent)return false;return insideRect(shop.getBoundingClientRect(),x,y);}
+function overUnitCard(x,y){const el=document.elementFromPoint(x,y)?.closest?.('[data-act="select"]');if(!el)return null;const uid=Number(el.dataset.uid);return state.game?.s.units.find(u=>u.uid===uid)||null;}
+// 装备到干员（点击流程与拖放流程共用）。槽位已满时弹出摧毁选择。
+function equipItemOnUnit(uid,itemUid=state.item){const g=state.game;if(!itemUid||!g.s.items.some(i=>i.uid===itemUid)){notice('先从整备区选择一件装备。');return false;}if(!g.perform('equip',itemUid,uid)){const u=g.s.units.find(x=>x.uid===uid);if(u?.equipment.length>=2){state.item=itemUid;modal(`<h2>选择替换的装备</h2><p>装备槽已满，请选择要摧毁的一件。</p>${u.equipment.map((e,i)=>`<button data-act="replace" data-uid="${uid}" data-slot="${i}">${esc(itemName(e.chessId))}</button>`).join('')}`);return false;}notice('当前阶段无法装备该道具。');return false;}state.item=null;notice('已装备。');return true;}
 function tileLift(tile,z){return (tile?.heightType==='HIGHLAND'||tile?.tileKey==='tile_fence_bound')&&tile.buildableType!=='NONE'?Math.min(10,z.th*.22):0;}
  function unitAtPointer(x,y){
   const g=state.game,z=geometry(),px=x-z.r.left,py=y-z.r.top,size=Math.min(z.tw*.68,z.th*1.1);
@@ -6769,10 +6773,10 @@ function tileLift(tile,z){return (tile?.heightType==='HIGHLAND'||tile?.tileKey==
 }
  function dragFeedback(){
   const bench=root.querySelector('.native-bench'),hint=document.getElementById('native-drop-hint'),over=drag?.moved&&drag.from==='field'&&overBench(drag.x,drag.y),full=state.game?.hand().length>=10;
-  bench?.classList.toggle('drop-target',!!over&&!full);bench?.classList.toggle('drop-blocked',!!over&&full);
+  bench?.classList.toggle('drop-target',!!over&&!full);bench?.classList.toggle('drop-blocked',!!over&&full);const shop=document.getElementById('native-supply-shop');const overShopNow=drag?.moved&&drag.kind==='operator'&&overShop(drag.x,drag.y);if(shop)shop.classList.toggle('drop-target',!!overShopNow);const itemDrag=drag?.moved&&drag.kind==='item';const hoverUnit=itemDrag?overUnitCard(drag.x,drag.y):null;for(const card of root.querySelectorAll('.native-bench [data-act="select"]')){card.classList.toggle('drop-target',!!hoverUnit&&Number(card.dataset.uid)===hoverUnit.uid);}
   const text=over?(full?'整备区已满，无法收回':`松手将${drag?.kind==='summon-card'?'召唤物':'干员'}移回整备区`):'可将场上干员或召唤物拖回此处；换位后重新选朝向';if(hint&&hint.textContent!==text)hint.textContent=text;
   let ghost=document.getElementById('native-drag-ghost');if(!drag?.moved){ghost?.remove();return;}
-  if(!ghost){ghost=document.createElement('div');ghost.id='native-drag-ghost';ghost.className='native-drag-ghost';ghost.setAttribute('aria-hidden','true');const u=state.game.s.units.find(u=>u.uid===drag.uid),card=state.game.s.summonCards?.find(c=>c.uid===drag.uid);ghost.innerHTML=drag.kind==='summon-card'?`<span class="native-summon-icon">◈</span><b>${esc(card?.name||'召唤物')}</b>`:avatar(u.charId);root.append(ghost);}ghost.style.left=(drag.x-28)+'px';ghost.style.top=(drag.y-36)+'px';
+  if(!ghost){ghost=document.createElement('div');ghost.id='native-drag-ghost';ghost.className='native-drag-ghost';ghost.setAttribute('aria-hidden','true');const u=state.game.s.units.find(u=>u.uid===drag.uid),card=state.game.s.summonCards?.find(c=>c.uid===drag.uid),item=drag.kind==='item'?state.game.s.items.find(i=>i.uid===drag.uid):null;ghost.innerHTML=drag.kind==='summon-card'?`<span class="native-summon-icon">◈</span><b>${esc(card?.name||'召唤物')}</b>`:item?`<span class="native-item-icon">◇</span><b>${esc(itemName(item.chessId))}</b>`:u?avatar(u.charId):'';root.append(ghost);}ghost.style.left=(drag.x-28)+'px';ghost.style.top=(drag.y-36)+'px';
 }
 function clearDrag(){drag=null;canvasPress=null;touchButton=null;dragFeedback();}
 function drawTerrain(c,z,map){
@@ -6947,6 +6951,7 @@ root.addEventListener('pointerdown',e=>{
  const button=paneHit||e.target.closest('button[data-act]');
  if(e.pointerType==='touch'&&button&&!button.disabled)touchButton={b:button,id:e.pointerId,x:e.clientX,y:e.clientY};
  const manage=state.game?.s.phase==='prep'&&!state.game.s.rewardPending&&!state.modal;
+  if(button?.dataset.act==='item'&&manage&&button.dataset.uid){drag={uid:Number(button.dataset.uid),kind:'item',id:e.pointerId,from:'hand',x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,moved:false};button.setPointerCapture(e.pointerId);return;}
   if((button?.dataset.act==='select'||button?.dataset.act==='summon-select')&&manage&&!state.item&&(button.dataset.act!=='summon-select'||button.dataset.mode==='manual')){state.preview=null;root.querySelector('.native-facing')?.setAttribute('hidden','');drag={uid:Number(button.dataset.uid),kind:button.dataset.act==='summon-select'?'summon-card':'operator',id:e.pointerId,from:'hand',x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,moved:false};button.setPointerCapture(e.pointerId);return;}
  if(e.target!==canvas)return;
  if(state.preview&&manage){const z=geometry(),x=z.r.left+z.ox+(state.preview.x+.5)*z.tw,y=z.r.top+z.oy+(state.preview.y+.5)*z.th;if(Math.hypot(e.clientX-x,e.clientY-y)>95){state.preview=null;render();return;}aim={x,y,id:e.pointerId};canvas.setPointerCapture(e.pointerId);return;}
@@ -6959,7 +6964,9 @@ root.addEventListener('pointermove',e=>{
  if(aim&&aim.id===e.pointerId&&state.preview){const dx=e.clientX-aim.x,dy=e.clientY-aim.y;state.preview.dir=Math.hypot(dx,dy)<18?null:Math.abs(dx)>Math.abs(dy)?dx>0?0:2:dy>0?1:3;draw();}
 });
 root.addEventListener('pointerup',e=>{
- if(drag&&drag.id===e.pointerId){const d=drag;if(d.moved){ignoredClickPointer=e.pointerId;ignoredClickUntil=performance.now()+400;clearDrag();state.inspect=null;
+ if(drag&&drag.id===e.pointerId){const d=drag;if(d.moved){
+if(d.from==='hand'&&d.kind==='operator'&&overShop(e.clientX,e.clientY)){drag=null;dragFeedback();const u=state.game.s.units.find(x=>x.uid===d.uid);const name=u?(data.profiles[u.chessId]?.name||'干员'):'干员';if(state.game.perform('sell',d.uid)){state.selected=null;state.inspect=null;save();notice('已出售 '+name+'，资金 +'+(u?data.season.shopCharChessInfoData[u.rank][data.season.charChessDataDict[u.chessId].isGolden?1:0].chessSoldPrice:0)+' ◆');}else notice('当前阶段无法出售该干员。');render();return;}
+if(d.kind==='item'&&d.from==='hand'){const u=overUnitCard(e.clientX,e.clientY);drag=null;dragFeedback();if(u){const name=data.profiles[u.chessId]?.name||'干员';const equipped=equipItemOnUnit(u.uid,d.uid);state.selected=u.uid;state.inspect={kind:'unit',uid:u.uid};save();render();if(equipped)notice('已为'+name+'装备。');return;}notice('请把装备拖到干员身上。');render();return;}ignoredClickPointer=e.pointerId;ignoredClickUntil=performance.now()+400;clearDrag();state.inspect=null;
     if(d.from==='field'&&overBench(e.clientX,e.clientY)){const ok=d.kind==='summon-card'?state.game.perform('withdrawSummon',d.uid):state.game.perform('withdraw',d.uid);if(ok){state.selected=state.summonSelected=state.preview=null;save();notice('已移回整备区');}else notice('整备区已满或当前阶段无法收回');render();}
     else if(overCanvas(e.clientX,e.clientY)){const cell=cellAt(e.clientX,e.clientY);d.kind==='summon-card'?placeSummon(d.uid,cell.x,cell.y):place(d.uid,cell.x,cell.y);}else render();return;
    }drag=null;dragFeedback();if(d.from==='field'){canvasPress=null;action({dataset:{act:d.kind==='summon-card'?'summon-select':'select',uid:String(d.uid)}});return;}}

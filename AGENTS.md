@@ -38,6 +38,13 @@
 - `native-fx.js`：**只画特效**。`s.events` 会裁剪过期，禁止当规则执行依据
 - `scripts/build-native.mjs`：把固定历史库编进客户端
 
+## 对局 UI 交互约定（`native-play.js`）
+
+- **整备区装备拖放**：`pointerdown` 在 `[data-act="item"]` 上起拖（`drag.kind==='item'`、`from:'hand'`），落点由 `overUnitCard` 找干员卡；点击流程（先点装备再点干员）与拖放共用 `equipItemOnUnit(uid,itemUid)`，槽位满时它弹摧毁选择（`data-act="replace"` + `data-slot`）。
+- **拖到商店出售**：干员卡拖到 `#native-supply-shop` 上松手即出售，`overShop` 判定，`dragFeedback` 给商店加 `drop-target`。
+- **新增拖放分支必须清 `drag`**：`pointerup` 的 `d.moved` 分支里提前 `return` 的分支要显式 `drag=null; dragFeedback();`，否则下一次拖放会复用上一次的 `drag.uid`。
+- **干员档案层级**：`.native-dossier`（含 body）在 PC 上 `pointer-events:none`，只当滚动容器用（滚轮由 `root` 的 wheel 监听 + `scrollerAtPoint` 接管）。一旦给它恢复 `auto`，它会盖住下方整备区卡片，卡片点不中、装备也拖不上去。
+
 资料：`data/prts/` 参考底库；`data/normalized/` 规范化；`data/modes/alliance-lower/` 本期包（历史提交 `86da4cfa…`）。客户端规模仍是 112 可见预设、266 养成状态、23 盟约、40 策略、215 敌人引用、376 头像。
 
 无第三方 JS。开发 Node.js 22+；Pages 用 24。`npm run build` 只编译。`npm test` 跑 `tests/*.test.mjs`。
