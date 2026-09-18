@@ -15,3 +15,29 @@ test('Lee strategy defers early base funding and resolves the declared tier-two 
 test('miracle probability is 18% plus 0.3% per layer and only grants when no free refresh remains',()=>{const c=new NativeEconomy(data,'mode_single_normal',{funds:100});const shops=Object.values(data.season.charShopChessDatas).filter(s=>s.charId&&data.season.charChessDataDict[s.chessId].bondIds.includes('miraShip'));const unique=[...new Map(shops.map(s=>[s.charId,s])).values()];c.s.units=unique.slice(0,2).map((s,i)=>unit(s,i+1));const offer=Object.values(data.season.charShopChessDatas).find(s=>s.charId&&!s.isHidden&&s.chessLevel===1).chessId;c.s.bondLayers.miraShip=40;c.random=()=>.299;assert.equal(c.refresh([offer]),true);assert.equal(c.s.freeRefresh,1);c.s.freeRefresh=2;let calls=0;c.random=()=>{calls++;return 0;};c.refresh([offer]);assert.equal(c.s.freeRefresh,1);assert.equal(calls,0);c.s.freeRefresh=0;c.random=()=>.301;c.refresh([offer]);assert.equal(c.s.freeRefresh,0);});
 
 test('巫恋出售交换已实现后可正常进入准备阶段',()=>{const c=new NativeEconomy(data,'mode_single_normal',{bandId:'band_vodfox'});assert.equal(c.command('startPreparation').ok,true);assert.equal(c.s.lastPrepRound,1);});
+
+test('三选一奖励每次给出的候选互不重复',()=>{
+ const g=new NativeSession(NATIVE_DATA,{seed:3});g.s.rewardPending={tier:6};g.s.rewardQueue=[];
+ g.ensureRewards();
+ const offers=g.s.rewardPending.offers;
+ assert.equal(offers.length,3,'三合一奖励仍是三选一');
+ assert.equal(new Set(offers).size,3,'三合一奖励不应出现重复候选');
+ assert.ok(offers.every(id=>NATIVE_DATA.profiles[id]),'候选必须都是合法干员');
+});
+
+test('盟约调配奖励同样不重复',()=>{
+ const g=new NativeSession(NATIVE_DATA,{seed:4});
+ g.s.rewardPending=null;g.s.rewardQueue=[];
+ g.rewardFromTier(3,3);
+ assert.equal(g.s.rewardPending.offers.length,3);
+ assert.equal(new Set(g.s.rewardPending.offers).size,3,'高台调配奖励不应重复');
+ g.s.rewardPending=null;g.s.rewardQueue=[];
+ const owner=g.gain(g.s.offers.find(Boolean));
+ // 隐现的盟约在 1 级商店只有 1~2 名候选，凑不出三张不同的卡；升到 6 级让盟约池够大
+ g.s.level=6;
+ g.s.rewardPending=null;g.s.rewardQueue=[];
+ assert.equal(g.rewardFromBond(owner,3),true);
+ assert.equal(g.s.rewardPending.offers.length,3);
+ assert.equal(new Set(g.s.rewardPending.offers).size,3,'盟约奖励不应重复');
+});
+

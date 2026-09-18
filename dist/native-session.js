@@ -16,16 +16,32 @@ export class NativeSession extends NativeEconomy {
  deploySummonCard(cardUid,x,y,dir=0){if(!this.canDeploySummonCard(cardUid,x,y))return false;const card=this.s.summonCards.find(c=>c.uid===cardUid);card.position={x,y};card.dir=dir;return true;}
  withdrawSummonCard(cardUid){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid&&c.position);if(!card||this.handFull())return false;card.position=null;return true;}
  eligible(){return Object.values(this.data.season.charShopChessDatas).filter(o=>o.charId&&!o.isHidden);}
+ // 奖励候选之间不能重复：同一次奖励里出现的卡必须互不相同。
+ // exclude 交给 drawFromPool 直接剔除，卡池确实不足时按顺序补位（不能因为去重让奖励变少）。
+ drawDistinct(request,count,exclude=[]){
+  const seen=[...exclude],offers=[];
+  for(let i=0;i<count;i++){
+   let id=null;
+   try{id=this.drawFromPool({...request,exclude:seen});}catch{id=null;}
+   if(id==null){try{id=this.drawFromPool(request);}catch{break;}}
+   offers.push(id);seen.push(id);
+  }
+  return offers;
+ }
  // used 只在商店刷新时传入：同一家店对库存无放回，避免给出比库存更多的同名卡
  drawFromPool(r,used=null){
   if(r.kind==='item'){let items=this.data.items.filter(i=>!i.hidden&&i.rank<=this.s.level);const tier=Number(String(r.pool||'').match(/shop_(\d)/)?.[1]);if(tier)items=this.data.items.filter(i=>!i.hidden&&i.rank===tier);if(String(r.pool||'').includes('equip_vict'))items=items.filter(i=>i.normal?.giveBondId==='victoriaShip'||this.data.season.trapChessDataDict[i.id]?.giveBondId==='victoriaShip');if(!items.length)throw Error('没有可用装备');return this.pick(items).id;}
   const pool=String(r.pool||''),fixedTier=r.tier||Number(pool.match(/shop_(\d)/)?.[1]);let rows=this.eligible();if(fixedTier)rows=rows.filter(o=>o.chessLevel===fixedTier);else rows=rows.filter(o=>o.chessLevel<=(r.maxTier||this.s.level));
   // 有库存系统时（对局内），候选池按各干员剩余库存铺成多份后等权抽；used 让同一次刷新无放回
+  // exclude 用于奖励这一类「本次候选之间不能重复」的场景：直接从候选里剔除，而不是靠重抽碰运气。
+  const exclude=new Set((r.exclude||[]).filter(Boolean));
   const stockPool=!!this.s.stock;
   if(r.bond)rows=rows.filter(o=>this.data.season.charChessDataDict[o.chessId].bondIds.includes(r.bond));if(r.excludeCharId)rows=rows.filter(o=>o.charId!==r.excludeCharId);
   if(stockPool&&used){rows=rows.filter(o=>stockOf(this.data,this.s,o.chessId)-(used[o.chessId]||0)>0);if(!rows.length)throw Error('当前候选池没有可用库存');}
   if(pool.includes('later'))rows=this.eligible().filter(o=>o.chessLevel>=4&&this.data.season.charChessDataDict[o.chessId].bondIds.includes('lateranoShip'));
   if(!rows.length)throw Error('当前候选池没有匹配干员');
+  const allowed=exclude.size?rows.filter(o=>!exclude.has(o.chessId)):rows;
+  if(allowed.length)rows=allowed;
   if(!fixedTier&&r.maxTier&&!pool.includes('later')&&!stockPool){
    // 阶级权重：最高阶 30%、次高阶 40%、其余所有低阶共用 30%（档内等权）
    const maxTier=Math.max(...rows.map(o=>o.chessLevel)),previous=maxTier-1;
@@ -41,7 +57,7 @@ export class NativeSession extends NativeEconomy {
    return this.pick(candidates).chessId;
   }
   let row;
-  if(stockPool){const copies=[];for(const o of rows)for(let i=stockOf(this.data,this.s,o.chessId)-(used?.[o.chessId]||0);i>0;i--)copies.push(o);const total=copies.length,q=this.random()*total;let c=0;row=copies[copies.length-1];for(const o of copies){c+=1;if(q<c){row=o;break;}}}else row=this.pick(rows);
+  if(stockPool){const copies=[];for(const o of rows){if(exclude.has(o.chessId))continue;for(let i=stockOf(this.data,this.s,o.chessId)-(used?.[o.chessId]||0);i>0;i--)copies.push(o);}if(!copies.length)throw Error('当前候选池没有可用库存');const total=copies.length,q=this.random()*total;let c=0;row=copies[copies.length-1];for(const o of copies){c+=1;if(q<c){row=o;break;}}}else row=this.pick(rows);
   if(used&&stockPool)used[row.chessId]=(used[row.chessId]||0)+1;
   return pool.includes('later')?row.goldenChessId:row.chessId;
  }
@@ -49,9 +65,9 @@ export class NativeSession extends NativeEconomy {
  // 库存 3/3/4 的三人等价于十张卡等权，同一家店也不会给出比库存更多的同名卡。
  rollOffers(){const required=runStrategyEvent(this,'refreshRequirements'),forced=this.s.forcedRefresh,used={};const draw=extra=>{try{return this.drawFromPool({kind:'operator',maxTier:this.s.level,...extra},used);}catch{return null;}};const rows=Array.from({length:this.terms().operatorSlots},()=>draw({bond:forced?.bond}));for(const r of required){if(r.bond)for(let i=0;i<r.minCount;i++)rows[i]=draw({bond:r.bond})??rows[i];if(r.duplicateCount&&rows[0]){const cap=Number.isFinite(this.s.stock?.[rows[0]])?this.s.stock[rows[0]]:Infinity;for(let i=1;i<rows.length&&i<r.duplicateCount&&i<cap;i++)rows[i]=rows[0];}}return rows;}
  fillItems(){if(this.s.level<3){this.s.itemOffers=[];return;}this.s.itemOffers=Array.from({length:this.terms().itemSlots},()=>this.drawFromPool({kind:'item'}));}
- ensureRewards(){const r=this.s.rewardPending;if(r?.tier&&!r.offers){r.offers=Array.from({length:3},()=>this.drawFromPool({kind:'operator',tier:r.tier}));r.kind='operator';}}
- rewardFromBond(owner,count){const bonds=this.ownBonds(owner).filter(Boolean);if(!bonds.length)return false;this.s.rewardPending={offers:Array.from({length:count},()=>this.drawFromPool({kind:'operator',bond:this.pick(bonds),maxTier:this.s.level})),choice:1,kind:'operator'};return true;}
- rewardFromTier(tier,count){this.s.rewardPending={offers:Array.from({length:count},()=>this.drawFromPool({kind:'operator',tier:Math.min(6,tier)})),choice:1,kind:'operator'};return true;}
+ ensureRewards(){const r=this.s.rewardPending;if(r?.tier&&!r.offers){r.offers=this.drawDistinct({kind:'operator',tier:r.tier},3);r.kind='operator';}}
+ rewardFromBond(owner,count){const bonds=this.ownBonds(owner).filter(Boolean);if(!bonds.length)return false;this.s.rewardPending={offers:this.drawDistinct({kind:'operator',bond:this.pick(bonds),maxTier:this.s.level},count),choice:1,kind:'operator'};return true;}
+ rewardFromTier(tier,count){this.s.rewardPending={offers:this.drawDistinct({kind:'operator',tier:Math.min(6,tier)},count),choice:1,kind:'operator'};return true;}
  applyPostBattleTransforms(){for(const u of this.s.units.filter(x=>x.transformAfterBattle)){const id=this.drawFromPool({kind:'operator',tier:Math.min(6,(u.rank||1)+1)}),shop=this.data.season.charShopChessDatas[id];u.chessId=id;u.charId=shop.charId;u.rank=shop.chessLevel;delete u.transformAfterBattle;}}
   // 装备增减后重算盟约：以干员自身盟约为底，叠加装备给出的盟约。战略层加过的盟约层不在 u.bondIds 里，不受影响。
  refreshEquipmentBonds(u){const base=this.data.season.charChessDataDict[u.chessId]?.bondIds||[];const extra=u.equipment.map(i=>this.data.season.trapChessDataDict[i.chessId]).map(d=>d?.giveBondId).filter(Boolean);const next=[...new Set([...base,...extra])];const cur=this.ownBonds(u);if(next.length!==cur.length||next.some(id=>!cur.includes(id)))u.bondIds=next;}
