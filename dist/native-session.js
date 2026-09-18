@@ -4,6 +4,11 @@ import {buildPhasePlan,blackboard,ensureStock,restoreStock,stockOf} from './prot
 import {runStrategyEvent} from './strategy.js';
 import {createWaveRoster} from './native-wave-random.js';
 
+// 商店阶级概率（项目规定口径）：最高阶 30% / 次高阶 40% / 更低阶合计 30%。
+// 抽卡顺序必须是「先掷阶级，再从该阶级的库存里抽」；掷到的阶级没库存时才回落到整池随机抽。
+// 商店只有 1 个可及阶级时全部落在最高阶；只有 2 个阶级时「更低阶」为空，按下面的兜底并回最高阶。
+const SHOP_TIER_ROLL=[[.3,'top'],[.7,'prev'],[Infinity,'lower']];
+
 export class NativeSession extends NativeEconomy {
  constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,egg325=false,cat=false,playerId='local',teamPeers=[],teamTransport=null}={}){
   const map=data.maps.find(m=>m.stageId===mapId)||data.maps.find(m=>m.weight>0);super(data,modeId,{bandId,board:map,seed,manualPreview:true,playerId,teamPeers});this.map=map;this.teamTransport=teamTransport;this.battle=null;this.s.mapId=map.stageId;this.s.itemOffers=[];this.s.summonCards=[];this.s.capacity=8;this.s.passiveIncome=0;this.s.history=[];this.s.runResult=null;this.s.frozenSlots=[];this.s.roundDecisions=[];this.s.enemyModifiers=[];this.s.operatorModifiers=[];this.s.commands=[];
@@ -35,29 +40,34 @@ export class NativeSession extends NativeEconomy {
   // 有库存系统时（对局内），候选池按各干员剩余库存铺成多份后等权抽；used 让同一次刷新无放回
   // exclude 用于奖励这一类「本次候选之间不能重复」的场景：直接从候选里剔除，而不是靠重抽碰运气。
   const exclude=new Set((r.exclude||[]).filter(Boolean));
-  const stockPool=!!this.s.stock;
+  const stockPool=!!this.s.stock,limited=stockPool&&!!used;
+  const inStock=o=>stockOf(this.data,this.s,o.chessId)-(used?.[o.chessId]||0)>0;
   if(r.bond)rows=rows.filter(o=>this.data.season.charChessDataDict[o.chessId].bondIds.includes(r.bond));if(r.excludeCharId)rows=rows.filter(o=>o.charId!==r.excludeCharId);
-  if(stockPool&&used){rows=rows.filter(o=>stockOf(this.data,this.s,o.chessId)-(used[o.chessId]||0)>0);if(!rows.length)throw Error('当前候选池没有可用库存');}
   if(pool.includes('later'))rows=this.eligible().filter(o=>o.chessLevel>=4&&this.data.season.charChessDataDict[o.chessId].bondIds.includes('lateranoShip'));
   if(!rows.length)throw Error('当前候选池没有匹配干员');
   const allowed=exclude.size?rows.filter(o=>!exclude.has(o.chessId)):rows;
   if(allowed.length)rows=allowed;
-  if(!fixedTier&&r.maxTier&&!pool.includes('later')&&!stockPool){
-   // 阶级权重：最高阶 30%、次高阶 40%、其余所有低阶共用 30%（档内等权）
+  const available=limited?rows.filter(inStock):rows;
+  if(!available.length)throw Error('当前候选池没有可用库存');
+  // 抽卡两步走：先按商店等级掷出阶级（最高阶 30% / 次高阶 40% / 更低阶合计 30%），
+  // 再从掷中阶级的库存里抽；该阶级已经没库存（或被排除）时，用本次刷新的整池随机代替。
+  // 档位按「商店等级可及的候选」算而不是按库存算，所以掷中卖空的阶级是正常情况，走上面的回落。
+  let tier=[];
+  if(!fixedTier&&r.maxTier&&!pool.includes('later')){
    const maxTier=Math.max(...rows.map(o=>o.chessLevel)),previous=maxTier-1;
    const top=rows.filter(o=>o.chessLevel===maxTier),prev=rows.filter(o=>o.chessLevel===previous),lower=rows.filter(o=>o.chessLevel<previous);
-   let candidates,roll=this.random();
-   if(maxTier<=1)candidates=top;
-   else if(!prev.length)candidates=top.length?top:lower;
-   else if(roll<.3)candidates=top;
-   else if(roll<.7)candidates=prev;
-   else candidates=lower;
-   if(!candidates?.length)candidates=top.length?top:prev.length?prev:lower;
-   if(!candidates.length)throw Error('当前候选池没有匹配阶级');
-   return this.pick(candidates).chessId;
+   // 只有 1 个可及阶级（或次高阶缺档）时结果与 roll 无关，就不掷这一下，免得白挪随机数流。
+   if(maxTier<=1)tier=top;
+   else if(!prev.length)tier=top.length?top:lower;
+   else{const roll=this.random();for(const [limit,key] of SHOP_TIER_ROLL)if(roll<limit){tier=key==='top'?top:key==='prev'?prev:lower;break;}}
+   if(!tier?.length)tier=top.length?top:prev.length?prev:lower;
+   if(!tier.length)throw Error('当前候选池没有匹配阶级');
   }
-  let row;
-  if(stockPool){const copies=[];for(const o of rows){if(exclude.has(o.chessId))continue;for(let i=stockOf(this.data,this.s,o.chessId)-(used?.[o.chessId]||0);i>0;i--)copies.push(o);}if(!copies.length)throw Error('当前候选池没有可用库存');const total=copies.length,q=this.random()*total;let c=0;row=copies[copies.length-1];for(const o of copies){c+=1;if(q<c){row=o;break;}}}else row=this.pick(rows);
+  const fromTier=tier.filter(o=>available.includes(o)),list=fromTier.length?fromTier:available;
+  const weighted=rows_=>{const copies=[];for(const o of rows_){if(exclude.has(o.chessId))continue;for(let i=stockOf(this.data,this.s,o.chessId)-(used?.[o.chessId]||0);i>0;i--)copies.push(o);}return copies.length?copies[Math.floor(this.random()*copies.length)]:null;};
+  let row=null;
+  if(stockPool){row=weighted(list)??(fromTier.length?weighted(available):null);if(!row)throw Error('当前候选池没有可用库存');}
+  else row=this.pick(list);
   if(used&&stockPool)used[row.chessId]=(used[row.chessId]||0)+1;
   return pool.includes('later')?row.goldenChessId:row.chessId;
  }
