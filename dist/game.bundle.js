@@ -5165,7 +5165,7 @@ class NativeBattle {
    return containsTarget(cells.map(g=>[g.x,g.y]),e);
   };
   return this.s.enemies.some(e=>e.hp>0&&!e.hidden&&!e.invulnerable&&!e.untargetable&&
-   (!e.invisible||cfg.canSeeHidden||e.block===u.uid)&&
+   (!e.invisible||cfg.canSeeHidden||e.block!=null)&&
    (e.block===u.uid||(!e.flying||behavior.antiAir))&&
    (sleepOk||!permissions(e).sleeping)&&
    canReach(e));
@@ -5177,8 +5177,8 @@ class NativeBattle {
  wideKind(u){return this.wideSkillKind(this.profile(u),u.skillIndex??u.source?.skillIndex??null);}
  // 特效层用：取该单位当前生效范围的几何（技能激活且有 rangeId 时用技能范围，否则用常态范围）
  rangeGeometry(u){const p=this.profile(u);const sid=(u.skillLeft>0||u.ammo>0)&&p.skill?.rangeId?p.skill.rangeId:p.rangeId;return rangeGeometry(this.data,sid);}
- targets(u){const behavior=this.behavior(u),p=this.profile(u),cfg=operatorSkillConfig(this,u),sleepOk=cfg.canTargetSleep||behavior.kind==='damage-heal'||p.charId==='char_4056_titi'||(p.charId==='char_423_blemsh'&&(p.activeTalents||[]).some(t=>/优先攻击.*沉睡/.test(t.description||'')));if(p.charId==='char_291_aglina'&&!this.skillActive(u))return [];if(p.charId==='char_245_cello'&&!this.skillActive(u))return [];let targets=this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&(!e.invisible||cfg.canSeeHidden||e.block===u.uid)&&!e.invulnerable&&!e.untargetable&&(sleepOk||!permissions(e).sleeping)&&(e.block===u.uid||((!e.flying||behavior.antiAir)&&(!behavior.airOnlyIdle||this.skillActive(u)||e.flying)&&this.inside(u,e))));if(p.charId==='char_391_rosmon'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u))targets=targets.filter(e=>e.block!=null);if(p.charId==='char_1019_siege2'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u))targets=targets.filter(e=>e.block!=null);if(p.charId==='char_4193_lemuen'){const wanted=targets.filter(e=>e.wantedByLemuen);if(wanted.length)targets=wanted;}if(u.floatTarget!=null){const locked=targets.find(e=>e.uid===u.floatTarget);if(locked)targets=[locked];else u.floatTarget=null;}
-  if(p.charId==='char_430_fartth'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u)){const dir=[[1,0],[0,-1],[-1,0],[0,1]][u.dir||0];targets=this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.invisible&&!e.invulnerable&&!e.untargetable&&((e.y===u.y&&dir[0]!==0&&Math.sign(e.x-u.x)===dir[0])||(e.x===u.x&&dir[1]!==0&&Math.sign(e.y-u.y)===dir[1])));}
+ targets(u){const behavior=this.behavior(u),p=this.profile(u),cfg=operatorSkillConfig(this,u),sleepOk=cfg.canTargetSleep||behavior.kind==='damage-heal'||p.charId==='char_4056_titi'||(p.charId==='char_423_blemsh'&&(p.activeTalents||[]).some(t=>/优先攻击.*沉睡/.test(t.description||'')));if(p.charId==='char_291_aglina'&&!this.skillActive(u))return [];if(p.charId==='char_245_cello'&&!this.skillActive(u))return [];let targets=this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&(!e.invisible||cfg.canSeeHidden||e.block!=null)&&!e.invulnerable&&!e.untargetable&&(sleepOk||!permissions(e).sleeping)&&(e.block===u.uid||((!e.flying||behavior.antiAir)&&(!behavior.airOnlyIdle||this.skillActive(u)||e.flying)&&this.inside(u,e))));if(p.charId==='char_391_rosmon'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u))targets=targets.filter(e=>e.block!=null);if(p.charId==='char_1019_siege2'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u))targets=targets.filter(e=>e.block!=null);if(p.charId==='char_4193_lemuen'){const wanted=targets.filter(e=>e.wantedByLemuen);if(wanted.length)targets=wanted;}if(u.floatTarget!=null){const locked=targets.find(e=>e.uid===u.floatTarget);if(locked)targets=[locked];else u.floatTarget=null;}
+  if(p.charId==='char_430_fartth'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u)){const dir=[[1,0],[0,-1],[-1,0],[0,1]][u.dir||0];targets=this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&(!e.invisible||e.block!=null)&&!e.invulnerable&&!e.untargetable&&((e.y===u.y&&dir[0]!==0&&Math.sign(e.x-u.x)===dir[0])||(e.x===u.x&&dir[1]!==0&&Math.sign(e.y-u.y)===dir[1])));}
   const talentTargetRule=(p.activeTalents||[]).some(t=>/不以束缚状态的敌人为攻击目标/.test(t.description||''))?'rooted':null;
   // 索敌规则是「优先」不是「只能」：过滤后一个都不剩时必须回退到原目标集。
   // 否则「不以束缚状态的敌人为攻击目标」（深靛）和「优先攻击使用远程武器的敌人」（隐现）
@@ -6172,7 +6172,48 @@ function drawDownRing(c,p,u,size,opts={}){
  c.fillStyle='#e9fff7';c.font='11px sans-serif';c.textAlign='center';c.fillText((opts.formatNumber?opts.formatNumber(n):n)+'s',p.x,p.y+4);
 }
 
-return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawWhitwEyes,drawWideSweep,drawSelfBurst,drawAuraField,drawZones,drawSkillFan,drawDisplace,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing};
+// 隐匿（我方由盟约提供、敌方由自身能力提供）：暗灰色滤镜 + 马赛克。
+// 与 drawFrostOverlay 同形参（调用方给 box 与可选 image），只读单位状态，不参与索敌判定——
+// 能不能被选中由 native-battle 的 targets() 决定（被阻挡的隐匿单位视为脱离隐匿）。
+const CONCEAL_WASH='rgba(110,118,126,0.45)';
+const CONCEAL_BLOCK=6;
+function concealActive(actor){return !!actor&&!actor.hidden&&actor.invisible===true;}
+function drawConcealOverlay(c,actor,box,opts={}){
+ if(!actor||!box||!(box.w>0)||!(box.h>0)||!concealActive(actor))return false;
+ const reduce=!!opts.reduceFx,time=Number(opts.time)||0,im=opts.image;
+ c.save();
+ c.fillStyle=CONCEAL_WASH;c.fillRect(box.x,box.y,box.w,box.h);      // 灰色滤镜
+ // 有头像时做真正的马赛克：先把头像缩到 6×6，再关掉插值放大回来（同一张画布自读，不会污染）。
+ let mosaicked=false;
+ if(im&&im.complete&&im.naturalWidth&&c.canvas&&!reduce){
+  try{
+   const n=6,smooth=c.imageSmoothingEnabled;
+   c.imageSmoothingEnabled=false;
+   c.drawImage(im,box.x,box.y,n,n);
+   c.drawImage(c.canvas,box.x,box.y,n,n,box.x,box.y,box.w,box.h);
+   c.imageSmoothingEnabled=smooth;mosaicked=true;
+  }catch{mosaicked=false;}
+ }
+ if(!mosaicked){
+  // 没有头像（召唤物、装置）或拿不到画布时退化成暗灰马赛克块，按时间错开相位形成流动感。
+  const tile=reduce?CONCEAL_BLOCK*1.5:CONCEAL_BLOCK,cols=Math.ceil(box.w/tile),rows=Math.ceil(box.h/tile),phase=reduce?0:Math.floor(time*6)%4;
+  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+   const k=(row*2+col*3+phase)%4;
+   c.fillStyle=k%2?'rgba(54,60,68,0.5)':'rgba(154,162,172,0.4)';
+   const x=box.x+col*tile,y=box.y+row*tile;
+   if(x<box.x+box.w&&y<box.y+box.h)c.fillRect(x,y,Math.min(tile,box.x+box.w-x),Math.min(tile,box.y+box.h-y));
+  }
+ }
+ if(!reduce){   // 缓慢扫过的一条淡灰光带，让「打码」和「渲染坏了」能区分开
+  const band=(time*.35)%1.6-.3,g=c.createLinearGradient(box.x,box.y+box.h*band,box.x+box.w,box.y+box.h*(band+.4));
+  g.addColorStop(0,'rgba(170,180,192,0)');g.addColorStop(.5,'rgba(170,180,192,0.16)');g.addColorStop(1,'rgba(170,180,192,0)');
+  c.fillStyle=g;c.fillRect(box.x,box.y,box.w,box.h);
+ }
+ c.restore();
+ return true;
+}
+
+return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawWhitwEyes,drawWideSweep,drawSelfBurst,drawAuraField,drawZones,drawSkillFan,drawDisplace,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing,concealActive,drawConcealOverlay};
 },
 "native-flight.js": function(load) {
 // 自由飞行移动原语（连续坐标，不做格子吸附、不走路网）。
@@ -7362,7 +7403,7 @@ const {renderLobby} = load("native-lobby.js");
 const {buildPhasePlan,ensureStock,STOCK_BY_TIER} = load("protocol.js");
 const {strategyCoverage} = load("strategy.js");
 const {spBarFill} = load("native-sp.js");
-const {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay,drawWhitwEyes} = load("native-fx.js");
+const {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay,drawConcealOverlay,drawWhitwEyes} = load("native-fx.js");
 const {renderSkillDescription} = load("native-skill-text.js");
 const {zoneVisual} = load("native-operator-effects.js");
 const {EGG_BASE_MODE,EGG_MODE_ID,apply325Display,egg325Active,format325,rewrite325Text} = load("native-325.js");
@@ -7707,6 +7748,7 @@ function draw(){
   statusOverlays.push(()=>{
   drawElementRing(c,p.x,p.y,u,size);
   drawFrostOverlay(c,u,{x:p.x-size/2,y:p.y-size*.75,w:size,h:size},{reduceFx:state.reduceFx});
+  drawConcealOverlay(c,u,{x:p.x-size/2,y:p.y-size*.75,w:size,h:size},{reduceFx:state.reduceFx,time:g.battle?.s.time||0,image:im});
   if(u.hp!==undefined&&u.deployed){c.fillStyle='#122022';c.fillRect(p.x-size/2,p.y+size*.35,size,4);c.fillStyle='#75d9aa';c.fillRect(p.x-size/2,p.y+size*.35,size*Math.max(0,u.hp/u.maxHp),4);}
   const sk=profile(u)?.skill,cost=g.battle&&u.sp!==undefined?g.battle.spCost(u):sk?.spData?.spCost||0,fill=spBarFill(u,sk,cost);if(fill&&u.deployed){const bx=p.x-size/2,by=p.y+size*.35+(u.hp!==undefined?6:0);if(fill.kind==='ammo'){const n=fill.cells,gap=1,cw=Math.max(1,(size-(n-1)*gap)/n);for(let i=0;i<n;i++){c.fillStyle='#122022';c.fillRect(bx+i*(cw+gap),by,cw,4);if(i<fill.filled){c.fillStyle='#f4d38b';c.fillRect(bx+i*(cw+gap),by,cw,4);}}}else{c.fillStyle='#122022';c.fillRect(bx,by,size,3);c.fillStyle=fill.on?'#f4d38b':fill.ready?'#f0d18a':'#7bbaf3';c.fillRect(bx,by,size*fill.ratio,3);}}
   if(g.battle)drawStatuses(c,p.x,p.y,u,size);if(down)drawDownRing(c,p,u,size,eggOn()?{formatNumber:format325}:undefined);
@@ -7719,12 +7761,13 @@ function draw(){
   statusOverlays.push(()=>{
   drawElementRing(c,p.x,p.y,s,size);
   drawFrostOverlay(c,s,{x:p.x-size/2,y:p.y-size*.55,w:size,h:size},{reduceFx:state.reduceFx});
+  drawConcealOverlay(c,s,{x:p.x-size/2,y:p.y-size*.55,w:size,h:size},{reduceFx:state.reduceFx,time:g.battle?.s.time||0});
   c.fillStyle='#122022';c.fillRect(p.x-size/2,p.y+size*.35,size,4);c.fillStyle='#75d9aa';c.fillRect(p.x-size/2,p.y+size*.35,size*Math.max(0,s.hp/s.maxHp),4);
   drawStatuses(c,p.x,p.y,s,size);
   c.fillStyle='#e9fff7';c.font='10px sans-serif';c.textAlign='center';c.fillText(s.name||s.type,p.x,p.y-size*.65);
   });
  }
- if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),im=img(e.id),size=z.tw*.55*(e.spriteScale||1);if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);drawFrostOverlay(c,e,{x:p.x-20,y:p.y-20,w:40,h:40},{reduceFx:state.reduceFx});}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{drawElementRing(c,p.x,p.y-(e.flying?15:0),e,size);drawFrostOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx});c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);});}if(g.battle.s.summons?.some(s=>s.type==='svash2-float'&&s.svashPursuit&&s.svashTargetUid===e.uid)){c.fillStyle='#ef566b';c.font='bold 14px sans-serif';c.textAlign='center';c.fillText('狼眼',p.x,p.y-size*.8);}if(g.battle.s.whitwEyes?.some(x=>x.targetUid===e.uid)){const y=p.y-size*.8-(e.flying?15:0);c.save();c.strokeStyle='#ff4f5e';c.fillStyle='#ff4f5e';c.lineWidth=2;c.beginPath();c.ellipse(p.x,y,7,4.5,0,0,Math.PI*2);c.stroke();c.beginPath();c.arc(p.x,y,2,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(p.x-11,y);c.lineTo(p.x-8,y);c.moveTo(p.x+8,y);c.lineTo(p.x+11,y);c.stroke();c.restore();}}
+ if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),im=img(e.id),size=z.tw*.55*(e.spriteScale||1);if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);drawFrostOverlay(c,e,{x:p.x-20,y:p.y-20,w:40,h:40},{reduceFx:state.reduceFx});}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{drawElementRing(c,p.x,p.y-(e.flying?15:0),e,size);drawFrostOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx});drawConcealOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx,time:g.battle.s.time,image:im});c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);});}if(g.battle.s.summons?.some(s=>s.type==='svash2-float'&&s.svashPursuit&&s.svashTargetUid===e.uid)){c.fillStyle='#ef566b';c.font='bold 14px sans-serif';c.textAlign='center';c.fillText('狼眼',p.x,p.y-size*.8);}if(g.battle.s.whitwEyes?.some(x=>x.targetUid===e.uid)){const y=p.y-size*.8-(e.flying?15:0);c.save();c.strokeStyle='#ff4f5e';c.fillStyle='#ff4f5e';c.lineWidth=2;c.beginPath();c.ellipse(p.x,y,7,4.5,0,0,Math.PI*2);c.stroke();c.beginPath();c.arc(p.x,y,2,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(p.x-11,y);c.lineTo(p.x-8,y);c.moveTo(p.x+8,y);c.lineTo(p.x+11,y);c.stroke();c.restore();}}
  if(g.battle)drawWhitwEyes(c,point,z,g.battle,{reduceFx:state.reduceFx});
  if(g.battle&&g.s.phase==='battle')drawFx(c,point,z,g.battle,{reduceFx:state.reduceFx,formatText:eggOn()?rewrite325Text:null});
   if(drag?.moved&&overCanvas(drag.x,drag.y)){const cell=cellAt(drag.x,drag.y);if(g.map.grid[cell.y]?.[cell.x]){const can=drag.kind==='summon-card'?g.canDeploySummonCard(drag.uid,cell.x,cell.y):g.canDeploy(drag.uid,cell.x,cell.y);c.strokeStyle=can?'#78f1bd':'#f88c78';c.lineWidth=3;c.strokeRect(z.ox+cell.x*z.tw+2,z.oy+cell.y*z.th+2,z.tw-4,z.th-4);}}

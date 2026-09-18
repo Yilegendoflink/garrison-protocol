@@ -551,3 +551,44 @@ export function drawDownRing(c,p,u,size,opts={}){
  const n=Math.ceil(u.down||0);
  c.fillStyle='#e9fff7';c.font='11px sans-serif';c.textAlign='center';c.fillText((opts.formatNumber?opts.formatNumber(n):n)+'s',p.x,p.y+4);
 }
+
+// 隐匿（我方由盟约提供、敌方由自身能力提供）：暗灰色滤镜 + 马赛克。
+// 与 drawFrostOverlay 同形参（调用方给 box 与可选 image），只读单位状态，不参与索敌判定——
+// 能不能被选中由 native-battle 的 targets() 决定（被阻挡的隐匿单位视为脱离隐匿）。
+const CONCEAL_WASH='rgba(110,118,126,0.45)';
+const CONCEAL_BLOCK=6;
+export function concealActive(actor){return !!actor&&!actor.hidden&&actor.invisible===true;}
+export function drawConcealOverlay(c,actor,box,opts={}){
+ if(!actor||!box||!(box.w>0)||!(box.h>0)||!concealActive(actor))return false;
+ const reduce=!!opts.reduceFx,time=Number(opts.time)||0,im=opts.image;
+ c.save();
+ c.fillStyle=CONCEAL_WASH;c.fillRect(box.x,box.y,box.w,box.h);      // 灰色滤镜
+ // 有头像时做真正的马赛克：先把头像缩到 6×6，再关掉插值放大回来（同一张画布自读，不会污染）。
+ let mosaicked=false;
+ if(im&&im.complete&&im.naturalWidth&&c.canvas&&!reduce){
+  try{
+   const n=6,smooth=c.imageSmoothingEnabled;
+   c.imageSmoothingEnabled=false;
+   c.drawImage(im,box.x,box.y,n,n);
+   c.drawImage(c.canvas,box.x,box.y,n,n,box.x,box.y,box.w,box.h);
+   c.imageSmoothingEnabled=smooth;mosaicked=true;
+  }catch{mosaicked=false;}
+ }
+ if(!mosaicked){
+  // 没有头像（召唤物、装置）或拿不到画布时退化成暗灰马赛克块，按时间错开相位形成流动感。
+  const tile=reduce?CONCEAL_BLOCK*1.5:CONCEAL_BLOCK,cols=Math.ceil(box.w/tile),rows=Math.ceil(box.h/tile),phase=reduce?0:Math.floor(time*6)%4;
+  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+   const k=(row*2+col*3+phase)%4;
+   c.fillStyle=k%2?'rgba(54,60,68,0.5)':'rgba(154,162,172,0.4)';
+   const x=box.x+col*tile,y=box.y+row*tile;
+   if(x<box.x+box.w&&y<box.y+box.h)c.fillRect(x,y,Math.min(tile,box.x+box.w-x),Math.min(tile,box.y+box.h-y));
+  }
+ }
+ if(!reduce){   // 缓慢扫过的一条淡灰光带，让「打码」和「渲染坏了」能区分开
+  const band=(time*.35)%1.6-.3,g=c.createLinearGradient(box.x,box.y+box.h*band,box.x+box.w,box.y+box.h*(band+.4));
+  g.addColorStop(0,'rgba(170,180,192,0)');g.addColorStop(.5,'rgba(170,180,192,0.16)');g.addColorStop(1,'rgba(170,180,192,0)');
+  c.fillStyle=g;c.fillRect(box.x,box.y,box.w,box.h);
+ }
+ c.restore();
+ return true;
+}
