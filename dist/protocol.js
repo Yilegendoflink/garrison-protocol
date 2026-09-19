@@ -38,6 +38,29 @@ export function skillWidensRange(profile,skillIndex=null){
 export function baseFunding(round){if(!Number.isInteger(round)||round<1)throw Error('Invalid round');return round+3;}
 // Versioned native data helpers. No missing rule is guessed or silently simulated.
 export function blackboard(entries=[]){return Object.fromEntries((entries||[]).map(e=>[e.key,e.valueStr??e.value]));}
+// 富文本 → 显示文本。原表用尖括号区分两类东西：
+//   样式标签：`<@ba.vup>`、`<$ba.stun>`、`<@autochess.gray>`、闭合的 `</>` —— 丢掉；
+//   内容：道具/召唤物/盟约/敌人/时机名（`<铜灯盘>`、`<替身>`、`<寻呼模块>`、`<炎>`、`<获得时>`）——
+//   里面的文字是正文，必须保留。
+// 原表还会嵌套（`<在场<@autochess.dgreen>6</>名不同【炎】干员>`），所以按尖括号配对扫描，不能简单用正则。
+export function richText(value){
+ const raw=String(value??'');let out='',i=0;
+ while(i<raw.length){
+  const lt=raw.indexOf('<',i);
+  if(lt<0){out+=raw.slice(i);break;}
+  out+=raw.slice(i,lt);
+  let depth=0,end=-1;
+  for(let j=lt;j<raw.length;j++){
+   if(raw[j]==='<')depth++;
+   else if(raw[j]==='>'){depth--;if(depth===0){end=j;break;}}
+  }
+  if(end<0){out+=raw.slice(lt);break;}                     // 未闭合：原样留着
+  const inner=raw.slice(lt+1,end);
+  if(!/^[@$/]/.test(inner)&&inner!=='')out+=richText(inner); // 内容型：保留内部文字
+  i=end+1;
+ }
+ return out.replace(/\\n/g,'\n');
+}
 // 卫戍效果（干员特质）的显示文本。原表把触发时机写成尖括号标签（`<获得时>`／`<战斗中>`…），
 // 直接按富文本去标签会把时机一起吃掉，所以这里统一成【…】前缀；没有标签的按 eventType／能力键补。
 // 时机口径见 GARRISON_EFFECT_AUDIT.md §一。
@@ -52,7 +75,13 @@ export function garrisonTimingLabel(rule){
  if(String(rule?.battleRuneKey||'').startsWith('give_garrison'))return '战斗开始时';
  return GARRISON_TIMING_LABELS[rule?.eventType]||'';
 }
-export function garrisonText(rule){const when=garrisonTimingLabel(rule),body=String(rule?.garrisonDesc||rule?.description||'').replace(/<[^>]+>/g,'').replace(/\\n/g,'\n').trim();return when?`【${when}】${body}`:body;}
+export function garrisonText(rule){
+ const when=garrisonTimingLabel(rule);
+ // 先把时机标签摘掉（它会变成前面的【…】前缀），再按富文本规则处理剩下的内容标签。
+ const raw=String(rule?.garrisonDesc||rule?.description||'').replace(new RegExp(GARRISON_TIMING_TAG.source,'g'),m=>GARRISON_TIMING_TEXT.test(m.slice(1,-1))?'':m);
+ const body=richText(raw).trim();
+ return when?`【${when}】${body}`:body;
+}
 export function talentCandidateOpen(candidate,status,potentialRank=0){
  const phase=Number(String(status?.evolvePhase||'PHASE_0').replace('PHASE_','')),need=Number(String(candidate.unlockCondition?.phase||'PHASE_0').replace('PHASE_',''));
  const level=status?.charLevel??1;

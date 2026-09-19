@@ -8,8 +8,11 @@
 // 只有黑板键本身确实带负号时（如 -demkni_s_3.move_speed）才由键承担该符号。
 //
 // 数值口径：:0% 表示按百分数显示（黑板存小数，乘 100）；其余按原样输出。
+// 技能/天赋描述同样是原表富文本：样式标签（`<@ba.vup>`、`<$ba.stun>`、`</>`）丢掉，
+// 内容标签（`<替身>`、`<铜灯盘>` 这类引用名）里的文字保留。
+import {richText} from './protocol.js';
 export function plainText(value){
- return String(value??'').replace(/<[^>]+>/g,'').replace(/\\n/g,'\n');
+ return richText(value);
 }
 export function normalizeKey(key){
  return String(key??'').replace(/^[-+]/,'').toLowerCase();

@@ -6,7 +6,7 @@ import {NATIVE_DATA} from './runtime-data.js';
 import {NativeSession} from './native-session.js';
 import {NativeBattle} from './native-battle.js';
 import {renderLobby} from './native-lobby.js';
-import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText} from './protocol.js';
+import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText} from './protocol.js';
 import {strategyCoverage} from './strategy.js';
 import {spBarFill} from './native-sp.js';
 import {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay,drawConcealOverlay,drawWhitwEyes} from './native-fx.js';
@@ -17,7 +17,7 @@ import {EGG_BASE_MODE,EGG_MODE_ID,apply325Display,egg325Active,format325,rewrite
 const CAT_MODE_ID='mode_cat_all',CAT_BASE_MODE='mode_single_normal';
 const data=NATIVE_DATA,root=document.getElementById('app'),strategyCoverageById=Object.fromEntries(strategyCoverage(data).map(x=>[x.id,x])),SAVE='garrison-native-manual-v1',CHECKPOINT_SAVE='garrison-native-safe-v1',VIEW_SAVE='garrison-native-view-v1';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const plain=s=>String(s||'').replace(/<[^>]+>/g,'').replace(/\\n/g,'\n');
+const plain=s=>richText(s);
 // 卫戍效果：时机标签（【获得时】【战斗中】…）加粗，正文照旧去富文本标签。
 const garrisonHtml=rule=>{const text=garrisonText(rule),m=text.match(/^(【[^】]+】)([\s\S]*)$/);return m?`<b class="native-garrison-when">${esc(m[1])}</b>${esc(m[2])}`:esc(text);};
 const imageCache=new Map(),img=id=>{const file=data.assets[id];if(!file)return null;if(!imageCache.has(file)){const im=new Image();im.src='./'+file;imageCache.set(file,im);}return imageCache.get(file);};

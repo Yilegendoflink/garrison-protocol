@@ -5,7 +5,9 @@ const KIND_LABEL={ 'random-pool':'常规池','mode-effect':'策略／悬赏','te
 const SORTS=[['name','名称'],['hp','生命'],['atk','攻击'],['cost','难度'],['id','ID']];
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-const plain=s=>String(s||'').replace(/<[^>]+>/g,'').replace(/\\n/g,'\n');
+// 敌人描述同样是原表富文本：`<@ba.vup>` 这类样式标签丢掉，`<铜灯盘>` 这类内容标签里的文字要留下。
+import {richText} from './protocol.js';
+const plain=s=>richText(s);
 
 export function editorState(){return {type:'SPECIAL',tier:1,template:0,query:'',sort:'name',motion:'all',kind:'all',tag:'all',selected:null,sample:null,scroll:0,caret:0};}
 
