@@ -41,6 +41,69 @@ export function blackboard(entries=[]){return Object.fromEntries((entries||[]).m
 // 棋盘上该画「上一场战斗的单位」还是「备战期的我方单位」：战斗、结算与休整期都沿用战斗棋盘，
 // 只有真正的备战期（prep）画整备区的布置——否则上一场的召唤物会在备战时留在场上。
 export function battleBoardVisible(phase){return phase==='battle'||phase==='finished'||phase==='intermission';}
+// ── 盟约面板的「当前动态数值」 ─────────────────────────────────────────────
+// 原表用 descParamBaseList / descParamPerStackList 声明哪些数值受层数影响（描述里只写「受层数影响」）。
+// 这里逐项算出当前值，**原表声明了几项就渲染几项**，不再靠手写 switch（叙拉古的持续时间、
+// 谢拉格寒风时长这类都曾被漏掉）。标签按参数键给，歧义的用 BOND_PARAM_LABEL_OVERRIDE 逐盟约覆盖。
+const BOND_PARAM_META={
+ base_atk:{label:'攻击力提升',kind:'pctAdd'},
+ base_time:{label:'增益持续时间',kind:'seconds'},
+ base_damage_scale:{label:'伤害倍率',kind:'pctMult'},
+ base_ex_damage_scale:{label:'对寒冷、冻结目标的伤害倍率',kind:'pctMult'},
+ 'bond_eff_kjerag[storm].base_time':{label:'寒风施加寒冷的持续时间',kind:'seconds'},
+ base_ammo_percent:{label:'技能额外弹药比例',kind:'pctAdd'},
+ base_max_hp:{label:'最大生命值提升',kind:'pctAdd'},
+ base_attack_speed:{label:'攻击速度加成',kind:'flatAdd'},
+ base_duration:{label:'攻速与隐匿状态的持续时间',kind:'seconds'},
+ base_damage:{label:'隐匿期间的真实伤害',kind:'flat'},
+ base_max_atk_when_born:{label:'部署攻击增益上限',kind:'pctAdd'},
+ base_prob:{label:'触发概率',kind:'pctAdd'},
+ base_damage_scale_show:{label:'法术脆弱',kind:'pctAdd'},
+ base_damage_scale_show_ex:{label:'生命低于50%时的法术脆弱',kind:'pctAdd'},
+ base_damage_value:{label:'反击法术伤害',kind:'flat'},
+ base_def:{label:'防御力提升',kind:'pctAdd'},
+ baseprob:{label:'下次刷新免费概率',kind:'pctAdd'}
+};
+const BOND_PARAM_LABEL_OVERRIDE={
+ sargonShip:{base_time:{label:'攻速与攻击力增益的持续时间'}},
+ skillfulShip:{base_attack_speed:{label:'邻近干员的攻击速度加成'}},
+ swiftShip:{base_prob:{label:'技能结束时回复技力的概率'}},
+ indomShip:{base_prob:{label:'近战干员被击倒后保留部署的概率'}}
+};
+const bondRound=v=>Math.round(v*1000)/1000;
+const bondPct=v=>`${bondRound(v*100)}%`;
+const formatBondValue=(v,kind)=>kind==='pctMult'?`提升至 ${bondPct(v)}`:kind==='pctAdd'?`+${bondPct(v)}`:kind==='seconds'?`${bondRound(v)} 秒`:kind==='flatAdd'?`+${bondRound(v)}`:`${bondRound(v)}`;
+function bondEffectValues(data,bondId){
+ const info=data.season.bondInfoDict?.[bondId],values={};
+ for(const row of (data.season.effectBuffInfoDataDict?.[info?.effectId]||[]).flatMap(e=>e.blackboard||[]))if(row.key!=='key'&&values[row.key]===undefined)values[row.key]=Number(row.valueStr??row.value);
+ return {info,values};
+}
+export function bondScaledParams(data,bondId,layers){
+ const {info,values}=bondEffectValues(data,bondId);if(!info)return[];
+ const level=Math.max(0,Number(layers)||0),base=info.descParamBaseList||[],per=info.descParamPerStackList||[],out=[];
+ for(let i=0;i<Math.max(base.length,per.length);i++){
+  const baseKey=base[i];if(!baseKey)continue;
+  const baseValue=Number(values[baseKey]),perValue=per[i]!=null?Number(values[per[i]])||0:0;
+  if(!Number.isFinite(baseValue))continue;
+  const override=(BOND_PARAM_LABEL_OVERRIDE[bondId]||{})[baseKey];
+  const meta={...(BOND_PARAM_META[baseKey]||{label:baseKey,kind:'flat'}),...(override||{})};
+  out.push({key:baseKey,label:meta.label,text:formatBondValue(baseValue+perValue*level,meta.kind),formula:`${bondRound(baseValue)} + ${bondRound(perValue)} × ${level}层`});
+ }
+ return out;
+}
+// 面板 HTML：受层数影响的数值 + 少量「阈值／累计」类备注（不含层数参数本身）。
+export function bondCurrentPreviewHtml(data,bondId,layers){
+ const {info,values}=bondEffectValues(data,bondId);if(!info)return '';
+ const level=Math.max(0,Number(layers)||0),line=(label,value)=>`<li><span>${label}</span><b>${value}</b></li>`,lines=[];
+ for(const param of bondScaledParams(data,bondId,level))lines.push(line(param.label,`${param.text}<small>${param.formula}</small>`));
+ const layer=Number(values.layer)||0,count=Number(values.count)||0;
+ if(bondId==='visiShip'&&layer)lines.push(line('已达到的资金奖励',`${Math.floor(level/layer)*count}资金（每${layer}层+${count}）`));
+ if(bondId==='miraShip'&&layer)lines.push(line('已达到的层数资金奖励',`${Math.floor(level/layer)*count}资金`));
+ if(bondId==='investShip')lines.push(line('「获得时」类特质的触发次数',`${level>=100?3:2}次（${level>=100?'已达到':'100层后达到'}）`));
+ if(bondId==='skillfulShip'&&Number(values.power_bond_stack_cnt))lines.push(line('扩大范围阈值',`${values.power_bond_stack_cnt}层`));
+ if(bondId==='raidShip'&&Number(values.power_bond_stack_cnt))lines.push(line('闲置强化状态',level>=values.power_bond_stack_cnt?`攻击速度 +${values.power_attack_speed}，攻击/生命提升已生效`:`未激活（需${values.power_bond_stack_cnt}层）`));
+ return lines.length?`<section class="native-bond-current"><h3>当前动态数值 · ${level}层</h3><ul>${lines.join('')}</ul></section>`:'';
+}
 // 富文本 → 显示文本。原表用尖括号区分两类东西：
 //   样式标签：`<@ba.vup>`、`<$ba.stun>`、`<@autochess.gray>`、闭合的 `</>` —— 丢掉；
 //   内容：道具/召唤物/盟约/敌人/时机名（`<铜灯盘>`、`<替身>`、`<寻呼模块>`、`<炎>`、`<获得时>`）——

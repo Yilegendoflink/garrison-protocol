@@ -48,6 +48,7 @@
 - **难度选择的海猫模式**：`mode_cat_all` 只是 lobby 下拉里的选项，底层仍跑 `mode_single_normal`（`state.draft.cat` → `s.cat`）。它把 `s.funds` 顶到 `Number.MAX_SAFE_INTEGER`，让 `spend`/`upgrade`/`refresh` 的原判定全部通过；界面上一律用 `fundsMarkup()` 显示彩色 `ALL`，不要直接印 `s.funds`。
 - **敌方小怪体型**：解压缩出来的碎片（器皿／镜／茶器／矛头一类，即 `enemyBehavior.hitCountHp` 的敌人）画面上按 `e.spriteScale`（0.6）缩小，免得和精英怪一样大。缩放必须在生成时定死：`hitCountHp` 是运行时状态，余烬／再生形态也会置真，不能拿它当缩放依据。
 - **次数血条不吃战斗缩放**：`combatScale` 只作用于常规血量，`hitCountHp` 敌人的生命值就是「需要击倒的伤害次数」，生成时取原表数值、不乘倍率，否则 0.7 倍会把「2 次」变成 1.4。
+- **盟约面板的「当前动态数值」必须数据驱动**：走 `protocol.bondCurrentPreviewHtml`／`bondScaledParams`，按原表的 `descParamBaseList`／`descParamPerStackList` **逐项**算出当前值并显示公式（例：叙拉古「攻速与隐匿状态的持续时间 → 46 秒（32 + 0.4 × 35层）」、谢拉格「寒风施加寒冷的持续时间 → 24 秒」）。不要再在 `native-play` 里手写 switch 数值——漏项就是这么来的（叙拉古的持续时间、谢拉格寒风时长都曾漏过）；只有「阈值／累计」类备注（资金奖励、触发次数、扩大范围阈值、闲置强化）还留在协议层的那几个特判里。`tests/native-bond-preview.test.mjs` 有一条门禁：原表声明了几项就必须渲染几项。
 - **手机端盟约面板**：横屏手机 UI（`html.native-landscape-ui`）左侧的盟约竖列是 flex column，卡片必须写 `flex:0 0 auto`（`native.css` 该段内的 `.native-bonds button`）：盟约一多时靠面板自身的 `overflow-y:auto` 整体上下滚动。漏掉它 flex 会把 20 多条盟约压进可视高度，卡片从 41px 挤到 34px 以下、名字和层数叠在一格里（真浏览器复测：`node scripts/mobile-bonds-browser.mjs`，静态口径回归：`tests/native-mobile-layout.test.mjs`）。窄屏竖排的横向条（`@media(max-width:600px)`）仍靠 `min-width:80px` 保底宽度横向滚动，不要改成压扁。
 
 ## 敌人能力口径
