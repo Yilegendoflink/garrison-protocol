@@ -92,5 +92,5 @@ export class NativeEconomy extends PreparationState {
   const rows=this.bonds();if(rows.deputShip.active){const variants=new Set(this.s.units.filter(u=>u.position&&this.ownBonds(u).includes('deputShip')).map(u=>u.charId+':'+this.data.season.charChessDataDict[u.chessId].isGolden));const amount=variants.size>=3?4:2;for(const[id,b]of Object.entries(rows))if(b.active)this.addLayers(id,amount);}
   runStrategyEvent(this,'prepEnd');this.s.prepApplied=true;if(this.s.rewardPending)return true;return super.beginBattle();
  }
- nextRound(...args){const result=super.nextRound(...args);if(result&&['prep','decision'].includes(this.s.phase)){this.s.roundGainCount=0;this.s.roundSpent=0;this.s.roundRefreshCount=0;this.s.roundBoughtBonds={};if(this.s.phase==='prep')this.startPreparation();}return result;}
+ nextRound(...args){const result=super.nextRound(...args);if(result&&['prep','decision'].includes(this.s.phase)){this.s.roundGainCount=0;this.s.roundSpent=0;this.s.roundRefreshCount=0;this.s.roundBoughtBonds={};this.s.refreshLayerClaimed={};if(this.s.phase==='prep')this.startPreparation();}return result;}
 }

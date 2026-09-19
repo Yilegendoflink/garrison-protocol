@@ -200,6 +200,7 @@ PRTS 把「两个时机」写在同一行的（砾 `<部署时><被击倒时>`�
 ## 三、缺口清单
 
 先说结论：**整备期（`SERVER_*`）那半边的 handler 全部接上、触发点也都真的会发生，数值与 PRTS 逐条一致**——缺口只有「每回合上限没实现」一处硬 bug 和若干口径题；
+> **2026-09-19 已按 §四 确认的口径全部落地**（逐条见 §五「落地结果」）。下面这份清单保留审计当时的原貌。
 **真正大面积失效的是作战能力（`IN_BATTLE`）**：代码里执行卫戍的只有四处——`native-battle.js:181`（`stats()` 里的常驻加成）、
 `native-battle.js:428`（`chaos` 弱点伤害）、`native-effects.js:844`（玛恩纳部署卫戍）、`native-effects.js:498` + `native-battle.js:411`（特质转发与战斗中事件叠层）；
 `IN_BATTLE` 里约四分之三的条目属于「键存在但字段被忽略」「整类触发时机没有代码」「给了特质却没有生效入口」三类。
@@ -312,3 +313,33 @@ PRTS 在隐现、哈洛德、泡泡、锡人、水月、信仰搅拌机、乌尔
 14. **`SERVER_*` 的结算顺序**是否需要统一（`PREP_START` 按 y→x、`PREP_FIN` 按数组序）。
 15. **佩佩池的「小概率」= 20%**（`native-session.js:28` 注释自标待确认），与焰尾的远牙 20% 是否同一档。
 16. **投资人盟约让 `SERVER_GAIN` 重复 2~3 次**（`native-economy.js:49`）没有原表依据，属项目自定，是否保留。
+
+## 五、落地结果（2026-09-19）
+
+用户确认的口径（本文 §四 Q1/Q2/Q3/Q4/Q5/Q6）：
+
+| 问题 | 口径 |
+| --- | --- |
+| 多盟约「每叠加 N 层」 | **每个盟约分别 ⌊层数/divide_num⌋ 后相加** |
+| 「核心盟约每叠加 N 层」 | **8 个核心盟约的层数合计**（与该干员自身所属盟约无关，隐德来希/迷迭香就是这样） |
+| `bond_self` | **每个已激活盟约各 +N**，上限也按每个盟约各算 |
+| `bond_actived_maxstack` | 只取**已激活**盟约中层数最多的那一个，并列**随机**取一个 |
+| 「每击倒 N 名单位」 | **不包含我方干员** |
+| 「每场作战至多 N 层」 | **每波**重置（不是整局累计） |
+| 送特质的目标校验 | **`check_bond_id` 不匹配就不发**（非本盟约、空格、召唤物都不发） |
+
+代码落地：
+
+| 批次 | 改了什么 | 位置 |
+| --- | --- | --- |
+| 整备期 | `SERVER_ADD_REFRESH_CNT_MULTIPLIER_BOND_LAYER` 改成「本回合累计配额」（`refreshLayerClaimed` 记账，`nextRound` 清零）；`pool_chess_shop_N_reward` 六个池在 `NAMED_POOLS` 显式建表（`tier`，不再靠池名正则）；余的 `SERVER_MOST_BOND` 去掉 `excludeCharId` | `garrison.js`、`native-session.js`、`native-economy.js` |
+| 属性族 | 新增 `garrisonStacks`（多盟约分别取整求和）；`stats()` 的卫戍段补齐 `atk`/`max_hp`/`def`/`hp_recovery_per_sec`/`sp_recovery_per_sec`/攻速/再部署，并补 `note()`（属性来源 UI 能看到「卫戍」） | `native-battle.js` `stats()` |
+| 事件叠层 | 新增 `garrisonEvent`/`applyGarrisonGrant`/`garrisonAmount`/`garrisonBonds`/`garrisonConditionOk`：`bond_type` 三语义、`by_charcount_samerow`（同行人数，含自身）、`by_charlevel` 取 `u.source.rank`、战斗内 `conditionkey`、计数箱改挂 `battle.garrisonCounters`（每波重置） | `native-battle.js` `event()` |
+| 状态触发 | 新增 `tickGarrisonStatusEvents`（每帧末尾比对新增状态）+ `garrisonStatusEvent`：敌人**冻结**（`check_ab_flag=16`，初雪/银灰/凛御银灰转发的那份）与**沉睡/晕眩**（缇缇，按 0.05 秒节流）；魔王 `addition_cnt` 在 `applyGarrisonGrant` 里给身前一格追加 | `native-battle.js` |
+| 伤害类 | 新增 `garrisonDamageScale`：`attack_enemy`（`check_tag` 特攻，深巡/跃跃）与 `ab_damageScaleByBond`（打束缚/停顿目标，仇白） | `native-battle.js` `hit()` |
+| 弹药范围 | 新增 `garrisonAmmoEvent`/`garrisonRangeTiles`：弹药事件按 `range_id`（`x-5`=周围4格、`1-1`=身前一格、`0-1`=自身）分发给持有特质的干员 | `native-battle.js` |
+| 特质转发 | `applyGarrisonTransfers` 改成按 `battleRuneKey` 选目标、按 `check_bond_id` 校验、跳过召唤物、与目标自身已有的 garrison 去重；每波开战前清空 `extraGarrisonIds` | `native-effects.js` |
+
+测试：`tests/native-garrison-effects.test.mjs`（20 例）——整备期上限/池表/余；属性族（水月/泡泡/浊心斯卡蒂/隐德来希）；`attack_enemy`/`ab_damageScaleByBond`；`bond_actived_maxstack`+同行人数；`bond_self` 每盟约各 +N 与每波封顶；每波重置；战斗内 `conditionkey`；弹药范围分发；魔王追加层数；冻结/沉睡晕眩触发；`check_bond_id` 发/不发；`give_garrison_to_all`；耀骑士临光去重；以及一条**门禁**测试：作战能力的每个 `blackboard.key` 必须在实现表或「未实现登记表」里。
+
+仍然留档（未做）：`garrison_27`「敌人进入冻结时回血」没有可见干员引用，已在门禁测试的 `PENDING` 表里显式登记；池类效果「直接进手牌 vs 候选三选一」按现状（直接进手牌）保留，待口径（本页 §四 Q11）；号角「不同阶干员」目前只数该盟约成员（§四 Q19）。

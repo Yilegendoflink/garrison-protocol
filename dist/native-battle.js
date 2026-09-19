@@ -14,7 +14,7 @@ import {ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,appl
 export class NativeBattle {
  constructor(data,economy,map,turn,{restore=false}={}){
   this.data=data;this.economy=economy;this.map=map;this.turn=turn;this.operatorRegistry=operatorRegistry(data);
-  this.rows=economy.bonds();this.layers=economy.s.bondLayers;
+  this.rows=economy.bonds();this.layers=economy.s.bondLayers;this.garrisonCounters=new Map();
   if(restore)return;
   this.s={frame:0,time:0,cost:20,costInitial:20,costMin:0,costMax:99,costRecoveryInterval:1,costRecoveryClock:0,enemyCostRecoveryMultiplier:1,enemyRespawnTimeMultiplier:1,mlyssFirstRhineDiscountUsed:false,bondLateranoAmmoStacks:0,bondEgirReviveCount:0,bondYanGuardiansSpawned:false,units:[],enemies:[],projectiles:[],queue:[],damage:{},leaks:0,kills:0,finished:false,benchmark:!!turn.isBossTurn,limit:turn.isBossTurn?turn.bossTurnHpReduceTime:turn.normalPhaseTime,effects:[],events:[],strikes:[],banner:null,nextId:100000};
   this.s.band=economy.s.bandId;this.s.banner={text:'作战开始',life:1.6};
@@ -178,7 +178,24 @@ export class NativeBattle {
   if(u.egirBorrowBlock>0)base.blockCnt=Math.max(base.blockCnt||0,u.egirBorrowBlock);
   if(u.raidBuffUntil>this.s.time){const b=this.params('raidShip');ratio('atk',Number(b.base_atk||.25)+Number(b.atk_per_stack||.01)*(l.raidShip||0),'盟约·突袭');ratio('maxHp',Number(b.base_max_hp||.25)+Number(b.max_hp_per_stack||.01)*(l.raidShip||0),'盟约·突袭');}if(u.garrisonDeployBuff&&this.s.time<u.garrisonDeployBuff.endsAt){base.atk+=u.garrisonDeployBuff.atk||0;base.maxHp+=u.garrisonDeployBuff.maxHp||0;note('atk','add',u.garrisonDeployBuff.atk||0,'部署卫戍');note('maxHp','add',u.garrisonDeployBuff.maxHp||0,'部署卫戍');}
   base.spRecoveryPerSec=p.attributes.spRecoveryPerSec??1;
-  for(const g of p.garrisons){const b=blackboard(g.blackboard);if(g.battleRuneKey==='char_attribute_mul'){mul('atk',b.atk??1,'卫戍');mul('maxHp',b.max_hp??1,'卫戍');}if(g.battleRuneKey==='env_gbuff_new_with_verify'&&b.bond_id&&b.atk_per_stack)ratio('atk',b.atk_per_stack*(l[b.bond_id]||0),'卫戍');if(b.key==='act1autochess_gar_eff_respawnTimeByBond'&&b.bond_id){const stacks=Math.floor((l[b.bond_id]||0)/(Number(b.divide_num)||1));base.respawnTime*=Math.max(0,1+Number(b.respawn_time||0)*stacks);}if(b.key==='act1autochess_gar_eff_attrByBond'&&b.bond_id){const stacks=Math.floor((l[b.bond_id]||0)/(Number(b.divide_num)||1));as+=Number(b.attack_speed||0)*stacks;}if(b.sp_recovery_per_sec)base.spRecoveryPerSec+=b.sp_recovery_per_sec;}
+  // 卫戍常驻加成。字段来源一律看原表 blackboard：
+  //  char_attribute_mul        攻/生（+防）乘算
+  //  attr_common_global_buff   技力自然恢复（古米，定值）
+  //  attrByBond                每个盟约分别 ⌊层数/divide_num⌋ 后相加，作用到 atk/max_hp/def/攻速/回血/技力回复
+  //  respawnTimeByBond         再部署时间按层数乘算
+  //  env_gbuff_* + atk_per_stack 走同一套 stacks
+  for(const g of p.garrisons){const b=blackboard(g.blackboard);
+   if(g.battleRuneKey==='char_attribute_mul'){mul('atk',b.atk??1,'卫戍');mul('maxHp',b.max_hp??1,'卫戍');if(b.def)mul('def',b.def,'卫戍');}
+   if(g.battleRuneKey==='env_gbuff_new_with_verify'&&b.bond_id&&b.atk_per_stack)ratio('atk',b.atk_per_stack*this.garrisonStacks(b.bond_id,b),'卫戍');
+   if(b.key==='act1autochess_gar_eff_respawnTimeByBond'&&b.bond_id){const stacks=this.garrisonStacks(b.bond_id,b);if(stacks)base.respawnTime*=Math.max(0,1+Number(b.respawn_time||0)*stacks);if(stacks)note('respawnTime','mul',1+Number(b.respawn_time||0)*stacks,'卫戍');}
+   if(b.key==='act1autochess_gar_eff_attrByBond'&&b.bond_id){const stacks=this.garrisonStacks(b.bond_id,b);
+    if(stacks){const atkBonus=Number(b.atk||0)*stacks,hpBonus=Number(b.max_hp||0)*stacks,defBonus=Number(b.def||0)*stacks,asBonus=Number(b.attack_speed||0)*stacks,hpRec=Number(b.hp_recovery_per_sec||0)*stacks,spRec=Number(b.sp_recovery_per_sec||0)*stacks;
+     if(atkBonus)ratio('atk',atkBonus,'卫戍');if(hpBonus)ratio('maxHp',hpBonus,'卫戍');if(defBonus)ratio('def',defBonus,'卫戍');
+     if(asBonus){as+=asBonus;note('attackSpeed','add',asBonus,'卫戍');}
+     if(hpRec){base.hpRecoveryPerSec=(base.hpRecoveryPerSec||0)+hpRec;note('hpRecoveryPerSec','add',hpRec,'卫戍');}
+     if(spRec){base.spRecoveryPerSec+=spRec;note('spRecoveryPerSec','add',spRec,'卫戍');}}}
+   if(b.sp_recovery_per_sec&&b.key!=='act1autochess_gar_eff_attrByBond')base.spRecoveryPerSec+=b.sp_recovery_per_sec;
+  }
   for(const item of u.source.equipment){const record=this.data.season.trapChessDataDict[item.chessId];for(const effect of this.data.season.effectBuffInfoDataDict[record?.effectId]||[]){const b=blackboard(effect.blackboard);if(effect.key==='char_attribute_mul'){mul('atk',b.atk??1,'装备');mul('maxHp',b.max_hp??1,'装备');mul('def',b.def??1,'装备');}else if(effect.key.startsWith('env_gbuff')){ratio('atk',b.atk||0,'装备');ratio('maxHp',b.max_hp||0,'装备');ratio('def',b.def||0,'装备');as+=b.attack_speed||0;base.magicResistance+=b.magic_resistance||0;base.spRecoveryPerSec+=b.sp_recovery_per_sec||0;}}}
   if(has('victoriaShip')&&this.rows.victoriaShip.count>=6)for(const i of u.source.equipment)ratio('atk',this.data.season.trapChessDataDict[i.chessId].isGolden?.8:.5,'盟约·维多利亚');
   if(this.s.units.some(v=>v.deployed&&v.hp>0&&v.id==='char_172_svrash'&&(this.profile(v).activeTalents||[]).some(t=>t.name==='领袖')))base.respawnTime*=.9;
@@ -237,6 +254,44 @@ export class NativeBattle {
   const skillBlackboard=(u.skillLeft>0||u.ammo>0)?blackboard(p.skill?.blackboard):{};if(Object.hasOwn(skillBlackboard,'block_cnt')){const value=Number(skillBlackboard.block_cnt)||0;base.blockCnt=Math.max(0,/阻挡数[^，；。\n]*\+/.test(p.skill?.description||'')?base.blockCnt+value:value);}base.tauntLevel+=(skillBlackboard.taunt_level??0);
   const a={...base,atk:combineStat(base.atk,extra.add.atk||0,atk,muls.atk,extra.finalAdd.atk||0),maxHp:combineStat(base.maxHp,extra.add.maxHp||0,hp,muls.maxHp,extra.finalAdd.maxHp||0),def:combineStat(base.def,extra.add.def||0,def,muls.def,extra.finalAdd.def||0),attackSpeed:Math.max(10,Math.min(600,base.attackSpeed+as+(u.enemyAttackSpeedMod||0))),parts};
   return a;
+ }
+ // ── 卫戍（干员特质）通用工具 ───────────────────────────────────────────────
+ // 多盟约口径（用户 2026-09-19 确认）：bond_id 用逗号列出多个盟约时，**每个盟约分别**
+ // ⌊层数/divide_num⌋ 后相加；「核心盟约每叠加 N 层」的 8 项列表就是全部核心盟约，直接求和。
+ garrisonStacks(bondIds,bb){const div=Math.max(1,Math.floor(Number(bb?.divide_num)||1));return String(bondIds||'').split(',').filter(Boolean).reduce((sum,id)=>sum+Math.floor((this.layers[id]||0)/div),0);}
+ // 给谁加层：bond_by_id（列出的盟约）／bond_self（自身所属的盟约）／
+ // bond_actived_maxstack（已激活盟约中层数最多的那一个，并列随机取一个）。
+ garrisonBonds(u,bb){
+  const type=bb.bond_type||'bond_by_id';
+  if(type==='bond_self')return this.economy.ownBonds(u.source);
+  if(type==='bond_actived_maxstack'){const rows=this.economy.bonds();const ids=Object.keys(rows).filter(id=>rows[id].active&&!this.data.season.bondInfoDict[id].noStack);if(!ids.length)return[];const max=Math.max(...ids.map(id=>this.layers[id]||0));return[this.economy.pick(ids.filter(id=>(this.layers[id]||0)===max))];}
+  return String(bb.bond_id||'').split(',').filter(Boolean);
+ }
+ // 每次加多少层：by_count（定值）／by_charcount_samerow（×同一行干员数，含自身）／by_charlevel（= 干员阶数）
+ garrisonAmount(u,bb){const type=bb.bond_add_type||'by_count',multi=Number(bb.bond_add_count??1);
+  if(type==='by_charlevel')return Number(u.source?.rank??this.profile(u).rank??1);
+  if(type==='by_charcount_samerow')return multi*this.s.units.filter(v=>(v.deployed||v.source?.position)&&v.y===u.y).length;
+  return multi;
+ }
+ // 每波计数箱：键 uid:garrisonId:event，battle 对象每波重建，所以「每场作战至多 N 层」天然按波重置。
+ garrisonCounter(key,delta=1){const next=(this.garrisonCounters.get(key)||0)+delta;this.garrisonCounters.set(key,next);return next;}
+ // range_id → 该干员按朝向覆盖的格子（「自身周围4格」= x-5、「身前一格」= 1-1、「自身」= 0-1）。
+ garrisonRangeTiles(owner,rangeId){const grids=this.data.ranges?.[rangeId]?.grids;if(!grids?.length)return[{x:owner.x,y:owner.y}];return grids.map(g=>{let x=Number(g.col)||0,y=-(Number(g.row)||0);for(let i=0;i<(owner.dir||0);i++)[x,y]=[-y,x];return{x:owner.x+x,y:owner.y+y};});}
+ garrisonInRange(owner,rangeId,target){return this.garrisonRangeTiles(owner,rangeId).some(t=>t.x===target.x&&t.y===target.y);}
+ // 卫戍里的伤害乘算（只改伤害，不改命中与伤害类型判定）：
+ //  attack_enemy        攻击带 check_tag（seamonster／drone）的敌人时「攻击力提升至 N 倍」
+ //  ab_damageScaleByBond 打束缚/停顿目标时，每个盟约分别 ⌊层数/divide_num⌋ 后相加的增伤
+ garrisonDamageScale(u,e){
+  let scale=1;const tags=[...(e.tags||[]),...(e.categories||[]),...(e.enemyTags||[]),...(this.data.enemies[e.id]?.enemyTags||[])];
+  for(const g of this.profile(u).garrisons||[]){
+   if(!g||g.eventType!=='IN_BATTLE')continue;const b=blackboard(g.blackboard),key=b.key||'';
+   if(key==='act1autochess_gar_eff_attack_enemy'){const tag=String(b.check_tag||'');if(tag&&tags.includes(tag))scale*=Number(b.atk)||1;}
+   else if(key==='act2autochess_gar_eff_ab_damageScaleByBond'){
+    const held=e.statuses?.some(s=>s.kind==='root'||s.kind==='sluggish');
+    if(held){const stacks=this.garrisonStacks(b.bond_id,b);if(stacks)scale*=1+Number(b.damage_scale_per_stack||0)*stacks;}
+   }
+  }
+  return scale;
  }
  range(u,skill=false){return this.rangeWithSkill(u,skill).cells;}
  // forceSkill=true 时无视当前是否开技，一律按技能范围算：自动释放要看的是「开技后能不能打到」。
@@ -408,8 +463,91 @@ export class NativeBattle {
   e.enemyDeathHandled=false;
   this.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'revive-revert',form:e.revive?.formName});
  }
- event(u,event){const p=this.profile(u);for(const g of p.garrisons){if(g.eventType!=='IN_BATTLE'||g.effectType!=='ADD_BOND')continue;const b=blackboard(g.blackboard),key=b.key||'',match=event==='kill'?/selfkillenemy/.test(key):event==='skill'?/skill/.test(key):event==='deploy'?/born|deploy|onstart/.test(key):event==='selfdead'?/selfdead/.test(key):event==='ammo'?/consume_ammo/.test(key):false;if(!match)continue;const id=g.id+':'+event;u.counters[id]=(u.counters[id]||0)+1;const threshold=b.check_cnt||b.consume_count||1;if(u.counters[id]%threshold)continue;const limit=b.max_cnt||b.max_count||b.max_trigger_count||Infinity;if(u.counters[id]/threshold>limit)continue;const amount=b.bond_add_type==='by_charlevel'?p.rank:(b.bond_add_count??1),maxTotal=Number(b.max_add_count_per_battle),appliedKey=id+':'+event+':applied',applied=u.counters[appliedKey]||0,grant=Number.isFinite(maxTotal)?Math.max(0,Math.min(amount,maxTotal-applied)):amount;if(!grant)continue;const bonds=b.bond_id?String(b.bond_id).split(','):this.economy.ownBonds(u.source);for(const bond of bonds)this.economy.addLayers(bond,grant);if(Number.isFinite(maxTotal))u.counters[appliedKey]=applied+grant;}
+ // 卫戍事件：只有原表 `act*autochess_gar_event_*` 这类键是事件驱动（`gar_eff_*` 是常驻/伤害类，见 stats()/hit()）。
+ // kill/skill/deploy/selfdead 由本人触发；ammo 由「消耗弹药的单位」触发，但层数记在**持有特质的干员**头上
+ // （莫斯提马 = 自身周围4格的干员消耗弹药），范围取 blackboard.range_id。
+ // 计数一律走 garrisonCounters（battle 每波重建 → 「每场作战至多 N 层」按波重置）。
+ event(u,event){return this.garrisonEvent(u,event,{actor:u,used:1});}
+ garrisonEvent(owner,event,{actor=owner,used=1}={}){
+  const p=this.profile(owner);
+  for(const g of p.garrisons||[]){
+   if(!g||g.eventType!=='IN_BATTLE')continue;const b=blackboard(g.blackboard),key=b.key||'';
+   if(!/gar_event_/.test(key))continue;
+   let match=false,step=1;
+   if(event==='kill')match=/selfkillenemy/.test(key);
+   else if(event==='skill')match=/useskill/.test(key);
+   else if(event==='deploy')match=/onstart|born|deploy/.test(key);
+   else if(event==='selfdead')match=/selfdead/.test(key);
+   else if(event==='ammo'){match=/consume_ammo/.test(key);if(match){if(actor!==owner&&!this.garrisonInRange(owner,b.range_id||'0-1',actor))continue;step=Math.max(1,Math.floor(used));}}
+   if(!match||!this.garrisonConditionOk(owner,b))continue;
+   this.applyGarrisonGrant(owner,g,b,event,{step});
+  }
  }
+ // 概率 → 计数 → 每波上限 → 加层（含魔王【…】给身前一格的追加层数）。
+ applyGarrisonGrant(owner,g,b,eventKey,{step=1,prob=1}={}){
+  if(prob<1&&this.economy.random()>=prob)return false;
+  const id=g.id+':'+eventKey,count=this.garrisonCounter(id,step),threshold=Math.max(1,Math.floor(Number(b.check_cnt||b.consume_count)||1));
+  if(count%threshold)return false;
+  const limit=Number(b.max_cnt||b.max_count||b.max_trigger_count)||Infinity;if(count/threshold>limit)return false;
+  let grant=this.garrisonAmount(owner,b);
+  const maxTotal=Number(b.max_add_count_per_battle),appliedKey=id+':applied',applied=this.garrisonCounters.get(appliedKey)||0;
+  if(Number.isFinite(maxTotal))grant=Math.max(0,Math.min(grant,maxTotal-applied));
+  if(!grant)return false;
+  let extra=0;
+  for(const w of this.s.units){
+   if(w===owner||!(w.deployed||w.source?.position)||w.hp<=0)continue;
+   for(const wg of this.profile(w).garrisons||[]){const wb=blackboard(wg.blackboard);if(wb.key!=='act1autochess_gar_event_addition_cnt')continue;if(this.garrisonInRange(w,wb.range_id||'1-1',owner))extra+=Number(wb.extra_cnt)||0;}
+  }
+  for(const bond of this.garrisonBonds(owner,b))this.economy.addLayers(bond,grant+extra);
+  if(Number.isFinite(maxTotal))this.garrisonCounters.set(appliedKey,applied+grant);
+  return true;
+ }
+ // 状态类卫戍：敌人进入冻结（初雪/银灰，以及凛御银灰转发出去的 garrison_29，check_ab_flag=16）
+ // 与「范围内有敌人或干员进入沉睡或晕眩」（缇缇）。「范围内」= 持有者的攻击范围。
+ // 缇缇的注记「同一单位每 0.05 秒仅能叠 1 次」按 (持有者, 特质) 节流。
+ garrisonStatusEvent(actor,kind){
+  if(!actor)return;
+  for(const owner of this.s.units){
+   if(owner.hp<=0)continue;const gs=this.profile(owner).garrisons;if(!gs?.length)continue;
+   if(!this.range(owner).some(c=>c.x===actor.x&&c.y===actor.y))continue;
+   for(const g of gs){
+    if(!g||g.eventType!=='IN_BATTLE')continue;const b=blackboard(g.blackboard),key=b.key||'';
+    let prob=1;
+    if(key==='act1autochess_gar_event_enemy_abflag_inrange'){
+     if(kind!=='frozen')continue;
+     const flag=Number(b.check_ab_flag)||0;if(flag&&flag!==16)continue;
+     prob=Number.isFinite(Number(b.prob))?Number(b.prob):1;
+    }else if(key==='act2autochess_gar_event_allyenemy_sleepstun_inrange'){
+     if(!(kind==='sleep'||kind==='stun'))continue;
+     this.garrisonStatusAt??=new Map();const tkey=owner.uid+':'+g.id;
+     if(this.s.time-(this.garrisonStatusAt.get(tkey)??-Infinity)<0.05)continue;
+     this.garrisonStatusAt.set(tkey,this.s.time);
+    }else continue;
+    this.applyGarrisonGrant(owner,g,b,'status:'+kind,{prob});
+   }
+  }
+ }
+ // 每帧末尾对「本帧新出现的冻结/沉睡/晕眩」派发一次，覆盖技能、状态区、敌人技能等所有施加路径。
+ tickGarrisonStatusEvents(){
+  this.garrisonStatusSeen??=new Map();
+  const check=actor=>{
+   const kinds=new Set((actor.statuses||[]).map(s=>s.kind)),seen=this.garrisonStatusSeen.get(actor.uid);
+   // 第一次见到某个单位时也照常判定：新出现的单位如果一上来就带冻结/沉睡/晕眩，同样算「进入」。
+   for(const kind of kinds)if((kind==='frozen'||kind==='sleep'||kind==='stun')&&(!seen||!seen.has(kind)))this.garrisonStatusEvent(actor,kind);
+   this.garrisonStatusSeen.set(actor.uid,kinds);
+  };
+  for(const u of this.s.units)if(u.hp>0)check(u);
+  for(const e of this.s.enemies)if(e.hp>0)check(e);
+ }
+ // 战斗内 conditionkey：只支持原表出现的三种（同一行/同一列 N 人、本人需在场）；计数含自身。
+ garrisonConditionOk(u,b){const key=b.conditionkey;if(!key)return true;const need=Math.max(1,Math.floor(Number(b.check_count)||1)),board=this.s.units.filter(v=>v.deployed||v.source?.position);
+  if(key==='character_target_inboard')return!!(u.deployed||u.source?.position);
+  if(key==='character_same_row')return board.filter(v=>v.y===u.y).length>=need;
+  if(key==='character_same_col')return board.filter(v=>v.x===u.x).length>=need;
+  return true;
+ }
+ // 弹药消耗：所有持有 consume_ammo 特质的干员都收一次事件，范围由 range_id 判定（自身/身前一格/周围4格）。
+ garrisonAmmoEvent(actor,used){for(const owner of this.s.units){if(owner.hp<=0)continue;const gs=this.profile(owner).garrisons;if(!gs?.length)continue;this.garrisonEvent(owner,'ammo',{actor,used});}}
   reserveUnits(predicate=()=>true){return this.s.units.filter(u=>!u.deployed&&u.hp>0&&predicate(u));}
   adjustReserveCost(delta,{predicate=()=>true,limit=1}={}){const value=Number(delta);if(!Number.isFinite(value)||!value)return [];const rows=this.reserveUnits(predicate).sort((a,b)=>a.y-b.y||a.x-b.x||a.uid-b.uid).slice(0,Math.max(0,limit));for(const u of rows)u.costRealtimeDelta=(u.costRealtimeDelta||0)+value;return rows;}
   swapReserveBaseCosts(predicate=()=>true){const rows=this.reserveUnits(predicate).sort((a,b)=>(a.baseCostOverride??a.baseCost??0)-(b.baseCostOverride??b.baseCost??0)||a.uid-b.uid);if(rows.length<2)return false;const first=rows[0],last=rows.at(-1),a=first.baseCostOverride??first.baseCost,b=last.baseCostOverride??last.baseCost;first.baseCostOverride=b;last.baseCostOverride=a;return true;}
@@ -433,6 +571,8 @@ export class NativeBattle {
   value=attackModifier(this,u,e,value);
   if(type!=='true'&&e.damageResistance>0)value*=Math.max(0,1-e.damageResistance);
   if(e.fragile)value*=e.fragile;
+  const garrisonScale=this.garrisonDamageScale(u,e);
+  if(garrisonScale!==1)value*=garrisonScale;
   u.lastAttackId=u.lastAttackId||newAttackId(this);
   const result=dealDamage(this,{source:u,target:e,value,type,cause:skill?'skill':'attack',attackId:u.lastAttackId,skill});
   if(!result)return;
@@ -495,7 +635,7 @@ export class NativeBattle {
    if(u.action&&--u.action.left<=0){const action=u.action;u.action=null;
     if(action.kind==='reload')u.magazine=Math.min(branchTrait(p).values.value??8,(u.magazine??0)+1);
     else if(action.kind==='charge')u.energy=Math.min(branchTrait(p).values.times??3,(u.energy||0)+1);
-   else{u.lastAttackId=newAttackId(this);const released=this.releaseNativeAttack(u,action);if(released>0){if(behavior.magazine)u.magazine=Math.max(0,u.magazine-1);if(behavior.storage)u.energy=Math.max(0,(u.energy||0)-(action.storedEnergy||0));}u.lastAttack=this.s.time;if(spTypeOf(skill)==='INCREASE_WHEN_ATTACK'&&!action.enhanced)gainSp(u,skill,undefined,cost);if(u.ammo>0){const lumenSelective=u.id==='char_4042_lumen'&&((u.source?.skillIndex??this.profile(u).skillIndex)===2)&&!((action.targets||[]).some(id=>{const e=this.s.units.find(v=>v.uid===id);return e?.statuses?.some(s=>['stun','frozen','sleep','fear','root','silence'].includes(s.kind));}));const used=lumenSelective?0:Math.min(u.ammo,u.ammoPerAttack||1);if(used>0){u.ammo-=used;this.event(u,'ammo');dispatch(this,'ammo',{source:u,target:u,used});this.emit('ammo',{uid:u.uid,x:u.x,y:u.y,ammo:u.ammo,used});}if(u.ammo===0&&!u.skillLeft){this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'skill-end',{target:u});}}}
+   else{u.lastAttackId=newAttackId(this);const released=this.releaseNativeAttack(u,action);if(released>0){if(behavior.magazine)u.magazine=Math.max(0,u.magazine-1);if(behavior.storage)u.energy=Math.max(0,(u.energy||0)-(action.storedEnergy||0));}u.lastAttack=this.s.time;if(spTypeOf(skill)==='INCREASE_WHEN_ATTACK'&&!action.enhanced)gainSp(u,skill,undefined,cost);if(u.ammo>0){const lumenSelective=u.id==='char_4042_lumen'&&((u.source?.skillIndex??this.profile(u).skillIndex)===2)&&!((action.targets||[]).some(id=>{const e=this.s.units.find(v=>v.uid===id);return e?.statuses?.some(s=>['stun','frozen','sleep','fear','root','silence'].includes(s.kind));}));const used=lumenSelective?0:Math.min(u.ammo,u.ammoPerAttack||1);if(used>0){u.ammo-=used;this.garrisonAmmoEvent(u,used);dispatch(this,'ammo',{source:u,target:u,used});this.emit('ammo',{uid:u.uid,x:u.x,y:u.y,ammo:u.ammo,used});}if(u.ammo===0&&!u.skillLeft){this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'skill-end',{target:u});}}}
    }
    if(u.action||u.attackCooldown>0||(behavior.returnProjectile&&u.pendingReturns>0))continue;
    const trait=branchTrait(p).values;
@@ -506,6 +646,7 @@ export class NativeBattle {
    if(chosen.length){const timing=attackTiming(stats.baseAttackTime,stats.attackSpeed,windupSeconds(stats.baseAttackTime,p.attackWindup));u.attackCooldown=timing.frames;const hits=u.id==='char_1021_kroos2'&&u.kroosQuad?4:u.id==='char_427_vigil'&&skillIndex===2?3:(cfg.hits??bb['attack@times']??bb.hit_count??bb.times??behavior.hits??1);u.lockId=chosen[0].uid;u.action={kind:healer?'heal':'damage',left:timing.windupFrames,targets:chosen.map(e=>e.uid),amount:stats.atk*(cfg.atkScale??bb.atk_scale??1),baseAmount:stats.atk,hits:Math.max(1,Math.min(12,hits)),extraProjectiles:behavior.returnProjectile?cfg.extraProjectiles||0:0,type:this.baseDamageType(u),enhanced:!!u.enhanced,storedEnergy:behavior.storage?(u.energy||0):0,energyScale:behavior.storage?(cfg.atkScale??bb.atk_scale??1):1};u.enhanced=false;}
   }
   tickLogic(this,dt);
+  this.tickGarrisonStatusEvents();
   this.tickEnemyGroundZones();
   resolveBlocks(blockingActors(this),this.s.enemies,u=>u.kind==='summon'?u.blockCnt||0:this.stats(u).blockCnt||0);
   for(const e of this.s.enemies)if(e.id==='enemy_1072_dlancer'&&e.block!=null&&!e.dlancerArmed){e.dlancerArmed=true;e.dlancerStrikeSpeed=e.speed;}

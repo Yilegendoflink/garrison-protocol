@@ -22,6 +22,8 @@ const SHOP_TIER_ROLL=[[.3,'top'],[.7,'prev'],[Infinity,'lower']];
 //   pool_equip_rockr  garrison_91 洛洛「随机制造1件洛洛的定制品」；洛洛是维多利亚干员，
 //                     该盟约的定制装备即维式重锤系列（giveBondId=victoriaShip）
 //   pool_equip_normal / pool_equip_kathe / pool_equip_narant：文案只说「随机装备／刷新3件装备／两件装备」
+//   pool_chess_shop_N_reward：松果 garrison_116（a=I 阶 / b=V 阶「免费特殊招募」）。成员 = 该阶级的
+//                     全部可见干员，按商店库存抽，所以只登记阶级（tier），不再靠池名里的 shop_(\d) 猜。
 const NAMED_POOLS={
  pool_chess_glady:{members:['chess_char_3_05_a','chess_char_2_07_a','chess_char_1_04_a']},
  pool_char_pinus:{members:[['chess_char_1_19_a',4],['chess_char_2_18_a',4],['chess_char_4_20_a',2]]},
@@ -29,7 +31,13 @@ const NAMED_POOLS={
  pool_equip_rockr:{bond:'victoriaShip'},
  pool_equip_normal:{any:true},
  pool_equip_kathe:{any:true},
- pool_equip_narant:{any:true}
+ pool_equip_narant:{any:true},
+ pool_chess_shop_1_reward:{tier:1,any:true},
+ pool_chess_shop_2_reward:{tier:2,any:true},
+ pool_chess_shop_3_reward:{tier:3,any:true},
+ pool_chess_shop_4_reward:{tier:4,any:true},
+ pool_chess_shop_5_reward:{tier:5,any:true},
+ pool_chess_shop_6_reward:{tier:6,any:true}
 };
 // 具名池的权重铺开：[[id,4],[id2,4],[id3,2]] → 10 项，抽到第 3 个的概率就是 20%，
 // 而且仍然走 this.pick，测试里可以照旧把它定死。
@@ -75,8 +83,7 @@ export class NativeSession extends NativeEconomy {
    if(!items.length)throw Error('没有可用装备');
    return this.pick(items).id;
   }
-  const pool=String(r.pool||''),fixedTier=r.tier||Number(pool.match(/shop_(\d)/)?.[1]);
-  const named=NAMED_POOLS[pool];
+  const pool=String(r.pool||''),named=NAMED_POOLS[pool],fixedTier=r.tier||named?.tier||Number(pool.match(/shop_(\d)/)?.[1]);
   if(named?.members){const weights=namedWeights(named),skip=new Set((r.exclude||[]).filter(Boolean)),members=this.eligible().filter(o=>weights.has(o.chessId)&&!skip.has(o.chessId));if(!members.length)throw Error('具名卡池没有可用干员：'+pool);return this.pick(namedPickList(members,weights,o=>o.chessId)).chessId;}
   let rows=this.eligible();if(fixedTier)rows=rows.filter(o=>o.chessLevel===fixedTier);else rows=rows.filter(o=>o.chessLevel<=(r.maxTier||this.s.level));
   // 有库存系统时（对局内），候选池按各干员剩余库存铺成多份后等权抽；used 让同一次刷新无放回

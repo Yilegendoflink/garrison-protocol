@@ -494,8 +494,45 @@ function tickYanSkill(battle,guardian,dt){
  if(guardian.yanSkillLeft<=0)endYanSkill(battle,guardian,'complete');
  return true;
 }
-function addExtraGarrison(target,id){if(!target||!id)return;target.extraGarrisonIds??=[];if(!target.extraGarrisonIds.includes(id))target.extraGarrisonIds.push(id);}
-function applyGarrisonTransfers(battle){const bondNames={卡西米尔:'kazimierzShip',精准:'preciShip',叙拉古:'siracusaShip',谢拉格:'kjeragShip'};for(const owner of battle.s.units){for(const g of battle.profile(owner).garrisons||[]){const give=blackboard(g.blackboard).give_garrison_id;if(!give)continue;const desc=String(g.description||g.garrisonDesc||'').replace(/<[^>]+>/g,''),bond=Object.entries(bondNames).find(([name])=>desc.includes(name))?.[1],d=[[1,0],[0,1],[-1,0],[0,-1]][owner.dir||0],front={x:owner.x+d[0],y:owner.y+d[1]},targets=desc.includes('同一行最右边')?battle.s.units.filter(v=>(v.deployed||v.source?.position)&&v.hp>0&&v.y===owner.y).sort((a,b)=>b.x-a.x||a.uid-b.uid).slice(0,1):desc.includes('所有')?battle.s.units.filter(v=>(v.deployed||v.source?.position)&&v.hp>0&&(!bond||battle.owns(v,bond))):desc.includes('自身')&&desc.includes('身前一格')?[owner,battle.s.units.find(v=>v!==owner&&(v.deployed||v.source?.position)&&v.hp>0&&v.x===front.x&&v.y===front.y)]:[battle.s.units.find(v=>v!==owner&&(v.deployed||v.source?.position)&&v.hp>0&&v.x===front.x&&v.y===front.y)];for(const target of targets.filter(Boolean))addExtraGarrison(target,give);}}}
+// 把一条卫戍特质发给目标。去重有两层：extra 数组内不重复，以及目标**本身**已经持有同一条时不再叠加
+// （耀骑士临光那类「使自身和身前一格获得特质」的规则里，特质本体已经挂在她自己的 garrisons 上）。
+// 召唤物不是干员，不接特质。
+function addExtraGarrison(battle,target,id){
+ if(!battle||!target||!id||target.kind==='summon'||target.hp<=0)return false;
+ const own=(battle.data.profiles[target.chessId]?.garrisons||[]).some(g=>g?.id===id);
+ if(own)return false;
+ target.extraGarrisonIds??=[];
+ if(target.extraGarrisonIds.includes(id))return false;
+ target.extraGarrisonIds.push(id);return true;
+}
+// 「战斗开始时把特质送给别人」：目标由 battleRuneKey 决定（front / most_right / all），
+// 是否限定盟约由 blackboard.check_bond_id 决定（不符合就不发，见 GARRISON_EFFECT_AUDIT.md 口径 5）；
+// 「使自身和身前一格」这种把自己也写进描述的，才额外包含 owner。
+function applyGarrisonTransfers(battle){
+ const dirs=[[1,0],[0,1],[-1,0],[0,-1]];
+ const alive=v=>(v.deployed||v.source?.position)&&v.hp>0;
+ // 转发的特质只在**本波**有效：每波开战前先清掉上一波的授予（身前一格换人后不该残留）。
+ for(const u of battle.s.units)u.extraGarrisonIds=[];
+ for(const owner of battle.s.units){
+  for(const g of battle.profile(owner).garrisons||[]){
+   const bb=blackboard(g.blackboard),give=bb.give_garrison_id,bond=bb.check_bond_id;
+   if(!give||!g.battleRuneKey)continue;
+   const desc=String(g.description||g.garrisonDesc||'').replace(/<[^>]+>/g,'');
+   const ok=v=>alive(v)&&(!bond||battle.owns(v,bond));
+   let targets=[];
+   if(g.battleRuneKey==='give_garrison_to_front'){
+    const d=dirs[owner.dir||0],front=battle.s.units.find(v=>v!==owner&&alive(v)&&v.x===owner.x+d[0]&&v.y===owner.y+d[1]);
+    if(desc.includes('自身'))targets.push(owner);
+    if(front)targets.push(front);
+   }else if(g.battleRuneKey==='give_garrison_to_most_right'){
+    targets=battle.s.units.filter(v=>v!==owner&&alive(v)&&v.y===owner.y).sort((a,b)=>b.x-a.x||a.uid-b.uid).slice(0,1);
+   }else if(g.battleRuneKey==='give_garrison_to_all'){
+    targets=battle.s.units.filter(v=>v!==owner);
+   }else continue;
+   for(const target of [...new Set(targets)].filter(ok))addExtraGarrison(battle,target,give);
+  }
+ }
+}
 function bondBattleStart(battle){
  if(battle.s.bondApplied)return;battle.s.bondApplied=true;
  applyGarrisonTransfers(battle);
