@@ -4041,7 +4041,7 @@ function runFatal(battle,target,wouldDie,event){
   const t=activeTalentsOf(battle,target).find(x=>x.name==='破财消灾');
   if(t){const base=Math.abs(Number(t.values.cost)||5),times=target.merchantRescueCount||0,cost=base*Math.pow(Number(t.values.cost_multi)||2,times);if(battle.spendCost?.(cost,{considerNegativeCost:true})){target.merchantRescueCount=times+1;target.hp=target.maxHp*(Number(t.values.hp_ratio)||.7);log(battle,'fatal-cost-save',{uid:target.uid,cost,hp:target.hp,eventId:event.eventId});return true;}}
  }
- if(target.kind!=='summon'&&battle.on?.('egirShip')&&battle.rows?.egirShip?.count>=5&&battle.owns(target,'egirShip')&&!target.egirRevived&&((battle.s.bondEgirReviveCount||0)<3)){
+ if(target.kind!=='summon'&&battle.s.units.includes(target)&&battle.on?.('egirShip')&&battle.rows?.egirShip?.count>=5&&battle.owns(target,'egirShip')&&!target.egirRevived&&((battle.s.bondEgirReviveCount||0)<3)){
   target.egirRevived=true;battle.s.bondEgirReviveCount=(battle.s.bondEgirReviveCount||0)+1;target.hp=Math.max(1,target.maxHp);target.deployed=true;target.downed=false;target.exitLife=null;target.down=0;target.action=null;target.skillLeft=0;target.ammo=0;log(battle,'bond-revive',{uid:target.uid,bond:'egirShip',count:battle.s.bondEgirReviveCount,eventId:event.eventId});return true;
  }
  if(typeof battle.fatalHook==='function')return battle.fatalHook(target,event);

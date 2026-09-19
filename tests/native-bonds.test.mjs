@@ -55,6 +55,11 @@ test('阿戈尔战斗开始吞噬身前干员并支持前三名首次复活',()=
  const {b}=start(uniqueBond('egirShip',5),{egirShip:0});assert.ok(b.s.units.some(u=>u.egirConsumedUid));b.s.bondEgirReviveCount=0;for(const u of b.s.units)u.egirRevived=false;const u=b.s.units.at(-1),e=enemy(b,{x:u.x,y:u.y});dealDamage(b,{source:e,target:u,amount:1e9,type:'true'});assert.ok(u.hp>0&&u.deployed&&u.egirRevived);
 });
 
+test('阿戈尔复活判定不把敌方目标传入干员盟约读取',()=>{
+ const {b}=start(uniqueBond('egirShip',5),{egirShip:0}),source=b.s.units[0],target=enemy(b,{x:source.x,y:source.y,hp:1,def:0,res:0});
+ assert.doesNotThrow(()=>dealDamage(b,{source,target,amount:1e9,type:'true'}));assert.equal(target.hp,0);
+});
+
 test('叙拉古部署隐匿、卡西米尔阻挡周期伤害和突袭闲置再部署',()=>{
  const s=start(uniqueBond('siracusaShip',6),{siracusaShip:0}).b;assert.ok(s.s.units.every(u=>u.siracusaInvisibleUntil>s.s.time));
  // 盟约隐匿必须真的挡住敌人：远程敌人不选隐匿中的叙拉古干员，隐匿窗口结束后恢复可选
