@@ -138,6 +138,7 @@
 | 银灰【鹰眼视觉】 | `periodicMods` | 攻击范围内（含技能改范围）敌人隐匿失效 |
 | 伊内丝【影哨】 | `periodicMods` + `placeInesSentry` | 攻击范围内隐匿失效且移速 -30%；撤退后在原地留 1 个影哨继续生效（半径取她撤退时攻击范围的最大切比雪夫跨度） |
 | 马赛克 | `drawConcealOverlay`（native-fx） | 我方／召唤物／敌人三处；灰滤镜 + 马赛克（有头像时缩到 10×10 再关插值放大），被反隐时不画，`reduceFx` 下不流动。**强度只在 `CONCEAL_STYLE` 里调**（wash 0.22 / detail 10 / block 5 / 块 α 0.28·0.22 / band 0.10）：早先的 6×6 + 0.45 灰滤镜糊到认不出人，用户要求调低，现在只做提示不做遮挡；改完要 `node scripts/build-browser.mjs` 重编 bundle |
+| 被阻挡即脱隐匿（表现） | `concealActive` + `drawStatuses` | 与索敌同口径：`actor.block!=null` 时 `concealActive` 返回 false，马赛克与头顶隐匿图标一起消失，解除阻挡后恢复（用户 2026-09-19 追加） |
 | 清明 `InvisibleShield` | `tickEnemyInvisibleShield`（native-battle）+ `supportedSkillPrefabs` | 独立计时：`initCooldown` 5 秒首放、之后每 `cooldown` 15 秒一次，给半径 2 格（敌人自身 `rangeRadius`，原表无独立半径字段）内的**其他**敌人 5 秒隐匿（技能黑板 `duration`；天赋黑板的 `InvisibleShield.duration=3` 不是这个技能的时长），自身不获得。已解除 `complexity` 并在 `enemy-behavior-overrides.json` 显式 `randomPoolEligible:true`；原表 `enemyInfoDict` 里它不属于任何词条（只出现在固定关卡 `h07_03`），所以默认随机池没收它，编制台手工加池与固定波次可用 |
 | 迷彩的发放时机 | `native-operator-effects.js`（`operatorSkillStart` / `enemy-death` / `skill-end`） | 通用分支只处理「技能开始即获得」，且跳过带「技能结束时」的文本；忍冬 S3【隐狐之艺】改成条件式：技能期间击倒过敌人才在技能结束拿到迷彩，下一次开技时由 `removeStatus` 摘掉（原实现是开技即给 10 秒，时序与条件都不对）。寒芒克洛丝的迷彩在本期卡池里取不到（她的运行时档案只有 S2【封喉】），因此没有额外分支 |
 | 头顶状态图标 | `drawStatuses` / `mark`（native-fx） | `invisible`／`camouflage` 进白名单，画虚线方框（迷彩多一道对角），没有状态就不画 |

@@ -72,6 +72,29 @@ test('隐匿马赛克：我方与敌方都画灰色滤镜 + 马赛克块，reduc
  assert.deepEqual(c2.ops,a.ops,'动效关闭时马赛克不流动');
 });
 
+test('被阻挡的隐匿敌人同步失去马赛克与头顶隐匿图标',()=>{
+ const box={x:10,y:10,w:40,h:40},blocker=7;
+ const foe={invisible:true,statuses:[{kind:'invisible',remaining:5,source:1,value:1}],block:null,flying:false};
+ const free=host();
+ assert.equal(concealActive(foe),true);
+ assert.equal(drawConcealOverlay(free.c,foe,box,{time:0}),true,'未被阻挡时照旧画马赛克');
+ // 被阻挡：索敌口径已经视为脱离隐匿，表现也要同步
+ foe.block=blocker;
+ const blocked=host();
+ assert.equal(concealActive(foe),false,'被阻挡后不再算隐匿中');
+ assert.equal(drawConcealOverlay(blocked.c,foe,box,{time:0}),false);
+ assert.equal(blocked.ops.length,0,'一个绘制指令都不该有');
+ // 头顶图标同口径
+ const iconFree=host(),iconBlocked=host();
+ drawStatuses(iconFree.c,20,20,{statuses:foe.statuses,block:null},40);
+ assert.equal(iconFree.ops.filter(o=>o.op==='strokeRect').length,1,'未阻挡时仍有隐匿图标');
+ drawStatuses(iconBlocked.c,20,20,{statuses:foe.statuses,block:blocker},40);
+ assert.equal(iconBlocked.ops.length,0,'被阻挡后连图标一起收掉');
+ // 解除阻挡后恢复
+ foe.block=null;
+ assert.equal(concealActive(foe),true);
+});
+
 // 用真实敌人数据落场（隐形/山海众这类自带隐匿的单位）
 function spawnReal(b,id,x,y){
  const origin=b.map.origin||{col:0,row:0},spot={col:x+origin.col,row:origin.row-y};

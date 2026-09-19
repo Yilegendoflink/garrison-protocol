@@ -510,9 +510,11 @@ export function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,redu
 export function drawStatuses(c,x,y,unit,size){
  // cold and frozen are shown by drawFrostOverlay on the actor itself, so they get no head icon here.
  // 隐匿／迷彩本身由 drawConcealOverlay 的马赛克画在身上，这里只补一个头顶图标，让玩家能分清
- // 「看不见」和「只是被挡在后面」。
+ // 「看不见」和「只是被挡在后面」。与马赛克同口径：被阻挡（unit.block!=null）视为脱离隐匿，
+ // 图标也一并收掉，否则会出现「没有马赛克却还挂着隐匿标」的矛盾画面。
  const kinds=[];
  for(const s of unit.statuses||[])if(['stun','sleep','silence','fear','terror','tremble','root','invisible','camouflage'].includes(s.kind)&&!kinds.includes(s.kind))kinds.push(s.kind);
+ if(unit.block!=null)for(const kind of ['invisible','camouflage']){const i=kinds.indexOf(kind);if(i>=0)kinds.splice(i,1);}
  if((unit.shield||0)>0||(unit.shieldLayers||[]).some(l=>l.remaining>0))kinds.push('shield');
  if((unit.barriers||[]).some(b=>b.charges>0))kinds.push('barrier');
  kinds.slice(0,3).forEach((k,i)=>mark(c,x-size/2+6+i*13,y-size*.82,k));
@@ -571,7 +573,9 @@ const CONCEAL_STYLE={
  blockLight:'rgba(154,162,172,0.22)',  // 浅色块（原 0.4）
  band:0.10,                            // 流光带峰值透明度（原 0.16）
 };
-export function concealActive(actor){return !!actor&&!actor.hidden&&actor.invisible===true;}
+// 隐匿表现口径与索敌口径一致：形态/状态给出 invisible，但**被阻挡时视为脱离隐匿**
+// （native-battle 的 targets() 就是「e.block!=null 即对所有人可选」），所以马赛克也要同步消失。
+export function concealActive(actor){return !!actor&&!actor.hidden&&actor.invisible===true&&actor.block==null;}
 export function drawConcealOverlay(c,actor,box,opts={}){
  if(!actor||!box||!(box.w>0)||!(box.h>0)||!concealActive(actor))return false;
  const reduce=!!opts.reduceFx,time=Number(opts.time)||0,im=opts.image,st=CONCEAL_STYLE;
