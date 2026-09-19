@@ -5,7 +5,7 @@ import {applyStatus} from '../dist/status.js';
 import {blackboard,resolveActiveTalents,resolveChess} from '../dist/protocol.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
-import {dealDamage,enqueue,newAttackId,applyHeal,applyRegen,applyLoss,applyElementDamage,commitExit,reviveActor,dispatch,tickLogic,addEffect,addDamageRedirect,queueDelayedDamage,teleportActor,operatorSkillConfig,BATTLE_SCHEMA_VERSION,validateBattle,migrateBattle,getActor,attackableAllies} from '../dist/native-effects.js';
+import {dealDamage,enqueue,newAttackId,applyHeal,applyRegen,applyLoss,applyElementDamage,commitExit,reviveActor,dispatch,tickLogic,addEffect,addDamageRedirect,queueDelayedDamage,teleportActor,canRelocateTo,nearbySpots,operatorSkillConfig,BATTLE_SCHEMA_VERSION,validateBattle,migrateBattle,getActor,attackableAllies} from '../dist/native-effects.js';
 import {openBattle,deployNow,enemy,byId,talentBB,logOf,steps,reps} from './effects-harness.mjs';
 
 const source=JSON.parse(fs.readFileSync('data/modes/alliance-lower/source.json','utf8'));
@@ -94,6 +94,46 @@ test('Ulpian S2 uses a legal anchor move and returns to its start cell',()=>{
  const {b}=openBattle({chessId:'chess_char_5_05_b',skillIndex:2});deployNow(b);const u=b.s.units[0],start={x:u.x,y:u.y};u.sp=b.spCost(u);b.activate(u);assert.ok(u.returnPosition);assert.notDeepEqual({x:u.x,y:u.y},start);dispatch(b,'skill-end',{target:u});assert.deepEqual({x:u.x,y:u.y},start);
 });
 
+test('换位置的落点避开其他干员与占格子的召唤物',()=>{
+ const {b}=openBattle([reps.operators.yak,reps.operators.mudrok]);deployNow(b);
+ const [mate,mover]=b.s.units;
+ assert.equal(teleportActor(b,mover,{x:mate.x,y:mate.y,source:mover}),false,'别的干员站着的格子不能落');
+ const free=nearbySpots(mate,{maxRadius:4}).find(s=>(s.x!==mover.x||s.y!==mover.y)&&canRelocateTo(b,mover,s.x,s.y));
+ assert.ok(free,'棋盘上应该还有空的可行落点');
+ assert.equal(canRelocateTo(b,mover,free.x,free.y),true);
+ const summonAt=occupiesTile=>b.s.summons.push({uid:b.s.nextId++,id:'probe-summon',kind:'summon',allied:true,canBlock:occupiesTile,occupiesTile,x:free.x,y:free.y,hp:100,maxHp:100,deployed:true});
+ summonAt(false);
+ assert.equal(canRelocateTo(b,mover,free.x,free.y),true,'不占格子的召唤物（浮游单元一类）不挡路');
+ summonAt(true);
+ assert.equal(canRelocateTo(b,mover,free.x,free.y),false,'占格子的召唤物挡路');
+ b.s.summons.length=0;
+ // 敌人不占格子：站在敌人身上照样能落位（被阻挡时敌方本来就与干员同格）
+ const spot={x:mover.x+1,y:mover.y};
+ assert.equal(canRelocateTo(b,mover,spot.x,spot.y),true,'先确认这格本身可部署');
+ enemy(b,{x:spot.x,y:spot.y,hp:500});
+ assert.equal(canRelocateTo(b,mover,spot.x,spot.y),true,'敌人站着不算被占');
+ assert.equal(teleportActor(b,mover,{x:spot.x,y:spot.y,source:mover}),true,'换位置不用避开敌人');
+ assert.equal(mover.x,spot.x);
+});
+test('乌尔比安返航前其原格对友方视为被占据，且他自己仍能返航',()=>{
+ const {b}=openBattle([{chessId:'chess_char_5_05_b',skillIndex:2},reps.operators.surtr]);deployNow(b);
+ const u=byId(b,'char_4145_ulpia'),mate=b.s.units.find(v=>v!==u),start={x:u.x,y:u.y};
+ u.sp=b.spCost(u);b.activate(u);
+ assert.notDeepEqual({x:u.x,y:u.y},start,'船锚位移要真的换格');
+ assert.equal(b.s.units.some(v=>v.deployed&&v.x===start.x&&v.y===start.y),false,'原格此时是空的');
+ assert.equal(teleportActor(b,mate,{x:start.x,y:start.y,source:mate}),false,'返航前原格视为被占据，别人不能抢');
+ dispatch(b,'skill-end',{target:u});
+ assert.deepEqual({x:u.x,y:u.y},start,'乌尔比安自己不受预留格影响，照常返航');
+});
+test('乌尔比安返航时原位被占则退到旁边的可部署格',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_05_b',skillIndex:2});deployNow(b);const u=b.s.units[0],start={x:u.x,y:u.y};
+ u.sp=b.spCost(u);b.activate(u);assert.notDeepEqual({x:u.x,y:u.y},start,'船锚位移要真的换格');
+ b.s.summons.push({uid:b.s.nextId++,id:'probe-summon',kind:'summon',allied:true,canBlock:true,occupiesTile:true,x:start.x,y:start.y,hp:100,maxHp:100,deployed:true});
+ dispatch(b,'skill-end',{target:u});
+ assert.ok(!(u.x===start.x&&u.y===start.y),'原位被占时不能硬压回去');
+ assert.ok(Math.max(Math.abs(u.x-start.x),Math.abs(u.y-start.y))<=2,`退到原位附近，实际 ${u.x},${u.y}`);
+ assert.equal(canRelocateTo(b,u,u.x,u.y),true,'落点仍然合法');
+});
 test('Blaze revival talent enters a downed state, blocks healing, then revives once',()=>{
  const {b}=openBattle({chessId:'chess_char_5_03_b',skillIndex:2});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,def:0});
  dealDamage(b,{source:e,target:u,amount:u.maxHp+100,type:'true'});assert.equal(u.downed,true);assert.equal(u.hp,1);assert.equal(u.healable,false);assert.equal(applyHeal(b,{source:u,target:u,amount:10}),0);assert.ok(u.shieldLayers.some(l=>l.remaining===6000));

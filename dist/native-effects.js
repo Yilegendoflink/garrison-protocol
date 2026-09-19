@@ -452,7 +452,7 @@ function syncReveals(battle){
  }
 }
 
-function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,spawnWhitwEyes,tickWhitwEyes,revealEnemy:(b,t,h)=>revealEnemy(b,t,h),log:(b,t,p)=>log(b,t,p)};}
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,canRelocateTo,projectSpot,nearbySpots,spawnSummon,spawnWhitwEyes,tickWhitwEyes,revealEnemy:(b,t,h)=>revealEnemy(b,t,h),log:(b,t,p)=>log(b,t,p)};}
 
 function bondUnits(battle,id,{deployedOnly=false}={}){return battle.s.units.filter(u=>(!deployedOnly||u.deployed&&u.hp>0)&&battle.owns?.(u,id));}
 function yanUnits(battle){return battle.s.units.filter(u=>battle.economy.ownBonds(u.source).includes('yanShip'));}
@@ -697,8 +697,13 @@ function validMoveTile(battle,target,x,y,{allowOccupied=false,allowFlyOnly=false
  const tile=battle.map.grid[y]?.[x];if(!tile||tile.passableMask==='NONE'||(!allowFlyOnly&&tile.passableMask==='FLY_ONLY')||tile.obstacle)return false;
  if(allowOccupied)return true;
  const alliedTarget=battle.s.units.includes(target)||(battle.s.summons||[]).includes(target);
- const occupants=alliedTarget?enemyActors(battle.s):alliedActors(battle.s);
- const occupied=new Set(occupants.filter(a=>a!==target&&a.deployed!==false&&a.occupiesTile!==false).map(a=>a.x+','+a.y));return !occupied.has(x+','+y);
+ // 只有「占格子」的单位挡落点：干员与占格子的召唤物。**敌人不占格子**——被阻挡时它本来就和
+ // 干员同格，所以敌人站着的位置不算被占，换位置（盟约突袭的再部署、乌尔比安 S3 船锚）不用避开它。
+ const occupied=new Set(alliedActors(battle.s).filter(a=>a!==target&&a.deployed!==false&&a.occupiesTile!==false).map(a=>a.x+','+a.y));
+ // 乌尔比安船锚位移期间，他让出的原格对友方换位置视为被占据：技能结束要返航，别被抢了。
+ // 只挡友方——敌人站在那儿不影响他回来（两者可以同格）。
+ if(alliedTarget)for(const a of battle.s.units)if(a!==target&&a.returnPosition&&a.deployed&&a.hp>0)occupied.add(Math.round(a.returnPosition.x)+','+Math.round(a.returnPosition.y));
+ return !occupied.has(x+','+y);
 }
 export function teleportActor(battle,target,{x,y,source=null,mode='teleport',allowOccupied=false}={}){
  if(!target||target.hp<=0||target.hidden||x==null||y==null)return false;
@@ -713,9 +718,36 @@ export function moveActor(battle,target,source,description=''){
  return teleportActor(battle,target,{x:nx,y:ny,source,mode:away?'push':'pull'});
 }
 
+// 「换位置」类效果（盟约突袭的再部署、乌尔比安 S3 的船锚位移）的落点口径：地形按备战期
+// canDeploy 的同一套规则（不能部署的格子、近战不能上高台），再叠上 validMoveTile 的占位判定。
+// 调用方先用它筛候选格，再交给 teleportActor 落位。
+export function canRelocateTo(battle,actor,x,y){
+ const tile=battle.map.grid[y]?.[x];if(!tile||tile.buildableType==='NONE'||tile.obstacle)return false;
+ if(actor?.kind!=='summon'&&battle.profile?.(actor)?.position==='MELEE'&&tile.heightType==='HIGHLAND')return false;
+ return validMoveTile(battle,actor,x,y,{allowFlyOnly:true});
+}
+// 找落点用的候选枚举：先四向、再对角，然后一圈圈外扩（老实现只试四向，四格被占就不落点）。
+// 同一圈内顺序固定，固定种子下挑到的格子可复现。
+export function nearbySpots(point,{maxRadius=3,axes=[[1,0],[-1,0],[0,1],[0,-1]]}={}){
+ const cx=Math.round(point.x),cy=Math.round(point.y),out=[];
+ for(let r=1;r<=maxRadius;r++){
+  for(const [dx,dy] of axes)out.push({x:cx+dx*r,y:cy+dy*r});
+  for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){if(Math.max(Math.abs(dx),Math.abs(dy))!==r||Math.abs(dx)+Math.abs(dy)===r)continue;out.push({x:cx+dx,y:cy+dy});}
+ }
+ return out;
+}
+// 沿某个方向由远及近找第一个能落脚的位置（乌尔比安船锚按「能部署就移动」的口径）。
+export function projectSpot(battle,actor,dir,{minDistance=1,maxDistance=1}={}){
+ for(let n=Math.max(1,Math.round(maxDistance));n>=Math.max(1,Math.round(minDistance));n--){
+  const x=Math.round(actor.x)+dir[0]*n,y=Math.round(actor.y)+dir[1]*n;
+  if(canRelocateTo(battle,actor,x,y))return {x,y};
+ }
+ return null;
+}
+
 export function dispatch(battle,type,payload){
  const {source,target,event}=payload;
- const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,exit:commitExit,log:(b,t,p)=>log(b,t,p)};
+ const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,canRelocateTo,projectSpot,nearbySpots,spawnSummon,exit:commitExit,log:(b,t,p)=>log(b,t,p)};
  if(type==='skill-end'&&battle.s.band==='band_humus'&&target?.kind!=='summon'&&target?.deployed&&battle.profile(target).position==='MELEE'){const near=battle.s.units.filter(v=>v!==target&&v.deployed&&v.hp>0&&Math.abs(v.x-target.x)+Math.abs(v.y-target.y)===1);if(near.length){const pick=near[Math.floor(battle.economy.random()*near.length)];gainSp(pick,battle.profile(pick).skill,3,battle.spCost(pick));}}
  if(type==='battle-start'&&battle.s.band==='band_mberry'){const right=Math.max(...battle.s.units.map(u=>u.x));for(const u of battle.s.units)u.mberryEligible=u.x===right;}
  if(type==='after-damage'&&battle.s.band==='band_mberry'&&source?.kind!=='summon'&&source?.mberryEligible&&payload.result?.total>0){const key=payload.event?.attackId??payload.event?.eventId??battle.s.time;if(source.mberryAttackKey!==key){source.mberryAttackKey=key;if(battle.economy.random()<.25)grantGuard(battle,source,{charges:1,sourceUid:source.uid,id:'mberry-'+source.uid});}}
@@ -933,8 +965,9 @@ function onSkillStart(battle,u){
  if(u.id==='char_4193_lemuen'&&u.lemuenTargets?.length){const bb=skillBB(battle,u);for(const uid of u.lemuenTargets){const target=battle.s.enemies.find(e=>e.uid===uid&&e.hp>0);if(target)for(const e of battle.s.enemies.filter(e=>e.hp>0&&Math.max(Math.abs(e.x-target.x),Math.abs(e.y-target.y))<=1.5))dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(e.uid===uid?Number(bb['attack@proj_atk_scale_1'])||3.6:Number(bb['attack@proj_atk_scale_2'])||2.4),type:'physical',cause:'skill'});}u.lemuenTargets=[];u.lemuenNextAt=0;}
  if(u.id==='char_174_slbell'){for(const e of enemyActors(battle.s).filter(e=>(e.statuses||[]).some(s=>s.kind==='attackSpeedDown'&&s.source===u.uid)))e.attackSpeedMod=0;}
  if(u.id==='char_1023_ghost2'&&idx===1){u.lockHp=null;if(u.hp>0)commitExit(battle,{target:u,reason:'forced'});}
- if(u.id==='char_4145_ulpia'&&u.returnPosition){const pos=u.returnPosition;u.returnPosition=null;teleportActor(battle,u,{...pos,source:u,mode:'return'});}
-}
+ // 返航找落点：原位被别的干员／占格子的召唤物占了，就退到旁边的可部署格。
+ if(u.id==='char_4145_ulpia'&&u.returnPosition){const pos=u.returnPosition;u.returnPosition=null;if(!teleportActor(battle,u,{...pos,source:u,mode:'return'})){const fallback=nearbySpots(pos,{maxRadius:2}).find(spot=>canRelocateTo(battle,u,spot.x,spot.y));if(fallback)teleportActor(battle,u,{...fallback,source:u,mode:'return'});}}}
+
 function onOperatorExit(battle,u,reason){
  if(u.id==='char_4087_ines'){for(const e of battle.s.enemies){if(e.inesMarked===u.uid)e.inesMarked=null;if(e.attackSpeedMod<0)e.attackSpeedMod=0;}placeInesSentry(battle,u);}
  for(const fx of battle.s.logicEffects.slice()){

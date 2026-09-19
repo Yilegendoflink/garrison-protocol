@@ -297,7 +297,10 @@ export function operatorSkillStart(battle,u,ctx){
  if(u.id==='char_4145_ulpia'&&has(text,/若船锚停留的位置可以部署/)&&ctx.teleportActor){
   u.returnPosition={x:u.x,y:u.y};
   const dirs=[[1,0],[0,-1],[-1,0],[0,1]],dir=dirs[(u.dir||0)%4],range=Math.max(1,Math.round(Number(bb.projectile_range)||1.8));
-  for(let n=range;n>=1;n--)if(ctx.teleportActor(battle,u,{x:u.x+dir[0]*n,y:u.y+dir[1]*n,source:u,mode:'anchor-move'}))break;
+  // 「可以部署」才移动：落点按 canRelocateTo 的口径筛（近战不上高台，也不许压到别的干员／
+  // 占格子的召唤物上），沿朝向由远及近取第一个能落脚的格。
+  const spot=ctx.projectSpot?.(battle,u,dir,{maxDistance:range});
+  if(spot)ctx.teleportActor(battle,u,{x:spot.x,y:spot.y,source:u,mode:'anchor-move'});
  }
  if(profile.branch==='funnel'&&has(text,/浮游单元/)){
   // attack@cnt 是「+N」而不是总数：基础数量来自干员天赋黑板（键名 cnt / attack_cnt / attack@cnt）。
