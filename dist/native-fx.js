@@ -558,19 +558,28 @@ export function drawDownRing(c,p,u,size,opts={}){
 // 隐匿（我方由盟约提供、敌方由自身能力提供）：暗灰色滤镜 + 马赛克。
 // 与 drawFrostOverlay 同形参（调用方给 box 与可选 image），只读单位状态，不参与索敌判定——
 // 能不能被选中由 native-battle 的 targets() 决定（被阻挡的隐匿单位视为脱离隐匿）。
-const CONCEAL_WASH='rgba(110,118,126,0.45)';
-const CONCEAL_BLOCK=6;
+// 强度统一收在这张表里调，别再往下面写魔数：玩家必须还能认出「是谁在隐匿」，
+// 所以整体是「淡灰 + 细马赛克」，只做提示、不做遮挡。detail 越大越清楚、block 越小越细，
+// wash／块α／band 越低越透。改完记得 `node scripts/build-browser.mjs` 重编 bundle。
+const CONCEAL_STYLE={
+ wash:'rgba(110,118,126,0.22)',        // 灰色滤镜（原 0.45，压得人影都糊了）
+ detail:10,                            // 有头像时的马赛克分辨率 detail×detail（原 6）
+ block:5,                              // 无头像（召唤物／装置）时的马赛克块边长 px（原 6）
+ blockDark:'rgba(54,60,68,0.28)',      // 深色块（原 0.5）
+ blockLight:'rgba(154,162,172,0.22)',  // 浅色块（原 0.4）
+ band:0.10,                            // 流光带峰值透明度（原 0.16）
+};
 export function concealActive(actor){return !!actor&&!actor.hidden&&actor.invisible===true;}
 export function drawConcealOverlay(c,actor,box,opts={}){
  if(!actor||!box||!(box.w>0)||!(box.h>0)||!concealActive(actor))return false;
- const reduce=!!opts.reduceFx,time=Number(opts.time)||0,im=opts.image;
+ const reduce=!!opts.reduceFx,time=Number(opts.time)||0,im=opts.image,st=CONCEAL_STYLE;
  c.save();
- c.fillStyle=CONCEAL_WASH;c.fillRect(box.x,box.y,box.w,box.h);      // 灰色滤镜
- // 有头像时做真正的马赛克：先把头像缩到 6×6，再关掉插值放大回来（同一张画布自读，不会污染）。
+ c.fillStyle=st.wash;c.fillRect(box.x,box.y,box.w,box.h);      // 灰色滤镜
+ // 有头像时做真正的马赛克：先把头像缩到 detail×detail，再关掉插值放大回来（同一张画布自读，不会污染）。
  let mosaicked=false;
  if(im&&im.complete&&im.naturalWidth&&c.canvas&&!reduce){
   try{
-   const n=6,smooth=c.imageSmoothingEnabled;
+   const n=st.detail,smooth=c.imageSmoothingEnabled;
    c.imageSmoothingEnabled=false;
    c.drawImage(im,box.x,box.y,n,n);
    c.drawImage(c.canvas,box.x,box.y,n,n,box.x,box.y,box.w,box.h);
@@ -579,17 +588,17 @@ export function drawConcealOverlay(c,actor,box,opts={}){
  }
  if(!mosaicked){
   // 没有头像（召唤物、装置）或拿不到画布时退化成暗灰马赛克块，按时间错开相位形成流动感。
-  const tile=reduce?CONCEAL_BLOCK*1.5:CONCEAL_BLOCK,cols=Math.ceil(box.w/tile),rows=Math.ceil(box.h/tile),phase=reduce?0:Math.floor(time*6)%4;
+  const tile=reduce?st.block*1.5:st.block,cols=Math.ceil(box.w/tile),rows=Math.ceil(box.h/tile),phase=reduce?0:Math.floor(time*6)%4;
   for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
    const k=(row*2+col*3+phase)%4;
-   c.fillStyle=k%2?'rgba(54,60,68,0.5)':'rgba(154,162,172,0.4)';
+   c.fillStyle=k%2?st.blockDark:st.blockLight;
    const x=box.x+col*tile,y=box.y+row*tile;
    if(x<box.x+box.w&&y<box.y+box.h)c.fillRect(x,y,Math.min(tile,box.x+box.w-x),Math.min(tile,box.y+box.h-y));
   }
  }
  if(!reduce){   // 缓慢扫过的一条淡灰光带，让「打码」和「渲染坏了」能区分开
   const band=(time*.35)%1.6-.3,g=c.createLinearGradient(box.x,box.y+box.h*band,box.x+box.w,box.y+box.h*(band+.4));
-  g.addColorStop(0,'rgba(170,180,192,0)');g.addColorStop(.5,'rgba(170,180,192,0.16)');g.addColorStop(1,'rgba(170,180,192,0)');
+  g.addColorStop(0,'rgba(170,180,192,0)');g.addColorStop(.5,`rgba(170,180,192,${st.band})`);g.addColorStop(1,'rgba(170,180,192,0)');
   c.fillStyle=g;c.fillRect(box.x,box.y,box.w,box.h);
  }
  c.restore();
