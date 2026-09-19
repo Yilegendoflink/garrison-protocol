@@ -67,6 +67,7 @@
 
 ## 技能表现与投掷物口径
 
+- **对空只有一个开关**：`NativeBattle.behavior(u).antiAir`（`native-branches.js` 的 `branchBehavior`）——普通攻击索敌（`targets()`）、技能预判、溅射/连锁的 `packet.antiAir` 都读它。分支默认值与 PRTS「分支特性信息/data」（`data/prts/branch-rules.json` 的 `runtime.antiAir`）逐条一致，别再手动改分支表；**技能级的例外写 `SKILL_ANTIAIR`**（同一文件）：依据是 PRTS 干员页技能备注的「※可对空／※不可对空」，本地快照在 `data/prts/snapshots/*/operators.json` 的 `skills[i].sourceTemplate.fields.备注`。`activate()` 开技时把覆盖记到 `u.skillAir`（带 `skillCount` 校验）：持续技在生效期内生效，瞬时／被动技没有生效期、伤害就在开启那一帧结算，所以窗口只到当前时刻。已登记：德克萨斯「剑雨」、焰尾「红松林」、忍冬「坠刃拷问」、塞雷娅「钙质化」、玛恩纳「未照耀的荣光」、缄默德克萨斯「剑雨滂沱」、锏「归于宁静」、泥岩「秽壤的血脉」、号角「照明榴弹」可对空，银灰「雪境生存法则」缩小范围后不可对空。反例也要照顾：PRTS 写「不可对空」的圈用 `values.groundOnly`（烛煌「灼烧地段」、锡人炼金单元的「地面敌人」），焰影苇草 S2 的火球与隐德来希 S3 的心烛候选各自带 `!e.flying` 过滤。回归：`tests/native-air-targeting.test.mjs`（PRTS 备注门禁 + 覆盖门禁 + 开关/索敌/伤害）。
 - **带 `carrier` 的 `kind:'zone'` 是投掷物**（锡人 S1「老科利」/S2「大拉里」的炼金单元）：`native-effects.tickLogic` 每帧按 `carrier.speed` 把它移向 `carrier.toX/toY`，抵达后 `carrier.arrived=true` 停驻，到 `endsAt` 才消失；每秒结算读的就是 `fx.x/fx.y`，所以移动必须在结算之前推进。落点取 `battle.targets(u)[0]` 所在格，没有目标时按 `u.dir` 落在 `projectile_range` 处。`refKind:'live'`＝召唤物随主人退场一起消失。原表没有单元自身的半径与飞行速度字段，**半径 1.5、1 格/秒是用户 2026-09-19 口径**，`values.groundOnly` 只吃地面敌人（原表文案写「地面敌人」）。`drawZones` 在飞行途中额外画本体＋落点虚线圈，抵达后只留本体；位置只由逻辑层写。回归：`tests/native-alchemy-unit.test.mjs`、`tests/native-fx-zones.test.mjs`。
 
 ## 红线

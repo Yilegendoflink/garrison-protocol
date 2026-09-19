@@ -24,6 +24,27 @@ export const BRANCH_POLICIES={
  ritualist:{damageType:'arts',antiAir:true,pending:['元素损伤']},underminer:{damageType:'arts',antiAir:true},
  merchant:{},charger:{pending:['击杀回费与撤退费用返还']},traper:{antiAir:true,pending:['陷阱单位与部署条件']},alchemist:{pending:['炼金单元']},counsellor:{pending:['待部署区支援']},mercenary:{pending:['部署费用强化']}
 };
+// 技能级的对空覆盖：分支特性只决定**常态**能否打空，个别技能会改变这一点。
+// 数据来源是 PRTS 干员页技能备注里的「※可对空」「※不可对空」「※攻击范围缩小时，不再攻击空中单位」
+// （本地快照 data/prts/snapshots/*/operators.json 的 skills[i].sourceTemplate.fields.备注），
+// 索引与预设的 skillIndex 一样是 0 起：{技能序号: 该技能生效时能否打空}。
+// 这张表只写**与分支默认值不同**的技能；tests/native-air-targeting.test.mjs 会拿 PRTS 备注做门禁。
+export const SKILL_ANTIAIR={
+ char_102_texas:{1:true},     // 德克萨斯「剑雨」：※可对空
+ char_202_demkni:{2:true},    // 塞雷娅「钙质化」：※可对空
+ char_311_mudrok:{2:true},    // 泥岩「秽壤的血脉」：※减速效果可对飞行单位生效
+ char_420_flamtl:{1:true},    // 焰尾「红松林」：※可对空
+ char_4039_horn:{0:true},     // 号角「照明榴弹」：※照明效果可对空
+ char_4064_mlynar:{2:true},   // 玛恩纳「未照耀的荣光」：※可对空
+ char_4116_blkkgt:{2:true},   // 锏「归于宁静」：※可对空
+ char_4026_vulpis:{1:true},   // 忍冬「坠刃拷问」：※可对空
+ char_1028_texas2:{2:true},   // 缄默德克萨斯「剑雨滂沱」：※效果可对空
+ char_172_svrash:{1:false}    // 银灰「雪境生存法则」：※攻击范围缩小时，不再攻击空中单位
+};
+export function skillAntiAir(charId,skillIndex){
+ const row=SKILL_ANTIAIR[charId];
+ return row&&skillIndex!=null&&Object.prototype.hasOwnProperty.call(row,skillIndex)?row[skillIndex]:null;
+}
 export function branchTrait(profile){
  const phase=profile.phase??Number(profile.status?.evolvePhase?.replace('PHASE_','')||0),level=profile.level??profile.status?.charLevel??1;
  const candidates=(profile.trait?.candidates||[]).filter(c=>{const required=Number(String(c.unlockCondition?.phase||'PHASE_0').replace('PHASE_',''));return required<phase||(required===phase&&(c.unlockCondition?.level||1)<=level);});
