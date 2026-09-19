@@ -43,3 +43,33 @@ test('盟约调配奖励同样不重复',()=>{
  assert.equal(new Set(g.s.rewardPending.offers).size,3,'盟约奖励不应重复');
 });
 
+// 贾维【团伙行动】口径（用户 2026-09-19 确认）：主动刷新次数跨回合累计，每满 6 次发 1 名叙拉古干员，
+// 「每回合至多 2 名」只约束发放节奏——被上限挡住的份数留到之后回合补发，同一档里程碑不重复兑现。
+// 发放按 s.events 的 gain 计数（三合一合并会减少 s.units，不能拿干员数当发放数）。
+test('贾维：主动刷新次数跨回合累计，满 6 次发 1 名叙拉古，单回合至多 2 名',()=>{
+ const c=new NativeSession(NATIVE_DATA,{bandId:'band_chiave',seed:9});
+ c.s.funds=1e9;
+ const grants=()=>c.s.events.filter(e=>e.type==='gain').length;
+ const lastGain=()=>c.s.events.filter(e=>e.type==='gain').at(-1)?.chessId;
+ const nextRound=()=>{c.s.phase='intermission';assert.equal(c.perform('next'),true);c.s.funds=1e9;};   // nextRound 会把资金重置成当回合基础资金，刷满要补
+ for(let i=0;i<3;i++)assert.equal(c.perform('refresh'),true);
+ assert.equal(c.s.refreshCountTotal,3,'累计计数要记录本回合的刷新');
+ assert.equal(grants(),0,'同一回合不满 6 次不发干员');
+ nextRound();
+ assert.equal(c.s.roundRefreshCount,0,'本回合计数换回合清零');
+ assert.equal(c.s.refreshCountTotal,3,'累计计数换回合必须保留');
+ for(let i=0;i<3;i++)assert.equal(c.perform('refresh'),true);
+ assert.equal(grants(),1,'跨回合累计满 6 次发 1 名');
+ assert.ok(NATIVE_DATA.season.charChessDataDict[lastGain()].bondIds.includes('siracusaShip'),'发的必须是叙拉古干员');
+ nextRound();
+ c.perform('refresh');   // 累计 7 次
+ assert.equal(grants(),1,'同一档里程碑不能重复兑现');
+ nextRound();
+ for(let i=0;i<17;i++)c.perform('refresh');   // 累计 24 次 -> 4 档
+ assert.equal(grants(),3,'单回合至多 2 名，其余留到之后补发');
+ nextRound();
+ c.perform('refresh');
+ assert.equal(grants(),4,'被单回合上限挡住的份数在下个回合补发');
+ assert.equal(c.s.strategyClaims['band_chiave:0:total'],4,'跨回合进度键按实际发放数累计');
+});
+

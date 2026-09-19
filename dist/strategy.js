@@ -22,7 +22,18 @@ const effects={
  band_coin_cost_gain_random_char_by_shop_level:{event:'spent',run:(c,p,k)=>{const earned=Math.floor(c.s.totalSpent/p.coin_cnt),claimed=c.s.strategyClaims[k]||0;for(let i=claimed;i<earned;i++)for(let n=0;n<p.count;n++)c.gain(c.draw({kind:'operator',maxTier:c.s.level}));c.s.strategyClaims[k]=earned;}},
  band_cost_coin_reach_cnt_gain_chess_from_pool:{event:'spent',run:(c,p,k)=>{if(c.s.totalSpent>=p.coin_cnt&&!c.s.strategyClaims[k]){randomGain(c,p);c.s.strategyClaims[k]=1;}}},
  round_start_gain_coin_by_bond_char_chess_buy:{event:'bought',run:(c,p,k,u)=>{if(c.ownBonds(u).includes(p.bond)){const key=k+':'+c.s.round,claimed=c.s.strategyClaims[key]||0;if(claimed<p.max_count){c.s.nextRoundBonus+=p.count;c.s.strategyClaims[key]=claimed+1;}}}},
- refresh_shop_count_gain_coin_bond_char_chess:{event:'refreshed',run:(c,p,k)=>{const key=k+':'+c.s.round,earned=Math.min(p.max_count,Math.floor(c.s.roundRefreshCount/p.refresh_count)),claimed=c.s.strategyClaims[key]||0;for(let i=claimed;i<earned;i++)c.gain(c.draw({kind:'operator',bond:p.bond,maxTier:c.s.level}));c.s.strategyClaims[key]=earned;}},
+ // 贾维【团伙行动】：主动刷新次数**跨回合累计**（用户 2026-09-19 确认口径）。每满 refresh_count 次
+ // 发 1 名该盟约干员；「每回合至多 max_count 名」只约束发放节奏，被上限挡住的份数留到之后回合补发。
+ // 因此进度键 `:total` 不带回合（跨回合累计已兑现的份数），本回合已发数才按回合记。
+ refresh_shop_count_gain_coin_bond_char_chess:{event:'refreshed',run:(c,p,k)=>{
+  const step=Number(p.refresh_count)||1,cap=Number(p.max_count)||Infinity,
+   earned=Math.floor((c.s.refreshCountTotal||0)/step),
+   claimedTotal=c.s.strategyClaims[k+':total']||0,
+   grantedThisRound=c.s.strategyClaims[k+':'+c.s.round]||0,
+   grant=Math.max(0,Math.min(earned-claimedTotal,cap-grantedThisRound));
+  for(let i=0;i<grant;i++)c.gain(c.draw({kind:'operator',bond:p.bond,maxTier:c.s.level}));
+  if(grant>0){c.s.strategyClaims[k+':total']=claimedTotal+grant;c.s.strategyClaims[k+':'+c.s.round]=grantedThisRound+grant;}
+ }},
  first_buy_in_round_char_price_change:{event:'price',run:(c,p,k,u)=>c.ownBonds(u).includes(p.bond)&&!(c.s.roundBoughtBonds[p.bond]>0)?p.price:null},
  band_first_self_refresh_present_char:{event:'refreshRequirements',run:(c,p)=>c.s.roundRefreshCount<2?{bond:p.bond,minCount:p.count}:null},
  band_shop_refresh_copy_max_lv_char:{event:'refreshRequirements',run:()=>({duplicateCount:2,freezeOne:true})}
