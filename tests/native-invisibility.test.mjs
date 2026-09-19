@@ -119,7 +119,9 @@ test('敌人自带的隐匿不会被状态表抹掉，攻击显形后 6 秒会�
 test('隐匿的我方不会被敌方远程索敌，正在阻挡它的敌人照打',()=>{
  const b=liveBattle(['char_469_indigo','char_498_inside']);
  const blocker=b.s.units[0],hidden=b.s.units[1];
- blocker.x=3;blocker.y=0;hidden.x=2;hidden.y=0;
+ // 放在可部署的地面格上：高台位按 new 口径不阻挡（PRTS「可以放置于远程位」的部署位规则），
+ // 这条用例要验的是隐匿与阻挡的关系，不是高台规则。
+ blocker.x=4;blocker.y=0;hidden.x=3;hidden.y=0;
  hidden.statuses.push({kind:'invisible',remaining:30,source:1,value:1});
  hidden.invisible=true;
  const foe=probe(b,5,0,{ranged:true,range:9,interval:1,canAttack:true});

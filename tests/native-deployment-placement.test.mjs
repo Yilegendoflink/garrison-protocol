@@ -3,6 +3,7 @@ import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {BRANCH_POLICIES,allowsHighlandPlacement} from '../dist/native-branches.js';
 import {canRelocateTo} from '../dist/native-effects.js';
+import {enemy} from './effects-harness.mjs';
 
 // 部署位口径：PRTS 分支特性写「可以放置于远程位」的分支（推击手／钩索师）既能下地面也能上高台。
 // 本模式的 HIGHLAND 地块分 HIGHLAND/RANGED（可部署的高台）与 HIGHLAND/NONE（不可部署）两类，
@@ -64,6 +65,25 @@ test('钩索师／推击手可以部署到高台与地面，普通近战只能�
  const {g:rg,u:ru}=session(ranged.charId);
  assert.equal(rg.canDeploy(ru.uid,high.x,high.y),true,`${ranged.name} 远程干员照常上高台`);
  assert.equal(rg.canDeploy(ru.uid,low.x,low.y),true,'本模式的高台位很少，远程干员仍然允许落在地面格');
+});
+
+test('站上高台的干员不再阻挡敌人，在地面上照常阻挡',()=>{
+ const map=NATIVE_DATA.maps.find(m=>m.stageId===MAP);
+ const {high,low}=tiles(map);
+ const run=(tile)=>{
+  const {g,u}=session('char_474_glady');
+  assert.equal(g.deploy(u.uid,tile.x,tile.y,0),true,'钩索师落位');
+  assert.equal(g.perform('start'),true,g.lastError||'开战失败');
+  const b=g.battle;
+  b.s.queue=[];b.s.enemies=[];b.s.limit=1e9;
+  const unit=b.s.units[0];
+  const e=enemy(b,{x:unit.x,y:unit.y,hp:10000});
+  b.step();
+  return {block:e.block,uid:unit.uid};
+ };
+ assert.equal(run(high).block,null,'高台上的钩索师不阻挡');
+ const ground=run(low);
+ assert.equal(ground.block,ground.uid,'地面上的钩索师照常阻挡');
 });
 
 test('位移类效果的落点判定走同一套部署位规则',()=>{

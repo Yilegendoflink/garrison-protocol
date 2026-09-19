@@ -677,7 +677,11 @@ export class NativeBattle {
   tickLogic(this,dt);
   this.tickGarrisonStatusEvents();
   this.tickEnemyGroundZones();
-  resolveBlocks(blockingActors(this),this.s.enemies,u=>u.kind==='summon'?u.blockCnt||0:this.stats(u).blockCnt||0);
+  resolveBlocks(blockingActors(this),this.s.enemies,u=>{
+   // 高台上的干员不阻挡：推击手／钩索师能部署到高台（allowsHighlandPlacement），站上去就只打不挡。
+   if(this.map.grid[u.y]?.[u.x]?.heightType==='HIGHLAND')return 0;
+   return u.kind==='summon'?u.blockCnt||0:this.stats(u).blockCnt||0;
+  });
   for(const e of this.s.enemies)if(e.id==='enemy_1072_dlancer'&&e.block!=null&&!e.dlancerArmed){e.dlancerArmed=true;e.dlancerStrikeSpeed=e.speed;}
   for(const e of this.s.enemies){if(e.hp<=0||e.trainingDummy)continue;this.ensureEnemySelfField(e);const control=permissions(e),alive=attackableAllies(this.s);
    if(Number(e.burstUntil)>0&&this.s.time>=e.burstUntil)e.burstUntil=0;if(e.invisibleRecoverAt!=null&&this.s.time>=e.invisibleRecoverAt&&!e.action){e.formInvisible=true;e.invisible=true;e.invisibleRecoverAt=null;}
