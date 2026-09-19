@@ -6,7 +6,7 @@ import {NATIVE_DATA} from './runtime-data.js';
 import {NativeSession} from './native-session.js';
 import {NativeBattle} from './native-battle.js';
 import {renderLobby} from './native-lobby.js';
-import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText} from './protocol.js';
+import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText,battleBoardVisible} from './protocol.js';
 import {strategyCoverage} from './strategy.js';
 import {spBarFill} from './native-sp.js';
 import {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay,drawConcealOverlay,drawWhitwEyes} from './native-fx.js';
@@ -344,7 +344,7 @@ function draw(){
  }
  const statusOverlays=[];
   const prepSummons=g.s.phase==='prep'?(g.s.summonCards||[]).filter(card=>card.position).map(card=>({...card,x:card.position.x,y:card.position.y,id:card.type,deployed:true})):[];
-  const actors=g.s.phase==='battle'||g.s.phase==='finished'||g.s.phase==='intermission'?g.battle?.s.units||[]:[...g.s.units.filter(u=>u.position).map(u=>({...u,x:u.position.x,y:u.position.y,id:u.charId,deployed:true})),...prepSummons];
+  const actors=battleBoardVisible(g.s.phase)?g.battle?.s.units||[]:[...g.s.units.filter(u=>u.position).map(u=>({...u,x:u.position.x,y:u.position.y,id:u.charId,deployed:true})),...prepSummons];
   for(const u of actors){
    if(u.kind==='summon-card'){const p=point(u.x,u.y);p.y-=tileLift(g.map.grid[u.y]?.[u.x],z)*.5;const size=Math.min(z.tw*.68,z.th*1.1),chosen=state.summonSelected===u.uid||state.preview?.summonUid===u.uid;c.fillStyle='#4bcdb6';c.beginPath();c.moveTo(p.x,p.y-size*.55);c.lineTo(p.x+size*.42,p.y);c.lineTo(p.x,p.y+size*.45);c.lineTo(p.x-size*.42,p.y);c.closePath();c.fill();c.strokeStyle=chosen?'#f4d38b':'#b5fff0';c.lineWidth=chosen?3:1.5;c.stroke();c.fillStyle='#06221f';c.font='bold '+Math.max(12,size*.42)+'px sans-serif';c.textAlign='center';c.fillText('召',p.x,p.y+size*.15);c.fillStyle='#e9fff7';c.font='10px sans-serif';c.fillText(u.name||'召唤物',p.x,p.y-size*.7);c.fillText(['→','↓','←','↑'][u.dir||0],p.x+size*.55,p.y);continue;}
    const shift=g.battle&&!state.reduceFx?actorOffset(u,g.battle):{x:0,y:0};
@@ -363,7 +363,7 @@ function draw(){
   if(g.battle)drawStatuses(c,p.x,p.y,u,size);if(down)drawDownRing(c,p,u,size,eggOn()?{formatNumber:format325}:undefined);
   });
  }
- if(g.battle)for(const s of g.battle.s.summons||[]){
+ if(g.battle&&battleBoardVisible(g.s.phase))for(const s of g.battle.s.summons||[]){
   if(!s.deployed)continue;
   const p=point(s.x,s.y);p.y-=tileLift(g.map.grid[s.y]?.[s.x],z)*.5;const size=Math.min(z.tw*.5,z.th*.8);
   {c.fillStyle=s.device?'#7ec8e3':'#c9a56a';c.beginPath();c.moveTo(p.x,p.y-size*.55);c.lineTo(p.x+size*.4,p.y);c.lineTo(p.x,p.y+size*.45);c.lineTo(p.x-size*.4,p.y);c.closePath();c.fill();c.strokeStyle='#f4efe2';c.lineWidth=state.inspect?.kind==='summon'&&state.inspect.uid===s.uid?2:1;c.stroke();}

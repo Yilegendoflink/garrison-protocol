@@ -38,6 +38,9 @@ export function skillWidensRange(profile,skillIndex=null){
 export function baseFunding(round){if(!Number.isInteger(round)||round<1)throw Error('Invalid round');return round+3;}
 // Versioned native data helpers. No missing rule is guessed or silently simulated.
 export function blackboard(entries=[]){return Object.fromEntries((entries||[]).map(e=>[e.key,e.valueStr??e.value]));}
+// 棋盘上该画「上一场战斗的单位」还是「备战期的我方单位」：战斗、结算与休整期都沿用战斗棋盘，
+// 只有真正的备战期（prep）画整备区的布置——否则上一场的召唤物会在备战时留在场上。
+export function battleBoardVisible(phase){return phase==='battle'||phase==='finished'||phase==='intermission';}
 // 富文本 → 显示文本。原表用尖括号区分两类东西：
 //   样式标签：`<@ba.vup>`、`<$ba.stun>`、`<@autochess.gray>`、闭合的 `</>` —— 丢掉；
 //   内容：道具/召唤物/盟约/敌人/时机名（`<铜灯盘>`、`<替身>`、`<寻呼模块>`、`<炎>`、`<获得时>`）——

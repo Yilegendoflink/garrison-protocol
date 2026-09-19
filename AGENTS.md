@@ -43,7 +43,7 @@
 - **整备区装备拖放**：`pointerdown` 在 `[data-act="item"]` 上起拖（`drag.kind==='item'`、`from:'hand'`），落点由 `overUnitCard` 找干员卡；点击流程（先点装备再点干员）与拖放共用 `equipItemOnUnit(uid,itemUid)`，槽位满时它弹摧毁选择（`data-act="replace"` + `data-slot`）。
 - **拖到商店出售**：干员卡拖到 `#native-supply-shop` 上松手即出售，`overShop` 判定，`dragFeedback` 给商店加 `drop-target`。
 - **整备区上限只认 `handLength()`**：未上场干员 ＋ 未装备装备 ＋ 未放置的召唤物卡合计 10 格（`HAND_LIMIT`，`protocol.js`）。干员／策略效果发放的卡牌可以临时超出，但 `handFull()` 为真时禁止购入干员和装备，也禁止收回场上召唤卡，必须先用部署、出售、装备消耗或销毁清出空余；「第三张同名卡」的三合一不占新格，仍然放行。UI 的计数、拖回提示和商店提示都走 `handFull()`，不要再写死 10。
-- **召唤物卡占格口径（已确认，别当 bug 修）**：只在「未放置」时占一格，放到场上后不占。因此满手时场上召唤卡收不回来，只能等持有者离场或先清其他格——这是用户确认过的玩法设计，不要为了「流畅」改成「场上召唤卡也占格」或给收回开例外。
+- **召唤物卡占格口径（已确认，别当 bug 修）**：只在「未放置」时占一格，放到场上后不占。因此满手时场上召唤卡收不回来，只能等持有者离场或先清其他格——这是用户确认过的玩法设计，不要为了「流畅」改成「场上召唤卡也占格」或给收回开例外。**跨回合留在原位**：进入新回合只做「按持有者／类型对账」（`syncSummonCards()`，不要传 `resetPlaced:true`），放置位置保留到持有者撤走（卡片被移除）或玩家主动 `withdrawSummon` 为止；备战期画的是整备区布置 + 已放置的召唤物卡，**不画上一场战斗残留的召唤物实体**（用 `protocol.battleBoardVisible(phase)` 判定，只有 battle/finished/intermission 沿用战斗棋盘）。已放置的召唤物卡占格，别的干员不能压上去（`canDeploy` 里查 `summonCards`；持有者本人可以，因为它移动时会清掉自己的召唤物位置）。
 - **干员档案层级**：`.native-dossier` 是覆盖在棋盘上的浮层（PC 上 z-index 8），PC 下 `max-height:calc(100vh - 556px)` 让它截止在整备区上方并自身滚动。档案高度若放到全视口，会把下方整备区卡片整片吃掉，卡片点不中、装备也拖不上；反过来把整备区抬到档案之上，档案底部的「撤回整备区／出售」按钮又会点不到。两边都要能用，只能靠限高错开。
 - **难度选择的海猫模式**：`mode_cat_all` 只是 lobby 下拉里的选项，底层仍跑 `mode_single_normal`（`state.draft.cat` → `s.cat`）。它把 `s.funds` 顶到 `Number.MAX_SAFE_INTEGER`，让 `spend`/`upgrade`/`refresh` 的原判定全部通过；界面上一律用 `fundsMarkup()` 显示彩色 `ALL`，不要直接印 `s.funds`。
 - **敌方小怪体型**：解压缩出来的碎片（器皿／镜／茶器／矛头一类，即 `enemyBehavior.hitCountHp` 的敌人）画面上按 `e.spriteScale`（0.6）缩小，免得和精英怪一样大。缩放必须在生成时定死：`hitCountHp` 是运行时状态，余烬／再生形态也会置真，不能拿它当缩放依据。
