@@ -35,6 +35,23 @@ test('炎佑模式乙持续施法、元素光环、元素免疫和沉默打断',
  applyStatus(g,'silence',1,{source:target.uid});b.s.time+=1/30;tickLogic(b,1/30);assert.equal(g.yanSkillActive,false);
 });
 
+test('炎佑「祛恶之焰」目标死亡时立刻结束，不换目标继续施法',()=>{
+ const {b}=start(uniqueBond('yanShip',6)),g=b.s.summons.find(s=>s.type==='yan-guardian');
+ const target=enemy(b,{x:g.x+2,y:g.y,hp:100000,threat:10,def:0,res:0}),other=enemy(b,{x:g.x+2,y:g.y+1,hp:100000,threat:1,def:0,res:0});
+ g.attackCooldown=999;tickLogic(b,0);
+ assert.equal(g.yanSkillActive,true,'应先开技');
+ assert.equal(g.yanSkillTargetUid,target.uid,'锁定仇恨最高的目标');
+ // 目标被击倒 → 下一次结算立刻结束，不再锁定旁边的敌人
+ target.hp=0;target.hidden=true;
+ b.s.time+=1/30;tickLogic(b,1/30);
+ assert.equal(g.yanSkillActive,false,'目标死亡后技能立刻结束');
+ assert.equal(g.yanSkillTargetUid,null,'不再锁定新目标');
+ assert.ok((b.s.events||[]).some(e=>e.type==='skill-end'&&e.uid===g.uid&&e.reason==='target-lost'),'结束原因应为 target-lost');
+ const otherHp=other.hp;
+ for(let i=0;i<90;i++){b.s.time+=1/30;tickLogic(b,1/30);}
+ assert.equal(other.hp,otherHp,'结束后不得再对周围敌人造成技能伤害');
+});
+
 test('萨尔贡技能启动给全体萨尔贡叠加独立持续时间攻速',()=>{
  const {b}=start(uniqueBond('sargonShip',3));const u=b.s.units[0],before=b.stats(u).attackSpeed;u.sp=b.spCost(u);b.activate(u);assert.equal(b.s.units.filter(v=>v.sargonBuffs?.length===1).length,3);assert.equal(b.stats(u).attackSpeed,before+12);
 });

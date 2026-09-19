@@ -121,8 +121,27 @@ function drawCombatFx(c,point,z,battle,reduce){
     c.fillStyle=`rgba(255,196,128,${((1-rise)*.6*YAN_SCALE*left+.15).toFixed(3)})`;
     c.beginPath();c.arc(p.x+Math.cos(a)*r*.52,p.y+Math.sin(a)*r*.24-rise*r*1.1,1.5,0,Math.PI*2);c.fill();}
    c.restore();
-   if(s2.yanSkillTargetUid!=null){const tg=(s.enemies||[]).find(e=>e.uid===s2.yanSkillTargetUid);if(tg){const q=point(tg.x,tg.y);c.save();c.globalCompositeOperation='lighter';
-    c.strokeStyle=`rgba(255,150,90,${.4*YAN_SCALE})`;c.lineWidth=1.6;ring(c,q,z.tw*.7,z.tw*.45);c.restore();}}
+   if(s2.yanSkillTargetUid!=null){
+    const tg=(s.enemies||[]).find(e=>e.uid===s2.yanSkillTargetUid);
+    if(tg){
+     // 技能持续期间，炎佑与锁定目标之间**一直**有一条火光连线（不只是命中的那一瞬）：
+     // 外层宽而淡、内层亮线，沿线跑动几点火星；reduceFx 下不打火星、线照旧。
+     const q=point(tg.x,tg.y),flow=reduce?0:((t*1.4)%1);
+     c.save();c.globalCompositeOperation='lighter';c.lineCap='round';
+     c.strokeStyle=`rgba(255,132,66,${.3*YAN_SCALE})`;c.lineWidth=4.4;
+     c.beginPath();c.moveTo(p.x,p.y);c.lineTo(q.x,q.y);c.stroke();
+     c.strokeStyle=`rgba(255,208,142,${.62*YAN_SCALE})`;c.lineWidth=1.6;
+     c.beginPath();c.moveTo(p.x,p.y);c.lineTo(q.x,q.y);c.stroke();
+     const sparks=reduce?0:4;
+     for(let i=0;i<sparks;i++){
+      const k=(flow+i/sparks)%1;
+      c.fillStyle=`rgba(255,234,196,${.55*YAN_SCALE})`;
+      c.beginPath();c.arc(p.x+(q.x-p.x)*k,p.y+(q.y-p.y)*k-2.4,1.6,0,Math.PI*2);c.fill();
+     }
+     c.strokeStyle=`rgba(255,150,90,${.4*YAN_SCALE})`;c.lineWidth=1.6;ring(c,q,z.tw*.7,z.tw*.45);
+     c.restore();
+    }
+   }
   }
  }
  for(const e of (s.events||[]).filter(e=>['heal','chain'].includes(e.type)&&t-e.t>=0&&t-e.t<.4)){  const a=point(e.x,e.y),b=point(e.targetX,e.targetY),heal=e.type==='heal',age=(t-e.t)/.4;

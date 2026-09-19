@@ -485,10 +485,13 @@ function endYanSkill(battle,guardian,reason='complete'){
 function tickYanSkill(battle,guardian,dt){
  if(!guardian.yanSkillActive)return false;
  if(permissions(guardian).silenced){endYanSkill(battle,guardian,'silence');return true;}
+ // 目标死亡（或离场/不可选）→ 技能**立刻结束**，不换目标（用户 2026-09-19 口径）。
+ const locked=getActor(battle.s,guardian.yanSkillTargetUid);
+ if(!locked||locked.hp<=0||locked.hidden||locked.untargetable){endYanSkill(battle,guardian,'target-lost');return true;}
  guardian.yanSkillLeft=Math.max(0,guardian.yanSkillLeft-dt);
  while(guardian.yanSkillLeft>0&&battle.s.time+1e-9>=guardian.yanSkillNextAt){
-  let target=getActor(battle.s,guardian.yanSkillTargetUid);if(!target||target.hp<=0||target.hidden||target.untargetable)target=yanTarget(battle,guardian);
-  if(target){const victims=enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable&&Math.hypot(e.x-target.x,e.y-target.y)<=1);for(const e of victims)yanDamage(battle,guardian,e,.6,'skill');}
+  const victims=enemyActors(battle.s).filter(e=>!e.hidden&&!e.untargetable&&Math.hypot(e.x-locked.x,e.y-locked.y)<=1);
+  for(const e of victims)yanDamage(battle,guardian,e,.6,'skill');
   guardian.yanSkillNextAt+=1;
  }
  if(guardian.yanSkillLeft<=0)endYanSkill(battle,guardian,'complete');
