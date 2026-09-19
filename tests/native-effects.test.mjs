@@ -411,6 +411,15 @@ test('断崖 S2 adds one nearby blocker follow-up and瑕光 S3 adds arts plus al
  const l=openBattle([{chessId:'chess_char_3_12_b',skillIndex:2},reps.operators.yak]);deployNow(l.b);const blem=l.b.s.units.find(u=>u.id==='char_423_blemsh'),ally=l.b.s.units.find(u=>u.id==='char_199_yak'),victim=enemy(l.b,{x:blem.x+1,y:blem.y,hp:5000,def:0});ally.hp=ally.maxHp-100;blem.sp=l.b.spCost(blem);l.b.activate(blem);const h0=ally.hp,v0=victim.hp;l.b.hit(blem,victim,20,'physical');assert.ok(victim.hp<v0-20);assert.ok(ally.hp>h0);
 });
 
+test('断崖 S2 对多个阻挡敌人分别结算额外伤害',()=>{
+ const {b}=openBattle([{chessId:'chess_char_3_02_b',skillIndex:1},reps.operators.yak]);deployNow(b);
+ const ayer=byId(b,'char_294_ayer'),blocker=byId(b,'char_199_yak');
+ const first=enemy(b,{x:ayer.x+1,y:ayer.y,hp:5000,def:0}),second=enemy(b,{x:ayer.x+1,y:ayer.y+1,hp:5000,def:0});
+ first.block=blocker.uid;second.block=blocker.uid;ayer.sp=b.spCost(ayer);b.activate(ayer);
+ const firstHp=first.hp,secondHp=second.hp;b.hit(ayer,first,20,'arts');
+ assert.ok(first.hp<firstHp-20);assert.ok(second.hp<secondHp);assert.equal(b.s.settle.fault,null);
+});
+
 test('断崖 S1 施加范围停顿且天赋提供周围攻速',()=>{
  const {b}=openBattle([{chessId:'chess_char_3_02_b',skillIndex:0},reps.operators.yak]);deployNow(b);const ayer=byId(b,'char_294_ayer'),yak=byId(b,'char_199_yak'),e=enemy(b,{x:ayer.x+1,y:ayer.y,hp:10000,def:0});yak.x=ayer.x+1;yak.y=ayer.y;ayer.sp=b.spCost(ayer);b.activate(ayer);for(let i=0;i<30;i++)b.step();assert.ok(e.statuses.some(s=>s.kind==='sluggish'));assert.equal(b.stats(yak).attackSpeed,b.profile(yak).attributes.attackSpeed+8);
 });
