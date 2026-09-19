@@ -111975,10 +111975,9 @@
           "trigger": "death",
           "radius": 2,
           "duration": 8,
-          "interval": 0.5,
-          "damage": 100,
-          "damageType": "true",
-          "atkScale": 0
+          "interval": 1,
+          "damage": 50,
+          "damageType": "true"
         },
         "bleeding": null,
         "statusResistance": 0,
@@ -112119,10 +112118,9 @@
           "trigger": "death",
           "radius": 2,
           "duration": 8,
-          "interval": 0.5,
-          "damage": 100,
-          "damageType": "true",
-          "atkScale": 0
+          "interval": 1,
+          "damage": 50,
+          "damageType": "true"
         },
         "bleeding": null,
         "statusResistance": 0,
@@ -113009,9 +113007,9 @@
           "trigger": "death-target",
           "radius": 0.8,
           "duration": 8,
-          "interval": 0.5,
-          "atkScale": 0,
-          "damage": 100,
+          "interval": 1,
+          "atkScale": 0.15,
+          "damage": 0,
           "damageType": "arts"
         },
         "bleeding": null,

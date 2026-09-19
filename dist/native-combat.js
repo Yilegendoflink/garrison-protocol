@@ -66,12 +66,11 @@ function hasZonePayload(zone){
  return !!zone&&(Number(zone.damage)>0||Number(zone.atkScale)>0||Number(zone.elementScale)>0);
 }
 
-// 死亡留下的持续伤害圈（「污染秽蚀」「毒雾」）的数值口径：**固定 100 点 / 0.5 秒**（用户 2026-09-19 指定）。
-// 原表给的是 50/1s 与「攻击力的 15%」；后者在敌人被击倒后 source 已不在场上，取不到攻击力，
-// 结算出来恒为 0，所以统一成定值。半径、持续时间与伤害类型仍按原表。
-// 层叠口径见 native-battle.tickEnemyGroundZones：同一个我方单位在 0.5 秒窗口内只吃一层圈的伤害。
-const DEATH_ZONE_DAMAGE=100,DEATH_ZONE_INTERVAL=.5;
-const tuneDeathZone=zone=>zone?{...zone,interval:DEATH_ZONE_INTERVAL,damage:DEATH_ZONE_DAMAGE,atkScale:0}:zone;
+// 死亡留下的持续伤害圈（「污染秽蚀」「毒雾」）的数值口径：**照原表**。污染秽蚀是固定伤害
+// （PollutedDie.polluted_damage_low），毒雾是「攻击力的 15%」（1.damage_atk_scale）。
+// 后者在敌人被击倒后 source 已不在场上，取不到攻击力会结算成 0，所以 native-battle 在创建区域时
+// 把产生者的攻击力记在 sourceAtk 上（用户 2026-09-19：伤害跟随产生者攻击力，死亡后留档到圈消失）。
+// 重叠口径见 native-battle.tickEnemyGroundZones：同一个我方单位在一个间隔窗内只吃最高的一层。
 
 // 死亡区域（PollutedDie 等）：以自身死亡位置为中心的一次性持续伤害区。
 export function inferDeathZone(raw={}){
@@ -80,8 +79,8 @@ export function inferDeathZone(raw={}){
  const bb=enemyBlackboard(raw),skillBb={...(enemySkill(raw)?.bb||{}),...bb};
  const damage=firstTemplateField(bb,'PollutedDie','polluted_damage_low');
  if(!Number.isFinite(damage)||damage<=0)return null;
- const radius=firstTemplateField(bb,'PollutedDie','projectile_range'),life=firstTemplateField(bb,'PollutedDie','projectile_life_time');
- return tuneDeathZone({trigger:'death',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:8,interval:1,damage,damageType:'true'});
+ const radius=firstTemplateField(bb,'PollutedDie','projectile_range'),life=firstTemplateField(bb,'PollutedDie','projectile_life_time'),interval=firstTemplateField(bb,'PollutedDie','interval');
+ return {trigger:'death',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:8,interval:Number.isFinite(interval)&&interval>0?interval:1,damage,damageType:'true'};
 }
 
 // 射击落点区域（ProjectileBoomRange 等）：普通攻击命中后在目标格留一片持续伤害区。
@@ -140,7 +139,7 @@ export function inferToxicZone(raw={}){
  if(!/击倒(?:后|时)[^。；;]*毒雾|毒雾/.test(text))return null;
  const atkScale=Number(talentBb['1.damage_atk_scale']),radius=Number(talentBb['1.projectile_range']),life=Number(talentBb['1.projectile_life_time']),interval=Number(talentBb['1.interval']);
  if(!Number.isFinite(atkScale)||atkScale<=0)return null;
- return tuneDeathZone({trigger:'death-target',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:8,interval:Number.isFinite(interval)&&interval>0?interval:1,atkScale,damage:0,damageType:'arts'});
+ return {trigger:'death-target',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:8,interval:Number.isFinite(interval)&&interval>0?interval:1,atkScale,damage:0,damageType:'arts'};
 }
 
 // 逐腐兽的流血：命中后周期性受到法术伤害，目标被治疗时提前解除。

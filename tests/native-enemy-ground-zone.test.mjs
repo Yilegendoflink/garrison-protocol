@@ -36,26 +36,29 @@ test('持续伤害范围的参数全部来自原表：六类敌人各自的区�
  assert.equal(nest.radius,1.6);assert.equal(nest.elementScale,0.05);assert.equal(nest.elementType,'neural');
  assert.equal(nest.atkScale,0,'原表没有常驻法术伤害的倍率，不能凭空给一个');
  const die=profiles('enemy_1267_nhpbr').deathZone;
- assert.deepEqual({r:die.radius,d:die.duration,i:die.interval,dmg:die.damage,atk:die.atkScale},{r:2,d:8,i:0.5,dmg:100,atk:0});
+ assert.deepEqual({r:die.radius,d:die.duration,i:die.interval,dmg:die.damage,atk:Number(die.atkScale)||0},{r:2,d:8,i:1,dmg:50,atk:0});
  const bleed=profiles('enemy_1270_nhstlk').bleeding;
  assert.deepEqual({dmg:bleed.damage,d:bleed.duration,cure:bleed.cureOnHeal},{dmg:100,d:10,cure:true});
  assert.equal(profiles('enemy_1270_nhstlk_2').bleeding.damage,150,'精英逐腐兽的流血伤害更高');
  const toxic=profiles('enemy_9006_actoxi').deathZone;
- assert.deepEqual({r:toxic.radius,d:toxic.duration,i:toxic.interval,atk:toxic.atkScale,dmg:toxic.damage,trigger:toxic.trigger},{r:0.8,d:8,i:0.5,atk:0,dmg:100,trigger:'death-target'});
+ assert.deepEqual({r:toxic.radius,d:toxic.duration,i:toxic.interval,atk:toxic.atkScale,dmg:toxic.damage,trigger:toxic.trigger},{r:0.8,d:8,i:1,atk:0.15,dmg:0,trigger:'death-target'});
 });
 
-test('所有死亡留下的持续伤害圈统一 100 点 / 0.5 秒（不再按攻击力结算）',()=>{
- // 死亡圈的中心在敌人死掉的那一刻就没了，按攻击力百分比结算会算出 0，所以统一成固定值；
+test('死亡圈数值照原表：要么固定伤害、要么产生者攻击力的百分比，两者必居其一',()=>{
+ // 污染秽蚀是固定伤害（PollutedDie.polluted_damage_low=50），毒雾是攻击力的 15%（1.damage_atk_scale）；
  // 这条门禁扫描原表里所有 trigger 为 death／death-target 的区域，避免以后新增敌人漏改。
+ // 攻击力百分比的那一类必须能在产生者死亡后继续结算——由 native-battle 创建区域时留档 sourceAtk 保证，
+ // 运行时行为见下面「蚀裂」的用例。
  const death=Object.entries(NATIVE_DATA.enemies).filter(([,e])=>['death','death-target'].includes(e?.enemyBehavior?.deathZone?.trigger));
  assert.ok(death.length>=2,'原表里应当有死亡区域类敌人');
  for(const [id,e] of death){
-  const zone=e.enemyBehavior.deathZone;
-  assert.equal(zone.damage,100,`${id} 的死亡圈伤害`);
-  assert.equal(zone.interval,0.5,`${id} 的死亡圈结算间隔`);
-  assert.equal(Number(zone.atkScale)||0,0,`${id} 的死亡圈不应再按攻击力结算`);
+  const zone=e.enemyBehavior.deathZone,flat=Number(zone.damage)>0,scaled=Number(zone.atkScale)>0;
+  assert.notEqual(flat,scaled,`${id} 的死亡圈必须且只能有一种伤害口径`);
+  assert.equal(zone.interval,1,`${id} 的死亡圈按原表每秒结算一次`);
   assert.ok(zone.duration>0&&zone.radius>0,`${id} 的死亡圈保留原表半径与时长`);
  }
+ assert.equal(profiles('enemy_1267_nhpbr').deathZone.damage,50,'污染秽蚀是原表的固定伤害');
+ assert.equal(profiles('enemy_9006_actoxi').deathZone.atkScale,0.15,'毒雾是原表的攻击力百分比');
  // 常驻光环与开火燃烧走的是 attackZone／selfField，数值不能被这次改动波及。
  assert.equal(profiles('enemy_10122_uacann_2').attackZone.damage,150);
  assert.equal(profiles('enemy_1272_nhtank').attackZone.damage,50);
@@ -107,19 +110,21 @@ test('萨卡兹枯朽战士被击倒后留下污染区域，只结算原表半�
  b.resolveEnemyDeath(near);
  const zone=zones(b)[0];
  assert.ok(zone,'击倒后应当留下污染区域');
- assert.equal(zone.radius,2);assert.equal(zone.values.damage,100);assert.equal(zone.values.damageType,'true');
- assert.equal(zone.interval,0.5,'死亡圈每 0.5 秒结算一次');
+ assert.equal(zone.radius,2);assert.equal(zone.values.damage,50);assert.equal(zone.values.damageType,'true');
+ assert.equal(zone.interval,1,'死亡圈按原表每秒结算一次');
  u.maxHp=999999;u.hp=999999;
  const hp=u.hp;
  b.s.time+=1.1;b.tickEnemyGroundZones();
- assert.equal(u.hp,hp-200,'1.1 秒里按 0.5 秒一拍共结算两拍，一拍 100');
+ assert.equal(u.hp,hp-50,'1.1 秒里结算一拍，一拍是原表的 50 点');
+ b.s.time+=1;b.tickEnemyGroundZones();
+ assert.equal(u.hp,hp-100,'再过一秒又一拍');
  // 同一地点再死一只只刷新同一片区域，不叠第二圈（否则加成混合下就是一地粉红）
  const again=spawnEnemy(b,'enemy_1267_nhpbr',u.x,u.y+1);
  b.resolveEnemyDeath(again);
  assert.equal(zones(b).length,1,'同一地点重复死亡只保留一圈');
 });
 
-test('错相重叠的多个死亡圈对同一个干员只结算一层（不因层叠翻倍）',()=>{
+test('错相重叠的多个死亡圈对同一个干员只结算最高的一层（不因层叠翻倍）',()=>{
  const b=liveBattle(),u=b.s.units[0];
  u.maxHp=999999;u.hp=999999;
  // 两圈圆心不重合、创建时刻相差 0.25 秒，结算相位因此错开，必须靠时间窗去重。
@@ -129,18 +134,18 @@ test('错相重叠的多个死亡圈对同一个干员只结算一层（不因�
  const second=spawnEnemy(b,'enemy_1267_nhpbr',u.x+1,u.y);
  b.resolveEnemyDeath(second);
  assert.equal(zones(b).length,2,'两处不同位置的死亡各留一圈');
- // 从首个结算点起跨 1.5 秒：每 0.5 秒只有一圈生效，共 4 拍；若层数直接相加会是 7 拍 700。
- const start=b.s.time+0.5,hp=u.hp;
- b.s.time=start+1.5;b.tickEnemyGroundZones();
- assert.equal(hp-u.hp,400,'重叠层只按一层结算');
+ // 从首个结算点起跨 3 秒：每 1 秒只有一圈生效，共 3 拍；若层数直接相加会是 5 拍 250。
+ const start=b.s.time+1,hp=u.hp;
+ b.s.time=start+2.1;b.tickEnemyGroundZones();
+ assert.equal(hp-u.hp,150,'重叠层只按最高的一层结算');
  // 伤害更高的一层在同一时间窗内只补差额，不会因为是后到的就被整个吞掉。
  b.s.logicEffects=[];b.zoneHitWindow.clear();
  const src=spawnEnemy(b,'enemy_1272_nhtank',u.x+1,u.y+1);
- b.addEnemyGroundZone(src,{radius:2,interval:0.5,duration:5,damage:100,damageType:'true'},{x:u.x,y:u.y});
+ b.addEnemyGroundZone(src,{radius:2,interval:1,duration:5,damage:50,damageType:'true'},{x:u.x,y:u.y});
  b.s.time+=0.2;
- b.addEnemyGroundZone(src,{radius:2,interval:0.5,duration:5,damage:150,damageType:'true'},{x:u.x,y:u.y});
- const hp2=u.hp;b.s.time+=0.5;b.tickEnemyGroundZones();
- assert.equal(hp2-u.hp,150,'同一窗内 100 + 更高的 150 只补 50');
+ b.addEnemyGroundZone(src,{radius:2,interval:1,duration:5,damage:150,damageType:'true'},{x:u.x,y:u.y});
+ const hp2=u.hp;b.s.time+=1;b.tickEnemyGroundZones();
+ assert.equal(hp2-u.hp,150,'同一窗内 50 + 更高的 150 只补 100');
 });
 
 test('逐腐兽的流血是吸血式持续伤害，接受治疗后立即解除',()=>{
@@ -169,11 +174,37 @@ test('假想敌：蚀裂只在被击倒时留下毒雾，不是常驻光环',()=
  b.resolveEnemyDeath(enemy,u);
  const zone=zones(b)[0];
  assert.ok(zone,'被击倒后留下毒雾');
- assert.equal(zone.radius,0.8);assert.equal(zone.values.damage,100);assert.equal(Number(zone.values.atkScale)||0,0);
+ assert.equal(zone.radius,0.8);assert.equal(zone.values.damage,0);assert.equal(zone.values.atkScale,0.15);
  assert.equal(zone.values.damageType,'arts');
+ assert.equal(zone.interval,1,'毒雾按原表每秒结算一次');
+ // 产生者已经死了，攻击力必须留档在区域上，否则「攻击力的 15%」会算成 0。
+ assert.equal(zone.sourceAtk,enemy.atk,'毒雾记下产生者死亡时的攻击力');
+ assert.ok(zone.sourceAtk>0);
+ // 真正死亡时敌人会从场上移除，圈必须只靠留档的攻击力继续结算。
+ b.s.enemies=b.s.enemies.filter(x=>x!==enemy);
  const hp=u.hp;
- b.s.time+=0.5;b.tickEnemyGroundZones();
- const one=hp-u.hp;assert.ok(one>0,'毒雾持续结算');
- b.s.time+=0.6;b.tickEnemyGroundZones();
- assert.equal(u.hp,hp-one*2,'毒雾每 0.5 秒固定 100 点，不再依赖已经消失的攻击力');
+ b.s.time+=1.1;b.tickEnemyGroundZones();
+ const one=hp-u.hp;assert.ok(one>0,'产生者离场后毒雾仍然结算');
+ b.s.time+=1;b.tickEnemyGroundZones();
+ assert.equal(u.hp,hp-one*2,'每秒一跳，数值与首跳相同');
+});
+
+test('毒雾伤害跟随产生者的攻击力：同一种敌人攻击力翻倍，圈里每秒掉的血也翻倍',()=>{
+ const perTick=atk=>{
+  const b=liveBattle(),u=b.s.units[0];
+  u.maxHp=999999;u.hp=999999;
+  const enemy=spawnEnemy(b,'enemy_9006_actoxi',u.x,u.y+1);
+  enemy.atk=atk; // 战斗中的实际攻击力（含词条与加成）
+  b.resolveEnemyDeath(enemy,u);
+  b.s.enemies=b.s.enemies.filter(x=>x!==enemy); // 敌人已离场，只剩圈
+  const zone=zones(b)[0];
+  const hp=u.hp;
+  b.s.time+=1.1;b.tickEnemyGroundZones();
+  return {zone,dealt:hp-u.hp};
+ };
+ const weak=perTick(200),strong=perTick(400);
+ assert.equal(weak.zone.sourceAtk,200);
+ assert.equal(strong.zone.sourceAtk,400);
+ assert.ok(weak.dealt>0);
+ assert.ok(Math.abs(strong.dealt-weak.dealt*2)<1,`攻击力 400 的毒雾应当约为 200 的两倍（${strong.dealt} vs ${weak.dealt}）`);
 });

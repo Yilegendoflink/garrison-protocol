@@ -365,16 +365,21 @@ export class NativeBattle {
   // 我方受到治疗时解除「治疗可解除」的敌方持续伤害（目前只有逐腐兽的流血）。
   cureHealCurableEffects(target){for(const fx of this.s.logicEffects||[])if(fx.kind==='dot'&&fx.targetUid===target?.uid&&String(fx.talentOrSkillId||'').endsWith('-bleeding')){fx.endsAt=this.s.time;}}
   // 敌方持续伤害区域统一入口：射击落点、跟随自身的常驻光环、死亡后留下的毒雾都走这里。
-  addEnemyGroundZone(source,spec,{x,y,follow=false,cleanupWithSource=false,attackId=null,key=null}={}){if(!source||!spec||!(Number(spec.damage)>0||Number(spec.atkScale)>0||Number(spec.elementScale)>0))return null;const interval=Math.max(.1,Number(spec.interval)||1),duration=Number(spec.duration),radius=Number(spec.radius)||1;const row=addEffect(this,{kind:'field',sourceUid:source.uid,sourceDeployGen:source.deployGen,x,y,followUid:follow?source.uid:null,radius,interval,nextAt:this.s.time+interval,endsAt:Number.isFinite(duration)&&duration>0?this.s.time+duration:null,talentOrSkillId:key||enemySpecialTraitId(source),sharedStack:!!key,values:{damage:Number(spec.damage)||0,atkScale:Number(spec.atkScale)||0,damageType:spec.damageType||'true',elementScale:Number(spec.elementScale)||0,elementType:spec.elementType||null},trackSide:'ally',trackArea:true,refKind:cleanupWithSource?'live':'owner',persistAfterSourceGone:!cleanupWithSource,attackId});if(row)this.emit('enemy-skill',{uid:source.uid,x:row.x??x,y:row.y??y,skill:spec.trigger||'ground-zone',radius:row.radius,endsAt:row.endsAt});return row;}
+  addEnemyGroundZone(source,spec,{x,y,follow=false,cleanupWithSource=false,attackId=null,key=null}={}){if(!source||!spec||!(Number(spec.damage)>0||Number(spec.atkScale)>0||Number(spec.elementScale)>0))return null;const interval=Math.max(.1,Number(spec.interval)||1),duration=Number(spec.duration),radius=Number(spec.radius)||1;const row=addEffect(this,{kind:'field',sourceUid:source.uid,sourceDeployGen:source.deployGen,x,y,followUid:follow?source.uid:null,radius,interval,nextAt:this.s.time+interval,endsAt:Number.isFinite(duration)&&duration>0?this.s.time+duration:null,talentOrSkillId:key||enemySpecialTraitId(source),sharedStack:!!key,values:{damage:Number(spec.damage)||0,atkScale:Number(spec.atkScale)||0,damageType:spec.damageType||'true',elementScale:Number(spec.elementScale)||0,elementType:spec.elementType||null},trackSide:'ally',trackArea:true,refKind:cleanupWithSource?'live':'owner',persistAfterSourceGone:!cleanupWithSource,attackId,
+   // 产生者的攻击力在创建时就留档：死亡圈的产生者会随死亡离场，之后仍要按它生前的攻击力结算。
+   sourceAtk:Number.isFinite(Number(source.atk))?Number(source.atk):0});if(row)this.emit('enemy-skill',{uid:source.uid,x:row.x??x,y:row.y??y,skill:spec.trigger||'ground-zone',radius:row.radius,endsAt:row.endsAt});return row;}
   // 常驻范围（如深溟巢涌者）：敌人活着时它自己就是区域中心，每秒结算一次。
   ensureEnemySelfField(enemy){if(!enemy?.selfField||enemy.hp<=0)return;const trait=enemySpecialTraitId(enemy);if((this.s.logicEffects||[]).some(fx=>fx.kind==='field'&&fx.talentOrSkillId===trait))return;this.addEnemyGroundZone(enemy,enemy.selfField,{x:enemy.x,y:enemy.y,follow:true,cleanupWithSource:true});}
-  // 敌方地面区域对同一个我方单位**只结算一层**：0.5 秒窗口内多次命中只保留伤害最高的一次，
-  // 后面命中的更高伤害只补差额（用户 2026-09-19：无论多少圈层叠都只有一层圈的伤害）。
+  // 敌方地面区域对同一个我方单位**只结算一层**：一个间隔窗内多次命中只保留伤害最高的一次，
+  // 后面命中的更高伤害只补差额（用户 2026-09-19 口径：圈重叠取最高，不叠加）。
+  // 窗口按区域自己的 interval 取（0.9 倍是给反复累加留的浮点余量，不能让同一片圈的下一次结算
+  // 落回窗口里被自己吞掉），至少 0.45 秒。
   // 不同圈的下一次结算时间会因为创建时刻不同而错开，所以用时间窗而不是「同一帧去重」。
-  applyEnemyZoneDamage(ally,amount,type,at){
+  applyEnemyZoneDamage(ally,amount,type,at,window){
    // 用「区域排定的结算时刻」而不是当前帧时间做窗口戳：大步推进时同一帧会补好几拍，
    // 若按帧时间记账这些拍会被压成一次，白白少算。
-   const now=Number.isFinite(at)?at:this.s.time,prev=this.zoneHitWindow.get(ally.uid),fresh=prev&&now-prev.at<0.45;
+   const span=Number.isFinite(window)&&window>0?window:.45;
+   const now=Number.isFinite(at)?at:this.s.time,prev=this.zoneHitWindow.get(ally.uid),fresh=prev&&now-prev.at<span;
    if(fresh&&amount<=prev.amount)return false;
    const delta=fresh?Math.max(0,amount-prev.amount):amount;
    this.zoneHitWindow.set(ally.uid,{at:now,amount:fresh?Math.max(prev.amount,amount):amount});
@@ -386,10 +391,14 @@ export class NativeBattle {
     if(fx.followUid!=null){const owner=getActor(this.s,fx.followUid);if(owner&&owner.hp>0){fx.x=owner.x;fx.y=owner.y;}}
     // 一次调用可能跨过多个结算点（快照恢复或大步推进），按 interval 补齐。
     while(fx.nextAt!=null&&this.s.time+1e-9>=fx.nextAt&&(fx.endsAt==null||fx.nextAt<=fx.endsAt+1e-9)){
-     const source=getActor(this.s,fx.sourceUid),values=fx.values||{},sourceAtk=source&&Number.isFinite(Number(source.atk))?Number(source.atk):0;
+     const source=getActor(this.s,fx.sourceUid),values=fx.values||{};
+     // 产生者还活着就用它当前的攻击力（伤害随攻击力变化），已经离场就用创建时留档的 sourceAtk
+     // （毒雾 = 攻击力的 15%，敌人被击倒后原本会算成 0）。
+     const liveAtk=source&&Number.isFinite(Number(source.atk))?Number(source.atk):null;
+     const sourceAtk=liveAtk??(Number(fx.sourceAtk)||0);
      for(const ally of attackableAllies(this.s)){if(chebyshev(fx,ally)>fx.radius)continue;
       const base=values.atkScale>0?sourceAtk*values.atkScale:values.damage;
-      if(base>0)this.applyEnemyZoneDamage(ally,base,values.damageType,fx.nextAt);
+      if(base>0)this.applyEnemyZoneDamage(ally,base,values.damageType,fx.nextAt,Math.max(.45,(Number(fx.interval)||1)*.9));
       if(values.elementScale>0&&values.elementType&&sourceAtk>0)applyElementDamage(this,{source,target:ally,amount:sourceAtk*values.elementScale,type:values.elementType,cause:'dot'});
      }
      fx.nextAt+=Math.max(.1,Number(fx.interval)||1);

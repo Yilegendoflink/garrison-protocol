@@ -30,9 +30,9 @@ DOT 词条池共 12 名敌人（`data/modes/alliance-lower/default-wave-table.js
 | 集团军重型火炮 | 攻击会留下燃烧区域 | `attackZone`：命中点区域 半径1 / 3秒 / 每秒150 | ✅ |
 | 萨卡兹枯朽战车（含尖端） | 数次攻击后释放污染秽蚀 | `attackZone`：半径2.2 / 10秒 / 每秒50 | ✅ |
 | 深溟巢涌者（含富营养） | 持续对周围造成法术伤害和神经损伤；抵抗且免疫停顿 | `selfField`：跟随自身 半径1.6 / 每秒 5% 攻击力神经损伤 + `statusResistance` 0.5 | ✅ |
-| 萨卡兹枯朽战士（含组长） | 被击倒时释放污染秽蚀 | `deathZone`：死亡点 半径2 / 8秒 / 每 0.5 秒 100 | ✅ |
+| 萨卡兹枯朽战士（含组长） | 被击倒时释放污染秽蚀 | `deathZone`：死亡点 半径2 / 8秒 / 每秒 50（`polluted_damage_low`，固定值） | ✅ |
 | 逐腐兽（含疯狂） | 攻击使目标持续受到法术伤害，接受治疗时解除 | `bleeding`：命中挂 dot 100/150 × 10 秒，治疗解除 | ✅ |
-| 假想敌：蚀裂 | 被击倒后向击倒者发射毒雾 | `deathZone`：落点跟随击杀者 半径0.8 / 8秒 / 每 0.5 秒 100（固定值） | ✅ |
+| 假想敌：蚀裂 | 被击倒后向击倒者发射毒雾 | `deathZone`：落点跟随击杀者 半径0.8 / 8秒 / 每秒 攻击力×15%（`1.damage_atk_scale`） | ✅ |
 | 单核掠食者 / 异光体掠食者 | 原表无技能预制体、无天赋数值 | 无可实现内容 | ⛔ 数据缺失 |
 
 ### 实现要点
@@ -41,13 +41,13 @@ DOT 词条池共 12 名敌人（`data/modes/alliance-lower/default-wave-table.js
 - **推导结果随构建落盘**：`scripts/build-native.mjs` 把推导结果写进 `enemyBehavior`（`behaviorInferred:true`），因为客户端快照里原表的 `skills` 表会被裁掉，运行时无法再推导。手动关掉某个能力就在 `enemy-behavior-overrides.json` 里写空值。
 - **统一结算入口**：三型区域都走 `logicEffects` 的 `kind:'field'`，由 `NativeBattle.tickEnemyGroundZones()` 每 `interval` 秒结算一次；伤害与元素损伤走 `hurt()` 和 `applyElementDamage()`，因此护盾、闪避、元素爆条都按常规处理。
 - **只对真正会受伤的我方生效**：死亡区域在半径内没有我方时不落地（避免远处被击倒也撒一片）；常驻光环跟随自身，敌人退场即消失。
-- **死亡留下的圈统一 100 点 / 0.5 秒（用户 2026-09-19 口径）**：`trigger` 为 `death` / `death-target` 的两类区域由 `native-combat.js` 的 `tuneDeathZone` 统一改写为固定伤害（`damage:100, interval:0.5, atkScale:0`）。原因是圈的圆心（施放者）在敌人死亡的那一刻就没了，`atkScale` 只能算出 0——蚀裂旧口径「每秒 15% 攻击力」在实际战斗中一滴血都不掉。`attackZone`（火炮 150/1 秒、战车 50/1 秒）与 `selfField`（巢涌者神经损伤）**不在此列**，仍按原表数值走。
-- **重叠圈只算一层**：`NativeBattle.applyEnemyZoneDamage()` 按「区域排定的结算时刻」维护 `zoneHitWindow`（每个我方单位一个，窗口 0.45 秒）：同一窗口内后面的圈更弱就完全丢弃，更强只补差额，因此无论几圈叠在一起，每 0.5 秒最多只有一层圈的伤害。窗口戳必须用 `fx.nextAt`（排定时刻）而不是当前帧时间，否则大步推进补拍时会把多拍压成一拍。不重合的圈（比如枯朽战士死在不同位置）各画各的，只是不叠加伤害。
+- **死亡留下的圈照原表结算（用户 2026-09-19 口径修订）**：`trigger` 为 `death` / `death-target` 的区域分两类——污染秽蚀是**固定伤害**（`PollutedDie.polluted_damage_low` = 50 / 1 秒），毒雾是**产生者攻击力的百分比**（`1.damage_atk_scale` = 15% / 1 秒）。攻击力百分比这一类需要「产生者死后仍能算」：`NativeBattle.addEnemyGroundZone` 在建圈时把 `source.atk` 记进 `fx.sourceAtk`，`tickEnemyGroundZones` 优先用活着产生者的当前攻击力、产生者已离场就用留档值。早期没有留档，`atkScale` 只能算出 0（表现为「蚀裂的毒雾一滴不掉」），当时用定值 100/0.5 兜底；现在恢复原表数值，兜底常量 `tuneDeathZone` 已删除。`attackZone`（火炮 150/1 秒、战车 50/1 秒）与 `selfField`（巢涌者神经损伤）不在此列。
+- **重叠圈取最高**：`NativeBattle.applyEnemyZoneDamage()` 按「区域排定的结算时刻」维护 `zoneHitWindow`（每个我方单位一个）：同一窗口内后面的圈更弱就完全丢弃，更强只补差额，因此重叠的圈只按最高的一层结算，不会相加。窗口长度取该区域 `interval` 的 0.9 倍（下限 0.45 秒；0.9 是给反复累加留的浮点余量，避免同一片圈的下一次结算被自己吞掉），窗口戳必须用 `fx.nextAt`（排定时刻）而不是当前帧时间，否则大步推进补拍时会把多拍压成一拍。不重合的圈（比如枯朽战士死在不同位置）各画各的，只是不叠加伤害。
 - **可见**：`dist/native-fx.js` 的 `drawZones` 现在同时绘制 `kind:'field'`，使用独立的「危险」配色与脉冲提示，玩家能看见自己站在污染里。
 
 ### 验收
 
-`tests/native-enemy-ground-zone.test.mjs`（9 例）+ `tests/native-fx-zones.test.mjs`（区域绘制）覆盖：原表数值对齐、**死亡圈 100/0.5 的全表门禁**、开火留区、常驻光环与抵抗、死亡区域半径门槛、**错相重叠只结算一层 + 更高一层只补差额**、流血与治疗解除、毒雾不是光环、区域可见与配色。
+`tests/native-enemy-ground-zone.test.mjs`（10 例）+ `tests/native-fx-zones.test.mjs`（区域绘制）覆盖：原表数值对齐、**死亡圈「固定伤害／攻击力百分比」二选一的全表门禁**、**产生者攻击力留档与「攻击力翻倍、每秒掉血翻倍」**、开火留区、常驻光环与抵抗、死亡区域半径门槛、**错相重叠只按最高一层结算 + 更高一层只补差额**、流血与治疗解除、毒雾不是光环、区域可见与配色。
 
 ## 后续批次（建议顺序）
 
