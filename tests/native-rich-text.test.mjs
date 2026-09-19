@@ -64,3 +64,22 @@ test('卫戍文本：时机标签变成前缀，其余内容标签照常保留',
  assert.match(garrisonText(rule), /^【获得时】/);
  assert.equal(/[<>]/.test(garrisonText(rule)), false);
 });
+
+test('构建产物里的展示文本也保留内容标签（策略／敌人／盟约／装备／干员技能）', async () => {
+ const fs = await import('node:fs');
+ // 策略：data/modes/alliance-lower/catalog.json 与 dist/protocol-data.js 都由 build-protocol 烘焙
+ const catalog = JSON.parse(fs.readFileSync('data/modes/alliance-lower/catalog.json', 'utf8'));
+ const orchid = catalog.bands.find(b => b.bandId === 'band_orchid');
+ assert.match(orchid.description, /寻呼模块/, '策略描述要保留「寻呼模块」这类内容标签里的字');
+ assert.equal(/[<>]/.test(orchid.description), false);
+ const noTag = catalog.bands.filter(b => /[<>]/.test(String(b.description || '')));
+ assert.deepEqual(noTag.map(b => b.bandId), [], '策略描述不应残留尖括号');
+ const protocol = await import('../dist/protocol-data.js');
+ const band = protocol.PROTOCOL_DATA.bands.find(b => b.id === 'band_orchid') || protocol.PROTOCOL_DATA.bands.find(b => b.description?.includes('猎头顾问'));
+ assert.match(band.description, /寻呼模块/);
+ assert.equal(/[<>]/.test(band.description), false);
+ // 干员技能（dist/catalog.js 由 build-catalog 烘焙）
+ const legacy = await import('../dist/catalog.js');
+ const dirty = legacy.CATALOG.flatMap(o => (o.skills || []).map(s => [o.id, s.description || ''])).filter(([, d]) => /[<>]/.test(d));
+ assert.deepEqual(dirty.slice(0, 3), [], 'CATALOG 技能描述不应残留尖括号');
+});

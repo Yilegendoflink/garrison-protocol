@@ -2,9 +2,10 @@ import {collectModeEnemies} from './mode-enemy-ids.mjs';
 import {SERVER_GARRISON_TYPES} from '../dist/garrison.js';
 import {strategyCoverage} from '../dist/strategy.js';
 import {enemyBehaviorProfile} from '../dist/native-combat.js';
-import fs from 'node:fs/promises';import crypto from 'node:crypto';import {resolveChess,buildPhasePlan,shopTerms,applyEnemyOverrides} from '../dist/protocol.js';
+import fs from 'node:fs/promises';import crypto from 'node:crypto';import {resolveChess,buildPhasePlan,shopTerms,applyEnemyOverrides,richText} from '../dist/protocol.js';
 const data=JSON.parse(await fs.readFile('data/modes/alliance-lower/source.json','utf8')),base=JSON.parse(await fs.readFile('data/normalized/allianceLower.json','utf8')),behaviorConfig=JSON.parse(await fs.readFile('data/modes/alliance-lower/enemy-behavior-overrides.json','utf8'));const behaviorOverrides=behaviorConfig.overrides||{};const levelsManifest=JSON.parse(await fs.readFile('data/modes/alliance-lower/levels/manifest.json','utf8'));let previousReadiness={};try{previousReadiness=JSON.parse(await fs.readFile('data/modes/alliance-lower/readiness.json','utf8'));}catch{}
-const plain=t=>(t||'').replace(/<[^>]+>/g,'').replace(/\\n/g,'\n');
+// 展示文本统一走 richText：样式标签（<@ba.vup>、</>）丢掉，内容标签（<寻呼模块>、<替身>、<炎>）里的文字保留。
+const plain=t=>richText(t);
 const roster=Object.values(data.season.charShopChessDatas).filter(s=>s.charId&&!s.isHidden).map(s=>{const a=resolveChess(data,base,s.chessId),b=resolveChess(data,base,s.goldenChessId);return {id:s.chessId,charId:s.charId,name:a.name,rank:s.chessLevel,type:s.chessType,normal:a,elite:b};});
 const items=Object.values(data.season.trapShopChessDatas).map(s=>{const chess=data.season.trapChessDataDict[s.itemId],elite=data.season.trapChessDataDict[s.goldenItemId],entity=base.entities[s.trapId];return {id:s.itemId,name:entity?.name||s.itemId,rank:s.itemLevel,type:s.itemType,hidden:s.hideInShop,normal:chess,elite,effect:data.season.effectInfoDataDict[chess?.effectId]||null};});
 const bands=Object.values(data.season.bandDataListDict).map(b=>({...b,name:data.common.bandDataDict[b.bandId]?.bandName||b.bandId,description:plain(b.bandDesc),effects:data.season.effectBuffInfoDataDict[b.effectId]}));
