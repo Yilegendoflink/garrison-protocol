@@ -9,16 +9,34 @@ import {createWaveRoster} from './native-wave-random.js';
 // 商店只有 1 个可及阶级时全部落在最高阶；只有 2 个阶级时「更低阶」为空，按下面的兜底并回最高阶。
 const SHOP_TIER_ROLL=[[.3,'top'],[.7,'prev'],[Infinity,'lower']];
 
-// 原表只给了具名卡池的名字、没给成员表（模式包里搜不到 pool_chess_glady 的定义），
-// 成员只能从卫戍描述本身取：
-//   garrison_39（歌蕾蒂娅）「若同一行有3名干员，获得1个斯卡蒂、幽灵鲨或深巡」
-//   garrison_149（焰尾）  「获得1个野鬃或灰毫，小概率获得远牙」——「小概率」没有具体数值，
-//                         宁可不做也不编一个，这里只放野鬃／灰毫（远牙待补）。
-// 命中具名池时就是这几个人的等概率抽取，不再套商店的阶级与库存规则。
+// 具名卡池：原表只给池名、不给成员表（模式包里搜不到 pool_chess_glady / pool_equip_* 的定义），
+// 成员只能从效果文案与装备字段推出来。写法：
+//   members：显式成员，[id,权重] 或 id（缺省权重 1，按权重铺开后等概率抽）
+//   bond   ：成员 = 盟约为该值的装备（原表 giveBondId），用于「维式重锤」这类整套装备
+//   any    ：文案没有限定成员的池子，等于「任意」，不需要额外过滤（登记在此备查）
+// 依据（逐条可查）：
+//   pool_chess_glady  garrison_39 歌蕾蒂娅「若同一行有3名干员，获得1个斯卡蒂、幽灵鲨或深巡」
+//   pool_char_pinus   garrison_149 焰尾「获得1个野鬃或灰毫，小概率获得远牙」→ 远牙 20%（用户给定）
+//   pool_equip_pepe   garrison_94 佩佩「获得1件“盟约之币”或“萨尔贡浓茶”，有小概率发现“黄沙罗盘”」
+//                     → 黄沙罗盘沿用同一「小概率」口径 20%（待确认）
+//   pool_equip_rockr  garrison_91 洛洛「随机制造1件洛洛的定制品」；洛洛是维多利亚干员，
+//                     该盟约的定制装备即维式重锤系列（giveBondId=victoriaShip）
+//   pool_equip_normal / pool_equip_kathe / pool_equip_narant：文案只说「随机装备／刷新3件装备／两件装备」
 const NAMED_POOLS={
- pool_chess_glady:['chess_char_3_05_a','chess_char_2_07_a','chess_char_1_04_a'],
- pool_char_pinus:['chess_char_1_19_a','chess_char_2_18_a']
+ pool_chess_glady:{members:['chess_char_3_05_a','chess_char_2_07_a','chess_char_1_04_a']},
+ pool_char_pinus:{members:[['chess_char_1_19_a',4],['chess_char_2_18_a',4],['chess_char_4_20_a',2]]},
+ pool_equip_pepe:{members:[['chess_item_1_03_e_a',4],['chess_item_2_04_e_a',4],['chess_item_6_07_e_a',2]]},
+ pool_equip_rockr:{bond:'victoriaShip'},
+ pool_equip_normal:{any:true},
+ pool_equip_kathe:{any:true},
+ pool_equip_narant:{any:true}
 };
+// 具名池的权重铺开：[[id,4],[id2,4],[id3,2]] → 10 项，抽到第 3 个的概率就是 20%，
+// 而且仍然走 this.pick，测试里可以照旧把它定死。
+const namedEntries=spec=>spec.members.map(m=>Array.isArray(m)?[m[0],Number(m[1])||1]:[m,1]);
+const namedWeights=spec=>new Map(namedEntries(spec));
+const namedPickList=(rows,weights,keyOf)=>rows.flatMap(row=>Array(Math.max(1,Math.round(weights.get(keyOf(row))))).fill(row));
+
 
 export class NativeSession extends NativeEconomy {
  constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,egg325=false,cat=false,playerId='local',teamPeers=[],teamTransport=null}={}){
@@ -46,10 +64,20 @@ export class NativeSession extends NativeEconomy {
  }
  // used 只在商店刷新时传入：同一家店对库存无放回，避免给出比库存更多的同名卡
  drawFromPool(r,used=null){
-  if(r.kind==='item'){let items=this.data.items.filter(i=>!i.hidden&&i.rank<=this.s.level);const tier=Number(String(r.pool||'').match(/shop_(\d)/)?.[1]);if(tier)items=this.data.items.filter(i=>!i.hidden&&i.rank===tier);if(String(r.pool||'').includes('equip_vict'))items=items.filter(i=>i.normal?.giveBondId==='victoriaShip'||this.data.season.trapChessDataDict[i.id]?.giveBondId==='victoriaShip');if(!items.length)throw Error('没有可用装备');return this.pick(items).id;}
+  if(r.kind==='item'){
+   const pool=String(r.pool||''),fixedTier=r.tier||Number(pool.match(/shop_(\d)/)?.[1]),named=NAMED_POOLS[pool];
+   const pooled=Boolean(named?.members||named?.bond);
+   let items=this.data.items.filter(i=>!i.hidden&&(pooled||i.rank<=this.s.level));
+   if(fixedTier)items=this.data.items.filter(i=>!i.hidden&&i.rank===fixedTier);
+   const bond=named?.bond||(pool.includes('equip_vict')?'victoriaShip':null);
+   if(bond)items=items.filter(i=>i.normal?.giveBondId===bond||this.data.season.trapChessDataDict[i.id]?.giveBondId===bond);
+   if(named?.members){const weights=namedWeights(named);items=items.filter(i=>weights.has(i.id));if(items.length)return this.pick(namedPickList(items,weights,i=>i.id)).id;}
+   if(!items.length)throw Error('没有可用装备');
+   return this.pick(items).id;
+  }
   const pool=String(r.pool||''),fixedTier=r.tier||Number(pool.match(/shop_(\d)/)?.[1]);
   const named=NAMED_POOLS[pool];
-  if(named){const skip=new Set((r.exclude||[]).filter(Boolean)),members=this.eligible().filter(o=>named.includes(o.chessId)&&!skip.has(o.chessId));if(!members.length)throw Error('具名卡池没有可用干员：'+pool);return this.pick(members).chessId;}
+  if(named?.members){const weights=namedWeights(named),skip=new Set((r.exclude||[]).filter(Boolean)),members=this.eligible().filter(o=>weights.has(o.chessId)&&!skip.has(o.chessId));if(!members.length)throw Error('具名卡池没有可用干员：'+pool);return this.pick(namedPickList(members,weights,o=>o.chessId)).chessId;}
   let rows=this.eligible();if(fixedTier)rows=rows.filter(o=>o.chessLevel===fixedTier);else rows=rows.filter(o=>o.chessLevel<=(r.maxTier||this.s.level));
   // 有库存系统时（对局内），候选池按各干员剩余库存铺成多份后等权抽；used 让同一次刷新无放回
   // exclude 用于奖励这一类「本次候选之间不能重复」的场景：直接从候选里剔除，而不是靠重抽碰运气。

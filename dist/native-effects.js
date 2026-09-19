@@ -421,9 +421,38 @@ export function tickLogic(battle,dt){
  for(const u of battle.s.units){periodicMods(battle,u,ctxFor(battle));bondPeriodic(battle,u);}
  tickSummons(battle,dt);
  tickWhitwEyes(battle,dt);
+ syncReveals(battle);
 }
 
-function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,spawnWhitwEyes,tickWhitwEyes,log:(b,t,p)=>log(b,t,p)};}
+// 反隐（隐匿免疫）：让目标身上的隐匿暂时失效，但不清除携带隐匿的 Buff；来源消失后自动恢复。
+// 用「时间窗」而不是永久置位——原实现直接 e.revealed=true，敌人走出反隐范围也永远不会撤销。
+export function revealEnemy(battle,target,hold=.3){
+ if(!battle||!target)return;
+ target.revealUntil=Math.max(Number(target.revealUntil)||0,battle.s.time+Math.max(.05,Number(hold)||.3));
+}
+// 伊内丝【影哨】：撤退后原地留下一个影哨，令「攻击范围内隐匿失效 + 移速-30%」继续生效，最多 1 个。
+function placeInesSentry(battle,u){
+ const geo=battle.rangeGeometry?.(u),cells=geo?.cells||[];
+ const radius=Math.max(1,cells.reduce((m,g)=>Math.max(m,Math.abs(g.col),Math.abs(g.row)),0));
+ const kept=(battle.s.revealSentries||[]).filter(s=>s.fromUid!==u.uid);
+ battle.s.revealSentries=[...kept,{fromUid:u.uid,x:u.x,y:u.y,radius}].slice(-1);
+}
+function syncReveals(battle){
+ const now=battle.s.time,enemies=battle.s.enemies||[];
+ for(const sentry of battle.s.revealSentries||[]){
+  if(sentry.endsAt!=null&&now>sentry.endsAt)continue;
+  for(const e of enemies)if(e.hp>0&&!e.hidden&&Math.max(Math.abs(e.x-sentry.x),Math.abs(e.y-sentry.y))<=sentry.radius){
+   revealEnemy(battle,e,.3);
+   applyStatus(e,'sluggish',1,{source:sentry.fromUid,resistible:false});
+  }
+ }
+ for(const e of enemies){
+  if(Number(e.revealUntil)>now)e.revealed=true;
+  else{e.revealed=false;e.revealUntil=null;}
+ }
+}
+
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,spawnSummon,spawnWhitwEyes,tickWhitwEyes,revealEnemy:(b,t,h)=>revealEnemy(b,t,h),log:(b,t,p)=>log(b,t,p)};}
 
 function bondUnits(battle,id,{deployedOnly=false}={}){return battle.s.units.filter(u=>(!deployedOnly||u.deployed&&u.hp>0)&&battle.owns?.(u,id));}
 function yanUnits(battle){return battle.s.units.filter(u=>battle.economy.ownBonds(u.source).includes('yanShip'));}
@@ -531,7 +560,7 @@ function settlePeriodic(battle,fx){
   if(fx.values?.pull&&source)for(const e of zoneActors(battle,fx,'enemy'))moveActor(battle,e,{x:fx.x,y:fx.y,uid:source.uid},'拖拽');
   if(fx.values?.fragile)for(const e of zoneActors(battle,fx,'enemy'))e.fragile=Math.max(e.fragile||1,Number(fx.values.fragile));
   if(fx.values?.silence)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'silence',fx.interval||1,{source:source?.uid,resistible:false});
-  if(fx.values?.reveal)for(const e of zoneActors(battle,fx,'enemy'))e.revealed=true;
+  if(fx.values?.reveal)for(const e of zoneActors(battle,fx,'enemy'))revealEnemy(battle,e,(fx.interval||1)+.2);
   if(fx.values?.hot)for(const a of zoneActors(battle,fx,'ally'))applyHeal(battle,{source,target:a,amount:fx.values.hot,effectId:fx.id});
   if(fx.values?.elementRegen&&source)for(const a of zoneActors(battle,fx,'ally'))battle.healElements?.(source,a,fx.values.elementRegen);
   if(fx.values?.defBuff)for(const a of zoneActors(battle,fx,'ally')){a.thornDefBuff=Number(fx.values.defBuff);a.thornDefBuffUntil=battle.s.time+1.1;}
@@ -907,7 +936,7 @@ function onSkillStart(battle,u){
  if(u.id==='char_4145_ulpia'&&u.returnPosition){const pos=u.returnPosition;u.returnPosition=null;teleportActor(battle,u,{...pos,source:u,mode:'return'});}
 }
 function onOperatorExit(battle,u,reason){
- if(u.id==='char_4087_ines')for(const e of battle.s.enemies){if(e.inesMarked===u.uid)e.inesMarked=null;if(e.attackSpeedMod<0)e.attackSpeedMod=0;}
+ if(u.id==='char_4087_ines'){for(const e of battle.s.enemies){if(e.inesMarked===u.uid)e.inesMarked=null;if(e.attackSpeedMod<0)e.attackSpeedMod=0;}placeInesSentry(battle,u);}
  for(const fx of battle.s.logicEffects.slice()){
   if(fx.refKind==='live'&&fx.sourceUid===u.uid&&!fx.persistAfterSourceGone)dropEffect(battle,fx,'source-exit');
   if(fx.refKind==='anchor'&&fx.anchorUid===u.uid)dropEffect(battle,fx,'anchor-exit');

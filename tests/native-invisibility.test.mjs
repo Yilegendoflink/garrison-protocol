@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {drawConcealOverlay,concealActive} from '../dist/native-fx.js';
+import {commitExit} from '../dist/native-effects.js';
 
 // 隐匿（INVISIBLE）：统一口径是「不能被不同阵营选中」，被阻挡即视为脱离隐匿；
 // 表现层给我方与敌方都套暗灰色滤镜 + 马赛克。计划与后续项见 INVISIBILITY_PLAN.md。
@@ -69,3 +70,71 @@ test('隐匿马赛克：我方与敌方都画灰色滤镜 + 马赛克块，reduc
  drawConcealOverlay(c2.c,ally,box,{time:1.7,reduceFx:true});
  assert.deepEqual(c2.ops,a.ops,'动效关闭时马赛克不流动');
 });
+
+// 用真实敌人数据落场（隐形/山海众这类自带隐匿的单位）
+function spawnReal(b,id,x,y){
+ const origin=b.map.origin||{col:0,row:0},spot={col:x+origin.col,row:origin.row-y};
+ b.level={...(b.level||{}),routes:[{motionMode:'WALK',startPosition:spot,endPosition:spot,checkpoints:[{type:'WAIT_FOR_SECONDS',time:600}]}],enemyProfiles:{...(b.level?.enemyProfiles||{}),[id]:NATIVE_DATA.enemies[id]}};
+ b.spawn({id,route:0});
+ return b.s.enemies.at(-1);
+}
+
+test('敌人自带的隐匿不会被状态表抹掉，攻击显形后 6 秒会重新隐匿',()=>{
+ const b=liveBattle(['char_498_inside']),u=b.s.units[0];
+ const e=spawnReal(b,'enemy_1299_ymkilr',u.x+1,u.y);
+ assert.equal(e.invisible,true,'山海众头目出场即隐匿');
+ b.step();
+ assert.equal(e.invisible,true,'初始隐匿必须能撑过第一帧（此前会被 tickStatuses 清掉）');
+ b.resolveEnemyStrike(e,u,{});
+ assert.equal(e.invisible,false,'攻击后显形');
+ assert.ok(e.invisibleRecoverAt>b.s.time,'停手 6 秒后重新隐匿');
+ for(let i=0;i<200;i++)b.step();
+ assert.equal(e.invisible,true,'6 秒后恢复隐匿');
+});
+
+test('隐匿的我方不会被敌方远程索敌，正在阻挡它的敌人照打',()=>{
+ const b=liveBattle(['char_469_indigo','char_498_inside']);
+ const blocker=b.s.units[0],hidden=b.s.units[1];
+ blocker.x=3;blocker.y=0;hidden.x=2;hidden.y=0;
+ hidden.statuses.push({kind:'invisible',remaining:30,source:1,value:1});
+ hidden.invisible=true;
+ const foe=probe(b,5,0,{ranged:true,range:9,interval:1,canAttack:true});
+ for(let i=0;i<5;i++)b.step();
+ assert.notEqual(foe.action?.target,hidden.uid,'远程敌人不能选隐匿中的干员');
+ // 贴上去形成阻挡：隐匿不阻止阻挡，正在阻挡它的敌人仍然能打它
+ foe.x=hidden.x;foe.y=hidden.y;
+ b.step();
+ assert.equal(foe.block,hidden.uid,'隐匿单位照常阻挡敌人');
+ const hp=hidden.hp;let sawTarget=false;
+ for(let i=0;i<60;i++){b.step();if(foe.action?.target===hidden.uid)sawTarget=true;}
+ assert.ok(sawTarget,'阻挡它的敌人锁定的是它');
+ assert.ok(hidden.hp<hp,'被阻挡的隐匿干员照样挨打');
+});
+
+test('银灰的鹰眼视觉只在自己攻击范围内反隐，离开范围后恢复隐匿',()=>{
+ const b=liveBattle(['char_172_svrash']),silver=b.s.units[0];
+ const near=probe(b,silver.x+1,silver.y,{invisible:true}),far=probe(b,silver.x+8,silver.y,{invisible:true});
+ for(let i=0;i<4;i++)b.step();
+ assert.equal(near.revealed,true,'射程内的隐匿被反隐');
+ assert.equal(far.revealed,false,'射程外不受影响');
+ near.x=silver.x+8;
+ for(let i=0;i<20;i++)b.step();
+ assert.equal(near.revealed,false,'走出射程后隐匿恢复（反隐窗口自动过期）');
+});
+
+test('伊内丝撤退后影哨留在原地继续反隐与减速',()=>{
+ const b=liveBattle(['char_4087_ines']),ines=b.s.units[0];
+ const near=probe(b,ines.x+1,ines.y,{invisible:true});
+ for(let i=0;i<4;i++)b.step();
+ assert.equal(near.revealed,true,'在攻击范围内的隐匿失效');
+ assert.ok(near.statuses.some(s=>s.kind==='sluggish'),'同时被减速');
+ commitExit(b,{target:ines,reason:'retreat'});
+ b.step();
+ assert.equal((b.s.revealSentries||[]).length,1,'撤退后留下 1 个影哨');
+ for(let i=0;i<10;i++)b.step();
+ assert.equal(near.revealed,true,'影哨让反隐继续生效');
+ near.x=ines.x+9;near.y=ines.y;
+ for(let i=0;i<20;i++)b.step();
+ assert.equal(near.revealed,false,'离开影哨范围后恢复隐匿');
+});
+

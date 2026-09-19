@@ -57,6 +57,16 @@ test('阿戈尔战斗开始吞噬身前干员并支持前三名首次复活',()=
 
 test('叙拉古部署隐匿、卡西米尔阻挡周期伤害和突袭闲置再部署',()=>{
  const s=start(uniqueBond('siracusaShip',6),{siracusaShip:0}).b;assert.ok(s.s.units.every(u=>u.siracusaInvisibleUntil>s.s.time));
+ // 盟约隐匿必须真的挡住敌人：远程敌人不选隐匿中的叙拉古干员，隐匿窗口结束后恢复可选
+ const si=s.s.units[0];
+ for(const u of s.s.units.slice(1)){u.x=-20-u.uid;u.y=-20;}   // 其余干员挪开，避免挡住敌人干扰观察
+ const foe=enemy(s,{x:si.x+2,y:si.y,hp:1e6,ranged:true,range:9,interval:1,canAttack:true,attackCooldown:0});
+ s.step();
+ assert.equal(si.invisible,true,'部署后带隐匿状态');
+ assert.notEqual(foe.action?.target,si.uid,'隐匿中的叙拉古干员不能被远程敌人选为目标');
+ si.statuses=si.statuses.filter(x=>x.kind!=='invisible');si.invisible=false;s.siracusaInvisibleUntil=0;
+ let sawTarget=false;for(let i=0;i<40;i++){s.step();if(foe.action?.target===si.uid)sawTarget=true;}
+ assert.ok(sawTarget,'隐匿结束后恢复可选');
  const k=start(uniqueBond('kazimierzShip',6)).b,u=k.s.units[0],e=enemy(k,{x:u.x,y:u.y,hp:10000,block:u.uid,def:0,res:0});u.kazimierzNextAt=0;k.s.time=2;tickLogic(k,0);assert.ok(e.hp<10000&&e.statuses.some(x=>x.kind==='stun'));
  const r=start(uniqueBond('raidShip',2),{raidShip:50}).b,ru=r.s.units[0];ru.raidIdleSince=0;ru.sp=0;r.s.time=11;enemy(r,{x:ru.x+5,y:ru.y,hp:10000});r.tickBondIdle(ru,0);assert.ok(ru.raidBuffUntil>11);
 });

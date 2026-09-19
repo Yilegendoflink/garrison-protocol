@@ -1,5 +1,9 @@
 # 第二批：隐匿（INVISIBLE）适配计划
 
+> **落地状态（2026-09-18）**：马赛克表现、我方隐匿的索敌落地、「被阻挡即脱离隐匿」、反隐的时间窗模型
+> （银灰鹰眼视觉 / 伊内丝影哨 + 撤退后留哨）都已完成，逐条见文末「落地结果」。
+> 未做：清明 `InvisibleShield`（§D11）、迷彩细则、`drawStatuses` 的隐匿图标（§D19）。
+
 目标：把隐匿做成**一套统一的可选性规则**，让敌人的隐匿、我方干员／召唤物获得的隐匿都真正生效；反隐（隐匿免疫）按原表逐个接入；隐匿单位在场上带**暗灰色流动马赛克**特效。
 
 范围包含波次编辑器的 `INVISIBLE` 词条，以及原表里带 `InvisibleCombat` / `InvisibleShield` 预制体、天赋黑名单写着「隐匿」或「被阻挡前无法被攻击」的敌人。
@@ -118,3 +122,19 @@
 - 迷彩（CAMOUFLAGE）的完整细则：不阻止光环／格子判定、与隐匿免疫的交互方式与隐匿不同。
 - 「隐匿与阻挡时解除」的通用机制（原表注明该机制通常由其他 Buff 实现，不属于隐匿本身）。
 - 隐匿单位对**光环类**技能是否可见：与原作一致地不受隐匿制约（光环不做选择判定），本批沿用现状、只在测试里固化。
+
+## 八、落地结果
+
+| 项 | 实现位置 | 口径 |
+| --- | --- | --- |
+| 形态自带的隐匿 | `native-battle.js` spawn 的 `formInvisible` | `invisible` 每帧由状态表重算，`initialInvisible` 敌人第 2 帧就会显形（实测山海众头目）；补 `formInvisible` 后 12 名自带隐匿的敌人才真正生效 |
+| 攻击显形后重新隐匿 | `resolveEnemyStrike` / 敌人循环 | 山海众（`InvisibleCombat`）攻击时置 `formInvisible=false` 并记 `invisibleRecoverAt=+6s`，到点恢复；此前这段逻辑因上面的显形问题从未触发过 |
+| 被阻挡即脱离隐匿 | `targets()`、`autoSkillWouldHit()`、法尔科内 S2 分支 | 敌人侧：`e.block!=null` 时对所有人都可选（原来只有阻挡者能打） |
+| 我方隐匿 | 敌方 AI 的远程目标过滤 | `alive.filter(u=>!u.invisible&&...)`；正在阻挡该敌人的单位仍是合法目标（与敌人侧对称），光环/AoE 不受隐匿制约 |
+| 反隐模型 | `native-effects.js` 的 `revealEnemy` + `syncReveals` | 反隐源只写 `e.revealUntil`，每帧末尾统一收敛成 `e.revealed`；来源消失后窗口走完自动恢复隐匿（原实现是永久置位，走出去也不撤销） |
+| 银灰【鹰眼视觉】 | `periodicMods` | 攻击范围内（含技能改范围）敌人隐匿失效 |
+| 伊内丝【影哨】 | `periodicMods` + `placeInesSentry` | 攻击范围内隐匿失效且移速 -30%；撤退后在原地留 1 个影哨继续生效（半径取她撤退时攻击范围的最大切比雪夫跨度） |
+| 马赛克 | `drawConcealOverlay`（native-fx） | 我方／召唤物／敌人三处；灰滤镜 + 马赛克（有头像时缩到 6×6 再关插值放大），被反隐时不画，`reduceFx` 下不流动 |
+
+测试：`tests/native-invisibility.test.mjs`（6 例，含山海众显形周期、敌方远程不选隐匿干员、银灰/伊内丝反隐与哨位）
+与 `tests/native-bonds.test.mjs` 的叙拉古用例（盟约隐匿真的挡住敌人）。
