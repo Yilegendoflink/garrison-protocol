@@ -24,7 +24,7 @@
 
 保留技能开关、部署、控制、倒地、漏怪及音量功能。减少动效模式关闭旋转、弹体高度、碎片和额外散射射线，保留目标与类别提示。动画仅依赖模拟时间，暂停与倍速保持同步。冰风在减少动效模式下把风痕从 8 道降到 3 道、冷雾更淡，但仍保留可见提示，因为寒冷本身带有攻速与谢拉格增伤等机制含义。冰风没有声音反馈。
 
-验证：69 项针对性回归通过；`scripts/combat-acceptance.cjs` 的 8 项浏览器检查通过；`scripts/fx-preview.cjs` 生成 15 组预览并验证渲染无状态修改、无浏览器异常。预览图位于 `artifacts/fx-preview/categories.png`。谢拉格寒风由 `tests/native-fx-ice-wind.test.mjs` 覆盖（含「不留常驻区域底色」那条）。盖：25 秒结算发出一条事件、不足 6 人不触发、窗口内渐入渐出、窗口外不绘制、减少动效降档，以及绘制不写入战斗状态。
+验证：69 项针对性回归通过；`scripts/combat-acceptance.cjs` 的 8 项浏览器检查通过；`scripts/fx-preview.cjs` 生成 15 组预览并验证渲染无状态修改、无浏览器异常。预览图位于 `artifacts/fx-preview/categories.png`。谢拉格寒风由 `tests/native-fx-ice-wind.test.mjs` 覆盖：25 秒结算发出一条事件、不足 6 人不触发、窗口内渐入渐出、窗口外不绘制、减少动效降档、绘制不写入战斗状态，以及「不留常驻区域底色」（`drawZones` 跳过 `bond-kjerag-storm`）。
 
 荒芜拉普兰德「终幕·浩劫」的浮游单元（`battle.s.whitwEyes`）是自由飞行的独立单位，之前只有逻辑没有画面。现在由 `native-fx.js` 的 `drawWhitwEyes` 给每个单元画一枚浪头素材：约 0.86×0.5 个地块大小，一弯白色卷浪加数点浪花，朝速度方向淡出的尾迹用来看出实时移动；攻击瞬间补一圈涟漪。减少动效模式下整体缩到一半并降透明度。该绘制只读 `x/y/vx/vy/nextAttackAt`，不写战斗状态。
 
