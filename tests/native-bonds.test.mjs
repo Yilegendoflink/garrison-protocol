@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
-import {commitExit,dealDamage,dispatch,tickLogic,applyElementDamage,reviveActor} from '../dist/native-effects.js';
+import {commitExit,dealDamage,dispatch,tickLogic,applyElementDamage,reviveActor,nearbySpots} from '../dist/native-effects.js';
 import {applyStatus} from '../dist/status.js';
 import {deployNow,enemy} from './effects-harness.mjs';
 
@@ -71,6 +71,50 @@ test('叙拉古部署隐匿、卡西米尔阻挡周期伤害和突袭闲置再�
  const r=start(uniqueBond('raidShip',2),{raidShip:50}).b,ru=r.s.units[0];ru.raidIdleSince=0;ru.sp=0;r.s.time=11;enemy(r,{x:ru.x+5,y:ru.y,hp:10000});r.tickBondIdle(ru,0);assert.ok(ru.raidBuffUntil>11);
 });
 
+test('突袭再部署不与干员／占格子的召唤物重合，四向被占就往外找',()=>{
+ const {b}=start(uniqueBond('raidShip',2),{raidShip:50}),ru=b.s.units[0],mate=b.s.units[1];
+ ru.raidIdleSince=0;ru.sp=0;b.s.time=11;
+ const e=enemy(b,{x:ru.x+5,y:ru.y,hp:10000});
+ mate.x=e.x+1;mate.y=e.y;   // 右侧邻格站着自己的干员
+ b.s.summons.push({uid:b.s.nextId++,id:'probe-summon',kind:'summon',allied:true,canBlock:true,occupiesTile:true,x:e.x-1,y:e.y,hp:100,maxHp:100,deployed:true});
+ b.tickBondIdle(ru,0);
+ assert.ok(ru.raidBuffUntil>11,'邻格被占也要找得到落点，而不是不落');
+ assert.ok(!(ru.x===e.x+1&&ru.y===e.y),'不能压在别的干员身上');
+ assert.ok(!(ru.x===e.x-1&&ru.y===e.y),'不能压在占格子的召唤物上');
+ assert.ok(Math.max(Math.abs(ru.x-e.x),Math.abs(ru.y-e.y))<=3,`落点要在敌人周围，实际 ${ru.x},${ru.y}`);
+});
+test('突袭闲置位移在真实步进里满 10 秒才触发，并走公共位移链路',()=>{
+ const {b}=start(uniqueBond('raidShip',2),{raidShip:50});
+ const ru=b.s.units[0],from={x:ru.x,y:ru.y};ru.sp=0;
+ const e=enemy(b,{x:ru.x+6,y:ru.y,hp:1e6});
+ for(let i=0;i<Math.round(9.5*30);i++)b.step();
+ assert.deepEqual({x:ru.x,y:ru.y},from,'不满 10 秒不位移');
+ for(let i=0;i<Math.round(1*30);i++)b.step();
+ assert.notDeepEqual({x:ru.x,y:ru.y},from,'闲置满 10 秒后要位移走');
+ assert.ok(!(ru.x===e.x&&ru.y===e.y),'落点不能和敌人同格');
+ assert.ok(ru.raidBuffUntil>=b.s.time,`位移后要拿到攻防加成窗口，实际 ${ru.raidBuffUntil}`);
+ assert.ok(b.s.logicLog.some(x=>x.type==='move'&&x.uid===ru.uid&&x.mode==='raid-redeploy'),'位移走公共位移链路');
+});
+test('突袭敌人周围全是占位时一路往外找落点，不压在任何人身上',()=>{
+ const {b}=start(uniqueBond('raidShip',2),{raidShip:50});
+ const ru=b.s.units[0],from={x:ru.x,y:ru.y};ru.sp=0;
+ const e=enemy(b,{x:ru.x+6,y:ru.y,hp:1e6});
+ // 用占格子的召唤物把敌人 3 圈内所有可部署格填满：落点必须找到更外面去
+ const blocked=[];
+ for(const spot of nearbySpots(e,{maxRadius:3})){
+  const tile=b.map.grid[spot.y]?.[spot.x];
+  if(!tile||tile.buildableType==='NONE'||tile.obstacle)continue;
+  if(spot.x===ru.x&&spot.y===ru.y)continue;
+  blocked.push(spot.x+','+spot.y);
+  b.s.summons.push({uid:b.s.nextId++,id:'probe-summon',kind:'summon',allied:true,canBlock:true,occupiesTile:true,x:spot.x,y:spot.y,hp:100,maxHp:100,deployed:true});
+ }
+ assert.ok(blocked.length>0,'测试需要先把近处填满');
+ for(let i=0;i<12*30;i++)b.step();
+ const landed=ru.x+','+ru.y;
+ assert.notDeepEqual({x:ru.x,y:ru.y},from,'近处被占满也要找得到落点，而不是不位移');
+ assert.ok(!blocked.includes(landed)&&!(ru.x===e.x&&ru.y===e.y),`落点不能在占位/敌人身上，实际 ${landed}`);
+ assert.ok(Math.max(Math.abs(ru.x-e.x),Math.abs(ru.y-e.y))>3,`近处满了就该到更外面，实际 ${landed}`);
+});
 test('卡西米尔部署卫戍识别 onstart，并在重新部署时重复叠层且遵守每场上限',()=>{
  const forbidden=new Set(['char_237_gravel','char_423_blemsh','char_430_fartth','char_1014_nearl2','char_4116_blkkgt']);
  const pool=Object.values(NATIVE_DATA.season.charShopChessDatas).filter(s=>s.charId&&!s.isHidden&&NATIVE_DATA.season.charChessDataDict[s.chessId].bondIds.includes('kazimierzShip')&&!forbidden.has(s.charId));

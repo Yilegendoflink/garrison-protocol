@@ -9,7 +9,7 @@ import {containsTarget} from './targeting.js';
 import {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds,TENTATIVE_PROJECTILE_SPEED,enemyBehaviorProfile,enemyTargetValid,enemyTargetInRange,enemyShouldHoldPosition,enemySpecialTraitId,enemyBleedingTraitId,ENEMY_MOVEMENT_POLICIES} from './native-combat.js';
 import {skillWidensRange,rangeGeometry} from './protocol.js';
 import {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,tokenCostFor} from './native-operator-effects.js';
-import {ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,spawnSummon,grantGuard,chebyshev} from './native-effects.js';
+import {ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,canRelocateTo,nearbySpots,spawnSummon,grantGuard,chebyshev} from './native-effects.js';
 
 export class NativeBattle {
  constructor(data,economy,map,turn,{restore=false}={}){
@@ -454,7 +454,18 @@ export class NativeBattle {
    u.raidIdleSince??=this.s.time;
    if(this.s.time-u.raidIdleSince<10&&!(cost>0&&u.sp>=cost))return;
    const enemy=this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.flying).sort((a,b)=>a.progress-b.progress||a.uid-b.uid)[0];if(!enemy)return;/* ponytail: nearest ground target is the deterministic fallback until the full server target selector is available. */
-   const around=[[1,0],[-1,0],[0,1],[0,-1],[0,0]];for(const [dx,dy] of around){const spot={x:Math.round(enemy.x)+dx,y:Math.round(enemy.y)+dy};if(!this.map.grid[spot.y]?.[spot.x]||this.map.grid[spot.y][spot.x].buildableType==='NONE')continue;if(teleportActor(this,u,{...spot,source:u,mode:'raid-redeploy'})){u.raidBuffUntil=this.s.time+10;u.raidIdleSince=this.s.time;u.lastAttack=this.s.time;this.emit('bond-raid',{uid:u.uid,x:u.x,y:u.y,targetUid:enemy.uid});break;}}
+   // 落点在敌人周围找：先四向、再逐圈外扩（nearbySpots），一直找到棋盘边界。
+   // 候选格必须「能部署该干员且没被别的干员／占格子的召唤物占了」；只找 3 圈在满编阵型里
+   // 会找不到落点而整个效果静默不触发，所以这里按距离枚举整张棋盘，取最近的那个空位。
+   let landed=false;
+   const reach=Math.max(this.map.rows||1,this.map.cols||1)+1;
+   for(const spot of nearbySpots(enemy,{maxRadius:reach})){
+    if(Math.round(u.x)===spot.x&&Math.round(u.y)===spot.y)continue;
+    if(!canRelocateTo(this,u,spot.x,spot.y))continue;
+    if(!teleportActor(this,u,{...spot,source:u,mode:'raid-redeploy'}))continue;
+    landed=true;break;
+   }
+   if(landed){u.raidBuffUntil=this.s.time+10;u.raidIdleSince=this.s.time;u.lastAttack=this.s.time;this.emit('bond-raid',{uid:u.uid,x:u.x,y:u.y,targetUid:enemy.uid});}
   }
   step(){
   if(this.s.finished)return;if(this.s.settle.fault)throw Error('战斗结算异常');if(!this.s.settle.queue.length){this.s.settle.byId={};this.s.settle.consumed=[];}const dt=1/FPS;this.s.frame++;this.s.time=this.s.frame/FPS;while(this.s.queue.length&&this.s.queue[0].at<=this.s.time)this.spawn(this.s.queue.shift());this.refreshEnemyCostEffects();this.tickCost(dt);
