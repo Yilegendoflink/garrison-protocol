@@ -286,9 +286,14 @@ test('凛御银灰技能只对尚未入场的单位改费用属性',()=>{
  assert.equal(b.deploymentCost(guard),Math.max(0,guard.baseCost-5));
 });
 
-test('荒芜拉普兰德三技能开启后浮游单元显示并飞行索敌',()=>{
+test('凛御银灰的「风雪之眼」在待部署区、不生成场上召唤物（本期不实现）',()=>{
  const chessId=Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId==='char_1045_svash2').chessId;
- const {b}=openBattle({chessId,skillIndex:2});deployNow(b);const u=byId(b,'char_1045_svash2'),e=enemy(b,{x:u.x+2,y:u.y,hp:10000,def:0});u.sp=b.spCost(u);b.activate(u);const floats=b.s.summons.filter(s=>s.ownerUid===u.uid&&s.type==='svash2-float');assert.equal(floats.length,3);assert.ok(floats.every(eye=>eye.svashPursuit&&eye.flying));const eye=floats[0],before=Math.hypot(eye.x-e.x,eye.y-e.y);b.s.time+=1/30;tickLogic(b,1/30);assert.equal(eye.svashTargetUid,e.uid);assert.ok(Math.hypot(eye.x-e.x,eye.y-e.y)<before);
+ const {b}=openBattle({chessId,skillIndex:2});deployNow(b);const u=byId(b,'char_1045_svash2');
+ assert.ok(u,'应有凛御银灰');
+ assert.equal((b.s.summons||[]).filter(s=>s.ownerUid===u.uid).length,0,'入场不应生成召唤物：风雪之眼是待部署区的卡');
+ u.sp=b.spCost(u);b.activate(u);
+ assert.equal((b.s.summons||[]).filter(s=>s.ownerUid===u.uid).length,0,'技能三也不生成场上实体');
+ assert.ok(u.svashCostRemaining>0,'技能三的持续部署费用照旧结算');
 });
 
 test('野鬃 S1 与砾 S1 的部署增益按生命周期衰减',()=>{
