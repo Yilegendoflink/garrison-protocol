@@ -1,6 +1,7 @@
 import {NativeEconomy} from './native-economy.js';
 import {NativeBattle} from './native-battle.js';
 import {buildPhasePlan,blackboard,ensureStock,restoreStock,stockOf,INFINITE_FUNDS} from './protocol.js';
+import {allowsHighlandPlacement} from './native-branches.js';
 import {runStrategyEvent} from './strategy.js';
 import {createWaveRoster} from './native-wave-random.js';
 
@@ -186,7 +187,7 @@ export class NativeSession extends NativeEconomy {
  canDeploy(uid,x,y){
   if(!Number.isInteger(x)||!Number.isInteger(y))return false;
   const u=this.s.units.find(u=>u.uid===uid),cell=this.map.grid[y]?.[x];if(!u||!cell||this.s.phase!=='prep'||cell.buildableType==='NONE')return false;
-  const valid=(unit,tile)=>this.data.profiles[unit.chessId].position!=='MELEE'||tile.heightType!=='HIGHLAND';if(!valid(u,cell))return false;
+  const valid=(unit,tile)=>{const p=this.data.profiles[unit.chessId];return tile.heightType!=='HIGHLAND'||p.position!=='MELEE'||allowsHighlandPlacement(p);};if(!valid(u,cell))return false;
   const other=this.s.units.find(v=>v.uid!==uid&&v.position?.x===x&&v.position?.y===y),old=u.position;
   // 已放置的召唤物卡也占格：干员不能压在**别人**的召唤物上（自己的那张在移动时会被清位）。
   if((this.s.summonCards||[]).some(c=>c.ownerUid!==uid&&c.position?.x===x&&c.position?.y===y))return false;

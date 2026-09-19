@@ -1515,13 +1515,13 @@ const BRANCH_POLICIES={
  fastshot:{antiAir:true,priority:'air'},longrange:{antiAir:true,priority:'defense'},siegesniper:{antiAir:true,priority:'weight'},closerange:{antiAir:true},
  aoesniper:{antiAir:true,style:'splash',radius:1},splashcaster:{damageType:'arts',antiAir:true,style:'splash',radius:1.1},blastcaster:{damageType:'arts',antiAir:true,style:'all'},
  reaperrange:{antiAir:true,style:'all',frontScale:true},bombarder:{antiAir:false,style:'aftershock',radius:.9,pending:['余震时序']},hammer:{style:'hammer',radius:1},fortress:{style:'fortress',radius:1},
- centurion:{style:'block-count'},crusher:{style:'block-count'},pusher:{style:'block-count'},sword:{hits:2},
+ centurion:{style:'block-count'},crusher:{style:'block-count'},pusher:{style:'block-count',highland:true},sword:{hits:2},
  lord:{antiAir:true,rangedPenalty:true},instructor:{unblockedBonus:true},
  reaper:{style:'all',noExternalHealing:true,selfHealing:'reaper'},musha:{noExternalHealing:true,selfHealing:'musha'},unyield:{noExternalHealing:true},
  slower:{damageType:'arts',antiAir:true,sluggish:.8},chain:{damageType:'arts',antiAir:true,style:'chain',jumpRadius:1.7,jumpScale:.85},
  mystic:{damageType:'arts',antiAir:true,storage:true},hunter:{antiAir:true,magazine:true},funnel:{damageType:'arts',antiAir:true,drone:true,pending:['技能释放浮游单元']},
  loopshooter:{returnProjectile:true,pending:['回旋轨迹与速度校准']},stalker:{style:'all',evasion:.5,taunt:-1},geek:{antiAir:true,hpDrain:.01},
- bearer:{blockZeroDuringSkill:true},agent:{antiAir:true},shotprotector:{antiAir:true},hookmaster:{antiAir:true,pending:['位移力度与碰撞']},
+ bearer:{blockZeroDuringSkill:true},agent:{antiAir:true},shotprotector:{antiAir:true},hookmaster:{antiAir:true,highland:true,pending:['位移力度与碰撞']},
  tactician:{antiAir:true,pending:['战术点与援军']},summoner:{damageType:'arts',antiAir:true,pending:['召唤物生命周期']},soulcaster:{damageType:'arts',antiAir:true,pending:['击杀召唤与召唤物索敌']},
  duelist:{spRequiresBlock:true,pending:['模组解除阻回的例外']},dollkeeper:{pending:['替身切换与Buff清理']},skywalker:{pending:['起飞与空中阻挡']},skybreaker:{antiAir:true,airOnlyIdle:true,pending:['起飞／降落']},
  ritualist:{damageType:'arts',antiAir:true,pending:['元素损伤']},underminer:{damageType:'arts',antiAir:true},
@@ -1548,6 +1548,12 @@ function skillAntiAir(charId,skillIndex){
  const row=SKILL_ANTIAIR[charId];
  return row&&skillIndex!=null&&Object.prototype.hasOwnProperty.call(row,skillIndex)?row[skillIndex]:null;
 }
+// 部署位：PRTS 分支特性写「可以放置于远程位」的两个分支（推击手／钩索师）既能上高台也能下地面，
+// 其余近战分支仍然只能放地面。数据来源 data/prts/branch-rules.json 的 baseTrait，
+// tests/native-deployment-placement.test.mjs 会拿它做门禁。
+function allowsHighlandPlacement(profile){
+ return !!(BRANCH_POLICIES[profile?.branch]?.highland);
+}
 function branchTrait(profile){
  const phase=profile.phase??Number(profile.status?.evolvePhase?.replace('PHASE_','')||0),level=profile.level??profile.status?.charLevel??1;
  const candidates=(profile.trait?.candidates||[]).filter(c=>{const required=Number(String(c.unlockCondition?.phase||'PHASE_0').replace('PHASE_',''));return required<phase||(required===phase&&(c.unlockCondition?.level||1)<=level);});
@@ -1558,7 +1564,7 @@ function branchBehavior(profile,active=false){
  return {...rule,kind,style:rule.style||'single',damageType:rule.artsDuringSkill&&active?'arts':rule.damageType||(['CASTER','SUPPORT'].includes(profile.profession)?'arts':'physical'),antiAir:rule.antiAir??(profile.position==='RANGED'),attack:rule.attack!==false&&!(rule.attackWhen==='skill'&&!active)};
 }
 
-return {BRANCH_POLICIES,SKILL_ANTIAIR,skillAntiAir,branchTrait,branchBehavior};
+return {BRANCH_POLICIES,SKILL_ANTIAIR,skillAntiAir,allowsHighlandPlacement,branchTrait,branchBehavior};
 },
 "native-wave-defaults.js": function(load) {
 // Generated from data/modes/alliance-lower/default-wave-table.json. Edit the JSON export, then rebuild.
@@ -4022,6 +4028,7 @@ return {blackboardValues,talentValues,coinCapFor,grantCoins,spendCoins,coinGainA
 },
 "native-effects.js": function(load) {
 const {applyDamage,recoverHP,damage} = load("combat.js");
+const {allowsHighlandPlacement} = load("native-branches.js");
 const {applyStatus,permissions} = load("status.js");
 const {blackboard,resolveActiveTalents,nativeAttributes} = load("protocol.js");
 const {gainSp} = load("native-sp.js");
@@ -4792,11 +4799,12 @@ function moveActor(battle,target,source,description=''){
 }
 
 // 「换位置」类效果（盟约突袭的再部署、乌尔比安 S3 的船锚位移）的落点口径：地形按备战期
-// canDeploy 的同一套规则（不能部署的格子、近战不能上高台），再叠上 validMoveTile 的占位判定。
+// canDeploy 的同一套规则（不能部署的格子、近战不能上高台——推击手／钩索师例外，见
+// allowsHighlandPlacement），再叠上 validMoveTile 的占位判定。
 // 调用方先用它筛候选格，再交给 teleportActor 落位。
 function canRelocateTo(battle,actor,x,y){
  const tile=battle.map.grid[y]?.[x];if(!tile||tile.buildableType==='NONE'||tile.obstacle)return false;
- if(actor?.kind!=='summon'&&battle.profile?.(actor)?.position==='MELEE'&&tile.heightType==='HIGHLAND')return false;
+ if(actor?.kind!=='summon'&&battle.profile?.(actor)?.position==='MELEE'&&tile.heightType==='HIGHLAND'&&!allowsHighlandPlacement(battle.profile(actor)))return false;
  return validMoveTile(battle,actor,x,y,{allowFlyOnly:true});
 }
 // 找落点用的候选枚举：先四向、再对角，然后一圈圈外扩（老实现只试四向，四格被占就不落点）。
@@ -5943,6 +5951,7 @@ return {NativeBattle};
 const {NativeEconomy} = load("native-economy.js");
 const {NativeBattle} = load("native-battle.js");
 const {buildPhasePlan,blackboard,ensureStock,restoreStock,stockOf,INFINITE_FUNDS} = load("protocol.js");
+const {allowsHighlandPlacement} = load("native-branches.js");
 const {runStrategyEvent} = load("strategy.js");
 const {createWaveRoster} = load("native-wave-random.js");
 // 商店阶级概率（项目规定口径）：最高阶 30% / 次高阶 40% / 更低阶合计 30%。
@@ -6127,7 +6136,7 @@ class NativeSession extends NativeEconomy {
  canDeploy(uid,x,y){
   if(!Number.isInteger(x)||!Number.isInteger(y))return false;
   const u=this.s.units.find(u=>u.uid===uid),cell=this.map.grid[y]?.[x];if(!u||!cell||this.s.phase!=='prep'||cell.buildableType==='NONE')return false;
-  const valid=(unit,tile)=>this.data.profiles[unit.chessId].position!=='MELEE'||tile.heightType!=='HIGHLAND';if(!valid(u,cell))return false;
+  const valid=(unit,tile)=>{const p=this.data.profiles[unit.chessId];return tile.heightType!=='HIGHLAND'||p.position!=='MELEE'||allowsHighlandPlacement(p);};if(!valid(u,cell))return false;
   const other=this.s.units.find(v=>v.uid!==uid&&v.position?.x===x&&v.position?.y===y),old=u.position;
   // 已放置的召唤物卡也占格：干员不能压在**别人**的召唤物上（自己的那张在移动时会被清位）。
   if((this.s.summonCards||[]).some(c=>c.ownerUid!==uid&&c.position?.x===x&&c.position?.y===y))return false;

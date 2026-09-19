@@ -20,6 +20,7 @@
 - 猎手、秘术师、回环射手、驭械术师：分别处理独立武器装填、能量储存、投射物回收门槛及普通浮游单元伤害。装填不复用技能弹药，攻击取消时不提前消耗尚未发射的储能。
 - 速射手／神射手／攻城手、领主／教官、凝滞师／链术师、伏击客、怪杰：分别处理目标优先级、攻击倍率、停顿、闪避／嘲讽和非致命生命流失。
 - 对空：分支默认值来自 PRTS「分支特性信息/data」的 `antiAir`（本地 `data/prts/branch-rules.json` 与 `BRANCH_POLICIES` 逐条一致，`native-battle.behavior()` 是唯一读取口）。**部分地面干员的技能会改写这一点**，依据是 PRTS 干员页技能备注里的「※可对空／※不可对空」，记在 `native-branches.js` 的 `SKILL_ANTIAIR`：德克萨斯「剑雨」、焰尾「红松林」、忍冬「坠刃拷问」、塞雷娅「钙质化」、玛恩纳「未照耀的荣光」、缄默德克萨斯「剑雨滂沱」、锏「归于宁静」、泥岩「秽壤的血脉」、号角「照明榴弹」可对空；银灰「雪境生存法则」缩小范围后**不再**攻击空中单位。瞬时／被动技没有生效期，覆盖只作用于开启那一帧（它们的伤害就在那一帧结算）。回归：`tests/native-air-targeting.test.mjs`。
+- 部署位：PRTS 分支特性里写「可以放置于远程位」的只有**推击手**与**钩索师**（歌蕾蒂娅、崖心、见行者等），它们既能放地面也能放高台；其余近战分支只能放地面，远程干员照旧可以落在本模式的地面格上。标记是 `BRANCH_POLICIES[branch].highland`＋`allowsHighlandPlacement()`，`NativeSession.canDeploy` 与 `native-effects.canRelocateTo` 共用。回归：`tests/native-deployment-placement.test.mjs`。
 
 ## 实现边界
 

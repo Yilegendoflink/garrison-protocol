@@ -1,4 +1,5 @@
 import {applyDamage,recoverHP,damage} from './combat.js';
+import {allowsHighlandPlacement} from './native-branches.js';
 import {applyStatus,permissions} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes} from './protocol.js';
 import {gainSp} from './native-sp.js';
@@ -770,11 +771,12 @@ export function moveActor(battle,target,source,description=''){
 }
 
 // 「换位置」类效果（盟约突袭的再部署、乌尔比安 S3 的船锚位移）的落点口径：地形按备战期
-// canDeploy 的同一套规则（不能部署的格子、近战不能上高台），再叠上 validMoveTile 的占位判定。
+// canDeploy 的同一套规则（不能部署的格子、近战不能上高台——推击手／钩索师例外，见
+// allowsHighlandPlacement），再叠上 validMoveTile 的占位判定。
 // 调用方先用它筛候选格，再交给 teleportActor 落位。
 export function canRelocateTo(battle,actor,x,y){
  const tile=battle.map.grid[y]?.[x];if(!tile||tile.buildableType==='NONE'||tile.obstacle)return false;
- if(actor?.kind!=='summon'&&battle.profile?.(actor)?.position==='MELEE'&&tile.heightType==='HIGHLAND')return false;
+ if(actor?.kind!=='summon'&&battle.profile?.(actor)?.position==='MELEE'&&tile.heightType==='HIGHLAND'&&!allowsHighlandPlacement(battle.profile(actor)))return false;
  return validMoveTile(battle,actor,x,y,{allowFlyOnly:true});
 }
 // 找落点用的候选枚举：先四向、再对角，然后一圈圈外扩（老实现只试四向，四格被占就不落点）。

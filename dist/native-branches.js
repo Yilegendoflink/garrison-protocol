@@ -12,13 +12,13 @@ export const BRANCH_POLICIES={
  fastshot:{antiAir:true,priority:'air'},longrange:{antiAir:true,priority:'defense'},siegesniper:{antiAir:true,priority:'weight'},closerange:{antiAir:true},
  aoesniper:{antiAir:true,style:'splash',radius:1},splashcaster:{damageType:'arts',antiAir:true,style:'splash',radius:1.1},blastcaster:{damageType:'arts',antiAir:true,style:'all'},
  reaperrange:{antiAir:true,style:'all',frontScale:true},bombarder:{antiAir:false,style:'aftershock',radius:.9,pending:['余震时序']},hammer:{style:'hammer',radius:1},fortress:{style:'fortress',radius:1},
- centurion:{style:'block-count'},crusher:{style:'block-count'},pusher:{style:'block-count'},sword:{hits:2},
+ centurion:{style:'block-count'},crusher:{style:'block-count'},pusher:{style:'block-count',highland:true},sword:{hits:2},
  lord:{antiAir:true,rangedPenalty:true},instructor:{unblockedBonus:true},
  reaper:{style:'all',noExternalHealing:true,selfHealing:'reaper'},musha:{noExternalHealing:true,selfHealing:'musha'},unyield:{noExternalHealing:true},
  slower:{damageType:'arts',antiAir:true,sluggish:.8},chain:{damageType:'arts',antiAir:true,style:'chain',jumpRadius:1.7,jumpScale:.85},
  mystic:{damageType:'arts',antiAir:true,storage:true},hunter:{antiAir:true,magazine:true},funnel:{damageType:'arts',antiAir:true,drone:true,pending:['技能释放浮游单元']},
  loopshooter:{returnProjectile:true,pending:['回旋轨迹与速度校准']},stalker:{style:'all',evasion:.5,taunt:-1},geek:{antiAir:true,hpDrain:.01},
- bearer:{blockZeroDuringSkill:true},agent:{antiAir:true},shotprotector:{antiAir:true},hookmaster:{antiAir:true,pending:['位移力度与碰撞']},
+ bearer:{blockZeroDuringSkill:true},agent:{antiAir:true},shotprotector:{antiAir:true},hookmaster:{antiAir:true,highland:true,pending:['位移力度与碰撞']},
  tactician:{antiAir:true,pending:['战术点与援军']},summoner:{damageType:'arts',antiAir:true,pending:['召唤物生命周期']},soulcaster:{damageType:'arts',antiAir:true,pending:['击杀召唤与召唤物索敌']},
  duelist:{spRequiresBlock:true,pending:['模组解除阻回的例外']},dollkeeper:{pending:['替身切换与Buff清理']},skywalker:{pending:['起飞与空中阻挡']},skybreaker:{antiAir:true,airOnlyIdle:true,pending:['起飞／降落']},
  ritualist:{damageType:'arts',antiAir:true,pending:['元素损伤']},underminer:{damageType:'arts',antiAir:true},
@@ -44,6 +44,12 @@ export const SKILL_ANTIAIR={
 export function skillAntiAir(charId,skillIndex){
  const row=SKILL_ANTIAIR[charId];
  return row&&skillIndex!=null&&Object.prototype.hasOwnProperty.call(row,skillIndex)?row[skillIndex]:null;
+}
+// 部署位：PRTS 分支特性写「可以放置于远程位」的两个分支（推击手／钩索师）既能上高台也能下地面，
+// 其余近战分支仍然只能放地面。数据来源 data/prts/branch-rules.json 的 baseTrait，
+// tests/native-deployment-placement.test.mjs 会拿它做门禁。
+export function allowsHighlandPlacement(profile){
+ return !!(BRANCH_POLICIES[profile?.branch]?.highland);
 }
 export function branchTrait(profile){
  const phase=profile.phase??Number(profile.status?.evolvePhase?.replace('PHASE_','')||0),level=profile.level??profile.status?.charLevel??1;
