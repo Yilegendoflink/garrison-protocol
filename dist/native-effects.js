@@ -408,6 +408,15 @@ export function tickLogic(battle,dt){
   if(fx.refKind==='anchor'&&fx.anchorUid!=null&&!getActor(battle.s,fx.anchorUid)){dropEffect(battle,fx,'anchor');continue;}
   if(fx.anchorUid){const a=getActor(battle.s,fx.anchorUid);if(a){fx.x=a.x;fx.y=a.y;}}
  }
+ // 投掷物（锡人「炼金单元」）：带 carrier 的区域按固定速度朝落点移动，抵达后停在原地直到 endsAt 结束。
+ // 移动必须在结算之前推进：每秒结算读的就是 fx.x/fx.y，圈的位置即伤害的位置。
+ for(const fx of battle.s.logicEffects||[]){
+  const c=fx.carrier;
+  if(!c||c.arrived)continue;
+  const dx=Number(c.toX)-fx.x,dy=Number(c.toY)-fx.y,dist=Math.hypot(dx,dy),step=Math.max(0,Number(c.speed)||1)*Math.max(0,Number(dt)||0);
+  if(dist<=step||dist<1e-6){fx.x=Number(c.toX);fx.y=Number(c.toY);c.arrived=true;}
+  else{fx.x+=dx/dist*step;fx.y+=dy/dist*step;}
+ }
  let scheduled=0;
  while(true){
   const due=battle.s.logicEffects.filter(f=>f.nextAt!=null&&f.nextAt<=now+1e-9&&(f.endsAt==null||f.nextAt<=f.endsAt+1e-9)).sort((a,b)=>a.nextAt-b.nextAt||a.id-b.id)[0];
@@ -565,7 +574,9 @@ function bondPeriodic(battle,u){
 function zoneActors(battle,fx,side){
  const cx=fx.x,cy=fx.y,r=fx.radius??1;
  const pool=side==='enemy'?enemyActors(battle.s):side==='all'?[...enemyActors(battle.s),...alliedActors(battle.s).filter(u=>u.deployed&&u.hp>0)]:alliedActors(battle.s).filter(u=>u.deployed&&u.hp>0);
- return pool.filter(a=>chebyshev({x:cx,y:cy},a)<=r);
+ const inside=pool.filter(a=>chebyshev({x:cx,y:cy},a)<=r);
+ // groundOnly：原表写「地面敌人」的圈不吃飞行单位（友方一侧不受这个开关影响）。
+ return side==='ally'||!fx.values?.groundOnly?inside:inside.filter(a=>!a.flying);
 }
 function settlePeriodic(battle,fx){
  const source=getActor(battle.s,fx.sourceUid);

@@ -3404,6 +3404,8 @@ const {applyStatus,removeStatus} = load("status.js");
 // Per-operator adapters share only small, data-driven primitives. A missing
 // primitive remains visible in the capability ledger instead of silently
 // becoming a normal attack.
+// 锡人「炼金单元」的表现常数（原表没有单元自身的范围与速度字段，口径见 operatorSkillStart 里的说明）。
+const ALCHEMY_UNIT_RADIUS=1.5,ALCHEMY_UNIT_SPEED=1;
 const NUMERIC_KEYS={
  atkScale:['atk_scale','attack@atk_scale','attack@atk_scale_1','damage_scale'],
  maxTarget:['max_target','attack@max_target','attack@times_target'],
@@ -3469,6 +3471,7 @@ const ZONE_VISUALS={
  'glady-s3':{shape:'circle',tone:'water'},         // 涌潮悲歌：吸附水涡
  'cetsyr-dust':{shape:'circle',tone:'sand'},       // 沙尘
  'etlchi-s1':{shape:'circle',tone:'blade'},        // 刀光领域
+ 'tinman-alchemy':{shape:'circle',tone:'shadow'},  // 锡人「炼金单元」：投掷物自身划出的圈
  'blaze2-s1':{shape:'circle',tone:'burn'},         // 灼燃领域
  'sntlla-s2':{shape:'circle',tone:'frost'},        // 寒冷领域
  'sbell2-s2':{shape:'circle',tone:'frost'},        // 睡眠+寒冷领域
@@ -3722,6 +3725,24 @@ function operatorSkillStart(battle,u,ctx){
  if(has(text,/下次攻击.*(?:恢复|回复)/)&&Number.isFinite(config.healScale)){u.pendingAttackHeal={scale:config.healScale,sourceUid:u.uid};suppressDefault=true;}
  if(has(text,/下次治疗.*(?:额外)?回复目标最大生命值/)&&Number.isFinite(Number(bb.hp_ratio))){u.pendingHealBonus={ratio:Number(bb.hp_ratio),requiresBelowHalf:has(text,/不满一半|低于一半/)};suppressDefault=true;}
  if(has(text,/下次治疗.*治疗量提升|下次治疗时的治疗量提升/)&&Number(bb.heal_scale)>0){u.pendingHealScale=Number(bb.heal_scale);if(profile.charId==='char_4139_papyrs')u.papyrsShieldScale=Number(bb.shield_scale_skill)||1;suppressDefault=true;}
+  // 锡人「炼金单元」（S1「老科利」/S2「大拉里」）：朝目标方向投出一个缓慢飞行的召唤物，自身划出半径 1.5 的圈，
+ // 圈内每秒结算技能标注的效果（地面敌人受伤／虚弱，或友方回复），飞到目标位置后停在原地、到 projectile_delay_time
+ // 结束才消失。原表只给 projectile_range（技能射程）与 projectile_delay_time（存活时长），没有单元自身的半径与
+ // 飞行速度——半径 1.5 与「缓慢飞行、到点停驻」按用户 2026-09-19 口径，速度取 1 格/秒。
+ if(profile.charId==='char_4151_tinman'&&has(text,/炼金单元/)){
+  const atk=battle.stats(u).atk,scale=Number(bb.atk_scale)||config.atkScale||.5;
+  const talent=activeTalents(battle,u).find(t=>t.name==='凋敝魂灵');
+  const dirs=[[1,0],[0,-1],[-1,0],[0,1]],dir=dirs[(u.dir||0)%4],reach=Math.max(1,Math.round(Number(bb.projectile_range)||1));
+  // 落点：有目标就打向目标所在格，没有目标就按朝向落在技能射程处（技能是手动投掷，不该凭空取消）。
+  const target=battle.targets(u)[0]||null,spot=target?{x:target.x,y:target.y}:{x:u.x+dir[0]*reach,y:u.y+dir[1]*reach};
+  const life=Math.max(.5,Number(bb.projectile_delay_time)||8),healRatio=Number(bb.hp_recovery_per_sec_ratio)||0;
+  ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'tinman-alchemy:'+u.id+':'+u.skillCount,
+   stackRule:'stack',x:u.x,y:u.y,radius:ALCHEMY_UNIT_RADIUS,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
+   trackArea:true,trackSide:'enemy',refKind:'live',values:{dot:true,groundOnly:true,atk_scale:scale,type:'arts',
+    attackDown:Number(bb.atk)<0?Number(bb.atk):0,hot:healRatio>0?atk*healRatio:0,fragile:talent?Number(talent.values?.['skill@damage_scale'])||1.2:0},
+   snapshot:{damage:atk*scale},carrier:{toX:spot.x,toY:spot.y,speed:ALCHEMY_UNIT_SPEED,arrived:false}});
+  return true;
+ }
  const periodicScale=Number(bb.magic_atk_scale??bb.damage_scale??bb.atk_scale??config.atkScale),periodicInterval=Number(bb.interval??bb.attack_interval??1),periodicCost=textCostValue(text)??costValue(config,'periodic'),periodicTick=costValue(config,'periodicTick'),duration=profile.skill?.duration;
  if(profile.charId!=='char_1045_svash2'&&periodicCost!=null&&has(text,/持续(?:时间内)?(?:逐渐|回复总共|获得)|期间逐渐回复/)){const span=duration<0?1e9:duration>0?duration:1,interval=Math.max(.1,periodicInterval),count=Math.max(1,Math.round(span/interval)),perTick=Number.isFinite(periodicTick)?periodicTick:periodicCost/count;u.pendingPeriodicCost={total:periodicCost,duration:span,endsAt:battle.s.time+span,interval,perTick,remaining:periodicCost,nextAt:battle.s.time+interval,skillCount:u.skillCount};}
  const attackCost=costValueForText(config,text,'attack');if(attackCost!=null&&has(text,/下次攻击.*获得.*费用/))u.pendingCostGain={amount:attackCost,skillCount:u.skillCount};
@@ -3733,7 +3754,6 @@ function operatorSkillStart(battle,u,ctx){
  if(profile.charId==='char_474_glady'&&profile.skillIndex===2){const target=battle.targets(u)[0]||u,center={x:target.x,y:target.y};u.gladyVortex=center;const hitDuration=Number(bb.hit_duration)||9;if(target!==u)applyStatus(target,'root',hitDuration,{source:u.uid,resistible:false});ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'glady-s3',x:center.x,y:center.y,radius:1.5,interval:Number(bb.interval)||1.5,nextAt:battle.s.time+(Number(bb.interval)||1.5),endsAt:battle.s.time+(duration>0?duration:9),values:{dot:true,sluggish:true,pull:true,type:'arts',atk_scale:Number(bb.atk_scale)||1},snapshot:{damage:battle.stats(u).atk*(Number(bb.atk_scale)||1)},refKind:'owner',persistAfterSourceGone:false});return true;}
  if(profile.charId==='char_171_bldsk'&&profile.skillIndex===1){const candidates=allAllies(battle,u,true).filter(a=>a.uid!==u.uid),target=candidates.length?candidates[Math.floor(battle.economy.random()*candidates.length)]:null;if(target){u.warfarinTargetUid=target.uid;target.warfarinBuff={atk:Number(bb.atk)||0,endsAt:battle.s.time+(Number(bb.duration)||15),sourceUid:u.uid};ctx.addEffect(battle,{kind:'loss',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:target.uid,talentOrSkillId:'warfarin-s2-ally',interval:Number(bb.interval)||1,nextAt:battle.s.time+(Number(bb.interval)||1),endsAt:battle.s.time+(Number(bb.duration)||15),values:{amount:target.maxHp*(Number(bb.hp_ratio)||0)},refKind:'owner',persistAfterSourceGone:false});} }
  if(profile.charId==='char_202_demkni'&&profile.skillIndex===2){const radius=Math.max(1,...(battle.range(u,true)||[]).map(p=>Math.max(Math.abs(p.x-u.x),Math.abs(p.y-u.y))));ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'saria-s3',x:u.x,y:u.y,radius,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+(duration>0?duration:5),trackSide:'all',values:{sluggish:true,hot:battle.stats(u).atk*(Number(bb['attack@heal_scale'])||.2),fragile:Number(bb['demkni_s_3.damage_scale'])||1.4},snapshot:{},refKind:'owner',persistAfterSourceGone:false});}
- if(profile.charId==='char_4151_tinman'){const zone=battle.s.logicEffects.find(f=>f.sourceUid===u.uid&&f.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`),talent=activeTalents(battle,u).find(t=>t.name==='凋敝魂灵');if(zone){if(Number(bb.atk)<0)zone.values.attackDown=Number(bb.atk);if(talent)zone.values.fragile=Number(talent.values?.['skill@damage_scale'])||1.2;}}
  if(profile.charId==='char_4191_tippi')u.flying=true;
  if(profile.charId==='char_4211_snhunt'&&profile.skillIndex===1){const target=battle.targets(u)[0];if(target){const scale=target.speed===0||target.stationary?Number(bb.atk_scale_2)||2.1:Number(bb.atk_scale_1)||1.8;for(let hit=0;hit<2;hit++)ctx.dealDamage(battle,{source:u,target,amount:battle.stats(u).atk*scale,type:'physical',cause:'skill',skill:true});applyStatus(target,'cold',3,{source:u.uid,resistible:false});}return true;}
  if(profile.charId==='char_206_gnosis'&&profile.skillIndex===2){u.gnosisFrozenUids=[];for(const e of allTargets(battle,u,true)){applyStatus(e,'frozen',Math.max(1,Number(duration)||5),{source:u.uid,resistible:false});u.gnosisFrozenUids.push(e.uid);} }
@@ -4377,6 +4397,15 @@ function tickLogic(battle,dt){
   if(fx.refKind==='anchor'&&fx.anchorUid!=null&&!getActor(battle.s,fx.anchorUid)){dropEffect(battle,fx,'anchor');continue;}
   if(fx.anchorUid){const a=getActor(battle.s,fx.anchorUid);if(a){fx.x=a.x;fx.y=a.y;}}
  }
+ // 投掷物（锡人「炼金单元」）：带 carrier 的区域按固定速度朝落点移动，抵达后停在原地直到 endsAt 结束。
+ // 移动必须在结算之前推进：每秒结算读的就是 fx.x/fx.y，圈的位置即伤害的位置。
+ for(const fx of battle.s.logicEffects||[]){
+  const c=fx.carrier;
+  if(!c||c.arrived)continue;
+  const dx=Number(c.toX)-fx.x,dy=Number(c.toY)-fx.y,dist=Math.hypot(dx,dy),step=Math.max(0,Number(c.speed)||1)*Math.max(0,Number(dt)||0);
+  if(dist<=step||dist<1e-6){fx.x=Number(c.toX);fx.y=Number(c.toY);c.arrived=true;}
+  else{fx.x+=dx/dist*step;fx.y+=dy/dist*step;}
+ }
  let scheduled=0;
  while(true){
   const due=battle.s.logicEffects.filter(f=>f.nextAt!=null&&f.nextAt<=now+1e-9&&(f.endsAt==null||f.nextAt<=f.endsAt+1e-9)).sort((a,b)=>a.nextAt-b.nextAt||a.id-b.id)[0];
@@ -4534,7 +4563,9 @@ function bondPeriodic(battle,u){
 function zoneActors(battle,fx,side){
  const cx=fx.x,cy=fx.y,r=fx.radius??1;
  const pool=side==='enemy'?enemyActors(battle.s):side==='all'?[...enemyActors(battle.s),...alliedActors(battle.s).filter(u=>u.deployed&&u.hp>0)]:alliedActors(battle.s).filter(u=>u.deployed&&u.hp>0);
- return pool.filter(a=>chebyshev({x:cx,y:cy},a)<=r);
+ const inside=pool.filter(a=>chebyshev({x:cx,y:cy},a)<=r);
+ // groundOnly：原表写「地面敌人」的圈不吃飞行单位（友方一侧不受这个开关影响）。
+ return side==='ally'||!fx.values?.groundOnly?inside:inside.filter(a=>!a.flying);
 }
 function settlePeriodic(battle,fx){
  const source=getActor(battle.s,fx.sourceUid);
@@ -6531,6 +6562,20 @@ function drawZones(c,point,z,battle,{reduceFx=false}={}){
    const since=Math.max(0,Math.min(1,(interval-(fx.nextAt-s.time))/Math.max(.001,interval)));
    if(fx.nextAt-s.time<=.25){const k=1-Math.max(0,(fx.nextAt-s.time))/.25;
     for(const cell of cells){const p=point(cell.x,cell.y);c.strokeStyle=`${deep}${Math.round(.55*(1-k)*255).toString(16).padStart(2,'0')}`;c.lineWidth=2;c.beginPath();c.ellipse(p.x,p.y,z.tw*.5*(1+k*.4),z.th*.5*(1+k*.4),0,0,Math.PI*2);c.stroke();}}
+  }
+  // 投掷物（锡人「炼金单元」）：画一只飞行中的单元本体，飞行途中再淡描出落点圈，
+  // 让「缓慢飞过去、停在目标位置」这件事在画面上看得出来。纯表现，不参与判定。
+  if(fx.carrier){
+   const c0=point(fx.x??0,fx.y??0);
+   if(!fx.carrier.arrived&&!reduceFx){
+    const tp=point(Number(fx.carrier.toX)||0,Number(fx.carrier.toY)||0);
+    c.save();c.setLineDash([4,4]);c.strokeStyle=`${deep}${Math.round(.5*blink*255).toString(16).padStart(2,'0')}`;c.lineWidth=1.2;
+    c.beginPath();c.ellipse(tp.x,tp.y,radius*z.tw,radius*z.th,0,0,Math.PI*2);c.stroke();c.setLineDash([]);
+    c.strokeStyle=`${light}${Math.round(.4*255).toString(16).padStart(2,'0')}`;c.lineWidth=1;c.beginPath();
+    c.moveTo(c0.x,c0.y);c.lineTo(tp.x,tp.y);c.stroke();c.restore();
+   }
+   c.fillStyle=`${light}f0`;c.beginPath();c.ellipse(c0.x,c0.y,z.tw*.28,z.th*.28,0,0,Math.PI*2);c.fill();
+   c.strokeStyle=`${deep}`;c.lineWidth=1.4;c.beginPath();c.ellipse(c0.x,c0.y,z.tw*.28,z.th*.28,0,0,Math.PI*2);c.stroke();
   }
   c.restore();
  }

@@ -2403,7 +2403,7 @@
         }
       ],
       "category": "B",
-      "skillGaps": "S1/S2炼金单元、持续区域减攻/伤害/回复已接入",
+      "skillGaps": "S1/S2炼金单元已接入：朝目标方向投出半径 1.5 的飞行召唤物，飞行途中与停驻落点后都每秒结算圈内效果，projectile_delay_time 结束即消失",
       "talentGaps": "持续伤害易伤已接入；萨卡兹肉鸽希望/负荷天赋不适用本模式",
       "prtsReference": "https://prts.wiki/w/%E9%94%A1%E4%BA%BA",
       "sourceProfileIds": [

@@ -65,6 +65,10 @@
 
 无第三方 JS。开发 Node.js 22+；Pages 用 24。`npm run build` 只编译。`npm test` 跑 `tests/*.test.mjs`。
 
+## 技能表现与投掷物口径
+
+- **带 `carrier` 的 `kind:'zone'` 是投掷物**（锡人 S1「老科利」/S2「大拉里」的炼金单元）：`native-effects.tickLogic` 每帧按 `carrier.speed` 把它移向 `carrier.toX/toY`，抵达后 `carrier.arrived=true` 停驻，到 `endsAt` 才消失；每秒结算读的就是 `fx.x/fx.y`，所以移动必须在结算之前推进。落点取 `battle.targets(u)[0]` 所在格，没有目标时按 `u.dir` 落在 `projectile_range` 处。`refKind:'live'`＝召唤物随主人退场一起消失。原表没有单元自身的半径与飞行速度字段，**半径 1.5、1 格/秒是用户 2026-09-19 口径**，`values.groundOnly` 只吃地面敌人（原表文案写「地面敌人」）。`drawZones` 在飞行途中额外画本体＋落点虚线圈，抵达后只留本体；位置只由逻辑层写。回归：`tests/native-alchemy-unit.test.mjs`、`tests/native-fx-zones.test.mjs`。
+
 ## 红线
 
 - **资料已采集 ≠ 机制已实现 ≠ 原作对照通过。** 适配层有注册、有处理器，只说明入口在，不说明数值和时序已对照。

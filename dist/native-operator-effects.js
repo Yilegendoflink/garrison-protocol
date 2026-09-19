@@ -3,6 +3,8 @@ import {applyStatus,removeStatus} from './status.js';
 // Per-operator adapters share only small, data-driven primitives. A missing
 // primitive remains visible in the capability ledger instead of silently
 // becoming a normal attack.
+// 锡人「炼金单元」的表现常数（原表没有单元自身的范围与速度字段，口径见 operatorSkillStart 里的说明）。
+const ALCHEMY_UNIT_RADIUS=1.5,ALCHEMY_UNIT_SPEED=1;
 const NUMERIC_KEYS={
  atkScale:['atk_scale','attack@atk_scale','attack@atk_scale_1','damage_scale'],
  maxTarget:['max_target','attack@max_target','attack@times_target'],
@@ -68,6 +70,7 @@ const ZONE_VISUALS={
  'glady-s3':{shape:'circle',tone:'water'},         // 涌潮悲歌：吸附水涡
  'cetsyr-dust':{shape:'circle',tone:'sand'},       // 沙尘
  'etlchi-s1':{shape:'circle',tone:'blade'},        // 刀光领域
+ 'tinman-alchemy':{shape:'circle',tone:'shadow'},  // 锡人「炼金单元」：投掷物自身划出的圈
  'blaze2-s1':{shape:'circle',tone:'burn'},         // 灼燃领域
  'sntlla-s2':{shape:'circle',tone:'frost'},        // 寒冷领域
  'sbell2-s2':{shape:'circle',tone:'frost'},        // 睡眠+寒冷领域
@@ -321,6 +324,24 @@ export function operatorSkillStart(battle,u,ctx){
  if(has(text,/下次攻击.*(?:恢复|回复)/)&&Number.isFinite(config.healScale)){u.pendingAttackHeal={scale:config.healScale,sourceUid:u.uid};suppressDefault=true;}
  if(has(text,/下次治疗.*(?:额外)?回复目标最大生命值/)&&Number.isFinite(Number(bb.hp_ratio))){u.pendingHealBonus={ratio:Number(bb.hp_ratio),requiresBelowHalf:has(text,/不满一半|低于一半/)};suppressDefault=true;}
  if(has(text,/下次治疗.*治疗量提升|下次治疗时的治疗量提升/)&&Number(bb.heal_scale)>0){u.pendingHealScale=Number(bb.heal_scale);if(profile.charId==='char_4139_papyrs')u.papyrsShieldScale=Number(bb.shield_scale_skill)||1;suppressDefault=true;}
+  // 锡人「炼金单元」（S1「老科利」/S2「大拉里」）：朝目标方向投出一个缓慢飞行的召唤物，自身划出半径 1.5 的圈，
+ // 圈内每秒结算技能标注的效果（地面敌人受伤／虚弱，或友方回复），飞到目标位置后停在原地、到 projectile_delay_time
+ // 结束才消失。原表只给 projectile_range（技能射程）与 projectile_delay_time（存活时长），没有单元自身的半径与
+ // 飞行速度——半径 1.5 与「缓慢飞行、到点停驻」按用户 2026-09-19 口径，速度取 1 格/秒。
+ if(profile.charId==='char_4151_tinman'&&has(text,/炼金单元/)){
+  const atk=battle.stats(u).atk,scale=Number(bb.atk_scale)||config.atkScale||.5;
+  const talent=activeTalents(battle,u).find(t=>t.name==='凋敝魂灵');
+  const dirs=[[1,0],[0,-1],[-1,0],[0,1]],dir=dirs[(u.dir||0)%4],reach=Math.max(1,Math.round(Number(bb.projectile_range)||1));
+  // 落点：有目标就打向目标所在格，没有目标就按朝向落在技能射程处（技能是手动投掷，不该凭空取消）。
+  const target=battle.targets(u)[0]||null,spot=target?{x:target.x,y:target.y}:{x:u.x+dir[0]*reach,y:u.y+dir[1]*reach};
+  const life=Math.max(.5,Number(bb.projectile_delay_time)||8),healRatio=Number(bb.hp_recovery_per_sec_ratio)||0;
+  ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'tinman-alchemy:'+u.id+':'+u.skillCount,
+   stackRule:'stack',x:u.x,y:u.y,radius:ALCHEMY_UNIT_RADIUS,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
+   trackArea:true,trackSide:'enemy',refKind:'live',values:{dot:true,groundOnly:true,atk_scale:scale,type:'arts',
+    attackDown:Number(bb.atk)<0?Number(bb.atk):0,hot:healRatio>0?atk*healRatio:0,fragile:talent?Number(talent.values?.['skill@damage_scale'])||1.2:0},
+   snapshot:{damage:atk*scale},carrier:{toX:spot.x,toY:spot.y,speed:ALCHEMY_UNIT_SPEED,arrived:false}});
+  return true;
+ }
  const periodicScale=Number(bb.magic_atk_scale??bb.damage_scale??bb.atk_scale??config.atkScale),periodicInterval=Number(bb.interval??bb.attack_interval??1),periodicCost=textCostValue(text)??costValue(config,'periodic'),periodicTick=costValue(config,'periodicTick'),duration=profile.skill?.duration;
  if(profile.charId!=='char_1045_svash2'&&periodicCost!=null&&has(text,/持续(?:时间内)?(?:逐渐|回复总共|获得)|期间逐渐回复/)){const span=duration<0?1e9:duration>0?duration:1,interval=Math.max(.1,periodicInterval),count=Math.max(1,Math.round(span/interval)),perTick=Number.isFinite(periodicTick)?periodicTick:periodicCost/count;u.pendingPeriodicCost={total:periodicCost,duration:span,endsAt:battle.s.time+span,interval,perTick,remaining:periodicCost,nextAt:battle.s.time+interval,skillCount:u.skillCount};}
  const attackCost=costValueForText(config,text,'attack');if(attackCost!=null&&has(text,/下次攻击.*获得.*费用/))u.pendingCostGain={amount:attackCost,skillCount:u.skillCount};
@@ -332,7 +353,6 @@ export function operatorSkillStart(battle,u,ctx){
  if(profile.charId==='char_474_glady'&&profile.skillIndex===2){const target=battle.targets(u)[0]||u,center={x:target.x,y:target.y};u.gladyVortex=center;const hitDuration=Number(bb.hit_duration)||9;if(target!==u)applyStatus(target,'root',hitDuration,{source:u.uid,resistible:false});ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'glady-s3',x:center.x,y:center.y,radius:1.5,interval:Number(bb.interval)||1.5,nextAt:battle.s.time+(Number(bb.interval)||1.5),endsAt:battle.s.time+(duration>0?duration:9),values:{dot:true,sluggish:true,pull:true,type:'arts',atk_scale:Number(bb.atk_scale)||1},snapshot:{damage:battle.stats(u).atk*(Number(bb.atk_scale)||1)},refKind:'owner',persistAfterSourceGone:false});return true;}
  if(profile.charId==='char_171_bldsk'&&profile.skillIndex===1){const candidates=allAllies(battle,u,true).filter(a=>a.uid!==u.uid),target=candidates.length?candidates[Math.floor(battle.economy.random()*candidates.length)]:null;if(target){u.warfarinTargetUid=target.uid;target.warfarinBuff={atk:Number(bb.atk)||0,endsAt:battle.s.time+(Number(bb.duration)||15),sourceUid:u.uid};ctx.addEffect(battle,{kind:'loss',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:target.uid,talentOrSkillId:'warfarin-s2-ally',interval:Number(bb.interval)||1,nextAt:battle.s.time+(Number(bb.interval)||1),endsAt:battle.s.time+(Number(bb.duration)||15),values:{amount:target.maxHp*(Number(bb.hp_ratio)||0)},refKind:'owner',persistAfterSourceGone:false});} }
  if(profile.charId==='char_202_demkni'&&profile.skillIndex===2){const radius=Math.max(1,...(battle.range(u,true)||[]).map(p=>Math.max(Math.abs(p.x-u.x),Math.abs(p.y-u.y))));ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'saria-s3',x:u.x,y:u.y,radius,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+(duration>0?duration:5),trackSide:'all',values:{sluggish:true,hot:battle.stats(u).atk*(Number(bb['attack@heal_scale'])||.2),fragile:Number(bb['demkni_s_3.damage_scale'])||1.4},snapshot:{},refKind:'owner',persistAfterSourceGone:false});}
- if(profile.charId==='char_4151_tinman'){const zone=battle.s.logicEffects.find(f=>f.sourceUid===u.uid&&f.talentOrSkillId===`skill-zone:${u.id}:${u.skillCount}`),talent=activeTalents(battle,u).find(t=>t.name==='凋敝魂灵');if(zone){if(Number(bb.atk)<0)zone.values.attackDown=Number(bb.atk);if(talent)zone.values.fragile=Number(talent.values?.['skill@damage_scale'])||1.2;}}
  if(profile.charId==='char_4191_tippi')u.flying=true;
  if(profile.charId==='char_4211_snhunt'&&profile.skillIndex===1){const target=battle.targets(u)[0];if(target){const scale=target.speed===0||target.stationary?Number(bb.atk_scale_2)||2.1:Number(bb.atk_scale_1)||1.8;for(let hit=0;hit<2;hit++)ctx.dealDamage(battle,{source:u,target,amount:battle.stats(u).atk*scale,type:'physical',cause:'skill',skill:true});applyStatus(target,'cold',3,{source:u.uid,resistible:false});}return true;}
  if(profile.charId==='char_206_gnosis'&&profile.skillIndex===2){u.gnosisFrozenUids=[];for(const e of allTargets(battle,u,true)){applyStatus(e,'frozen',Math.max(1,Number(duration)||5),{source:u.uid,resistible:false});u.gnosisFrozenUids.push(e.uid);} }

@@ -437,6 +437,20 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
    if(fx.nextAt-s.time<=.25){const k=1-Math.max(0,(fx.nextAt-s.time))/.25;
     for(const cell of cells){const p=point(cell.x,cell.y);c.strokeStyle=`${deep}${Math.round(.55*(1-k)*255).toString(16).padStart(2,'0')}`;c.lineWidth=2;c.beginPath();c.ellipse(p.x,p.y,z.tw*.5*(1+k*.4),z.th*.5*(1+k*.4),0,0,Math.PI*2);c.stroke();}}
   }
+  // 投掷物（锡人「炼金单元」）：画一只飞行中的单元本体，飞行途中再淡描出落点圈，
+  // 让「缓慢飞过去、停在目标位置」这件事在画面上看得出来。纯表现，不参与判定。
+  if(fx.carrier){
+   const c0=point(fx.x??0,fx.y??0);
+   if(!fx.carrier.arrived&&!reduceFx){
+    const tp=point(Number(fx.carrier.toX)||0,Number(fx.carrier.toY)||0);
+    c.save();c.setLineDash([4,4]);c.strokeStyle=`${deep}${Math.round(.5*blink*255).toString(16).padStart(2,'0')}`;c.lineWidth=1.2;
+    c.beginPath();c.ellipse(tp.x,tp.y,radius*z.tw,radius*z.th,0,0,Math.PI*2);c.stroke();c.setLineDash([]);
+    c.strokeStyle=`${light}${Math.round(.4*255).toString(16).padStart(2,'0')}`;c.lineWidth=1;c.beginPath();
+    c.moveTo(c0.x,c0.y);c.lineTo(tp.x,tp.y);c.stroke();c.restore();
+   }
+   c.fillStyle=`${light}f0`;c.beginPath();c.ellipse(c0.x,c0.y,z.tw*.28,z.th*.28,0,0,Math.PI*2);c.fill();
+   c.strokeStyle=`${deep}`;c.lineWidth=1.4;c.beginPath();c.ellipse(c0.x,c0.y,z.tw*.28,z.th*.28,0,0,Math.PI*2);c.stroke();
+  }
   c.restore();
  }
  return true;

@@ -70,8 +70,27 @@ test('敌方持续伤害区域只画一圈，且不用加成混合、不逐格�
  assert.equal(drawZones(host().c,point,Z,battle([{...field,values:{damage:0,atkScale:0,elementScale:0}}])),false,'没有伤害参数的区域不画');
 });
 
-test('减少动效模式仍绘制但更淡',()=>{
- const normal=host(),reduced=host();
+test('炼金单元画出飞行中的本体与落点提示，抵达后只剩本体',()=>{
+ assert.equal(zoneVisual('tinman-alchemy:char_4151_tinman:1',{dot:true,hot:5,type:'arts'}).tone,'shadow');
+ const flying={id:3,kind:'zone',talentOrSkillId:'tinman-alchemy:char_4151_tinman:1',sourceUid:1,x:3,y:2,radius:1.5,interval:1,nextAt:3.5,endsAt:9,values:{dot:true,hot:5,type:'arts'},carrier:{toX:5,toY:2,speed:1,arrived:false}};
+ const out=host();
+ drawZones(out.c,point,Z,battle([flying]));
+ const orbs=out.ops.filter(o=>o.op==='ellipse'&&o.args[2]===Z.tw*.28);
+ assert.equal(orbs.length,2,'本体一次填充 + 一次描边');
+ assert.equal(orbs[0].args[0],point(3,2).x);assert.equal(orbs[0].args[1],point(3,2).y);
+ const ring=out.ops.filter(o=>o.op==='ellipse'&&o.args[2]===1.5*Z.tw);
+ assert.equal(ring.length,1,'飞行途中标出落点圈');
+ assert.equal(ring[0].args[0],point(5,2).x,'落点就是 carrier 的目标格');
+ const arrived=host();
+ drawZones(arrived.c,point,Z,battle([{...flying,carrier:{...flying.carrier,arrived:true}}]));
+ assert.equal(arrived.ops.filter(o=>o.op==='ellipse'&&o.args[2]===1.5*Z.tw).length,0,'抵达后不再画落点圈');
+ assert.equal(arrived.ops.filter(o=>o.op==='ellipse'&&o.args[2]===Z.tw*.28).length,2,'本体照画');
+ const reduced=host();
+ drawZones(reduced.c,point,Z,battle([flying]),{reduceFx:true});
+ assert.equal(reduced.ops.filter(o=>o.op==='ellipse'&&o.args[2]===1.5*Z.tw).length,0,'减少动效时不画落点提示');
+});
+
+test('减少动效模式仍绘制但更淡',()=>{ const normal=host(),reduced=host();
  const fx={id:1,kind:'zone',talentOrSkillId:'saria-s3',x:3,y:2,radius:1,interval:1,nextAt:3.2,endsAt:6,values:{hot:5}};
  const alpha=s=>{const t=String(s);if(t.startsWith('#')&&t.length===9)return parseInt(t.slice(7,9),16)/255;const m=t.match(/rgba?\([^)]*?([\d.]+)\)$/);return m?Number(m[1]):1;};
  const sum=h=>h.ops.filter(o=>o.op==='fillRect').reduce((a,o)=>a+alpha(o.style),0);
