@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {deployNow,enemy} from './effects-harness.mjs';
-import {drawIceWind} from '../dist/native-fx.js';
+import {drawIceWind,drawZones} from '../dist/native-fx.js';
 
 const uniqueBond=(id,count)=>[...new Map(Object.values(NATIVE_DATA.season.charShopChessDatas).filter(s=>s.charId&&NATIVE_DATA.season.charChessDataDict[s.chessId].bondIds.includes(id)).map(s=>[s.charId,s.chessId])).values()].slice(0,count);
 function kjeragBattle(count=6){
@@ -119,4 +119,17 @@ test('冰风窗口以 1 秒为界，中途最亮',()=>{
  assert.ok(mid>=out2&&out2>=out1,'渐出：越接近结尾越淡');
  stepTo(26.1);
  assert.equal(alphaAt(),0,'1 秒之后必须完全消失');
+});
+
+test('6人谢拉格不留常驻区域底色，只有起风那 1 秒有全屏特效',()=>{
+ const b=kjeragBattle(6);
+ assert.ok(b.s.logicEffects.some(fx=>fx.talentOrSkillId==='bond-kjerag-storm'),'寒风区域应当存在（判定仍在跑）');
+ const idle=host();
+ assert.equal(drawZones(idle.c,Z,b),false,'不看常驻底色：没有别的区域时不应画任何东西');
+ assert.equal(idle.ops.length,0);
+ // 起风窗口内仍然有全屏冰风
+ runTo(b,25.2);
+ assert.equal(drawIceWind(host().c,Z,b),true);
+ // 区域本身没有被删掉：寒冷仍在按 25 秒周期施加
+ assert.ok(b.s.logicEffects.some(fx=>fx.talentOrSkillId==='bond-kjerag-storm'&&fx.endsAt==null));
 });

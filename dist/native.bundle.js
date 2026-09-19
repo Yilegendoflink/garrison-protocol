@@ -6357,7 +6357,9 @@ const FIELD_TINT={fill:'#4a4160',edge:'#8f86b8'};
 function drawZones(c,point,z,battle,{reduceFx=false}={}){
  const s=battle?.s;if(!s)return false;
  // 敌方留下的持续伤害区域（kind:'field'：污染秽蚀、燃烧区域、毒雾）和我方技能区域共用这套绘制。
- const list=(s.logicEffects||[]).filter(fx=>(fx.kind==='zone'||(fx.kind==='field'&&(Number(fx.values?.damage)>0||Number(fx.values?.atkScale)>0||Number(fx.values?.elementScale)>0)))&&(fx.endsAt==null||fx.endsAt>s.time));
+ // 例外：6 人谢拉格的寒风区域（bond-kjerag-storm）是全场常驻判定，但**不留常驻底色**——
+ // 表现只有每 25 秒起风时的全屏冰风（'ice-wind' → drawIceWind）。
+ const list=(s.logicEffects||[]).filter(fx=>fx.talentOrSkillId!=='bond-kjerag-storm'&&(fx.kind==='zone'||(fx.kind==='field'&&(Number(fx.values?.damage)>0||Number(fx.values?.atkScale)>0||Number(fx.values?.elementScale)>0)))&&(fx.endsAt==null||fx.endsAt>s.time));
  if(!list.length)return false;
  for(const fx of list){
   const visual=battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
