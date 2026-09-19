@@ -81,8 +81,11 @@ html.native-landscape-ui{
  .native-status>div{display:flex;align-items:baseline;gap:5px;white-space:nowrap}
  .native-status small{font-size:10px;letter-spacing:0;margin:0}.native-status b{font-size:20px}
  .native-workspace{position:absolute;inset:0 0 calc(var(--dock-height) + env(safe-area-inset-bottom));display:block;margin:0;min-height:0}
- .native-bonds{position:absolute;z-index:2;left:max(10px,env(safe-area-inset-left));top:68px;bottom:6px;width:70px;min-height:0;max-height:none;overflow:auto;flex-direction:column;font-size:10px;gap:4px}
- .native-bonds button{min-width:0;padding:5px 3px}.native-bonds small{display:none}.native-bonds span{margin-top:2px}
+ .native-bonds{position:absolute;z-index:2;left:max(10px,env(safe-area-inset-left));top:68px;bottom:6px;width:70px;min-height:0;max-height:none;overflow-y:auto;overflow-x:hidden;flex-direction:column;align-content:flex-start;font-size:10px;gap:4px;scrollbar-width:thin}
+ /* 盟约多起来时不能压扁卡片：卡片保持自然高度，装不下就整体上下滚动。
+    少了 flex:0 0 auto 时 flex 会把 20 多条盟约压进可视高度，名字和层数会叠在一起。 */
+ .native-bonds button{flex:0 0 auto;min-width:0;min-height:34px;padding:5px 3px;line-height:1.3}
+ .native-bonds small{display:none}.native-bonds span{margin-top:2px}
  .native-detail,.native-field>.native-terrain-legend{display:none}
  .native-field{position:absolute;inset:0;display:block;min-height:0}
  .native-field-caption{position:absolute;z-index:2;top:40px;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));padding:0;font-size:10px}.native-field-caption b{font-size:12px}
