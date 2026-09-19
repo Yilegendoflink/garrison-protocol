@@ -27,6 +27,10 @@
     "enemy_9010_acpupp": {
       "randomPoolEligible": true,
       "reason": "傀儡再生与 5 层物法次数护盾已实现并通过定向测试，回到 TIMES 词条池"
+    },
+    "enemy_1209_sfden": {
+      "randomPoolEligible": true,
+      "reason": "清明的 InvisibleShield（每 15 秒给半径 2 格内其他敌人 5 秒隐匿）已实现并通过定向测试，解除 complex 限制；原表 enemyInfoDict 里它不属于任何词条（只出现在固定关卡 h07_03），因此不进默认随机池，但手工编制台与固定波次可以直接用"
     }
   }
 }

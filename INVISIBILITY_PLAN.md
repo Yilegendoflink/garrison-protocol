@@ -1,8 +1,9 @@
 # 第二批：隐匿（INVISIBLE）适配计划
 
 > **落地状态（2026-09-18）**：马赛克表现、我方隐匿的索敌落地、「被阻挡即脱离隐匿」、反隐的时间窗模型
-> （银灰鹰眼视觉 / 伊内丝影哨 + 撤退后留哨）都已完成，逐条见文末「落地结果」。
-> 未做：清明 `InvisibleShield`（§D11）、迷彩细则、`drawStatuses` 的隐匿图标（§D19）。
+> （银灰鹰眼视觉 / 伊内丝影哨 + 撤退后留哨）、清明 `InvisibleShield`、忍冬的条件式迷彩、
+> `drawStatuses` 的隐匿图标都已完成，逐条见文末「落地结果」。
+> 仍未做：迷彩的完整细则（§七），它不影响本批已经落地的选择判定。
 
 目标：把隐匿做成**一套统一的可选性规则**，让敌人的隐匿、我方干员／召唤物获得的隐匿都真正生效；反隐（隐匿免疫）按原表逐个接入；隐匿单位在场上带**暗灰色流动马赛克**特效。
 
@@ -78,7 +79,8 @@
 
 ### D. 敌方隐匿技能（`dist/native-battle.js` + `dist/native-combat.js`）
 
-11. `InvisibleShield`（清明）：`supportedSkillPrefabs` 加入该预制体；每 `cooldown` 秒对半径内**其他敌方单位**施加隐匿，时长取技能黑板 `duration`（当前数据为 5 秒）；自身不获得。**实现并验过后解除 `complexity` 限制、纳入 INVISIBLE 随机池**，并在 `default-wave-table.json` 的 INVISIBLE 池里补一个费用档位。
+11. `InvisibleShield`（清明）：`supportedSkillPrefabs` 加入该预制体；每 `cooldown` 秒对半径内**其他敌方单位**施加隐匿，时长取技能黑板 `duration`（当前数据为 5 秒）；自身不获得。**实现并验过后解除 `complexity` 限制**。**已落地**：这是独立计时的自施法技能（`tickEnemyInvisibleShield`），不挂在「攻击附带特殊效果」分支上——清明在行进途中不开火，挂攻击就会漏触发。半径原表没有独立字段，取敌人自身 `rangeRadius`（2 格）。
+    落地时发现计划里「纳入 INVISIBLE 随机池 + 补费用档位」这条前提是错的：原表 `season.enemyInfoDict` 里清明**不属于任何词条**（它只出现在固定关卡 `h07_03`），而 `tests/native-wave-defaults.test.mjs` 强制「池成员必须属于该词条的 enemyInfoDict」。因此改为：保留行为覆盖里的 `randomPoolEligible:true`（编制台手工加池、固定波次都因此不再被 `filterRandomPoolTable` 剔掉），默认随机池不动、采集数据不改。
 12. `InvisibleCombat`（山海众头目／秘使）：攻击后显形，攻击力倍率按黑板 `atk_scale`（当前 2.0）；停止攻击 6 秒后重新隐匿。现实现的 `invisibleRecoverAt` 固定 6 秒，改造时保留这个常量并写进注释。
 13. 常驻隐匿的「被阻挡前无法被攻击」敌人（隐形弩手／隐形术师／潜伏者／山海众等）保持 `initialInvisible`，由 A 的统一判定保证「被阻挡即可选」。
 
@@ -91,7 +93,7 @@
     - 被反隐时不画；`reduceFx`（动效少）时为静态马赛克，不流动。
     - 结果按 `(imageKey, reduceFx)` 缓存离屏画布，避免每帧重采样像素。
 18. 调用点：干员绘制、召唤物绘制、敌人绘制三处，紧挨现有 `drawFrostOverlay`。
-19. `drawStatuses` 的图标白名单加入 `invisible`／`camouflage`（`native-fx.js:477`），让「能被玩家反隐发现」这件事有可读提示。
+19. `drawStatuses` 的图标白名单加入 `invisible`／`camouflage`（`native-fx.js:477`），让「能被玩家反隐发现」这件事有可读提示。**已落地**：两者都是虚线方框（迷彩多一道对角），马赛克仍由 `drawConcealOverlay` 画在身上，图标只负责说明「为什么打不到」。
 
 ### E. 测试（新增 `tests/native-invisibility.test.mjs`，扩展 `tests/native-fx-zones` 或另开一个绘制测试）
 
@@ -115,11 +117,12 @@
 ## 六、已确认的口径
 
 1. **干员／召唤物隐匿＝完全无法被选中**（已确认）：按 PRTS 的「不能被不同阵营选中」实现，远程与近战敌人一视同仁地不选它；正在阻挡该敌人的单位仍是合法目标。这不是「只免疫远程」。
-2. **清明实现后直接进随机池**（已确认）：`InvisibleShield` 做完并验过后，解除它的 `complexity` 限制，纳入 `INVISIBLE` 词条的随机抽取；默认波次表里给它补一个费用档位。
+2. **清明实现后放开随机池**（已确认，落地时按原表数据修正）：`InvisibleShield` 做完并验过后，解除它的 `complexity` 限制、在行为覆盖里显式 `randomPoolEligible:true`。原计划「纳入 INVISIBLE 词条 + 默认波次表补费用档位」被落地核对推翻：原表 `enemyInfoDict` 里清明不属于任何词条，池成员的词条归属由 `tests/native-wave-defaults.test.mjs` 强制，不能为了让它进池去改采集数据。
 
 ## 七、本批不做、留档的部分
 
 - 迷彩（CAMOUFLAGE）的完整细则：不阻止光环／格子判定、与隐匿免疫的交互方式与隐匿不同。
+  本批只保证**发放时机**正确（`applyStatus(kind:'camouflage')` 与隐匿同一条选择判定），细则仍留档。
 - 「隐匿与阻挡时解除」的通用机制（原表注明该机制通常由其他 Buff 实现，不属于隐匿本身）。
 - 隐匿单位对**光环类**技能是否可见：与原作一致地不受隐匿制约（光环不做选择判定），本批沿用现状、只在测试里固化。
 
@@ -135,6 +138,10 @@
 | 银灰【鹰眼视觉】 | `periodicMods` | 攻击范围内（含技能改范围）敌人隐匿失效 |
 | 伊内丝【影哨】 | `periodicMods` + `placeInesSentry` | 攻击范围内隐匿失效且移速 -30%；撤退后在原地留 1 个影哨继续生效（半径取她撤退时攻击范围的最大切比雪夫跨度） |
 | 马赛克 | `drawConcealOverlay`（native-fx） | 我方／召唤物／敌人三处；灰滤镜 + 马赛克（有头像时缩到 6×6 再关插值放大），被反隐时不画，`reduceFx` 下不流动 |
+| 清明 `InvisibleShield` | `tickEnemyInvisibleShield`（native-battle）+ `supportedSkillPrefabs` | 独立计时：`initCooldown` 5 秒首放、之后每 `cooldown` 15 秒一次，给半径 2 格（敌人自身 `rangeRadius`，原表无独立半径字段）内的**其他**敌人 5 秒隐匿（技能黑板 `duration`；天赋黑板的 `InvisibleShield.duration=3` 不是这个技能的时长），自身不获得。已解除 `complexity` 并在 `enemy-behavior-overrides.json` 显式 `randomPoolEligible:true`；原表 `enemyInfoDict` 里它不属于任何词条（只出现在固定关卡 `h07_03`），所以默认随机池没收它，编制台手工加池与固定波次可用 |
+| 迷彩的发放时机 | `native-operator-effects.js`（`operatorSkillStart` / `enemy-death` / `skill-end`） | 通用分支只处理「技能开始即获得」，且跳过带「技能结束时」的文本；忍冬 S3【隐狐之艺】改成条件式：技能期间击倒过敌人才在技能结束拿到迷彩，下一次开技时由 `removeStatus` 摘掉（原实现是开技即给 10 秒，时序与条件都不对）。寒芒克洛丝的迷彩在本期卡池里取不到（她的运行时档案只有 S2【封喉】），因此没有额外分支 |
+| 头顶状态图标 | `drawStatuses` / `mark`（native-fx） | `invisible`／`camouflage` 进白名单，画虚线方框（迷彩多一道对角），没有状态就不画 |
 
-测试：`tests/native-invisibility.test.mjs`（6 例，含山海众显形周期、敌方远程不选隐匿干员、银灰/伊内丝反隐与哨位）
+测试：`tests/native-invisibility.test.mjs`（10 例，含山海众显形周期、敌方远程不选隐匿干员、银灰/伊内丝反隐与哨位、
+清明 InvisibleShield 的半径/时长/冷却/不含自身、忍冬条件式迷彩、隐匿图标、清明的随机池归属）
 与 `tests/native-bonds.test.mjs` 的叙拉古用例（盟约隐匿真的挡住敌人）。

@@ -188,7 +188,7 @@ export function enemyBehaviorProfile(raw={}){
  const stallTimeout=Number(behavior.stallTimeout??raw.stallTimeout);
  const stanceInterval=Number(behavior.stanceInterval??raw.stanceInterval);
  const stanceDuration=Number(behavior.stanceDuration??raw.stanceDuration);
- const supportedSkillPrefabs=new Set(['AOEAttack','CrossAttack','PowerAttack','StunAttack','stuncombat','InvisibleCombat','DeathEye','PollutedRangedAtk','Flame']);
+ const supportedSkillPrefabs=new Set(['AOEAttack','CrossAttack','PowerAttack','StunAttack','stuncombat','InvisibleCombat','InvisibleShield','DeathEye','PollutedRangedAtk','Flame']);
  const complexity=behavior.complexity||(/召唤|分裂|重生|复活|变身|传送|遁地|载客|乘客|改变路线|修改地块|地图变化|全场.*效果|区域.*生成|多阶段/.test(text)||Boolean(specialSkill&&!supportedSkillPrefabs.has(specialSkill.prefab))?'complex':'common');
  const randomPoolEligible=behavior.randomPoolEligible??(complexity!=='complex');
  const stunMatch=text.match(/攻击\s*(\d+)次后[^。；;]*晕眩/),stunBefore=stunMatch?Number(stunMatch[1]):(/数次攻击后[^。；;]*晕眩/.test(text)?Number(raw.skills?.[0]?.spCost)||3:0);

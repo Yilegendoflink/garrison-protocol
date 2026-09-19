@@ -1,4 +1,4 @@
-import {applyStatus} from './status.js';
+import {applyStatus,removeStatus} from './status.js';
 
 // Per-operator adapters share only small, data-driven primitives. A missing
 // primitive remains visible in the capability ledger instead of silently
@@ -344,7 +344,12 @@ export function operatorSkillStart(battle,u,ctx){
  if(profile.charId==='char_332_archet'&&skillIndex===1){let target=battle.targets(u)[0],power=Number(bb.atkScale)||1.2,remaining=Number(bb.hits)||5;const seen=new Set();while(target&&remaining-->0){seen.add(target.uid);ctx.dealDamage(battle,{source:u,target,amount:battle.stats(u).atk*power,type:'physical',cause:'skill',skill:true});target=battle.s.enemies.filter(e=>e.hp>0&&!seen.has(e.uid)&&!e.hidden&&Math.max(Math.abs(e.x-target.x),Math.abs(e.y-target.y))<=1.7).sort((a,b)=>a.uid-b.uid)[0];power*=.8;}return true;}
  if(profile.charId==='char_494_vendla'&&profile.skillIndex===1){const target=allAllies(battle,u,true).sort((a,b)=>b.maxHp-a.maxHp||a.uid-b.uid)[0];if(target){u.vendlaTargetUid=target.uid;target.vendlaBuff={sourceUid:u.uid,taunt:Number(bb.taunt_level)||1,endsAt:battle.s.time+(duration>0?duration:15)};target.vendlaPreviousHeal=target.healingReceived??1;target.healingReceived=target.vendlaPreviousHeal*(Number(activeTalents(battle,u).find(t=>t.name==='土壤基肥改良')?.values?.heal_scale)||1.15);}}
   if(has(text,/每秒.*(?:回复|恢复)|持续.*(?:回复|恢复)/)&&(Number.isFinite(config.regenScale)||Number.isFinite(config.maxHpRegenScale))){const amount=has(text,/最大生命/) ? u.maxHp*(config.maxHpRegenScale||0) : battle.stats(u).atk*(config.regenScale||0),selfOnly=!has(text,/周围|附近|友方|队友/),kind=selfOnly?'regen':'zone';ctx.addEffect(battle,{kind,sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:selfOnly?u.uid:undefined,talentOrSkillId:'skill-heal-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:Number(bb.projectile_range)||1,interval:1,nextAt:battle.s.time+1,endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),trackArea:has(text,/区域|影响范围|地面敌人/),trackSide:'ally',values:selfOnly?{regen:amount}:{hot:amount},snapshot:selfOnly?{regen:amount}:{hot:amount},refKind:'owner',persistAfterSourceGone:false});}
- if(has(text,/获得隐匿|进入隐匿|迷彩/)){const time=duration>0?duration:1e9;applyStatus(u,has(text,/迷彩/)?'camouflage':'invisible',time,{source:u.uid,resistible:false});}
+ // 迷彩/隐匿的通用分支只处理「技能开始即获得」。忍冬 S3「隐狐之艺」是条件式的
+ // （技能期间击倒敌人才在技能结束时进入迷彩，并保持到下一次开技），走下面的专属分支。
+ if(has(text,/获得隐匿|进入隐匿|迷彩/)&&!has(text,/技能结束时/)){const time=duration>0?duration:1e9;applyStatus(u,has(text,/迷彩/)?'camouflage':'invisible',time,{source:u.uid,resistible:false});}
+ // 忍冬 S3「隐狐之艺」：技能期间击倒过敌人则在技能结束时进入迷彩，直到下一次开启技能
+ // （所以开技时先摘掉上一轮的迷彩，击杀标记在 enemy-death 钩子里置位、skill-end 钩子里消费）。
+ if(profile.charId==='char_4026_vulpis'&&has(text,/技能结束时.*迷彩/)){u.vulpisKilled=false;u.vulpisCamo=false;removeStatus(u,'camouflage',u.uid);}
  if(has(text,/屏障|护盾/)&&ctx.grantShield){const ratio=Number(bb.shield_max_hp_ratio),amount=Number(bb.shield_value)||(Number.isFinite(ratio)?u.maxHp*ratio:0);if(Number.isFinite(amount)&&amount>0)ctx.grantShield(battle,u,{amount,endsAt:duration>0?battle.s.time+duration:null,sourceUid:u.uid,id:'skill-shield:'+u.id+':'+u.skillCount});}
   if(has(text,/每秒流失.*生命/)&&Number.isFinite(Number(bb.lose_hp_scale??bb.hp_ratio))){const interval=1/30,ratio=Number(bb.lose_hp_scale??bb.hp_ratio);ctx.addEffect(battle,{kind:'loss',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:u.uid,talentOrSkillId:'skill-loss:'+u.id+':'+u.skillCount,interval,nextAt:battle.s.time+interval,endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),values:{amount:u.maxHp*ratio*interval},refKind:'owner',persistAfterSourceGone:false});}
   if(has(text,/每秒(?:恢复|回复).*点生命/)&&Number(bb.hp_recovery_per_sec)>0){ctx.addEffect(battle,{kind:'regen',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:u.uid,talentOrSkillId:'skill-regen-zone:'+u.id+':'+u.skillCount,interval:1,nextAt:battle.s.time+1,endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),values:{regen:Number(bb.hp_recovery_per_sec)},snapshot:{regen:Number(bb.hp_recovery_per_sec)},refKind:'owner',persistAfterSourceGone:false});}
@@ -357,6 +362,8 @@ export function operatorSkillStart(battle,u,ctx){
 }
 export function onEvent(battle,type,payload,ctx){
  const source=payload.source,target=payload.target;
+ // 忍冬 S3「隐狐之艺」：技能期间击倒过敌人 → 技能结束时获得迷彩；没击倒就保持开技时摘掉的状态。
+ if(type==='skill-end'&&target?.id==='char_4026_vulpis'){if(target.vulpisKilled&&target.deployed&&target.hp>0)applyStatus(target,'camouflage',1e9,{source:target.uid,resistible:false});target.vulpisKilled=false;}
  // 深靛·柔光缚目：攻击时按几率使目标束缚，且「每个攻击能量独立计算触发概率」。
  // 特性积攒的每条能量弹道都会各发一次 after-damage，所以这里天然是按弹道掷概率；
  // 技能 2 的持续区域伤害 cause 是 dot，不经过 after-damage 的 attack 分支，因此不会触发天赋。
@@ -504,7 +511,7 @@ export function onEvent(battle,type,payload,ctx){
   if(killer?.id==='char_4064_mlynar'&&battle.skillActive(killer)&&(killer.source?.skillIndex??battle.profile(killer).skillIndex)===2)killer.mlynarKills=(killer.mlynarKills||0)+1;
   if(payload.target?.statuses?.some(s=>s.kind==='burn'))for(const reed of battle.s.units.filter(v=>v.deployed&&v.hp>0&&v.id==='char_1020_reed2'&&battle.skillActive(v)&&(v.source?.skillIndex??battle.profile(v).skillIndex)===2)){const bb=skillBB(battle,reed);for(const e of battle.s.enemies.filter(e=>e.hp>0&&Math.max(Math.abs(e.x-payload.target.x),Math.abs(e.y-payload.target.y))<=1))ctx.dealDamage(battle,{source:reed,target:e,amount:battle.stats(reed).atk*(Number(bb['talent@aoe_scale'])||1),type:'arts',cause:'extra'});}
   if(killer?.id==='char_1033_swire2'&&battle.skillActive?.(killer)&&/击倒敌人时获得.*金币/.test(battle.profile(killer)?.skill?.description||''))grantCoins(killer,1,skillConfig(battle.profile(killer)).coinCap);
-  if(killer?.id==='char_4026_vulpis'&&battle.skillActive?.(killer)&&(battle.profile(killer)?.skillIndex??killer.source?.skillIndex)===2)killer.vulpisKilled=true;
+  if(killer?.id==='char_4026_vulpis'&&battle.skillActive?.(killer)&&/技能结束时.*迷彩/.test(battle.profile(killer)?.skill?.description||''))killer.vulpisKilled=true;
   if(killer?.kind!=='summon'&&killer?.deployed&&killer.hp>0&&battle.profile(killer)?.branch==='charger')battle.gainCost?.(Number(killer.chargerKillCost)||1);
   if(killer?.kind!=='summon'&&killer?.deployed&&killer.hp>0){const skill=battle.profile(killer)?.skill,config=skillConfig(battle.profile(killer)),text=skill?.description||'';if(battle.skillActive?.(killer)&&has(text,/击杀|击倒|击败/)&&has(text,/获得.*费用|回复.*费用/)){const amount=costValueForText(config,text,'kill');if(amount>0)battle.gainCost?.(amount);}}
   if(killer?.kind!=='summon'&&killer?.deployed&&killer.hp>0)for(const talent of activeTalents(battle,killer)){const text=talent.description||'',bb=talentValues(talent);if(has(text,/击杀|击倒|击败/)&&has(text,/获得.*费用|回复.*费用/)){const amount=costValue({bb},'kill')??textCostValue(text);if(amount>0)battle.gainCost?.(amount);}}

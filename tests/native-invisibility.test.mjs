@@ -1,7 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} from '../dist/runtime-data.js';
-import {drawConcealOverlay,concealActive} from '../dist/native-fx.js';
+import {drawConcealOverlay,concealActive,drawStatuses} from '../dist/native-fx.js';
 import {commitExit} from '../dist/native-effects.js';
+import {openBattle,deployNow,enemy,byId} from './effects-harness.mjs';
 
 // 隐匿（INVISIBLE）：统一口径是「不能被不同阵营选中」，被阻挡即视为脱离隐匿；
 // 表现层给我方与敌方都套暗灰色滤镜 + 马赛克。计划与后续项见 INVISIBILITY_PLAN.md。
@@ -34,9 +35,9 @@ function host(){
  const ops=[];
  const c={globalCompositeOperation:'source-over',strokeStyle:'',fillStyle:'',lineWidth:1,imageSmoothingEnabled:true,
   save(){},restore(){},createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){return {addColorStop(){}};},
-  fillRect(...a){ops.push({op:'fillRect',args:a,style:this.fillStyle});},strokeRect(){},beginPath(){},moveTo(){},lineTo(){},
+  fillRect(...a){ops.push({op:'fillRect',args:a,style:this.fillStyle});},strokeRect(...a){ops.push({op:'strokeRect',args:a,style:this.strokeStyle,dash:this._dash});},beginPath(){},moveTo(){},lineTo(){},
   closePath(){},stroke(){},arc(){},ellipse(){},fill(){},translate(){},rotate(){},drawImage(){ops.push({op:'drawImage'});},
-  fillText(){},setLineDash(){}};
+  fillText(){},setLineDash(a){this._dash=a;}};
  return {c,ops};
 }
 
@@ -136,5 +137,67 @@ test('伊内丝撤退后影哨留在原地继续反隐与减速',()=>{
  near.x=ines.x+9;near.y=ines.y;
  for(let i=0;i<20;i++)b.step();
  assert.equal(near.revealed,false,'离开影哨范围后恢复隐匿');
+});
+
+test('清明每 15 秒给半径 2 格内其他敌人 5 秒隐匿，自身不含、半径外不受影响',()=>{
+ const b=liveBattle(['char_469_indigo']),u=b.s.units[0];
+ const qing=spawnReal(b,'enemy_1209_sfden',u.x+6,u.y);
+ qing.hp=qing.maxHp=1e7; // 远离干员，别被顺手打死，也不参与本测试的伤害结算
+ const near=probe(b,qing.x+2,qing.y),far=probe(b,qing.x+3,qing.y);
+ const held=e=>e.statuses.some(s=>s.kind==='invisible');
+ for(let i=0;i<Math.round(4.5*30);i++)b.step();
+ assert.equal(held(near),false,'开局 5 秒（initCooldown）内不触发');
+ for(let i=0;i<Math.round(1*30);i++)b.step();
+ assert.equal(held(near),true,'5 秒后半径内其他敌人获得隐匿');
+ assert.equal(near.invisible,true,'隐匿要真的落到索敌开关上');
+ assert.equal(held(qing),false,'清明自己不获得隐匿状态');
+ assert.equal(qing.invisible,false,'清明自身保持可见');
+ assert.equal(held(far),false,'半径 2 格外的敌人不受影响');
+ const remaining=near.statuses.find(s=>s.kind==='invisible').remaining;
+ assert.ok(remaining>3.4&&remaining<=5.02,`隐匿时长应为技能黑板的 5 秒，实际剩 ${remaining.toFixed(2)}`);
+ for(let i=0;i<Math.round(5.5*30);i++)b.step();
+ assert.equal(held(near),false,'5 秒隐匿到期后自然恢复');
+ for(let i=0;i<Math.round(10*30);i++)b.step();
+ assert.equal(held(near),true,'20 秒（5+15 冷却）时第二次触发');
+});
+
+test('忍冬 S3 的迷彩只在技能期间击倒过敌人时、于技能结束时到手，下一次开技时消失',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_18_a',skillIndex:2});deployNow(b);
+ const u=byId(b,'char_4026_vulpis');assert.ok(u,'忍冬要落场');
+ const foe=enemy(b,{x:u.x+1,y:u.y,hp:200,def:0});
+ u.sp=b.spCost(u);b.activate(u);
+ assert.ok(b.skillActive(u),'技能要开起来');
+ assert.equal(u.statuses.some(s=>s.kind==='camouflage'),false,'技能开始时不该立刻拿到迷彩（条件式能力）');
+ for(let i=0;i<300&&foe.hp>0;i++)b.step();
+ assert.ok(foe.hp<=0,'技能期间要击倒测试敌人');
+ assert.equal(u.statuses.some(s=>s.kind==='camouflage'),false,'击倒当下还没到技能结束，先不给迷彩');
+ for(let i=0;i<400&&b.skillActive(u);i++)b.step();
+ assert.equal(b.skillActive(u),false,'技能要正常结束');
+ assert.ok(u.statuses.some(s=>s.kind==='camouflage'),'技能结束时获得迷彩');
+ assert.equal(u.invisible,true,'迷彩按隐匿口径生效');
+ u.sp=b.spCost(u);u.lastSkill=-999;b.activate(u);
+ assert.equal(u.statuses.some(s=>s.kind==='camouflage'),false,'下一次开技时迷彩结束');
+ assert.equal(u.invisible,false,'迷彩结束后恢复可见');
+});
+
+test('隐匿/迷彩在头顶有虚线方框图标，没有状态就不画',()=>{
+ const hidden=host();
+ drawStatuses(hidden.c,20,20,{statuses:[{kind:'invisible',remaining:5,source:1}]},40);
+ assert.equal(hidden.ops.filter(o=>o.op==='strokeRect').length,1,'隐匿要画一个虚线方框');
+ assert.deepEqual(hidden.ops.find(o=>o.op==='strokeRect').dash,[2,2]);
+ const camo=host();
+ drawStatuses(camo.c,20,20,{statuses:[{kind:'camouflage',remaining:5,source:1}]},40);
+ assert.equal(camo.ops.filter(o=>o.op==='strokeRect').length,1,'迷彩图标同样是一个方框');
+ const plain=host();
+ drawStatuses(plain.c,20,20,{statuses:[]},40);
+ assert.equal(plain.ops.length,0,'没有状态、护盾和屏障时不画任何图标');
+});
+
+test('清明已解除 complex 限制（可进手工池与固定波次），但不改原表词条归属',()=>{
+ const info=NATIVE_DATA.enemies['enemy_1209_sfden'].enemyBehavior;
+ assert.equal(info.complexity,'common','预制体进了 supportedSkillPrefabs，不再按未实现能力标 complex');
+ assert.equal(info.randomPoolEligible,true,'实现完的敌人要在行为覆盖里显式放开随机池');
+ const dict=NATIVE_DATA.season.enemyInfoDict||{};
+ assert.equal(Object.values(dict).some(list=>(list||[]).includes('enemy_1209_sfden')),false,'原表 enemyInfoDict 里清明不属于任何词条，不能为了进池去改采集数据');
 });
 

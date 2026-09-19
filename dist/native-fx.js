@@ -146,6 +146,7 @@ function mark(c,x,y,kind){
  else if(kind==='silence'){c.beginPath();c.arc(0,0,5,0,Math.PI*2);c.moveTo(-3,-3);c.lineTo(3,3);c.stroke();}
  else if(kind==='shield'){c.beginPath();c.moveTo(0,-6);c.lineTo(5,-2);c.lineTo(4,5);c.lineTo(0,7);c.lineTo(-4,5);c.lineTo(-5,-2);c.closePath();c.fill();c.stroke();}
  else if(kind==='barrier'){c.strokeRect(-5,-5,10,10);c.beginPath();c.moveTo(-5,0);c.lineTo(5,0);c.stroke();}
+ else if(kind==='invisible'||kind==='camouflage'){c.setLineDash([2,2]);c.strokeRect(-5,-5,10,10);c.setLineDash([]);c.beginPath();c.moveTo(-5,5);c.lineTo(5,-5);c.stroke();if(kind==='camouflage'){c.beginPath();c.moveTo(-5,-5);c.lineTo(5,5);c.stroke();}}
  else{c.fillRect(-4,-4,8,8);}
  c.restore();
 }
@@ -506,8 +507,10 @@ export function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,redu
 }
 export function drawStatuses(c,x,y,unit,size){
  // cold and frozen are shown by drawFrostOverlay on the actor itself, so they get no head icon here.
+ // 隐匿／迷彩本身由 drawConcealOverlay 的马赛克画在身上，这里只补一个头顶图标，让玩家能分清
+ // 「看不见」和「只是被挡在后面」。
  const kinds=[];
- for(const s of unit.statuses||[])if(['stun','sleep','silence','fear','terror','tremble','root'].includes(s.kind)&&!kinds.includes(s.kind))kinds.push(s.kind);
+ for(const s of unit.statuses||[])if(['stun','sleep','silence','fear','terror','tremble','root','invisible','camouflage'].includes(s.kind)&&!kinds.includes(s.kind))kinds.push(s.kind);
  if((unit.shield||0)>0||(unit.shieldLayers||[]).some(l=>l.remaining>0))kinds.push('shield');
  if((unit.barriers||[]).some(b=>b.charges>0))kinds.push('barrier');
  kinds.slice(0,3).forEach((k,i)=>mark(c,x-size/2+6+i*13,y-size*.82,k));

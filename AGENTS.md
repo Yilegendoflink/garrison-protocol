@@ -55,7 +55,7 @@
 - **反推原表字段**：`DeadSpawn.*`、`Revive[Trigger].*`、`Atkup.atk`／`AtkUp.atk`、`shield.dynamic` 等一律从 `talentBlackboard` 取，取不到就不给这个能力，并在 `enemy-behavior-overrides.json` 里显式关闭。`aura.*` 前缀是**自身条件判定**，不是发给周围敌人的光环（真光环是 `defup.*`）。
 - **放开随机池要走流程**：复杂敌人先在 `enemy-behavior-overrides.json` 里 `randomPoolEligible:false`，补完专属实现并写了定向测试后再逐条放开；`filterRandomPoolTable` 会把不合格的敌人从词条池里剔掉，没放开就等于没上场。
 - **具名卡池要在 `native-session.js` 显式建表**：`drawFromPool` 只认池名，而原表（`pool_chess_glady`、`pool_char_pinus`、`pool_equip_*`）只给名字不给成员，不建表就等于按商店规则从整池抽。成员只能从效果文案或装备字段推：`members`（可带权重）、`bond`（该盟约的装备）、`any`（文案没限定，等于任意）；推不出来的宁可不做也不要编，并在表里注明依据。
-- **隐匿只有一条判定**：`invisible` = 状态表（`invisible`/`camouflage`）或形态自带的 `formInvisible`，`revealed` = 反隐时间窗（`revealUntil`，每帧由 `syncReveals` 收敛）。被阻挡（`e.block!=null`）视为脱离隐匿。改索敌时三处一起改：`targets()`、`autoSkillWouldHit()`、敌方 AI 的远程选目标；反隐由 `revealEnemy` 续期，不要写回永久置位的 `e.revealed=true`。
+- **隐匿只有一条判定**：`invisible` = 状态表（`invisible`/`camouflage`）或形态自带的 `formInvisible`，`revealed` = 反隐时间窗（`revealUntil`，每帧由 `syncReveals` 收敛）。被阻挡（`e.block!=null`）视为脱离隐匿。改索敌时三处一起改：`targets()`、`autoSkillWouldHit()`、敌方 AI 的远程选目标；反隐由 `revealEnemy` 续期，不要写回永久置位的 `e.revealed=true`。敌方隐匿技能只有两条实现路径：`InvisibleCombat` 挂在 `resolveEnemyStrike`（攻击显形），清明 `InvisibleShield` 走独立计时的 `tickEnemyInvisibleShield`（跟攻击解耦）；技能文案里带「技能结束时」的是条件式发放（忍冬 S3 迷彩），通用「开技即获得」分支必须跳过它。
 
 资料：`data/prts/` 参考底库；`data/normalized/` 规范化；`data/modes/alliance-lower/` 本期包（历史提交 `86da4cfa…`）。客户端规模仍是 112 可见预设、266 养成状态、23 盟约、40 策略、215 敌人引用、376 头像。
 

@@ -15,6 +15,15 @@ export function applyStatus(target,kind,duration,{source=null,value=1,resistible
 }
 // formInvisible：形态自带的常驻隐匿（例如深池逐火的「怨恨的余烬」），不是可驱散的状态，
 // 因此不能被 tickStatuses 按状态表覆盖掉。
+// 主动摘掉一条状态（例如忍冬 S3 的迷彩「直至下一次开启技能」，下一次开技时要手动撤销）。
+// source 给定时只摘该来源的那一条；摘完重算 `invisible`，避免隐匿残留。
+export function removeStatus(target,kind,source){
+ if(!target?.statuses)return false;const before=target.statuses.length;
+ target.statuses=target.statuses.filter(s=>!(s.kind===kind&&(source===undefined||s.source===source)));
+ if(target.statuses.length===before)return false;
+ if(['invisible','camouflage'].includes(kind))tickStatuses(target,0);
+ return true;
+}
 export function tickStatuses(target,dt){if(!Number.isFinite(dt)||dt<0)throw Error('Invalid status delta');target.statuses??=[];for(const s of target.statuses)s.remaining-=dt;target.statuses=target.statuses.filter(s=>s.remaining>1e-9);target.invisible=target.formInvisible===true||(target.statuses.some(s=>['invisible','camouflage'].includes(s.kind))&&!target.revealed);target.levitated=target.statuses.some(s=>s.kind==='levitate');target.fragile=target.statuses.filter(s=>s.kind==='fragile').reduce((v,s)=>Math.max(v,s.value||1),1);}
 export function permissions(target){const denied=new Set();for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!(target.statuses||[]).some(s=>['sleep','levitate'].includes(s.kind)),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
 export function statusAttributeChanges(target){const s=target.statuses||[];return {attackSpeed:s.some(s=>s.kind==='cold'||s.kind==='frozen')?-30:0,resistance:s.some(s=>s.kind==='frozen')?-15:0,attack:s.filter(s=>s.kind==='attackDown').reduce((v,x)=>Math.min(v,x.value??0),0),defense:s.filter(s=>s.kind==='defDown').reduce((v,x)=>Math.min(v,x.value??0),0),magicResistance:s.filter(s=>s.kind==='resDown').reduce((v,x)=>Math.min(v,x.value??0),0)};}

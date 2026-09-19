@@ -28,6 +28,7 @@
 - 萨卡兹枯朽战车的攻击计数、近战强化和污染秽蚀持续区域。
 - 敌方持续伤害区域（第一批，DOT 词条）：射击落点燃烧区、跟随自身的常驻光环、死亡污染区，以及逐腐兽的「治疗可解除」流血。数值一律取自原表 blackboard，推导结果随构建写入 `enemyBehavior`，结算走 `logicEffects` 的 `kind:'field'` 并由 `drawZones` 绘制。分批计划与验收口径见 `ENEMY_EFFECTS_PLAN.md`。
 - 解压缩与再生（第三批，TIMES 词条）：`DeadSpawn.*` 形成碎片、`Revive[Trigger].*` 进入第二形态，碎片依赖的「特殊生命值机制」（血条数值 = 需要击倒的伤害次数，类型限定按图鉴文案）落在 `applyDamage`。死亡类能力统一由 `commitExit` 的 `battle.onEnemyDeath` 触发，覆盖全部死因；数值、位置、时序与遗留问题见 `DECOMPRESS_ENEMY_PLAN.md`。
+- 敌方隐匿技能（第四批，INVISIBLE 词条）：`InvisibleCombat` 攻击显形、停手 6 秒后重新隐匿；清明 `InvisibleShield` 是独立计时的自施法技能（`tickEnemyInvisibleShield`，`initCooldown` 首放、之后按 `cooldown` 循环，给半径内其他敌人限时隐匿），不挂在攻击路径上，否则行进途中不开火就会漏触发。口径与验收见 `INVISIBILITY_PLAN.md`。
 - 周期停移、连射冷却和技能控制停移的数据字段。
 - 复杂行为按运行时元数据过滤随机敌人池，保持手工波次表不被修改。
 - 未接入的敌方技能预制体（如地图、召唤、重生、全局效果和复杂蓄力）自动标记为 `complex`，通过固定波次等待专属实现。
