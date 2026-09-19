@@ -37,7 +37,7 @@ export class NativeEconomy extends PreparationState {
  settleBondRewards(){
   const rows=this.bonds();for(const[id,b]of Object.entries(rows))if(b.active){const info=this.data.season.bondInfoDict[id];for(const [index,e]of (this.data.season.effectBuffInfoDataDict[info.effectId]||[]).entries()){
    const p=blackboard(e.blackboard),layers=this.s.bondLayers[id]||0,key=id+':'+index;
-   if(e.key==='bond_layer_gain_coin'){const count=Math.floor(layers/p.layer),old=this.s.claimedBondRewards[key]||0;if(count>old){this.s.funds+=(count-old)*p.count;this.s.claimedBondRewards[key]=count;}}
+   if(e.key==='bond_layer_gain_coin'){const count=Math.floor(layers/p.layer),old=this.s.claimedBondRewards[key]||0;if(count>old){this.addFunds((count-old)*p.count);this.s.claimedBondRewards[key]=count;}}
    if(e.key==='bond_layer_added_reward_equip'){const count=Math.floor(layers/(Number(p.layer)||25)),old=this.s.claimedBondRewards[key]||0;if(count>old){for(let n=old;n<count;n++){let itemId;if(this.poolDraw)itemId=this.draw({kind:'item',pool:p.pool});else{const items=(this.data.items||[]).filter(i=>!i.hidden&&i.normal?.itemType==='EQUIP'&&(!String(p.pool).includes('equip_vict')||i.normal?.giveBondId==='victoriaShip'));const fallback=items.length?items.map(i=>i.id):Object.entries(this.data.season.trapChessDataDict).filter(([,i])=>i.itemType==='EQUIP'&&(!String(p.pool).includes('equip_vict')||i.giveBondId==='victoriaShip')).map(([id])=>id);if(!fallback.length)throw Error('没有可用装备');itemId=this.pick(fallback);}this.gainItem(itemId);}this.s.claimedBondRewards[key]=count;}}
    if(e.key==='bond_multi_layer_char_goods_price_bond_discount'){if(layers>=p.layer2)this.s.permanentDiscount=2;else if(layers>=p.layer1)this.s.permanentDiscount=Math.max(1,this.s.permanentDiscount);}
   }}
@@ -63,7 +63,7 @@ export class NativeEconomy extends PreparationState {
   return item;
  }
  price(id){const def=this.data.season.charChessDataDict[id];if(!def)return purchasePrice(this.data,id);let value=purchasePrice(this.data,id);for(const gid of def.garrisonIds){const g=this.data.season.garrisonDataDict[gid];if(g.eventType==='SERVER_PRICE')value=runGarrison(this,null,g,'SERVER_PRICE');}if(this.s.permanentDiscount===2||(this.s.permanentDiscount===1&&def.bondIds.includes('visiShip')))value--;const special=runStrategyEvent(this,'price',{chessId:id});if(special.length)value=special.at(-1);return Math.max(0,value);}
- spend(amount){if(this.s.funds<amount)return false;this.s.funds-=amount;this.s.roundSpent+=amount;this.s.totalSpent+=amount;runStrategyEvent(this,'spent');return true;}
+ spend(amount){if(this.s.funds<amount)return false;this.addFunds(-amount);this.s.roundSpent+=amount;this.s.totalSpent+=amount;runStrategyEvent(this,'spent');return true;}
  buy(index){
   if(this.s.phase!=='prep'||this.s.rewardPending)return {ok:false,code:'WRONG_PHASE'};const id=this.s.offers[index],shop=this.data.season.charShopChessDatas[id];if(!shop?.charId||shop.chessLevel>this.s.level)return {ok:false,code:'INVALID_OFFER'};
   if(this.handFull()&&this.s.units.filter(u=>u.chessId===id).length<2)return {ok:false,code:'FULL_HAND'};if(!this.spend(this.price(id)))return {ok:false,code:'NO_FUNDS'};if(stockOf(this.data,this.s,id)<=0)return {ok:false,code:'NO_STOCK'};this.s.stock[id]-=1;this.s.offers[index]=null;const unit=this.gain(id);unit.purchases??={};unit.purchases[id]=(unit.purchases[id]||0)+1;runStrategyEvent(this,'bought',unit);for(const b of this.ownBonds(unit))this.s.roundBoughtBonds[b]=(this.s.roundBoughtBonds[b]||0)+1;return {ok:true};
@@ -84,7 +84,7 @@ export class NativeEconomy extends PreparationState {
   if(this.s.rewardQueue.length){if(this.s.rewardPending)this.s.rewardQueue.push(this.s.rewardPending);this.s.rewardPending=this.s.rewardQueue.shift();}return true;
  }
  startPreparation(){
-  if(this.s.phase!=='prep'||this.s.lastPrepRound===this.s.round)return false;this.s.lastPrepRound=this.s.round;this.s.funds+=this.s.nextRoundBonus+this.s.carryFunds;this.s.nextRoundBonus=0;this.s.carryFunds=0;runStrategyEvent(this,'prep');
+  if(this.s.phase!=='prep'||this.s.lastPrepRound===this.s.round)return false;this.s.lastPrepRound=this.s.round;this.addFunds(this.s.nextRoundBonus+this.s.carryFunds);this.s.nextRoundBonus=0;this.s.carryFunds=0;runStrategyEvent(this,'prep');
   for(const u of this.s.units.slice().sort((a,b)=>(a.position?.y??999)-(b.position?.y??999)||(a.position?.x??999)-(b.position?.x??999)))this.triggerGarrisons('SERVER_PREP_START',u);this.settleBondRewards();return true;
  }
  beginBattle(){
