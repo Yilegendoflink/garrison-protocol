@@ -44,6 +44,8 @@ button.native-equipment-slot:hover{border-color:#78e6bd;background:#17362d}
 .native-dossier h3{margin:14px 0 6px;font-size:13px;letter-spacing:.16em;color:#8eb4a7;font-weight:600}
 .native-dossier p{margin:0 0 8px;white-space:pre-line;color:#d5e8df}
 .native-dossier-skill-name{color:#f0d18a;font-weight:600}
+/* 卫戍效果的触发时机（【获得时】【战斗中】…）：原表把时机写在描述里、以前被富文本去标签吃掉了 */
+.native-garrison-when{color:#8fd8c0}
 .native-dossier label{display:block;margin:0 0 8px;color:#9ec4b6;font-size:11px}
 .native-dossier select{width:100%;margin-top:4px;padding:8px;font-size:12px}
 .native-dossier-gear{color:#b5cec2;font-size:12px}

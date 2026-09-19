@@ -38,6 +38,21 @@ export function skillWidensRange(profile,skillIndex=null){
 export function baseFunding(round){if(!Number.isInteger(round)||round<1)throw Error('Invalid round');return round+3;}
 // Versioned native data helpers. No missing rule is guessed or silently simulated.
 export function blackboard(entries=[]){return Object.fromEntries((entries||[]).map(e=>[e.key,e.valueStr??e.value]));}
+// 卫戍效果（干员特质）的显示文本。原表把触发时机写成尖括号标签（`<获得时>`／`<战斗中>`…），
+// 直接按富文本去标签会把时机一起吃掉，所以这里统一成【…】前缀；没有标签的按 eventType／能力键补。
+// 时机口径见 GARRISON_EFFECT_AUDIT.md §一。
+export const GARRISON_TIMING_LABELS={SERVER_GAIN:'获得时',SERVER_PREP_START:'进入休整期时',SERVER_PREP_FIN:'休整期结束时',SERVER_REFRESH_SHOP:'刷新时',SERVER_CHESS_SOLD:'售出时',SERVER_PRICE:'购买时',IN_BATTLE:'战斗中'};
+const GARRISON_TIMING_TAG=/<([^@/][^>]*)>/g,GARRISON_TIMING_TEXT=/时$|战斗中|部署/;
+export function garrisonTimingLabel(rule){
+ const raw=String(rule?.garrisonDesc||rule?.description||'');
+ const tag=[...raw.matchAll(GARRISON_TIMING_TAG)].map(m=>m[1]).find(t=>GARRISON_TIMING_TEXT.test(t));
+ if(tag)return tag;
+ const key=String(blackboard(rule?.blackboard||[]).key||'');
+ if(/onstart/.test(key))return '部署时';
+ if(String(rule?.battleRuneKey||'').startsWith('give_garrison'))return '战斗开始时';
+ return GARRISON_TIMING_LABELS[rule?.eventType]||'';
+}
+export function garrisonText(rule){const when=garrisonTimingLabel(rule),body=String(rule?.garrisonDesc||rule?.description||'').replace(/<[^>]+>/g,'').replace(/\\n/g,'\n').trim();return when?`【${when}】${body}`:body;}
 export function talentCandidateOpen(candidate,status,potentialRank=0){
  const phase=Number(String(status?.evolvePhase||'PHASE_0').replace('PHASE_','')),need=Number(String(candidate.unlockCondition?.phase||'PHASE_0').replace('PHASE_',''));
  const level=status?.charLevel??1;

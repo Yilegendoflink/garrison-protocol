@@ -339,7 +339,8 @@ PRTS 在隐现、哈洛德、泡泡、锡人、水月、信仰搅拌机、乌尔
 | 伤害类 | 新增 `garrisonDamageScale`：`attack_enemy`（`check_tag` 特攻，深巡/跃跃）与 `ab_damageScaleByBond`（打束缚/停顿目标，仇白） | `native-battle.js` `hit()` |
 | 弹药范围 | 新增 `garrisonAmmoEvent`/`garrisonRangeTiles`：弹药事件按 `range_id`（`x-5`=周围4格、`1-1`=身前一格、`0-1`=自身）分发给持有特质的干员 | `native-battle.js` |
 | 特质转发 | `applyGarrisonTransfers` 改成按 `battleRuneKey` 选目标、按 `check_bond_id` 校验、跳过召唤物、与目标自身已有的 garrison 去重；每波开战前清空 `extraGarrisonIds` | `native-effects.js` |
+| 文本时机 | 原表把时机写成 `<获得时>`／`<战斗中>` 这类尖括号标签，此前档案直接 `plain(garrisonDesc)` 去标签会把时机一起吃掉。新增 `protocol.garrisonTimingLabel`/`garrisonText`：统一成 **【获得时】** 前缀（有标签用标签，没有的按 `eventType`／能力键补：`onstart`→部署时、`give_garrison_*`→战斗开始时、其余 `IN_BATTLE`→战斗中、`SERVER_PRICE`→购买时），干员档案的「卫戍」段落用 `<b class="native-garrison-when">` 加亮 | `protocol.js`、`native-play.js`、`native.css` |
 
-测试：`tests/native-garrison-effects.test.mjs`（20 例）——整备期上限/池表/余；属性族（水月/泡泡/浊心斯卡蒂/隐德来希）；`attack_enemy`/`ab_damageScaleByBond`；`bond_actived_maxstack`+同行人数；`bond_self` 每盟约各 +N 与每波封顶；每波重置；战斗内 `conditionkey`；弹药范围分发；魔王追加层数；冻结/沉睡晕眩触发；`check_bond_id` 发/不发；`give_garrison_to_all`；耀骑士临光去重；以及一条**门禁**测试：作战能力的每个 `blackboard.key` 必须在实现表或「未实现登记表」里。
+测试：`tests/native-garrison-effects.test.mjs`（21 例）——整备期上限/池表/余；属性族（水月/泡泡/浊心斯卡蒂/隐德来希）；`attack_enemy`/`ab_damageScaleByBond`；`bond_actived_maxstack`+同行人数；`bond_self` 每盟约各 +N 与每波封顶；每波重置；战斗内 `conditionkey`；弹药范围分发；魔王追加层数；冻结/沉睡晕眩触发；`check_bond_id` 发/不发；`give_garrison_to_all`；耀骑士临光去重；**显示文本必须带【触发时机】前缀**（含全量 126 条）；以及一条**门禁**测试：作战能力的每个 `blackboard.key` 必须在实现表或「未实现登记表」里。
 
 仍然留档（未做）：`garrison_27`「敌人进入冻结时回血」没有可见干员引用，已在门禁测试的 `PENDING` 表里显式登记；池类效果「直接进手牌 vs 候选三选一」按现状（直接进手牌）保留，待口径（本页 §四 Q11）；号角「不同阶干员」目前只数该盟约成员（§四 Q19）。

@@ -5,6 +5,7 @@
 //   「每场作战至多 N 层」按每波重置；送特质时 check_bond_id 不匹配就不发。
 import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} from '../dist/runtime-data.js';
+import {garrisonText} from '../dist/protocol.js';
 import {openBattle,deployNow,enemy,byId} from './effects-harness.mjs';
 import {dispatch} from '../dist/native-effects.js';
 import {applyStatus} from '../dist/status.js';
@@ -290,6 +291,37 @@ test('耀骑士临光：自己已经持有的特质不会再被「送给自己�
  b.layers.kazimierzShip = 9;                          // ⌊9/3⌋=3 → 再部署 ×(1-0.045)
  const mul = sumParts(b, u, 'respawnTime');
  assert.ok(Math.abs(mul - 0.955) < 1e-9, `只算一次，期望 0.955，实际 ${mul}`);
+});
+
+// 文本门禁：每条卫戍效果的显示文本都必须以【时机】开头（口径见 GARRISON_EFFECT_AUDIT.md §一）。
+test('每条卫戍效果的显示文本都带【触发时机】前缀', () => {
+ const cases = [
+  ['角峰', '获得时'], ['波登可', '休整期结束时'], ['歌蕾蒂娅', '进入休整期时'],
+  ['拉普兰德', '刷新时'], ['德克萨斯', '售出时'], ['至简', '购买时'],
+  ['水月', '战斗中'], ['瑕光', '部署时'], ['史尔特尔', '部署时'],
+  ['寒芒克洛丝', '战斗开始时'], ['远牙', '战斗开始时'], ['荒芜拉普兰德', '战斗中'],
+ ];
+ // 精锐档的荒芜拉普兰德换成「战斗开始时给所有【叙拉古】干员特质」那条
+ const goldenWolf = cardOf('荒芜拉普兰德').replace(/_a$/, '_b');
+ assert.ok(garrisonText(s.garrisonDataDict[s.charChessDataDict[goldenWolf].garrisonIds[0]]).startsWith('【战斗开始时】'), '精锐档应是【战斗开始时】');
+ for (const [name, when] of cases) {
+  const chessId = cardOf(name);
+  const rules = (s.charChessDataDict[chessId].garrisonIds || []).map(id => s.garrisonDataDict[id]);
+  assert.ok(rules.length, name + ' 应有卫戍效果');
+  for (const rule of rules) assert.ok(garrisonText(rule).startsWith(`【${when}】`), `${name} → ${garrisonText(rule)}`);
+ }
+ // 全量：可见干员的每条卫戍都拿得到时机，且文本里不残留富文本标签
+ let seen = 0;
+ for (const shop of Object.values(s.charShopChessDatas)) {
+  if (shop.isHidden) continue;
+  for (const gid of s.charChessDataDict[shop.chessId].garrisonIds || []) {
+   const text = garrisonText(s.garrisonDataDict[gid]);
+   assert.match(text, /^【[^】]+】/, gid + ' 缺少时机前缀：' + text);
+   assert.equal(/[<>]/.test(text), false, gid + ' 文本里还留着富文本标签');
+   seen++;
+  }
+ }
+ assert.ok(seen >= 120, '可见干员的卫戍条目应有 120 条以上，实际 ' + seen);
 });
 
 // 门禁：原表出现过的每个作战能力键，要么有实现，要么在本表里显式登记「未实现」，
