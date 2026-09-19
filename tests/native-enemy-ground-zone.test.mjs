@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {enemyBehaviorProfile} from '../dist/native-combat.js';
-import {tickLogic} from '../dist/native-effects.js';
+import {tickLogic,commitExit} from '../dist/native-effects.js';
 
 // 持续伤害范围第一批（DOT 词条）：集团军重型火炮、深溟巢涌者、萨卡兹枯朽（战士/战车）、
 // 逐腐兽、假想敌：蚀裂。数值全部来自原表 blackboard，测试只核对「原表写了的那些数」。
@@ -187,6 +187,21 @@ test('假想敌：蚀裂只在被击倒时留下毒雾，不是常驻光环',()=
  const one=hp-u.hp;assert.ok(one>0,'产生者离场后毒雾仍然结算');
  b.s.time+=1;b.tickEnemyGroundZones();
  assert.equal(u.hp,hp-one*2,'每秒一跳，数值与首跳相同');
+});
+
+test('毒雾走真实死亡入口时也留档产生者攻击力，并落在击杀者所在格',()=>{
+ const b=liveBattle(),u=b.s.units[0];
+ u.maxHp=999999;u.hp=999999;
+ const enemy=spawnEnemy(b,'enemy_9006_actoxi',u.x,u.y+1);
+ commitExit(b,{target:enemy,reason:'knockdown',killer:u}); // 真实死亡入口：击杀者是我们的干员
+ const zone=zones(b)[0];
+ assert.ok(zone,'真实死亡路径也要留下毒雾');
+ assert.equal(zone.x,u.x);assert.equal(zone.y,u.y,'毒雾落在击杀者所在格');
+ assert.equal(zone.sourceAtk,enemy.atk,'建圈时就记下产生者攻击力');
+ b.s.enemies=b.s.enemies.filter(x=>x!==enemy); // 敌人已从场上移除
+ const hp=u.hp;
+ b.s.time+=1.1;b.tickEnemyGroundZones();
+ assert.ok(hp-u.hp>0,'产生者离场后仍按留档的攻击力结算');
 });
 
 test('毒雾伤害跟随产生者的攻击力：同一种敌人攻击力翻倍，圈里每秒掉的血也翻倍',()=>{
