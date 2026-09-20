@@ -8781,10 +8781,10 @@ function roundEndBegin(g){
  node.className='native-round-end';node.dataset.stage='wave';node.dataset.tone=info.danger?'danger':info.loss?'normal':'perfect';
  if(reduce)node.dataset.reduce='1';
  node.setAttribute('role','dialog');node.setAttribute('aria-label','波次结束');
- node.innerHTML=`<div class="native-round-end-dim"></div><div class="native-round-end-banner"><b>波次结束</b><em>WAVE END</em></div><div class="native-round-end-body"><p class="native-round-end-round">第 ${g.s.round} 回合</p>${info.loss?`<p class="native-round-end-label">损失生命</p><strong class="native-round-end-value">0</strong>`:'<p class="native-round-end-perfect">完美通关</p>'}<p class="native-round-end-hp">剩余生命 ${info.hp} / ${info.maxHp}${info.leaks?` · 漏失 ${info.leaks}`:''}</p><button class="native-primary" data-act="${info.gameOver?'result':'next'}">${info.gameOver?'查看伤害报告':'进入下一回合 →'}</button></div>`;
+ node.innerHTML=`<div class="native-round-end-dim"></div><div class="native-round-end-banner"><div class="native-round-end-wave"><b>波次结束</b><em>WAVE END</em></div><div class="native-round-end-body"><p class="native-round-end-round">第 ${g.s.round} 回合</p>${info.loss?`<p class="native-round-end-label">损失生命</p><strong class="native-round-end-value">0</strong>`:'<p class="native-round-end-perfect">完美通关</p>'}<p class="native-round-end-hp">剩余生命 ${info.hp} / ${info.maxHp}${info.leaks?` · 漏失 ${info.leaks}`:''}</p><button class="native-primary" data-act="${info.gameOver?'result':'next'}">${info.gameOver?'查看伤害报告':'进入下一回合 →'}</button></div></div>`;
  root.append(node);
  state.roundEnd={node,info,stage:'wave',count:0,countStart:0,timer:0};
- const hold=reduce?260:1000,out=reduce?20:360;
+ const hold=reduce?260:1000,out=reduce?20:340;
  state.roundEnd.timer=setTimeout(()=>{const r=state.roundEnd;if(!r||r.node!==node)return;roundEndStage('out');r.timer=setTimeout(()=>{if(state.roundEnd===r)roundEndStage('count');},out);},hold);
 }
 function roundEndTick(now){
