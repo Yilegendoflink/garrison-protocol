@@ -6,7 +6,7 @@ import {NATIVE_DATA} from './runtime-data.js';
 import {NativeSession} from './native-session.js';
 import {NativeBattle} from './native-battle.js';
 import {renderLobby} from './native-lobby.js';
-import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText,battleBoardVisible,bondCurrentPreviewHtml,isolatedPlatform,tileLiftAmount} from './protocol.js';
+import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText,battleBoardVisible,bondCurrentPreviewHtml,isolatedPlatform,tileLiftAmount,ROUND_LEAK_CAP} from './protocol.js';
 import {strategyCoverage} from './strategy.js';
 import {spBarFill} from './native-sp.js';
 import {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay,drawConcealOverlay,drawWhitwEyes} from './native-fx.js';
@@ -54,7 +54,7 @@ async function leavePlayChrome(){
 const portraitQuery=matchMedia('(orientation:portrait)');
 if(portraitQuery.addEventListener)portraitQuery.addEventListener('change',syncPlayChrome);else portraitQuery.addListener(syncPlayChrome);
 window.addEventListener('resize',syncPlayChrome);
-const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:null,view:'lobby',mode:'mode_single_normal',band:'band_amiya',strategyDraft:null,map:data.maps.find(m=>m.weight>0).stageId,selected:null,summonSelected:null,item:null,inspect:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,editor:editorState(),waveTable:loadWaveTable()};
+const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:null,view:'lobby',mode:'mode_single_normal',band:'band_amiya',strategyDraft:null,map:data.maps.find(m=>m.weight>0).stageId,selected:null,summonSelected:null,item:null,inspect:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,roundEnd:null,editor:editorState(),waveTable:loadWaveTable()};
 let canvas,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0,dossierDismissedAt=0,runtimeFault=null;
 function readSave(key){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):null;}catch{return null;}}
 function savedView(){try{return sessionStorage.getItem(VIEW_SAVE)||'lobby';}catch{return 'lobby';}}
@@ -229,6 +229,41 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
  if(!ok)notice(handWasFull&&(a==='buy'||a==='buyItem')?'整备区已满：先部署、出售或装备清出空余，才能购入干员／装备':g.lastError||'当前资金、位置或阶段不允许此操作');if(ok&&(a==='next'||a==='decision'))saveCheckpoint();save();render();if(g.s.phase==='finished')showResult();
 }
  function renderSummonCards(){const game=state.game;if(game?.s.phase==='prep')game.syncSummonCards?.();const bench=document.getElementById('native-hand'),cards=game?.s.phase==='prep'?(game.s.summonCards||[]).filter(c=>c.position===null):[];if(!bench)return;bench.querySelectorAll('[data-act="summon-select"]').forEach(node=>node.remove());for(const card of cards){const button=document.createElement('button');button.dataset.act='summon-select';button.dataset.uid=String(card.uid);button.dataset.mode=card.mode||'manual';button.disabled=card.mode!=='manual';button.className=`native-summon-card${state.summonSelected===card.uid?' chosen':''}`;const hint=card.mode==='skill'?'技能转好后自动出现':card.mode==='auto'?'开战时自动出现':'可拖动放置并选择朝向';button.innerHTML=`<span class="native-summon-icon">◈</span><b>${esc(card.name)}</b><small>${hint}</small>`;bench.append(button);}}
+// ── 回合结束演出 ────────────────────────────────────────────────────────────
+// 暗屏 + 拉出横幅「波次结束 / WAVE END」→ 停留 1 秒 → 收横幅 → 「损失生命」从 0 快速累加到位。
+// 纯表现层：只读 s.lastBattle（loss = 上限后的真实扣血，leaks = 真值），不写任何战斗状态，
+// 也不参与索敌/结算。减动效开关下退化为「横幅瞬现 + 短停留」。
+function roundEndInfo(g){
+ const last=g.s.lastBattle||{},loss=Math.max(0,Math.min(ROUND_LEAK_CAP,Number(last.loss)||0)),leaks=Math.max(0,Number(last.leaks)||0),gameOver=g.s.phase==='finished'||g.s.hp<=0;
+ return {loss,leaks,gameOver,hp:Math.max(0,g.s.hp),maxHp:g.s.maxHp,danger:gameOver||loss>=ROUND_LEAK_CAP};
+}
+function roundEndStage(next){
+ const r=state.roundEnd;if(!r||!r.node.isConnected)return;
+ r.stage=next;r.node.dataset.stage=next;
+ if(next!=='count')return;
+ r.countStart=performance.now();
+ if(r.info.gameOver)r.timer=setTimeout(()=>{if(state.roundEnd===r&&r.node.isConnected)showResult();},1000);
+}
+function roundEndBegin(g){
+ if(state.roundEnd?.timer)clearTimeout(state.roundEnd.timer);
+ const reduce=!!state.reduceFx,info=roundEndInfo(g),node=document.createElement('div');
+ node.className='native-round-end';node.dataset.stage='wave';node.dataset.tone=info.danger?'danger':info.loss?'normal':'perfect';
+ if(reduce)node.dataset.reduce='1';
+ node.setAttribute('role','dialog');node.setAttribute('aria-label','波次结束');
+ node.innerHTML=`<div class="native-round-end-dim"></div><div class="native-round-end-banner"><b>波次结束</b><em>WAVE END</em></div><div class="native-round-end-body"><p class="native-round-end-round">第 ${g.s.round} 回合</p>${info.loss?`<p class="native-round-end-label">损失生命</p><strong class="native-round-end-value">0</strong>`:'<p class="native-round-end-perfect">完美通关</p>'}<p class="native-round-end-hp">剩余生命 ${info.hp} / ${info.maxHp}${info.leaks?` · 漏失 ${info.leaks}`:''}</p><button class="native-primary" data-act="${info.gameOver?'result':'next'}">${info.gameOver?'查看伤害报告':'进入下一回合 →'}</button></div>`;
+ root.append(node);
+ state.roundEnd={node,info,stage:'wave',count:0,countStart:0,timer:0};
+ const hold=reduce?260:1000,out=reduce?20:360;
+ state.roundEnd.timer=setTimeout(()=>{const r=state.roundEnd;if(!r||r.node!==node)return;roundEndStage('out');r.timer=setTimeout(()=>{if(state.roundEnd===r)roundEndStage('count');},out);},hold);
+}
+function roundEndTick(now){
+ const r=state.roundEnd;if(!r)return;
+ if(!r.node.isConnected){state.roundEnd=null;return;}
+ if(r.stage!=='count'||!r.info.loss)return;
+ const value=Math.round(r.info.loss*(1-Math.pow(1-Math.min(1,(now-r.countStart)/650),3)));
+ if(value===r.count)return;
+ r.count=value;const el=r.node.querySelector('.native-round-end-value');if(el)el.textContent=String(value);
+}
 function updateHud(){const g=state.game;if(!g||state.view!=='game')return;renderSummonCards();const b=g.battle?.s,rounds=buildPhasePlan(data,g.s.modeId).filter(r=>!r.isConditional).length,status=document.getElementById('native-status');
  if(status){const time=b&&g.s.phase==='battle'?`<div><small>剩余时间</small><b>${Math.max(0,Math.ceil(b.limit-b.time))}<i> 秒</i></b></div><div><small>剩余资金</small>${fundsMarkup(g.s.funds)}</div>`:`<div><small>剩余资金</small>${fundsMarkup(g.s.funds)}</div>`;
   const wave=b&&g.s.phase==='battle'?`<div><small>波次</small><b>${b.kills}<i> / ${b.total}</i></b></div>`:`<div><small>回合</small><b>${g.s.round}<i>/${rounds}</i></b></div>`;
@@ -514,7 +549,7 @@ window.addEventListener('beforeunload',()=>{state.expiresAt??=Date.now()+8640000
 function frame(now){
  if(runtimeFault){requestAnimationFrame(frame);return;}
  try{
-  const dt=Math.min(.15,(now-last)/1000);last=now;const g=state.game;if(state.view==='game'&&g?.s.phase==='battle'&&!state.paused){acc+=dt*state.speed;const previous=g.s.phase;while(acc>=1/30&&g.s.phase==='battle'){acc-=1/30;g.tick();}if(g.battle)playBattleEvents(g.battle.s,state.muted,state.volume);if(g.s.phase!==previous){acc=0;save();render();if(g.s.phase==='finished'){const dmg=Math.round(g.s.runResult?.totalDamage||0);notice('模拟结束，总伤害 '+(eggOn()?format325(dmg):dmg.toLocaleString()));showResult();}}}else if(state.view==='sandbox'&&state.sandbox?.phase==='battle'&&!state.paused){acc+=dt*state.speed;while(acc>=1/30&&!state.sandbox.battle.s.finished){acc-=1/30;state.sandbox.battle.step();}if(state.sandbox.battle)playBattleEvents(state.sandbox.battle.s,state.muted,state.volume);}else acc=0;hudTime+=dt;saveTime+=dt;if(hudTime>.2){updateHud();hudTime=0;}if(saveTime>2&&g){save();saveTime=0;}draw();
+  const dt=Math.min(.15,(now-last)/1000);last=now;const g=state.game;if(state.view==='game'&&g?.s.phase==='battle'&&!state.paused){acc+=dt*state.speed;const previous=g.s.phase;while(acc>=1/30&&g.s.phase==='battle'){acc-=1/30;g.tick();}if(g.battle)playBattleEvents(g.battle.s,state.muted,state.volume);if(g.s.phase!==previous){acc=0;save();render();if(g.s.phase==='intermission')roundEndBegin(g);else if(g.s.phase==='finished'){const dmg=Math.round(g.s.runResult?.totalDamage||0);notice('模拟结束，总伤害 '+(eggOn()?format325(dmg):dmg.toLocaleString()));if(g.s.runResult?.kind==='training-dummy')showResult();else roundEndBegin(g);}}}else if(state.view==='sandbox'&&state.sandbox?.phase==='battle'&&!state.paused){acc+=dt*state.speed;while(acc>=1/30&&!state.sandbox.battle.s.finished){acc-=1/30;state.sandbox.battle.step();}if(state.sandbox.battle)playBattleEvents(state.sandbox.battle.s,state.muted,state.volume);}else acc=0;hudTime+=dt;saveTime+=dt;if(hudTime>.2){updateHud();hudTime=0;}if(saveTime>2&&g){save();saveTime=0;}roundEndTick(now);draw();
  }catch(error){runtimeFault=error;state.paused=true;console.error('Native runtime paused',error);try{notice('战斗已暂停：'+(error?.message||String(error)));}catch{}}
  requestAnimationFrame(frame);
 }

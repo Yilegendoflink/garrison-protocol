@@ -205,6 +205,7 @@ test('每回合漏怪掉血上限 10 点：漏失真值留档，扣血按上限'
  g.finishCurrentBattle();
  assert.equal(g.s.hp,13,'单回合最多掉 10 点血');
  assert.equal(g.s.lastBattle.leaks,23,'战报里的漏失数同样不被截断');
+ assert.equal(g.s.lastBattle.loss,10,'结算演出读的就是这个上限后的扣血值');
 });
 // 判负条件也用上限后的值：上限救得回来的回合不会因为漏失数超过当前生命就提前结束。
 test('漏失判负按上限后的扣血算，不是按原始漏失数',()=>{

@@ -393,3 +393,31 @@ html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px
 }
 
 .native-bench-label.is-over{color:#f2b3a4}.native-hand-warn{font-style:normal;color:#ffb9a6;border:1px solid #f28e79;background:#713c3940;padding:1px 6px;font-size:11px;white-space:nowrap}.native-reward-shop-hint.is-over{color:#ffb9a6;border-color:#f28e79}
+
+/* ── 回合结束演出：暗屏 + 拉出横幅「波次结束 / WAVE END」+ 损失生命计数 ─────────────
+   只做表现（数值来自 s.lastBattle），动效少开关下退化为瞬现 + 短停留。 */
+.native-round-end{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#e7fff4;font-family:inherit;text-align:center}
+.native-round-end-dim{position:absolute;inset:0;background:#04090c;opacity:0;animation:native-round-dim .4s ease-out forwards}
+.native-round-end-banner{position:relative;display:flex;align-items:baseline;gap:16px;padding:16px 44px;border-top:2px solid #62d7b2;border-bottom:2px solid #62d7b2;background:linear-gradient(90deg,#0c1b18f7,#16352ef7,#0c1b18f7);box-shadow:0 0 0 1px #3c5b52,0 18px 60px #000a;opacity:0;transform:scaleX(.04);transform-origin:left center}
+.native-round-end[data-stage=wave] .native-round-end-banner{animation:native-round-banner-in .5s cubic-bezier(.16,.9,.2,1) forwards}
+.native-round-end[data-stage=out] .native-round-end-banner{animation:native-round-banner-out .36s cubic-bezier(.6,0,.8,.4) forwards}
+.native-round-end-banner b{font-size:clamp(22px,3.4vw,32px);letter-spacing:.34em;color:#eafff5}
+.native-round-end-banner em{font:600 12px var(--mono,'Arial Narrow',sans-serif);font-style:normal;letter-spacing:.5em;color:#62d7b2;opacity:0}
+.native-round-end[data-stage=wave] .native-round-end-banner em{animation:native-round-text-in .4s .26s ease-out forwards}
+.native-round-end[data-stage=out] .native-round-end-banner em{opacity:1}
+.native-round-end-body{position:relative;margin-top:22px;display:grid;justify-items:center;gap:6px;opacity:0;transform:translateY(12px);transition:opacity .32s ease-out,transform .32s ease-out}
+.native-round-end[data-stage=count] .native-round-end-body{opacity:1;transform:none}
+.native-round-end-round{margin:0;color:#80b5ab;font:600 11px var(--mono,'Arial Narrow',sans-serif);letter-spacing:.3em}
+.native-round-end-label{margin:0;color:#b5cec2;font-size:13px;letter-spacing:.24em}
+.native-round-end-value{font:700 clamp(52px,9vw,84px)/1 var(--mono,'Arial Narrow',sans-serif);font-variant-numeric:tabular-nums;color:#eafff5;text-shadow:0 8px 34px #000a}
+.native-round-end[data-tone=danger] .native-round-end-value{color:#ff8b78;text-shadow:0 0 30px #ff5a3c59,0 8px 34px #000a}
+.native-round-end-perfect{margin:0;font-weight:700;font-size:clamp(28px,5vw,46px);line-height:1.2;letter-spacing:.3em;color:#8ef0c6;text-shadow:0 0 30px #4fd8a659}
+.native-round-end-hp{margin:2px 0 14px;color:#9dbcb1;font-size:12px;letter-spacing:.08em}
+.native-round-end .native-primary{min-width:200px}
+@keyframes native-round-dim{from{opacity:0}to{opacity:.9}}
+@keyframes native-round-banner-in{from{opacity:0;transform:scaleX(.04)}60%{opacity:1}to{opacity:1;transform:scaleX(1)}}
+@keyframes native-round-banner-out{from{opacity:1;transform:scaleX(1)}to{opacity:0;transform:scaleX(.04) translateX(-10px)}}
+@keyframes native-round-text-in{from{opacity:0;letter-spacing:.9em}to{opacity:1;letter-spacing:.5em}}
+.native-round-end[data-reduce] .native-round-end-dim,.native-round-end[data-reduce] .native-round-end-banner,.native-round-end[data-reduce] .native-round-end-banner em{animation-duration:.01s;animation-delay:0s}
+.native-round-end[data-reduce] .native-round-end-body{transition-duration:.01s}
+@media(prefers-reduced-motion:reduce){.native-round-end-dim,.native-round-end-banner,.native-round-end-banner em{animation-duration:.01s;animation-delay:0s}.native-round-end-body{transition-duration:.01s}}
