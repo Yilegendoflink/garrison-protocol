@@ -72,6 +72,18 @@ test('海猫模式：利息与金币类策略在无限资金下仍收敛回哨�
  assert.equal(lee.s.funds,INFINITE_FUNDS,'策略直接改资金也保持无限');
 });
 
+test('海猫模式：回合被动收入（精打细算玩偶）也不会把无限资金写成普通数值',()=>{
+ const g=new NativeSession(NATIVE_DATA,{seed:9,cat:true});
+ const u=g.gain(g.s.offers.find(Boolean));
+ assert.equal(placeFirst(g),true,'干员需要落场');
+ assert.equal(g.beginBattle(),true);
+ assert.equal(g.finishBattle({success:true}),true);
+ g.s.passiveIncome=3; // 精打细算玩偶那类「每回合额外获得」的被动收入
+ assert.equal(g.advanceRound(),true);
+ assert.equal(g.s.funds,INFINITE_FUNDS,'passiveIncome 也必须走 addFunds，不能直接 += 哨兵值');
+ assert.equal(Number.isFinite(g.s.funds),true);
+});
+
 test('普通模式的资金照常结算（海猫模式不能污染普通流程）',()=>{
  const g=new NativeSession(NATIVE_DATA,{seed:5});
  assert.equal(g.s.cat,undefined,'非海猫模式不写 cat 标记');

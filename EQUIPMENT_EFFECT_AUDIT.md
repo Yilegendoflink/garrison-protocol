@@ -14,36 +14,66 @@
 
 ## 落地进度（2026-09-19）
 
-新增 `dist/native-equipment.js`（装备的战斗期效果）并接到三个位置：`native-effects` 的 `dispatch` 统一发装备事件、
-`runFatal` 里发保命效果、`native-battle.stats()` 里发统计类修正。**已实现 19 项**：
+实现集中在 `dist/native-equipment.js`，接线点如下：
+
+| 接线点 | 用途 |
+| --- | --- |
+| `native-effects.dispatch` | deploy／skill-start／skill-end／ammo／before-damage／after-damage／after-heal 统一转成装备事件 |
+| `native-effects.tickLogic` 末尾的 `equipmentTick` | 逐帧效果（回血、成长、范围内压制、秒伤） |
+| `native-battle.stats()` | 统计类修正（嘲讽、再部署、生命、叠层攻击/攻速、光环） |
+| `native-battle.hit()` | 命中修正（弱点伤害、法术抗性穿透） |
+| `runFatal` | 保命（不死、复活、成对不撤退） |
+| `native-session` | 备战／跨回合（拟态物质、博士投影下回合晋升、天师古鼎资金、神秘顾客销毁给钱） |
+
+**已实现（第一批 19 项）**：战栗维式重锤、谢拉格不融冰、奥术法阵、突袭手雷、休眠子裔、精准狙击镜、防暴盾、
+海沟实验体、坚固维式重锤、M3茧甲、浓缩嗅盐、伪装服、护盾无人机、蜂鸣器、不屈弹射器、歌利亚头盔、迅捷作战粮、源石溶剂。
+
+**已实现（第二批 24 项）**：
 
 | 装备 | 实现 |
 | --- | --- |
-| 战栗维式重锤 | 地面携带者攻击时 prob 概率使目标战栗 `disarmed_duration` 秒 |
-| 谢拉格不融冰 | 攻击时 prob 概率施加 `cold` 秒寒冷 |
-| 奥术法阵 | 攻击使目标沉默 `silence` 秒（无概率） |
-| 突袭手雷 | 部署后 `duration` 秒内攻击使目标晕眩 `stun` 秒 |
-| 休眠子裔 | 每攻击 1 个目标回复自身 `hp_ratio`×最大生命 |
-| 精准狙击镜 | 攻击距离 ≥`radius` 格的目标伤害 ×`damage_scale` |
-| 防暴盾 | 阻挡敌人时，受到非自身阻挡来源的伤害 ×`damage_scale` |
-| 海沟实验体 | 固定伤害减免 `value` 点；阿戈尔盟约受击反伤 `atk_scale`×攻击力（`lock_duration` 间隔，成对阿戈尔重刃触发两次） |
-| 坚固维式重锤 | 首次致命伤时生命值不低于 1，持续 `undeadable_duration` 秒（一次性） |
-| M3茧甲 | 战斗阶段被击倒立刻满血复活，最多 `max_respawn_cnt` 次 |
-| 浓缩嗅盐 | 生命比例 > `hp_ratio` 时免疫晕眩/冻结等特殊状态（按帧开关 `immunities`） |
-| 伪装服 | 首次受到伤害后获得 `duration` 秒隐匿 |
-| 护盾无人机 | 治疗时 prob 概率给目标 1 层护盾（不超过 `max_stack_cnt`） |
-| 蜂鸣器 | `taunt_level` 进嘲讽等级 |
-| 不屈弹射器 | `respawn_time` 修正再部署时间（生命值走通用通道） |
-| 歌利亚头盔 | 部署时按身前一格是否有人给 `init_max_hp`＋`ex_max_hp` |
-| 迅捷作战粮 | 部署时给 `sp_each_person` 点技力，每个同盟约友军再加一份 |
-| 源石溶剂 | 每秒流失 `damage` 点生命（持续整场） |
+| 炎国短刀 | 每开技叠一层，攻击力 +atk×层数（上限 atk_buff_cnt） |
+| 有限加速器 | 每次攻击或治疗后攻速 +attack_speed×层数（上限 max_buff_cnt） |
+| 卡西米尔竞技旗 | 部署后 interval 秒内伤害 ×damage_scale，随后每 ex_interval 秒衰减 damage_scale_minus（不低于 100%） |
+| 天师古鼎 | 【炎】携带者按本回合获得干员数 +attack_speed×层数（上限 max_cnt）；与炎国短刀成对时每次获得干员给 count 资金（每回合 max 次） |
+| 家族徽章 | 【叙拉古】携带者隐匿期间攻击力按 atk_per_sec 成长（上限 max_atk），失去隐匿后首次造成伤害清空；与叙拉古正装成对时该次伤害追加 atk_scale 攻击力真实伤害 |
+| 黄沙罗盘 | 部署时 +init_sp 技力；【萨尔贡】首次技能结束回 sp 技力；与萨尔贡浓茶成对时每次开技为全体【萨尔贡】回 addition_sp |
+| 天马之盔 | 与天马之枪成对时每秒回复 hp_recovery_per_sec_by_max_hp_ratio 比例的最大生命 |
+| 耶拉冈德之泪 | 【谢拉格】携带者攻击范围内寒冷/冻结的敌人每秒受 atk_scale 攻击力法术伤害；成对不融冰提升到 atk_scale_ex |
+| 骑士戒律 | 再部署时间修正走通用行；【卡西米尔】开技后 duration 秒内范围内敌人攻速/移速 ×attack_speed／move_speed；与竞技旗成对时技能期攻击力 +atk、致死不撤退且技能结束退场 |
+| 叙拉古正装 | 携带者部署方向的左右两侧友军攻速 +attack_speed |
+| 拉特兰桥夹 | 子弹技能剩余一发时 prob 概率恢复 ammo_percent 比例子弹（每次部署上限 max_trigger_cnt） |
+| 蒸汽之心 | 【维多利亚】携带者获得维式重锤系列特殊效果（攻速／战栗／不死／灼燃，数值取本行黑板）；携带维式重锤系列时该件效果翻倍 |
+| 铳骑之威 | 追加子弹的成对倍率（atk_scale_2）此前因盟约判定失效而从未触发，已修 |
+| 海沟实验体 | 反伤此前因盟约 id 写成 `aegirShip`（实际是 `egirShip`）而从未触发，已修 |
+| 迅捷作战粮 | 「每个同盟约友军再加一份」此前读不到盟约名单而恒为 0，已修 |
+| 激光发射器 | 攻击无视 magic_resist_penetrate 比例法术抗性 |
+| 双模机械臂 | 物理/法术伤害按敌人防御与法术抗性取更高的那种（与卫戍「弱点伤害」同一口径） |
+| 灼燃维式重锤 | 造成法术伤害时附带 damage_scale 比例的灼燃损伤（元素损伤 `burn`） |
+| 博士投影（普通） | 下个回合开始时销毁该装备并把携带者晋升为精锐（装备已被换下/销毁则不晋升） |
+| 变形同构体 | 「额外盟约由另一件携带装备而定」：本客户端口径是装备的 giveBondId 直接叠进携带者盟约，原表天赋栏列出的 14 条映射与 giveBondId 逐条一致（`tests/native-equipment-growth.test.mjs` 有门禁） |
+| “神秘顾客” | 主动销毁时按 trap_disney_special 的 count 给资金（多人局的「传递给下一名玩家」没有道具传输通道） |
 
-**仍未实现**（本表其余条目）分四类：① 叠层成长（炎国短刀、有限加速器、卡西米尔竞技旗、天师古鼎攻速、家族徽章）；
-② 回复/技力（黄沙罗盘、天马之盔成对回血）；③ 成对联动剩余（天师古鼎资金、铳骑之威成对、耶拉冈德之泪、骑士戒律、蒸汽之心、叙拉古正装）；
-④ 备战/跨回合（博士投影 S1、天师古鼎资金）与**缺机制/缺数据**（催泪瓦斯的「麻痹」、双模机械臂的「弱点伤害」、变形同构体的额外盟约对应关系）。
+**顺手修掉的两类静默错值**：
 
+1. **盟约判定**：`native-equipment` 里曾写 `battle.ownBonds(u)`，而 `NativeBattle` 没有这个方法，盟约名单挂在
+   `economy.ownBonds(u.source)` 上——所有「若携带者为【X】盟约干员」的效果（铳骑之威、海沟实验体、黄沙罗盘、
+   天师古鼎、耶拉冈德之泪、骑士戒律、家族徽章、蒸汽之心）当时恒不触发。现已统一走 `isCovenant`。
+2. **通用通道误吃叠层值**：`stats()` 的 `env_gbuff*` 分支会读行内任意 `atk/max_hp/def/attack_speed/…`，于是
+   「炎国短刀恒 +5% 攻击」「有限加速器恒 +1 攻速」「天师古鼎恒 +25 攻速」「骑士戒律恒 +100% 攻击」
+   「蒸汽之心的借来攻速无条件生效」都错了。这些符文行改由 `native-equipment` 按规则算，`equipGenericExcluded` 让通用通道跳过它们。
 
-- **完全实现 37 条**、**部分实现 38 条**、**完全没实现 37 条**。
+**仍未实现（1 项）**：
+
+| 装备 | 原因 |
+| --- | --- |
+| 催泪瓦斯 | 「使目标获得一层麻痹」是**层数制**状态：本客户端没有麻痹层数、没有「触发麻痹时消耗层数」的消费者，原表也不给时长，写死一个时长等于编数值；登记在 `tests/native-equipment-effects.test.mjs` 的 `PENDING_RUNES` |
+
+**门禁**：`tests/native-equipment-effects.test.mjs` 两条——外层效果 key（`char_dynamic_ability_new`、`equip_round_start_upgrade_char`、
+`equip_with_another_gain_coin_when_gain_char` 等）与 **`env_gbuff` 行里的内层符文名**（催泪瓦斯就是这样漏掉的）都必须
+「被逻辑引用」或「登记为待补齐」。第二批的行为回归在 `tests/native-equipment-growth.test.mjs`。
+
+- 初次扫描（尚未补装前）：**完全实现 37 条**、**部分实现 38 条**、**完全没实现 37 条**。
 - 也就是说 **75 / 112 条装备至少有一项描述里的效果没有生效**。
 
 ## 一、完全没实现（37 条）

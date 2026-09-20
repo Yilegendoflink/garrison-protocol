@@ -1,5 +1,5 @@
 import {applyDamage,recoverHP,damage} from './combat.js';
-import {equipmentEvent,equipmentFatal} from './native-equipment.js';
+import {equipmentEvent,equipmentFatal,equipmentTick} from './native-equipment.js';
 import {allowsHighlandPlacement} from './native-branches.js';
 import {applyStatus,permissions} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes} from './protocol.js';
@@ -434,6 +434,7 @@ export function tickLogic(battle,dt){
  tickSummons(battle,dt);
  tickWhitwEyes(battle,dt);
  syncReveals(battle);
+ equipmentTick(battle,dt,ctxFor(battle));
 }
 
 // 反隐（隐匿免疫）：让目标身上的隐匿暂时失效，但不清除携带隐匿的 Buff；来源消失后自动恢复。
@@ -464,7 +465,7 @@ function syncReveals(battle){
  }
 }
 
-function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,canRelocateTo,projectSpot,nearbySpots,spawnSummon,spawnWhitwEyes,tickWhitwEyes,revealEnemy:(b,t,h)=>revealEnemy(b,t,h),log:(b,t,p)=>log(b,t,p)};}
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,canRelocateTo,projectSpot,nearbySpots,spawnSummon,spawnWhitwEyes,tickWhitwEyes,exit:commitExit,revealEnemy:(b,t,h)=>revealEnemy(b,t,h),log:(b,t,p)=>log(b,t,p)};}
 
 function bondUnits(battle,id,{deployedOnly=false}={}){return battle.s.units.filter(u=>(!deployedOnly||u.deployed&&u.hp>0)&&battle.owns?.(u,id));}
 function yanUnits(battle){return battle.s.units.filter(u=>battle.economy.ownBonds(u.source).includes('yanShip'));}

@@ -434,7 +434,7 @@ export function advanceEnemy(e,dt,onEvent,stopForAttack=false){
   if(s.kind==='appear'){e.x=s.x;e.y=s.y;e.hidden=false;e.untargetable=false;e.cmd++;e.cmdLeft=null;onEvent?.('appear',e);continue;}
   const dx=s.x-e.x,dy=s.y-e.y,d=Math.hypot(dx,dy);
   if(d<=1e-9){e.cmd++;continue;}
-  const speed=(!e.block&&permissions(e).move&&!stopForAttack)?e.speed*slow:0;
+  const speed=(!e.block&&permissions(e).move&&!stopForAttack)?e.speed*(e.moveSpeedMod??1)*slow:0;
   if(speed<=0||dt<=1e-9)break;
   const move=speed*dt;
   if(d<=move){e.x=s.x;e.y=s.y;e.cmd++;e.cmdLeft=null;dt-=d/speed;}

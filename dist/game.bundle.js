@@ -1575,7 +1575,11 @@ return {BRANCH_POLICIES,SKILL_ANTIAIR,skillAntiAir,allowsHighlandPlacement,branc
 // 未接入的装备见 EQUIPMENT_EFFECT_AUDIT.md（含原因）。
 //
 // 这里只做「装备带来的战斗期效果」；备战期（装备时销毁、发钱、发干员、下回合晋升…）在 native-session。
+//
+// 三个接线点：native-effects.dispatch（事件统一转成装备事件）、native-effects.tickLogic 末尾的
+// equipmentTick（逐帧效果）、native-battle.stats()（统计类修正）＋ hit()（弱点伤害／法抗穿透）。
 
+const {skillKind} = load("native-sp.js");
 const ROW_KEY='key';
 function runeOf(row){
  const entry=(row.blackboard||[]).find(b=>b.key===ROW_KEY);
@@ -1597,7 +1601,7 @@ function rowsOf(battle,chessId){
  if(rowCache.has(battle)){const hit=rowCache.get(battle).get(chessId);if(hit)return hit;}
  else rowCache.set(battle,new Map());
  const record=battle.data.season.trapChessDataDict[chessId];
- const rows=record?(battle.data.season.effectBuffInfoDataDict[record.effectId]||[]).map(row=>({rune:runeOf(row),bb:row.blackboard||[]})):[];
+ const rows=record?(battle.data.season.effectBuffInfoDataDict[record.effectId]||[]).map(row=>({key:row.key,rune:runeOf(row),bb:row.blackboard||[]})):[];
  rowCache.get(battle).set(chessId,rows);
  return rows;
 }
@@ -1606,8 +1610,15 @@ function equipmentList(u){
  return [...(u.source?.equipment||[]),...(u.equipment||[])];
 }
 // 取该单位身上第一个带此符文的装备行（含精锐）
-function equipRune(battle,u,rune){
+function rawRune(battle,u,rune){
  for(const item of equipmentList(u))for(const row of rowsOf(battle,item.chessId))if(row.rune===rune)return {...row,chessId:item.chessId};
+ return null;
+}
+function equipRune(battle,u,rune){return rawRune(battle,u,rune);}
+// char_dynamic_ability_new：动态能力行（耶拉冈德之泪／骑士戒律／叙拉古正装），行内的符文名才是能力 id
+const DYNAMIC_KEY='char_dynamic_ability_new';
+function dynamicRune(battle,u,rune){
+ for(const item of equipmentList(u))for(const row of rowsOf(battle,item.chessId))if(row.key===DYNAMIC_KEY&&row.rune===rune)return {...row,chessId:item.chessId};
  return null;
 }
 function hasEquipPrefix(u,prefix){
@@ -1624,22 +1635,79 @@ function pairedWith(u,bb){
  });
 }
 const chance=(battle,p)=>battle.economy.random()<Math.max(0,Math.min(1,p));
-const isCovenant=(battle,u,bond)=>(battle.ownBonds?.(u)||[]).includes(bond);
+// 盟约判定：NativeBattle 上没有 ownBonds，盟约名单挂在 session 的 ownBonds(u.source) 上
+// （曾经写成 battle.ownBonds，导致所有「若携带者为【X】盟约干员」的装备效果恒不触发）。
+const isCovenant=(battle,u,bond)=>{
+ if(!u)return false;
+ if(typeof battle.owns==='function'&&battle.owns(u,bond))return true;
+ return bondList(battle,u).includes(bond);
+};
+// 该干员身上的盟约名单（装备叠加进来的也算，走 session.ownBonds）
+const bondList=(battle,u)=>battle.economy?.ownBonds?.(u?.source)||u?.source?.bondIds||u?.bondIds||[];
 
-// ── 统计类：stats() 里调用（api 提供 ratio/mul/note/base/attackSpeed） ──
+// 通用通道（native-battle.stats 的 env_gbuff* 分支）只认固定属性字段，但有几件装备的符文行里
+// 这些同名字段其实是「叠层／条件」值——当常驻属性加就变成了「炎国短刀恒 +5% 攻击」「骑士戒律恒 +100% 攻击」
+// 这类错值。它们交给本模块按规则算，通用通道跳过。保留在通用通道的：萨尔贡浓茶/家族徽章（sp_recovery_per_sec）、
+// 不屈弹射器（max_hp）、加速维式重锤（attack_speed）。
+const GENERIC_EXCLUDED=new Set([
+ 'act1vautochess_equip_acarm024_global_buff', // 炎国短刀：每开技 +5% 攻击（叠层）
+ 'act1vautochess_equip_acarm037_global_buff', // 有限加速器：每次攻/治疗 +1 攻速（叠层）
+ 'act1autochess_equip_acarm077_global_buff',  // 天师古鼎：本回合每获得 1 名干员 +25 攻速（叠层）
+ 'act1autochess_equip_acarm079_global_buff',  // 蒸汽之心：借来的维式重锤特殊效果（含攻速）
+ 'act2autochess_equip_acarm119_global_buff',  // 骑士戒律：与竞技旗成对时技能期 +100% 攻击
+]);
+function equipGenericExcluded(rune){return GENERIC_EXCLUDED.has(String(rune||''));}
+
+// ── 蒸汽之心：给【维多利亚】携带者发放「维式重锤」系列的特殊效果 ──
+// 原表把维式重锤四项特殊效果的黑板值（attack_speed／prob＋disarmed_duration／undeadable_duration／
+// damage_scale）都写在 蒸汽之心 自己的行上，所以「获得当前场上所有维式重锤特殊效果」直接按本行数值发放；
+// 携带维式重锤系列（行里的 hammer_1..4 前缀）时该系列的特殊效果翻倍（boost=2）。
+function steamEffect(battle,u){
+ const row=rawRune(battle,u,'act1autochess_equip_acarm079_global_buff');
+ if(!row||!isCovenant(battle,u,'victoriaShip'))return null;
+ const prefixes=['hammer_1','hammer_2','hammer_3','hammer_4'].map(k=>text(row.bb,k)).filter(Boolean);
+ const hasOwn=prefixes.some(p=>hasEquipPrefix(u,p));
+ return {...row,boost:hasOwn?2:1};
+}
+// 战栗（维式重锤系列）：地面干员攻击时 prob 概率战栗 disarmed_duration 秒；与蒸汽之心取较强的一份
+function trembleSpec(battle,u){
+ const own=rawRune(battle,u,'act1autochess_equip_acarm045_global_buff'),steam=steamEffect(battle,u);
+ const ownBoost=steam?2:1;
+ let prob=own?num(own.bb,'prob')*ownBoost:0,duration=own?num(own.bb,'disarmed_duration')*ownBoost:0;
+ if(steam){const p=num(steam.bb,'prob')*steam.boost,d=num(steam.bb,'disarmed_duration')*steam.boost;if(p>prob){prob=p;duration=d;}}
+ return {prob:Math.min(1,prob),duration:duration};
+}
+// 灼燃（维式重锤系列）：造成法术伤害附带 damage_scale 比例的灼燃损伤
+function burningSpec(battle,u){
+ const own=rawRune(battle,u,'act1autochess_equip_acarm042_global_buff'),steam=steamEffect(battle,u);
+ const ownBoost=steam?2:1;
+ let scale=own?num(own.bb,'damage_scale')*ownBoost:0;
+ if(steam)scale=Math.max(scale,num(steam.bb,'damage_scale')*steam.boost);
+ return scale;
+}
+// 不死（维式重锤系列）：首次致命伤后生命值不低于 1 的持续时间
+function undyingSpec(battle,u){
+ const own=rawRune(battle,u,'act1autochess_equip_acarm043_global_buff'),steam=steamEffect(battle,u);
+ const ownBoost=steam?2:1;
+ let duration=own?num(own.bb,'undeadable_duration')*ownBoost:0;
+ if(steam)duration=Math.max(duration,num(steam.bb,'undeadable_duration')*steam.boost);
+ return duration;
+}
+
+// ── 统计类：stats() 里调用（api 提供 ratio/note/base/addAttackSpeed） ──
 function equipmentStatMods(battle,u,api){
  if(!u||u.kind==='summon')return;
  // 蜂鸣器：更容易受到攻击（嘲讽等级）
- const taunt=equipRune(battle,u,'act1autochess_equip_acarm054_global_buff');
+ const taunt=rawRune(battle,u,'act1autochess_equip_acarm054_global_buff');
  if(taunt)api.base.tauntLevel=(api.base.tauntLevel||0)+num(taunt.bb,'taunt_level');
- // 不屈弹射器：再部署时间 -30/-50%（max_hp 走通用通道）
- const ej=equipRune(battle,u,'act1autochess_equip_acarm056_global_buff');
+ // 不屈弹射器／骑士戒律：再部署时间修正（max_hp 走通用通道）
+ const ej=rawRune(battle,u,'act1autochess_equip_acarm056_global_buff');
  if(ej)api.base.respawnTime*=Math.max(0,1+num(ej.bb,'respawn_time'));
  // 歌利亚头盔：部署时身前一格没有其他干员时的额外生命（部署那一刻定死）
  if(u.helmetMaxHpBonus)api.ratio('maxHp',u.helmetMaxHpBonus,'装备·歌利亚头盔');
  // 浓缩嗅盐：生命值高于阈值时免疫晕眩、冻结等特殊状态。
  // applyStatus 会看 target.immunities，所以这里按当前血量逐帧开/关（只动自己加的那几个键）。
- const salt=equipRune(battle,u,'act1autochess_equip_acarm059_global_buff');
+ const salt=rawRune(battle,u,'act1autochess_equip_acarm059_global_buff');
  if(salt){
   const above=u.maxHp>0&&u.hp/u.maxHp>num(salt.bb,'hp_ratio',1);
   if(above&&!u.equipSaltImmune){
@@ -1652,90 +1720,187 @@ function equipmentStatMods(battle,u,api){
    u.equipSaltKeys=[];u.equipSaltImmune=false;
   }
  }
+ // 炎国短刀：每开启一次技能 +atk 攻击，最多 atk_buff_cnt 层
+ const knife=rawRune(battle,u,'act1vautochess_equip_acarm024_global_buff');
+ if(knife&&u.equipSkillUses>0)api.ratio('atk',num(knife.bb,'atk')*Math.min(num(knife.bb,'atk_buff_cnt',10),u.equipSkillUses),'装备·炎国短刀');
+ // 有限加速器：每次攻击或治疗后 +attack_speed 攻速，最多 max_buff_cnt 层
+ const accel=rawRune(battle,u,'act1vautochess_equip_acarm037_global_buff');
+ if(accel&&u.equipAspdStacks>0)api.addAttackSpeed(num(accel.bb,'attack_speed',1)*Math.min(num(accel.bb,'max_buff_cnt',60),u.equipAspdStacks));
+ // 天师古鼎：本回合每获得过 1 名干员，战斗开始后攻击速度 +attack_speed（最多 max_cnt 层）
+ const cauldron=rawRune(battle,u,'act1autochess_equip_acarm077_global_buff');
+ if(cauldron&&isCovenant(battle,u,'yanShip')){
+  const gained=Math.min(num(cauldron.bb,'max_cnt',3),Math.max(0,Number(battle.economy.s.roundGainedChars?.count)||0));
+  if(gained>0)api.addAttackSpeed(num(cauldron.bb,'attack_speed')*gained);
+ }
+ // 骑士戒律：与卡西米尔竞技旗成对时，技能持续期间攻击力 +atk
+ const decree=rawRune(battle,u,'act2autochess_equip_acarm119_global_buff');
+ if(decree&&isCovenant(battle,u,'kazimierzShip')&&pairedWith(u,decree.bb)&&battle.skillActive?.(u))api.ratio('atk',num(decree.bb,'atk'),'装备·骑士戒律');
+ // 家族徽章：隐匿期间逐渐提升的攻击力（失去隐匿后首次造成伤害或离场时清空）
+ const badge=rawRune(battle,u,'act2autochess_equip_acarm122_global_buff');
+ if(badge&&isCovenant(battle,u,'siracusaShip')&&u.familyBadgeAtk>0)api.ratio('atk',u.familyBadgeAtk,'装备·家族徽章');
+ // 蒸汽之心：借来的维式重锤特殊效果里的攻速（自己那件加速维式重锤的 +30 已走通用通道，这里只补差额）
+ const steam=steamEffect(battle,u);
+ if(steam){
+  const ownAccel=rawRune(battle,u,'act1autochess_equip_acarm044_global_buff');
+  const ownAs=ownAccel?num(ownAccel.bb,'attack_speed'):0;
+  const borrowed=Math.max(ownAs*(steam.boost),num(steam.bb,'attack_speed')*steam.boost);
+  if(borrowed>ownAs)api.addAttackSpeed(borrowed-ownAs);
+ }
+ // 叙拉古正装：携带者部署方向左右两侧的我方干员攻击速度 +attack_speed
+ for(const v of battle.s.units||[]){
+  if(v===u||!v.deployed||v.hp<=0||v.kind==='summon')continue;
+  const suit=dynamicRune(battle,v,'act2autochess_equip_acarm121_ability');
+  if(!suit)continue;
+  const dir=[[1,0],[0,-1],[-1,0],[0,1]][v.dir||0]||[1,0];
+  if((u.x===v.x-dir[1]&&u.y===v.y+dir[0])||(u.x===v.x+dir[1]&&u.y===v.y-dir[0]))api.addAttackSpeed(num(suit.bb,'attack_speed'));
+ }
 }
 
 // ── 部署／开局 ──
 function equipmentDeploy(battle,u,ctx){
  if(!u||u.kind==='summon')return;
  // 突袭手雷：本次部署后 duration 秒内，攻击使目标晕眩 stun 秒
- const grenade=equipRune(battle,u,'act1autochess_equip_acarm064_global_buff');
+ const grenade=rawRune(battle,u,'act1autochess_equip_acarm064_global_buff');
  if(grenade)u.raidGrenadeUntil=battle.s.time+num(grenade.bb,'duration');
  // 歌利亚头盔：生命值 +init_max_hp；身前一格没有其他干员再 +ex_max_hp（部署时判定）
- const helmet=equipRune(battle,u,'act1autochess_equip_acarm049_global_buff');
+ const helmet=rawRune(battle,u,'act1autochess_equip_acarm049_global_buff');
  if(helmet){
   const dir=[[1,0],[0,-1],[-1,0],[0,1]][u.dir||0]||[1,0];
   const front=battle.s.units.some(v=>v.uid!==u.uid&&v.deployed&&v.hp>0&&v.x===u.x+dir[0]&&v.y===u.y+dir[1]);
   u.helmetMaxHpBonus=num(helmet.bb,'init_max_hp')+(front?0:num(helmet.bb,'ex_max_hp'));
  }
  // 迅捷作战粮：部署时获得 sp_each_person 点技力，每有一个同盟约的其他干员再加一份
- const ration=equipRune(battle,u,'act1autochess_equip_acarm051_global_buff');
+ const ration=rawRune(battle,u,'act1autochess_equip_acarm051_global_buff');
  if(ration&&ctx.gainSp){
-  const per=num(ration.bb,'sp_each_person'),bonds=battle.ownBonds?.(u)||[];
-  const mates=battle.s.units.filter(v=>v.uid!==u.uid&&v.deployed&&v.hp>0&&(battle.ownBonds?.(v)||[]).some(b=>bonds.includes(b))).length;
+  const per=num(ration.bb,'sp_each_person'),bonds=bondList(battle,u);
+  const mates=battle.s.units.filter(v=>v.uid!==u.uid&&v.deployed&&v.hp>0&&bondList(battle,v).some(b=>bonds.includes(b))).length;
   ctx.gainSp(u,battle.profile(u).skill,per+per*mates,battle.spCost(u));
  }
+ // 黄沙罗盘：初始技力 +init_sp
+ const compass=rawRune(battle,u,'act1autochess_equip_acarm103_global_buff');
+ if(compass&&ctx.gainSp)ctx.gainSp(u,battle.profile(u).skill,num(compass.bb,'init_sp'),battle.spCost(u));
+ // 卡西米尔竞技旗：部署后 interval 秒内伤害提升至 damage_scale，随后每 ex_interval 秒衰减 damage_scale_minus
+ const flag=rawRune(battle,u,'act2autochess_equip_acarm120_global_buff');
+ if(flag)u.kazimierzFlagAt=battle.s.time;
  // 源石溶剂：每秒流失 damage 点生命（持续整场）
- const solvent=equipRune(battle,u,'periodic_damage');
+ const solvent=rawRune(battle,u,'periodic_damage');
  if(solvent&&ctx.addEffect){const per=num(solvent.bb,'damage');if(per>0)ctx.addEffect(battle,{kind:'loss',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:u.uid,talentOrSkillId:'equip-solvent:'+u.uid,interval:1,nextAt:battle.s.time+1,endsAt:null,values:{amount:per},snapshot:{amount:per},refKind:'owner',persistAfterSourceGone:true});}
 }
-
 function equipmentBattleStart(battle,ctx){
  return; // 'battle-start' 早于各单位 deploy；部署期效果统一由 'deploy' 钩子发放，避免发两次
+}
+
+// ── 开技／技能结束 ──
+function onOperatorSkillStart(battle,u,ctx){
+ if(!u||u.kind==='summon')return;
+ // 炎国短刀：每开启一次技能叠一层攻击加成
+ const knife=rawRune(battle,u,'act1vautochess_equip_acarm024_global_buff');
+ if(knife&&chance(battle,num(knife.bb,'prob',1)))u.equipSkillUses=Math.min(num(knife.bb,'atk_buff_cnt',10),(u.equipSkillUses||0)+1);
+ // 黄沙罗盘：与萨尔贡浓茶成对时，每次开技为全部【萨尔贡】干员回复 addition_sp 点技力
+ const compass=rawRune(battle,u,'act1autochess_equip_acarm103_global_buff');
+ if(compass&&isCovenant(battle,u,'sargonShip')&&pairedWith(u,compass.bb)){
+  for(const ally of battle.s.units)if(ally.deployed&&ally.hp>0&&isCovenant(battle,ally,'sargonShip'))ctx.gainSp?.(ally,battle.profile(ally).skill,num(compass.bb,'addition_sp'),battle.spCost(ally));
+ }
+ // 骑士戒律：开技后 duration 秒内，攻击范围内的敌人攻速／移速被压制
+ const decree=rawRune(battle,u,'act2autochess_equip_acarm119_global_buff');
+ if(decree&&isCovenant(battle,u,'kazimierzShip'))u.knightDecreeUntil=battle.s.time+num(decree.bb,'duration');
+}
+function onOperatorSkillEnd(battle,u,ctx){
+ if(!u||u.kind==='summon')return;
+ // 黄沙罗盘：携带者为【萨尔贡】时，首次技能结束立刻回复 sp 点技力
+ const compass=rawRune(battle,u,'act1autochess_equip_acarm103_global_buff');
+ if(!compass||!isCovenant(battle,u,'sargonShip')||u.compassSkillEnd)return;
+ u.compassSkillEnd=true;
+ ctx.gainSp?.(u,battle.profile(u).skill,num(compass.bb,'sp'),battle.spCost(u));
+}
+// 拉特兰桥夹：子弹类技能剩余一发子弹时 prob 概率恢复 ammo_percent 比例的子弹（每次部署最多 max_trigger_cnt 次）
+function onAmmoEvent(battle,payload,ctx){
+ const u=payload.source;if(!u||u.kind==='summon')return;
+ const clip=rawRune(battle,u,'act1autochess_equip_acarm057_global_buff');
+ if(!clip||skillKind(battle.profile(u).skill)!=='ammo')return;
+ if((u.ammo||0)>1)return;
+ if((u.equipAmmoRestores||0)>=Math.max(1,num(clip.bb,'max_trigger_cnt',3)))return;
+ if(!chance(battle,num(clip.bb,'prob')))return;
+ u.equipAmmoRestores=(u.equipAmmoRestores||0)+1;
+ const add=Math.max(1,Math.round((u.ammoMax||0)*num(clip.bb,'ammo_percent')));
+ u.ammo=Math.min(u.ammoMax||Infinity,(u.ammo||0)+add);
+ ctx.log?.(battle,'equip',{uid:u.uid,equip:'acarm057',ammo:u.ammo});
 }
 
 // ── 攻击时（source 是我方干员，cause==='attack'） ──
 function onOperatorHit(battle,payload,ctx){
  const {source,target}=payload;if(!source||!target)return;
- // 战栗维式重锤：地面干员攻击时有 prob 概率使目标战栗 disarmed_duration 秒
- const hammer=equipRune(battle,source,'act1autochess_equip_acarm045_global_buff');
- if(hammer&&battle.profile(source)?.position==='MELEE'&&chance(battle,num(hammer.bb,'prob')))ctx.applyStatus?.(target,'tremble',num(hammer.bb,'disarmed_duration'),{source:source.uid,resistible:false});
+ // 战栗维式重锤／蒸汽之心：地面干员攻击时有 prob 概率使目标战栗 disarmed_duration 秒
+ const tremble=trembleSpec(battle,source);
+ if(tremble.prob>0&&battle.profile(source)?.position==='MELEE'&&chance(battle,tremble.prob))ctx.applyStatus?.(target,'tremble',tremble.duration,{source:source.uid,resistible:false});
  // 谢拉格不融冰：攻击时有 prob 概率对目标施加 cold 秒寒冷
- const ice=equipRune(battle,source,'act1vautochess_equip_acarm003_global_buff');
+ const ice=rawRune(battle,source,'act1vautochess_equip_acarm003_global_buff');
  if(ice&&chance(battle,num(ice.bb,'prob')))ctx.applyStatus?.(target,'cold',num(ice.bb,'cold'),{source:source.uid,resistible:false});
  // 奥术法阵：攻击使目标失去特殊能力 silence 秒（无概率）
- const arcane=equipRune(battle,source,'silence_attachment');
+ const arcane=rawRune(battle,source,'silence_attachment');
  if(arcane)ctx.applyStatus?.(target,'silence',num(arcane.bb,'silence'),{source:source.uid,resistible:false});
  // 突袭手雷：部署后窗口内攻击使目标晕眩
- if(source.raidGrenadeUntil>battle.s.time){const g=equipRune(battle,source,'act1autochess_equip_acarm064_global_buff');if(g)ctx.applyStatus?.(target,'stun',num(g.bb,'stun'),{source:source.uid,resistible:false});}
+ if(source.raidGrenadeUntil>battle.s.time){const g=rawRune(battle,source,'act1autochess_equip_acarm064_global_buff');if(g)ctx.applyStatus?.(target,'stun',num(g.bb,'stun'),{source:source.uid,resistible:false});}
  // 休眠子裔：每攻击 1 个目标回复自身 hp_ratio×最大生命
- const brood=equipRune(battle,source,'act1vautochess_equip_acarm025_global_buff');
+ const brood=rawRune(battle,source,'act1vautochess_equip_acarm025_global_buff');
  if(brood)ctx.applyHeal(battle,{source,target:source,amount:source.maxHp*num(brood.bb,'hp_ratio')});
+ // 有限加速器：每次攻击 +attack_speed 攻速（上限 max_buff_cnt）
+ const accel=rawRune(battle,source,'act1vautochess_equip_acarm037_global_buff');
+ if(accel)source.equipAspdStacks=Math.min(num(accel.bb,'max_buff_cnt',60),(source.equipAspdStacks||0)+1);
  // 铳骑之威：拉特兰干员攻击时有 prob 概率追加一发子弹（同时装备拉特兰桥夹时倍率提高）
- const gun=equipRune(battle,source,'act1autochess_equip_acarm076_global_buff');
+ const gun=rawRune(battle,source,'act1autochess_equip_acarm076_global_buff');
  if(gun&&isCovenant(battle,source,'lateranoShip')&&chance(battle,num(gun.bb,'prob'))){
   const extra=battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.untargetable&&e.uid!==target.uid&&battle.inside(source,e,true))[0];
   if(extra){const scale=pairedWith(source,gun.bb)?num(gun.bb,'atk_scale_2'):num(gun.bb,'atk_scale_1');ctx.dealDamage(battle,{source,target:extra,amount:battle.stats(source).atk*scale,type:'physical',cause:'extra',skill:true,effectId:'acarm076:'+source.uid+':'+target.uid});}
  }
  // 天马之枪：同时装备天马之盔时，造成伤害额外造成 atk_scale 的真实伤害
- const spear=equipRune(battle,source,'act2autochess_equip_acarm117_global_buff');
+ const spear=rawRune(battle,source,'act2autochess_equip_acarm117_global_buff');
  if(spear&&pairedWith(source,spear.bb))ctx.dealDamage(battle,{source,target,amount:battle.stats(source).atk*num(spear.bb,'atk_scale'),type:'true',cause:'extra',skill:true,effectId:'acarm117:'+source.uid});
+ // 灼燃维式重锤／蒸汽之心：造成法术伤害时附带 damage_scale 比例的灼燃损伤
+ const burn=burningSpec(battle,source);
+ if(burn>0&&payload.type==='arts'&&payload.result?.total>0)ctx.applyElementDamage?.(battle,{source,target,amount:payload.result.total*burn,type:'burn',cause:'element'});
+ // 家族徽章：隐匿结束后首次造成伤害时，与叙拉古正装成对则额外造成 atk_scale 攻击力的真实伤害，然后清空成长
+ const badge=rawRune(battle,source,'act2autochess_equip_acarm122_global_buff');
+ if(badge&&isCovenant(battle,source,'siracusaShip')&&(source.familyBadgeAtk||0)>0&&!source.invisible){
+  if(!source.familyBadgePaid&&pairedWith(source,badge.bb)){
+   source.familyBadgePaid=true;
+   ctx.dealDamage(battle,{source,target,amount:battle.stats(source).atk*num(badge.bb,'atk_scale',8),type:'true',cause:'extra',skill:true,effectId:'acarm122:'+source.uid});
+  }
+  source.familyBadgeAtk=0;
+ }
 }
 
 // ── 受击前（target 是我方干员） ──
 function onBeforeDamage(battle,payload){
  const {source,target}=payload;if(!target||target.kind==='summon'||!(payload.value>0))return;
- // 精准狙击镜：攻击距离 radius 格及以上的目标时伤害 ×damage_scale
  if(source&&source.kind!=='summon'){
-  const scope=equipRune(battle,source,'act1autochess_equip_acarm063_global_buff');
+  // 精准狙击镜：攻击距离 radius 格及以上的目标时伤害 ×damage_scale
+  const scope=rawRune(battle,source,'act1autochess_equip_acarm063_global_buff');
   if(scope&&Math.max(Math.abs(target.x-source.x),Math.abs(target.y-source.y))>=num(scope.bb,'radius',3))payload.value*=num(scope.bb,'damage_scale',1);
+  // 卡西米尔竞技旗：部署后 interval 秒内 ×damage_scale，随后逐渐衰减
+  const flag=rawRune(battle,source,'act2autochess_equip_acarm120_global_buff');
+  if(flag&&source.kazimierzFlagAt!=null){
+   const age=battle.s.time-source.kazimierzFlagAt,window=num(flag.bb,'interval',15),step=Math.max(.01,num(flag.bb,'ex_interval',.5)),decay=num(flag.bb,'damage_scale_minus',-.04);
+   payload.value*=age<=window?num(flag.bb,'damage_scale',1):Math.max(1,num(flag.bb,'damage_scale',1)+decay*Math.floor((age-window)/step));
+  }
  }
  // 防暴盾：阻挡敌人时，受到来自非自身阻挡单位的伤害 ×damage_scale
  // （“阻挡的敌人”记在敌人身上的 e.block === 携带者 uid）
- const shield=equipRune(battle,target,'act1autochess_equip_acarm060_global_buff');
+ const shield=rawRune(battle,target,'act1autochess_equip_acarm060_global_buff');
  if(shield){
   const blocked=new Set((battle.s.enemies||[]).filter(e=>e.hp>0&&e.block===target.uid).map(e=>e.uid));
   if(blocked.size&&(!source||!blocked.has(source.uid)))payload.value*=num(shield.bb,'damage_scale',1);
  }
  // 海沟实验体：固定伤害减免（另一行的符文名就是 halfidle_block_fixed_damage，值 180/300）
- const flat=equipRune(battle,target,'halfidle_block_fixed_damage');
+ const flat=rawRune(battle,target,'halfidle_block_fixed_damage');
  if(flat){const cut=num(flat.bb,'value');if(cut>0)payload.value=Math.max(0,payload.value-cut);}
 }
 
 // ── 受伤后：反弹伤害（海沟实验体） ──
 function onTookDamage(battle,payload,ctx){
  const {source,target}=payload;if(!target||!source||target.kind==='summon')return;
- const trench=equipRune(battle,target,'act2autochess_equip_acarm078_global_buff');
- if(!trench||!isCovenant(battle,target,'aegirShip'))return;
+ const trench=rawRune(battle,target,'act2autochess_equip_acarm078_global_buff');
+ if(!trench||!isCovenant(battle,target,'egirShip'))return;
  const gap=num(trench.bb,'lock_duration')||.5;
  if(!(battle.s.time>=(target.trenchReflectAt??-Infinity)))return;
  target.trenchReflectAt=battle.s.time+gap;
@@ -1747,16 +1912,22 @@ function onTookDamage(battle,payload,ctx){
 // ── 受到致命伤害（runFatal 里调用） ──
 function equipmentFatal(battle,target,event){
  if(!target||target.kind==='summon')return false;
- // 坚固维式重锤：首次受到致命伤害时生命值不低于 1，持续 undeadable_duration 秒
- const hammer=equipRune(battle,target,'act1autochess_equip_acarm043_global_buff');
- if(hammer&&!target.equipUndeadUsed){
+ // 骑士戒律：与卡西米尔竞技旗成对时，技能持续期间受到致命伤害不撤退（技能结束后退场）
+ const decree=rawRune(battle,target,'act2autochess_equip_acarm119_global_buff');
+ if(decree&&isCovenant(battle,target,'kazimierzShip')&&pairedWith(target,decree.bb)&&battle.skillActive?.(target)){
+  target.lockHp={min:1,endsAt:null,onEnd:'none'};target.equipRetreatAtSkillEnd=true;target.hp=Math.max(1,target.hp);
+  return true;
+ }
+ // 坚固维式重锤／蒸汽之心：首次受到致命伤害时生命值不低于 1，持续 undeadable_duration 秒
+ const undying=undyingSpec(battle,target);
+ if(undying>0&&!target.equipUndeadUsed){
   target.equipUndeadUsed=true;
-  target.lockHp={min:1,endsAt:battle.s.time+num(hammer.bb,'undeadable_duration',8),onEnd:'none'};
+  target.lockHp={min:1,endsAt:battle.s.time+undying,onEnd:'none'};
   target.hp=Math.max(1,target.hp);
   return true;
  }
  // M3茧甲：战斗阶段被击倒时立刻复活，最多 max_respawn_cnt 次
- const m3=equipRune(battle,target,'act1autochess_equip_acarm068_global_buff');
+ const m3=rawRune(battle,target,'act1autochess_equip_acarm068_global_buff');
  if(m3&&(target.m3Revives||0)<num(m3.bb,'max_respawn_cnt',1)){
   target.m3Revives=(target.m3Revives||0)+1;
   target.hp=target.maxHp;
@@ -1768,7 +1939,10 @@ function equipmentFatal(battle,target,event){
 // ── 治疗时 ──
 function onHeal(battle,payload,ctx){
  const {source,target}=payload;if(!source||source.kind==='summon')return;
- const drone=equipRune(battle,source,'act1autochess_equip_acarm061_global_buff');
+ // 有限加速器：每次治疗后 +attack_speed 攻速（上限 max_buff_cnt）
+ const accel=rawRune(battle,source,'act1vautochess_equip_acarm037_global_buff');
+ if(accel)source.equipAspdStacks=Math.min(num(accel.bb,'max_buff_cnt',60),(source.equipAspdStacks||0)+1);
+ const drone=rawRune(battle,source,'act1autochess_equip_acarm061_global_buff');
  if(!drone||!target)return;
  if(!chance(battle,num(drone.bb,'prob')))return;
  const cap=num(drone.bb,'max_stack_cnt',1);
@@ -1780,16 +1954,72 @@ const CONTROL=['stun','frozen','sleep','fear','terror','tremble','palsy','root',
 // ── 首次受到伤害后：伪装服 ──
 function onFirstHit(battle,payload,ctx){
  const target=payload.target;if(!target||target.kind==='summon')return;
- const camo=equipRune(battle,target,'act2autochess_equip_acarm055_global_buff');
+ const camo=rawRune(battle,target,'act2autochess_equip_acarm055_global_buff');
  if(!camo||target.equipCamoUsed)return;
  target.equipCamoUsed=true;
  ctx.applyStatus?.(target,'invisible',num(camo.bb,'duration'),{source:target.uid,resistible:false});
 }
 
+// ── 逐帧效果（tickLogic 里调用一次/帧，dt 为帧时长） ──
+function equipmentTick(battle,dt,ctx){
+ if(!battle||!(dt>0))return;
+ for(const e of battle.s.enemies||[])if(e.moveSpeedMod!==1)e.moveSpeedMod=1;
+ for(const u of battle.s.units||[]){
+  if(!u.deployed||u.hp<=0||u.kind==='summon')continue;
+  // 天马之盔：与天马之枪成对时，每秒回复 hp_recovery_per_sec_by_max_hp_ratio 比例的最大生命
+  const helm=rawRune(battle,u,'act2autochess_equip_acarm118_global_buff');
+  if(helm&&pairedWith(u,helm.bb))ctx.applyRegen(battle,{source:u,target:u,amount:u.maxHp*num(helm.bb,'hp_recovery_per_sec_by_max_hp_ratio',.08)*dt});
+  // 家族徽章：隐匿期间攻击力逐渐提升（上限 max_atk）
+  const badge=rawRune(battle,u,'act2autochess_equip_acarm122_global_buff');
+  if(badge&&isCovenant(battle,u,'siracusaShip')){
+   const concealed=!!u.invisible||battle.s.time<(u.siracusaInvisibleUntil??-Infinity);
+   if(concealed)u.familyBadgeAtk=Math.min(num(badge.bb,'max_atk',1),(u.familyBadgeAtk||0)+num(badge.bb,'atk_per_sec',.02)*dt);
+  }
+  // 骑士戒律：开技后的 duration 秒内，攻击范围内的敌人攻速／移速被压制
+  const decree=dynamicRune(battle,u,'act2autochess_equip_acarm119_ability');
+  if(decree&&u.knightDecreeUntil>battle.s.time&&isCovenant(battle,u,'kazimierzShip')){
+   const asMul=num(decree.bb,'attack_speed',1),moveMul=num(decree.bb,'move_speed',1);
+   for(const e of battle.s.enemies||[])if(e.hp>0&&!e.hidden&&battle.inside(u,e,battle.skillActive(u))){
+    e.attackSpeedMod=(e.attackSpeedMod||0)-(1-asMul)*Math.max(10,Number(e.attackSpeed)||100);
+    e.moveSpeedMod=Math.min(e.moveSpeedMod??1,moveMul);
+   }
+  }
+  // 骑士戒律：成对保命结束后，技能一结束就退场
+  if(u.equipRetreatAtSkillEnd&&!battle.skillActive(u)){u.equipRetreatAtSkillEnd=false;ctx.exit?.(battle,{target:u,reason:'forced'});continue;}
+  // 耶拉冈德之泪：谢拉格携带者攻击范围内处于寒冷／冻结的敌人每秒受一次 atk_scale 攻击力的法术伤害
+  const tear=dynamicRune(battle,u,'act2autochess_equip_acarm102_ability');
+  if(tear&&isCovenant(battle,u,'kjeragShip')){
+   const interval=Math.max(.1,num(tear.bb,'interval',1));
+   if(u.yaleNextAt==null)u.yaleNextAt=battle.s.time+interval;
+   if(battle.s.time+1e-9>=u.yaleNextAt){
+    const scale=pairedWith(u,tear.bb)?num(tear.bb,'atk_scale_ex',num(tear.bb,'atk_scale')):num(tear.bb,'atk_scale');
+    const victims=(battle.s.enemies||[]).filter(e=>e.hp>0&&!e.hidden&&!e.untargetable&&(e.statuses||[]).some(s=>s.kind==='cold'||s.kind==='frozen')&&battle.inside(u,e,battle.skillActive(u)));
+    while(battle.s.time+1e-9>=u.yaleNextAt){
+     for(const e of victims)ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*scale,type:'arts',cause:'skill',effectId:'acarm102:'+u.uid+':'+u.yaleNextAt});
+     u.yaleNextAt+=interval;
+    }
+   }
+  }
+ }
+}
+
+// ── 命中修正（native-battle.hit 里调用） ──
+// 激光发射器：攻击无视目标 magic_resist_penetrate 比例的法术抗性
+function equipMagicPenetration(battle,u){
+ let ratio=0;
+ for(const item of equipmentList(u))for(const row of rowsOf(battle,item.chessId))if(row.rune==='magic_penetrate_global_buff')ratio=Math.max(ratio,num(row.bb,'magic_resist_penetrate'));
+ return ratio;
+}
+// 双模机械臂：自身造成的物理／法术伤害转化为弱点伤害（按敌人防御力与法术抗性取更高的那种）
+function equipWeakness(battle,u){return !!rawRune(battle,u,'act1autochess_equip_acarm067_global_buff');}
+
 // ── 统一入口：native-effects 的 dispatch 里调用 ──
 function equipmentEvent(battle,type,payload,ctx){
  if(!battle||!payload)return;
  if(type==='deploy')return equipmentDeploy(battle,payload.target,ctx);
+ if(type==='skill-start')return onOperatorSkillStart(battle,payload.target,ctx);
+ if(type==='skill-end')return onOperatorSkillEnd(battle,payload.target,ctx);
+ if(type==='ammo')return onAmmoEvent(battle,payload,ctx);
  if(type==='after-damage'){
   if(payload.cause==='attack')onOperatorHit(battle,payload,ctx);
   onTookDamage(battle,payload,ctx);
@@ -1800,7 +2030,7 @@ function equipmentEvent(battle,type,payload,ctx){
  if(type==='after-heal')return onHeal(battle,payload,ctx);
 }
 
-return {equipmentList,equipRune,hasEquipPrefix,equipmentStatMods,equipmentDeploy,equipmentBattleStart,equipmentFatal,equipmentEvent};
+return {equipmentList,equipRune,hasEquipPrefix,equipGenericExcluded,equipmentStatMods,equipmentDeploy,equipmentBattleStart,equipmentFatal,equipmentTick,equipMagicPenetration,equipWeakness,equipmentEvent};
 },
 "native-wave-defaults.js": function(load) {
 // Generated from data/modes/alliance-lower/default-wave-table.json. Edit the JSON export, then rebuild.
@@ -3619,7 +3849,7 @@ function advanceEnemy(e,dt,onEvent,stopForAttack=false){
   if(s.kind==='appear'){e.x=s.x;e.y=s.y;e.hidden=false;e.untargetable=false;e.cmd++;e.cmdLeft=null;onEvent?.('appear',e);continue;}
   const dx=s.x-e.x,dy=s.y-e.y,d=Math.hypot(dx,dy);
   if(d<=1e-9){e.cmd++;continue;}
-  const speed=(!e.block&&permissions(e).move&&!stopForAttack)?e.speed*slow:0;
+  const speed=(!e.block&&permissions(e).move&&!stopForAttack)?e.speed*(e.moveSpeedMod??1)*slow:0;
   if(speed<=0||dt<=1e-9)break;
   const move=speed*dt;
   if(d<=move){e.x=s.x;e.y=s.y;e.cmd++;e.cmdLeft=null;dt-=d/speed;}
@@ -4264,7 +4494,7 @@ return {blackboardValues,talentValues,coinCapFor,grantCoins,spendCoins,coinGainA
 },
 "native-effects.js": function(load) {
 const {applyDamage,recoverHP,damage} = load("combat.js");
-const {equipmentEvent,equipmentFatal} = load("native-equipment.js");
+const {equipmentEvent,equipmentFatal,equipmentTick} = load("native-equipment.js");
 const {allowsHighlandPlacement} = load("native-branches.js");
 const {applyStatus,permissions} = load("status.js");
 const {blackboard,resolveActiveTalents,nativeAttributes} = load("protocol.js");
@@ -4698,6 +4928,7 @@ function tickLogic(battle,dt){
  tickSummons(battle,dt);
  tickWhitwEyes(battle,dt);
  syncReveals(battle);
+ equipmentTick(battle,dt,ctxFor(battle));
 }
 
 // 反隐（隐匿免疫）：让目标身上的隐匿暂时失效，但不清除携带隐匿的 Buff；来源消失后自动恢复。
@@ -4728,7 +4959,7 @@ function syncReveals(battle){
  }
 }
 
-function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,canRelocateTo,projectSpot,nearbySpots,spawnSummon,spawnWhitwEyes,tickWhitwEyes,revealEnemy:(b,t,h)=>revealEnemy(b,t,h),log:(b,t,p)=>log(b,t,p)};}
+function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,canRelocateTo,projectSpot,nearbySpots,spawnSummon,spawnWhitwEyes,tickWhitwEyes,exit:commitExit,revealEnemy:(b,t,h)=>revealEnemy(b,t,h),log:(b,t,p)=>log(b,t,p)};}
 
 function bondUnits(battle,id,{deployedOnly=false}={}){return battle.s.units.filter(u=>(!deployedOnly||u.deployed&&u.hp>0)&&battle.owns?.(u,id));}
 function yanUnits(battle){return battle.s.units.filter(u=>battle.economy.ownBonds(u.source).includes('yanShip'));}
@@ -5487,7 +5718,7 @@ return {BATTLE_SCHEMA_VERSION,EFFECT_KINDS,ELEMENT_TYPES,emptySettle,ensureBattl
 },
 "native-battle.js": function(load) {
 const {branchBehavior,branchTrait,skillAntiAir} = load("native-branches.js");
-const {equipmentStatMods} = load("native-equipment.js");
+const {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} = load("native-equipment.js");
 const {nativeWavePlan} = load("native-waves.js");
 const {damage,applyDamage,recoverHP,attackTiming,FPS} = load("combat.js");
 const {applyStatus,tickStatuses,permissions,statusAttributeChanges} = load("status.js");
@@ -5691,7 +5922,7 @@ class NativeBattle {
      if(spRec){base.spRecoveryPerSec+=spRec;note('spRecoveryPerSec','add',spRec,'卫戍');}}}
    if(b.sp_recovery_per_sec&&b.key!=='act1autochess_gar_eff_attrByBond')base.spRecoveryPerSec+=b.sp_recovery_per_sec;
   }
-  for(const item of u.source.equipment){const record=this.data.season.trapChessDataDict[item.chessId];for(const effect of this.data.season.effectBuffInfoDataDict[record?.effectId]||[]){const b=blackboard(effect.blackboard);if(effect.key==='char_attribute_mul'){mul('atk',b.atk??1,'装备');mul('maxHp',b.max_hp??1,'装备');mul('def',b.def??1,'装备');}else if(effect.key.startsWith('env_gbuff')){ratio('atk',b.atk||0,'装备');ratio('maxHp',b.max_hp||0,'装备');ratio('def',b.def||0,'装备');as+=b.attack_speed||0;base.magicResistance+=b.magic_resistance||0;base.spRecoveryPerSec+=b.sp_recovery_per_sec||0;}}}equipmentStatMods(this,u,{ratio,note,base,addAttackSpeed:value=>{as+=value;}});
+  for(const item of u.source.equipment){const record=this.data.season.trapChessDataDict[item.chessId];for(const effect of this.data.season.effectBuffInfoDataDict[record?.effectId]||[]){const b=blackboard(effect.blackboard);if(effect.key==='char_attribute_mul'){mul('atk',b.atk??1,'装备');mul('maxHp',b.max_hp??1,'装备');mul('def',b.def??1,'装备');}else if(effect.key.startsWith('env_gbuff')&&!equipGenericExcluded(b.key)){ratio('atk',b.atk||0,'装备');ratio('maxHp',b.max_hp||0,'装备');ratio('def',b.def||0,'装备');as+=b.attack_speed||0;base.magicResistance+=b.magic_resistance||0;base.spRecoveryPerSec+=b.sp_recovery_per_sec||0;}}}equipmentStatMods(this,u,{ratio,note,base,addAttackSpeed:value=>{as+=value;}});
   if(has('victoriaShip')&&this.rows.victoriaShip.count>=6)for(const i of u.source.equipment)ratio('atk',this.data.season.trapChessDataDict[i.chessId].isGolden?.8:.5,'盟约·维多利亚');
   if(this.s.units.some(v=>v.deployed&&v.hp>0&&v.id==='char_172_svrash'&&(this.profile(v).activeTalents||[]).some(t=>t.name==='领袖')))base.respawnTime*=.9;
   for(const talent of p.activeTalents||[]){const value=Number(blackboard(talent.blackboard).respawn_time);if(Number.isFinite(value))base.respawnTime+=value;}
@@ -6069,7 +6300,7 @@ class NativeBattle {
   adjustReserveCost(delta,{predicate=()=>true,limit=1}={}){const value=Number(delta);if(!Number.isFinite(value)||!value)return [];const rows=this.reserveUnits(predicate).sort((a,b)=>a.y-b.y||a.x-b.x||a.uid-b.uid).slice(0,Math.max(0,limit));for(const u of rows)u.costRealtimeDelta=(u.costRealtimeDelta||0)+value;return rows;}
   swapReserveBaseCosts(predicate=()=>true){const rows=this.reserveUnits(predicate).sort((a,b)=>(a.baseCostOverride??a.baseCost??0)-(b.baseCostOverride??b.baseCost??0)||a.uid-b.uid);if(rows.length<2)return false;const first=rows[0],last=rows.at(-1),a=first.baseCostOverride??first.baseCost,b=last.baseCostOverride??last.baseCost;first.baseCostOverride=b;last.baseCostOverride=a;return true;}
   deploymentCost(u){const p=this.profile(u),base=Math.max(0,Number(u.baseCostOverride??u.baseCost??p.attributes.cost)||0),runtime=!u.runtimeCostUsed&&u.runtimeCostActive?Number(u.runtimeCost)||0:0;let baseDelta=Number(u.costBaseDelta||0)+Number(u.wildmaneCostDelta||0),realtime=Number(u.costRealtimeDelta)||0;if(u.id==='char_237_gravel')baseDelta-=1;for(const source of this.s.units.filter(v=>v.deployed&&v.hp>0)){const sp=this.profile(source);if(source.id==='char_249_mlyss'&&p.groupId==='rhine'&&sp.activeTalents?.some(t=>/莱茵生命.*部署费用/.test(t.description||''))){baseDelta-=2;if(!this.s.mlyssFirstRhineDiscountUsed&&u.id!=='char_249_mlyss')baseDelta-=1;}}const multiplier=Math.pow(1.5,Math.min(2,Math.max(0,Number(u.redeployPenalty)||0)));return Math.max(0,Math.floor((base+baseDelta)*multiplier+realtime+runtime));}
-  deploy(u,{reentry=false}={}){if(reentry){const cost=this.deploymentCost(u);if(cost>0&&!this.spendCost(cost,{considerNegativeCost:true}))return false;u.deploymentCost=cost;u.lastDeploymentCost=cost;u.refundCap=Math.max(0,Math.floor(Number(u.baseCostOverride??u.baseCost)||0)+(Number(u.costBaseDelta)||0));u.refundEligible=true;u.waitingCost=false;}u.runtimeCostUsed=true;u.wildmaneCostDelta=0;if(u.id!=='char_249_mlyss'&&this.s.mlyssFirstRhineDiscountUsed===false&&this.profile(u).groupId==='rhine'&&this.s.units.some(v=>v.id==='char_249_mlyss'&&v.deployed&&v.hp>0))this.s.mlyssFirstRhineDiscountUsed=true;u.hornBuff=null;u.etlchiSaved=false;u.sbellRevived=false;u.pasngrNext=null;u.cetsyrNextShare=0;u.svashCostAt=0;u.svashCostRemaining=0;u.svashCostHandled=false;u.etlchiCandles=[];u.pendingAttackHits=0;u.invulnerableUntil=0;u.mudrokSleepUntil=0;u.mudrokAwake=false;u.mudrokS1=null;u.titiSleepUid=null;u.titiSleepState={};u.lumenEmergencyAt=-Infinity;u.blaze2AnchorUid=null;u.ulpiaKills=0;u.nymphStacks=0;u.nymphNextAt=0;u.haloStacks=0;u.haloStay={};u.qiubaiNext=null;u.blkkgtNext=null;u.pepeStacks=0;u.pepeSkillUses=0;u.pepeKillSp=0;u.excu2Targets=[];u.lemuenTargets=[];u.lemuenNextAt=0;u.lemuenWanted={};u.whitwNextAt=0;u.whitwTalentStage=0;u.kjeraNextAt=0;u.siege2Next=null;u.siege2Marks={};u.duskNext=null;u.archetNext=null;u.inesStealAt=0;u.surtrS1=false;u.lockHp=null;u.damageProtection=null;u.returnPosition=null;u.helmetMaxHpBonus=0;u.raidGrenadeUntil=0;u.equipUndeadUsed=false;u.equipCamoUsed=false;u.equipSaltBlocked=0;u.m3Revives=0;u.trenchReflectAt=-Infinity;u.equipHitStacks=0;u.equipSkillUses=0;u.familyBadgeAtk=0;u.familyBadgeAt=0;u.familyBadgeBonus=0;u.pendingAttackHeal=null;u.pendingAttackSelfHeal=null;u.pendingHealBonus=null;u.pendingHealScale=null;u.papyrsShieldScale=null;u.skillDisarmUntil=null;u.focusHealAfter=null;u.focusHeal=false;u.statusResistance=0;u.skillEndHealRatio=0;u.talentSpRecoveryUntil=0;u.talentSpRecovery=0;u.pineSkillUses=0;u.philaeNextAt=0;u.philaeElementBoost=false;u.elementDamageResistance=0;u.downed=false;u.blazeDownUsed=false;u.healable=true;u.energy=0;u.talentTime=0;u.talentAmmoTimers={};u.talentAmmoFlags={};u.talentAmmoBonus=0;u.merchantDeployGen=null;u.merchantNextFeeAt=null;u.merchantTalentStacks=0;u.wildmaneAspdUntil=0;u.gravelDefBuff=null;u.physicalEvadeOnce=false;u.physicalEvadeUntil=0;u.physicalEvadeProb=0;u.skillEvasionProb=0;u.vulpisMarks={};u.vulpisKilled=false;u.hainiTalentScale=1;u.kroosHits=0;u.kroosQuad=false;u.aromaSeen={};u.aromaPending=null;u.texas2Killed=false;u.duskTalentStacks=0;u.aromaLevitateSeen={};u.aromaLevitateFired={};u.shield=0;u.shieldLayers=[];u.barriers=[];u.deployed=true;u.deployCount=(u.deployCount||0)+1;u.deployGen=(u.deployGen||0)+1;u.exitLife=null;u.branchCharge=0;u.branchSkillActive=false;u.pendingReturns=0;u.energy=0;u.magazine=branchTrait(this.profile(u)).values.value??8;u.pendingSelfHeals=[];u.droneTarget=null;u.droneScale=0;u.reaperWindowStart=-999;u.reaperWindowCount=0;u.nextSelfHealAt=0;u.hp=u.maxHp=this.stats(u).maxHp;u.sp=initSpOf(this.profile(u).skill);u.spCd=0;u.spLock=0;u.ammo=0;u.ammoMax=0;u.lockId=null;if(this.on('soloShip')&&this.owns(u,'soloShip'))u.sp+=15;u.deployAt=this.s.time;this.event(u,'deploy');this.emit('deploy',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'deploy',{target:u});}
+  deploy(u,{reentry=false}={}){if(reentry){const cost=this.deploymentCost(u);if(cost>0&&!this.spendCost(cost,{considerNegativeCost:true}))return false;u.deploymentCost=cost;u.lastDeploymentCost=cost;u.refundCap=Math.max(0,Math.floor(Number(u.baseCostOverride??u.baseCost)||0)+(Number(u.costBaseDelta)||0));u.refundEligible=true;u.waitingCost=false;}u.runtimeCostUsed=true;u.wildmaneCostDelta=0;if(u.id!=='char_249_mlyss'&&this.s.mlyssFirstRhineDiscountUsed===false&&this.profile(u).groupId==='rhine'&&this.s.units.some(v=>v.id==='char_249_mlyss'&&v.deployed&&v.hp>0))this.s.mlyssFirstRhineDiscountUsed=true;u.hornBuff=null;u.etlchiSaved=false;u.sbellRevived=false;u.pasngrNext=null;u.cetsyrNextShare=0;u.svashCostAt=0;u.svashCostRemaining=0;u.svashCostHandled=false;u.etlchiCandles=[];u.pendingAttackHits=0;u.invulnerableUntil=0;u.mudrokSleepUntil=0;u.mudrokAwake=false;u.mudrokS1=null;u.titiSleepUid=null;u.titiSleepState={};u.lumenEmergencyAt=-Infinity;u.blaze2AnchorUid=null;u.ulpiaKills=0;u.nymphStacks=0;u.nymphNextAt=0;u.haloStacks=0;u.haloStay={};u.qiubaiNext=null;u.blkkgtNext=null;u.pepeStacks=0;u.pepeSkillUses=0;u.pepeKillSp=0;u.excu2Targets=[];u.lemuenTargets=[];u.lemuenNextAt=0;u.lemuenWanted={};u.whitwNextAt=0;u.whitwTalentStage=0;u.kjeraNextAt=0;u.siege2Next=null;u.siege2Marks={};u.duskNext=null;u.archetNext=null;u.inesStealAt=0;u.surtrS1=false;u.lockHp=null;u.damageProtection=null;u.returnPosition=null;u.helmetMaxHpBonus=0;u.raidGrenadeUntil=0;u.equipUndeadUsed=false;u.equipCamoUsed=false;u.equipSaltBlocked=0;u.m3Revives=0;u.trenchReflectAt=-Infinity;u.equipHitStacks=0;u.equipSkillUses=0;u.equipAspdStacks=0;u.equipAmmoRestores=0;u.kazimierzFlagAt=null;u.compassSkillEnd=false;u.knightDecreeUntil=0;u.equipRetreatAtSkillEnd=false;u.yaleNextAt=null;u.familyBadgeAtk=0;u.familyBadgeAt=0;u.familyBadgeBonus=0;u.familyBadgePaid=false;u.pendingAttackHeal=null;u.pendingAttackSelfHeal=null;u.pendingHealBonus=null;u.pendingHealScale=null;u.papyrsShieldScale=null;u.skillDisarmUntil=null;u.focusHealAfter=null;u.focusHeal=false;u.statusResistance=0;u.skillEndHealRatio=0;u.talentSpRecoveryUntil=0;u.talentSpRecovery=0;u.pineSkillUses=0;u.philaeNextAt=0;u.philaeElementBoost=false;u.elementDamageResistance=0;u.downed=false;u.blazeDownUsed=false;u.healable=true;u.energy=0;u.talentTime=0;u.talentAmmoTimers={};u.talentAmmoFlags={};u.talentAmmoBonus=0;u.merchantDeployGen=null;u.merchantNextFeeAt=null;u.merchantTalentStacks=0;u.wildmaneAspdUntil=0;u.gravelDefBuff=null;u.physicalEvadeOnce=false;u.physicalEvadeUntil=0;u.physicalEvadeProb=0;u.skillEvasionProb=0;u.vulpisMarks={};u.vulpisKilled=false;u.hainiTalentScale=1;u.kroosHits=0;u.kroosQuad=false;u.aromaSeen={};u.aromaPending=null;u.texas2Killed=false;u.duskTalentStacks=0;u.aromaLevitateSeen={};u.aromaLevitateFired={};u.shield=0;u.shieldLayers=[];u.barriers=[];u.deployed=true;u.deployCount=(u.deployCount||0)+1;u.deployGen=(u.deployGen||0)+1;u.exitLife=null;u.branchCharge=0;u.branchSkillActive=false;u.pendingReturns=0;u.energy=0;u.magazine=branchTrait(this.profile(u)).values.value??8;u.pendingSelfHeals=[];u.droneTarget=null;u.droneScale=0;u.reaperWindowStart=-999;u.reaperWindowCount=0;u.nextSelfHealAt=0;u.hp=u.maxHp=this.stats(u).maxHp;u.sp=initSpOf(this.profile(u).skill);u.spCd=0;u.spLock=0;u.ammo=0;u.ammoMax=0;u.lockId=null;if(this.on('soloShip')&&this.owns(u,'soloShip'))u.sp+=15;u.deployAt=this.s.time;this.event(u,'deploy');this.emit('deploy',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'deploy',{target:u});}
   activate(u){const p=this.profile(u),sk=p.skill,cfg=operatorSkillConfig(this,u);if(!sk||!permissions(u).skill||(!usesSp(sk)&&!cfg.coinCost))return;const b=blackboard(sk.blackboard),cost=this.spCost(u),kind=skillKind(sk)||(cfg.coinCost?'instant':null),flow=skillFlow(sk),passiveCoinSkill=sk.skillType==='PASSIVE'&&u.coinSkillEnabled,openingCoins=passiveCoinSkill?0:coinGainAtSkillStart(this,u),coinCap=coinCapFor(p);if(cfg.coinCost&&(u.coins||0)+openingCoins<cfg.coinCost)return;if(u.sp<cost||(usesSp(sk)&&sk.skillType!=='AUTO'&&this.s.time-u.lastSkill<3))return;if(kind==='instant'&&sk.skillType==='AUTO'&&(u.action||u.attackCooldown>0))return;if(flow.resetAttack){u.action=null;u.attackCooldown=0;}if(openingCoins)grantCoins(u,openingCoins,coinCap);if(cfg.coinCost&&!spendCoins(u,cfg.coinCost))return;u.sp=Math.max(0,Math.trunc(u.sp)-cost);u.lastSkill=this.s.time;u.skillCount++;const skillAir=skillAntiAir(p.charId,p.skillIndex??u.source?.skillIndex);u.skillAir=skillAir==null?null:{value:skillAir,count:u.skillCount,until:this.s.time+(Number(sk.duration)>0?Number(sk.duration):0)};const lateranoBonus=this.on('lateranoShip')&&this.owns(u,'lateranoShip')?this.params('lateranoShip'):null,baseAmmo=ammoCount(sk),bondAmmo=lateranoBonus?Math.max(0,Math.floor(baseAmmo*(Number(lateranoBonus.base_ammo_percent||0)+Number(lateranoBonus.ammo_percent_per_stack||0)*(this.layers.lateranoShip||0)))):0;u.ammo=kind==='ammo'?baseAmmo+cfg.ammoBonus+(u.talentAmmoBonus||0)+bondAmmo+(p.charId==='char_1032_excu2'?Math.min(4,this.s.units.filter(v=>v.deployed&&v.hp>0&&this.profile(v)?.bonds?.includes('lateranoShip')).length):0):0;u.ammoMax=u.ammo;u.ammoPerAttack=cfg.ammoPerAttack;u.skillLeft=kind==='ammo'?0:this.skillTimeLeft(sk);if(kind==='instant'){const t=attackTiming(this.stats(u).baseAttackTime,this.stats(u).attackSpeed,windupSeconds(this.stats(u).baseAttackTime,p.attackWindup));u.spLock=t.seconds;}this.event(u,'skill');this.emit('skill-start',{uid:u.uid,kind,name:sk.name,x:u.x,y:u.y,wide:this.wideAttack(u),wideKind:this.wideKind(u)});if(dispatch(this,'skill-start',{target:u}))return;if(kind==='instant'&&sk.skillType==='AUTO'&&spTypeOf(sk)==='INCREASE_WHEN_ATTACK'){u.enhanced=true;return;}if(kind==='instant'){const targets=this.targets(u);if(p.branch!=='incantationmedic'&&/回复.*生命|治疗/.test(sk.description||'')){for(const v of this.healingTargets(u))this.heal(u,v,this.stats(u).atk*(cfg.bb.healScale??b.heal_scale??b.atk_scale??1));}else if(cfg.atkScale!=null||b.atk_scale){for(const e of targets.slice(0,cfg.multiTarget===Infinity?targets.length:(cfg.multiTarget??b.max_target??999)))for(let hit=0;hit<Math.max(1,cfg.hits||1);hit++)this.hit(u,e,this.stats(u).atk*(cfg.atkScale??b.atk_scale??1),this.baseDamageType(u),{skill:true});}if(b.stun||cfg.bb.stun)for(const e of targets){if(applyStatus(e,'stun',b.stun??cfg.bb.stun,{source:u.uid}))this.emit('control',{uid:e.uid,kind:'stun',x:e.x,y:e.y});}}}
  deactivate(u){const p=this.profile(u),sk=p.skill;if(!sk||!this.skillActive(u))return false;const idx=sk.skillIndex??u.source?.skillIndex;if(u.id==='char_1033_swire2'&&idx===2){const cfg=operatorSkillConfig(this,u),coins=Math.max(0,Math.trunc(u.coins||0));for(let i=0;i<coins;i++){const targets=this.targets(u);if(!targets.length)break;const target=targets[Math.floor(this.economy.random()*targets.length)];this.hit(u,target,this.stats(u).atk*(cfg.atkScale||1),'physical');moveActor(this,target,u,sk.description||'');}u.coins=0;}if(u.id==='char_4039_horn'&&idx===1&&u.ammo>0){const cfg=operatorSkillConfig(this,u),targets=this.targets(u);for(let i=0;i<u.ammo;i++)for(const target of targets)this.hit(u,target,this.stats(u).atk*(Number(cfg.bb['attack@s2.atk_scale'])||1.6),'physical',{skill:true});u.hp=Math.max(1,u.hp-u.maxHp*(Number(cfg.bb['attack@s2.hp_ratio'])||.6));u.ammo=0;}u.skillLeft=0;u.ammo=0;u.action=null;this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'skill-end',{target:u});return true;}
  spCost(u){const p=this.profile(u),base=p.skill?.spData.spCost||0;return this.on('suntShip')&&this.rows.suntShip.count>=5&&p.isGolden?Math.floor(base*.7):base;}
@@ -6080,7 +6311,7 @@ class NativeBattle {
   costRecoveryMultiplier(){let multiplier=1;for(const u of this.s.units)if(u.deployed&&u.hp>0)for(const talent of this.profile(u).activeTalents||[]){const bb=blackboard(talent.blackboard),value=Number(bb.delta_cost_increase_time);if(Number.isFinite(value)&&value>0)multiplier*=value;}return multiplier;}
   tickCost(dt){const base=this.s.costRecoveryInterval;if(!Number.isFinite(base)||base<=0||this.s.cost>=this.s.costMax)return 0;const multiplier=this.costRecoveryMultiplier()*Math.max(0,Number(this.s.enemyCostRecoveryMultiplier??1));if(multiplier<=0)return 0;const interval=base/multiplier;this.s.costRecoveryClock+=Math.max(0,Number(dt)||0);let gained=0;while(this.s.costRecoveryClock+1e-9>=interval&&this.s.cost<this.s.costMax){this.s.costRecoveryClock-=interval;gained+=this.gainCost(this.s.cost<0?.5:1);}return gained;}
   baseDamageType(u){const p=this.profile(u),description=p.skill?.description||'',configured=operatorSkillConfig(this,u).damageType,active=this.skillActive(u)||u.enhanced||u.passiveArts;if(active&&configured)return configured;if(active&&description.includes('真实伤害'))return 'true';if(active&&/变为.*法术|造成法术/.test(description))return 'arts';return this.behavior(u).damageType;}
-  hit(u,e,amount,type,opts={}){if(e.hp<=0||e.hidden||e.invulnerable||permissions(e).sleeping)return;const skill=!!opts.skill||this.skillActive(u),p=this.profile(u),pen=attackPenetration(this,u,e),enemyStatus=statusAttributeChanges(e);let penetrationRatio=this.on('preciShip')&&this.rows.preciShip.count>=3&&(this.owns(u,'preciShip')||p.position==='RANGED')?.3:0;penetrationRatio=Math.max(penetrationRatio,pen.ratio);const physical=damage({amount,type:'physical',defense:Math.max(0,e.def+(enemyStatus.defense||0)-pen.fixed),penetrationRatio}),arts=damage({amount,type:'arts',resistance:Math.max(0,e.res+(enemyStatus.resistance||0)+(enemyStatus.magicResistance||0)-Number(pen.magicFixed||0)),penetrationRatio});if(p.charId==='char_1014_nearl2'&&(p.skillIndex??u.source?.skillIndex)===2&&type!=='true'&&(e.block===u.uid||this.s.summons.some(x=>x.type==='nearl2-sun'&&x.ownerUid===u.uid&&e.block===x.uid)))type='true';if(type!=='true'&&(this.s.band==='band_chen'||p.garrisons.some(g=>blackboard(g.blackboard).key==='act1autochess_gar_eff_chaos')))type=physical>=arts?'physical':'arts';let value=type==='physical'?physical:type==='arts'?arts:amount;
+  hit(u,e,amount,type,opts={}){if(e.hp<=0||e.hidden||e.invulnerable||permissions(e).sleeping)return;const skill=!!opts.skill||this.skillActive(u),p=this.profile(u),pen=attackPenetration(this,u,e),enemyStatus=statusAttributeChanges(e);let penetrationRatio=this.on('preciShip')&&this.rows.preciShip.count>=3&&(this.owns(u,'preciShip')||p.position==='RANGED')?.3:0;penetrationRatio=Math.max(penetrationRatio,pen.ratio,equipMagicPenetration(this,u));const physical=damage({amount,type:'physical',defense:Math.max(0,e.def+(enemyStatus.defense||0)-pen.fixed),penetrationRatio}),arts=damage({amount,type:'arts',resistance:Math.max(0,e.res+(enemyStatus.resistance||0)+(enemyStatus.magicResistance||0)-Number(pen.magicFixed||0)),penetrationRatio});if(p.charId==='char_1014_nearl2'&&(p.skillIndex??u.source?.skillIndex)===2&&type!=='true'&&(e.block===u.uid||this.s.summons.some(x=>x.type==='nearl2-sun'&&x.ownerUid===u.uid&&e.block===x.uid)))type='true';if(type!=='true'&&(this.s.band==='band_chen'||p.garrisons.some(g=>blackboard(g.blackboard).key==='act1autochess_gar_eff_chaos')||equipWeakness(this,u)))type=physical>=arts?'physical':'arts';let value=type==='physical'?physical:type==='arts'?arts:amount;
   if(this.on('victoriaShip')&&this.owns(u,'victoriaShip')&&u.source.equipment.length)value*=1.25+.008*(this.layers.victoriaShip||0);
   if(this.on('kjeragShip')&&this.owns(u,'kjeragShip'))value*=e.statuses.some(s=>s.kind==='cold'||s.kind==='frozen')?1.35+.01*(this.layers.kjeragShip||0):1.25;
   if(this.on('emptyShip')&&this.owns(u,'emptyShip'))value*=p.isGolden?1.4:1.2;
@@ -6366,12 +6597,12 @@ class NativeSession extends NativeEconomy {
  }
  buyItem(index){if(this.s.phase!=='prep'||this.s.rewardPending)return false;const id=this.s.itemOffers[index],item=this.data.season.trapChessDataDict[id];if(!item||this.handFull()||!this.spend(item.purchasePrice))return false;this.s.itemOffers[index]=null;this.gainItem(id);return true;}
  // 主动销毁：手牌里的装备直接移除；干员身上的装备从槽位移除（不退回手牌）。
- destroyItem(itemUid){if(this.s.phase!=='prep')return false;const item=this.s.items.find(i=>i.uid===itemUid);if(!item)return false;this.s.items=this.s.items.filter(i=>i.uid!==itemUid);this.s.events.push({type:'destroyItem',uid:itemUid,chessId:item.chessId});return true;}
+ destroyItem(itemUid){if(this.s.phase!=='prep')return false;const item=this.s.items.find(i=>i.uid===itemUid);if(!item)return false;this.s.items=this.s.items.filter(i=>i.uid!==itemUid);this.s.events.push({type:'destroyItem',uid:itemUid,chessId:item.chessId});const row=this.equipRowsOf({equipment:[item]}).find(r=>r.key==='trap_disney_special');if(row)this.addFunds(Number(row.bb.count)||1);return true;}
  destroyEquipment(unitUid,slot){if(this.s.phase!=='prep')return false;const u=this.s.units.find(x=>x.uid===unitUid);if(!u||!Number.isInteger(slot))return false;const item=u.equipment[slot];if(!item)return false;u.equipment.splice(slot,1);this.refreshEquipmentBonds(u);this.s.events.push({type:'destroyItem',uid:item.uid,chessId:item.chessId});return true;}
  equip(itemUid,unitUid,replaceIndex=null){
   if(this.s.phase!=='prep')return false;const item=this.s.items.find(i=>i.uid===itemUid),u=this.s.units.find(u=>u.uid===unitUid);if(!item||!u)return false;const def=this.data.season.trapChessDataDict[item.chessId],effects=this.data.season.effectBuffInfoDataDict[def.effectId]||[];let consumed=false;
   if(def.itemType==='MAGIC'){const effect=effects.find(e=>e.key==='trap_create_self_choice'||e.key==='trap_copy_front_char');if(effect?.key==='trap_create_self_choice'){const pool=Object.entries(this.data.season.effectInfoDataDict).filter(([id,info])=>info.effectType==='ENEMY_GAIN'&&this.data.season.effectBuffInfoDataDict[id]?.some(e=>['add_enemy_selfbattle_win_gain_coin','next_battle_add_enemy_win_gain_coin'].includes(e.key)));this.s.rewardPending={kind:'bounty',choice:1,offers:Array.from({length:3},()=>this.pick(pool)[0])};consumed=true;}if(effect?.key==='trap_copy_front_char'){const copy=this.gain(u.chessId);copy.equipment=(u.equipment||[]).map(i=>({uid:++this.s.seq,chessId:i.chessId}));copy.bondIds=[...this.ownBonds(u)];consumed=true;}if(consumed){this.s.items=this.s.items.filter(i=>i.uid!==itemUid);return true;}}
-  for(const e of effects){const p=blackboard(e.blackboard);if(e.key==='equip_destory_gain_random_coin'){this.addFunds(p.min+Math.floor(this.random()*(p.max-p.min+1)));consumed=true;}if(e.key==='use_equip_gain_coin_when_next_round_start'){this.s.nextRoundBonus+=p.count;consumed=true;}if(e.key==='gain_coin_when_round_start'){this.s.passiveIncome+=p.count;consumed=true;}if(e.key==='use_equip_reward_char_chess_bond_layer'){for(const b of this.ownBonds(u))this.addLayers(b,p.layer,false);consumed=true;}if(e.key==='equip_destory_deployment_cnt_change'){this.s.capacity=p.count;consumed=true;}if(e.key==='use_equip_upgrade_char'){const next=this.data.season.charChessDataDict[u.chessId].upgradeChessId;if(next)u.chessId=next;consumed=true;}if(e.key==='use_equip_reward_char_chess'){const initial=this.data.season.chessNormalIdLookupDict[u.chessId]||u.chessId,owned=this.s.units.filter(x=>(this.data.season.chessNormalIdLookupDict[x.chessId]||x.chessId)===initial).length;if(owned>=2)this.gain(initial);else this.gain(this.drawFromPool({kind:'operator',bond:this.pick(this.ownBonds(u)),maxTier:this.s.level}));consumed=true;}if(e.key==='use_equip_reward_char_chess_with_same_bond'){for(let n=0;n<p.count;n++)this.gain(this.drawFromPool({kind:'operator',bond:this.pick(this.ownBonds(u)),maxTier:this.s.level}));consumed=true;}if(e.key==='use_equip_reward_random_char_chess_in_shop'){const indices=this.s.offers.map((x,i)=>x?i:null).filter(x=>x!==null);for(let n=0;n<p.count&&indices.length;n++){const index=indices.splice(Math.floor(this.random()*indices.length),1)[0];this.gain(this.s.offers[index]);this.s.offers[index]=null;}consumed=true;}}
+  for(const e of effects){const p=blackboard(e.blackboard);if(e.key==='equip_destory_gain_random_coin'){this.addFunds(p.min+Math.floor(this.random()*(p.max-p.min+1)));consumed=true;}if(e.key==='use_equip_gain_coin_when_next_round_start'){this.s.nextRoundBonus+=p.count;consumed=true;}if(e.key==='gain_coin_when_round_start'){this.s.passiveIncome+=p.count;consumed=true;}if(e.key==='use_equip_reward_char_chess_bond_layer'){for(const b of this.ownBonds(u))this.addLayers(b,p.layer,false);consumed=true;}if(e.key==='equip_destory_deployment_cnt_change'){this.s.capacity=p.count;consumed=true;}if(e.key==='equip_round_start_upgrade_char')u.projectionUpgrade={itemUid:item.uid};if(e.key==='use_equip_upgrade_char'){const next=this.data.season.charChessDataDict[u.chessId].upgradeChessId;if(next)u.chessId=next;consumed=true;}if(e.key==='use_equip_reward_char_chess'){const initial=this.data.season.chessNormalIdLookupDict[u.chessId]||u.chessId,owned=this.s.units.filter(x=>(this.data.season.chessNormalIdLookupDict[x.chessId]||x.chessId)===initial).length;if(owned>=2)this.gain(initial);else this.gain(this.drawFromPool({kind:'operator',bond:this.pick(this.ownBonds(u)),maxTier:this.s.level}));consumed=true;}if(e.key==='use_equip_reward_char_chess_with_same_bond'){for(let n=0;n<p.count;n++)this.gain(this.drawFromPool({kind:'operator',bond:this.pick(this.ownBonds(u)),maxTier:this.s.level}));consumed=true;}if(e.key==='use_equip_reward_random_char_chess_in_shop'){const indices=this.s.offers.map((x,i)=>x?i:null).filter(x=>x!==null);for(let n=0;n<p.count&&indices.length;n++){const index=indices.splice(Math.floor(this.random()*indices.length),1)[0];this.gain(this.s.offers[index]);this.s.offers[index]=null;}consumed=true;}}
   for(const e of effects){const p=blackboard(e.blackboard);if(e.key==='use_equip_reward_special_goods_char_chess')consumed=this.rewardFromBond(u,p.refresh_cnt||3)||consumed;if(e.key==='use_equip_recruit_new_char_and_give_char_to_player_most_bond'){this.rewardFromTier(u.rank||1,p.refresh_cnt||2);if(this.s.bandId==='band_fang')this.queueFangTransfer(u);this.s.units=this.s.units.filter(x=>x!==u);consumed=true;}if(e.key==='char_chess_transformation_equip'){u.transformAfterBattle=true;consumed=true;}if(e.key==='use_equip_upgrade_char'){const normal=this.data.season.chessNormalIdLookupDict[u.chessId]||u.chessId,golden=this.data.season.charShopChessDatas[normal]?.goldenChessId;if(golden)u.chessId=golden;consumed=true;}}
   if(!consumed){if(u.equipment.length>=2){if(replaceIndex===null)return false;const old=u.equipment.splice(replaceIndex,1)[0];if(old)this.s.items.push(old);}u.equipment.push(item);if(def.canGiveBond&&def.giveBondId)u.bondIds=[...new Set([...this.ownBonds(u),def.giveBondId])];this.refreshEquipmentBonds(u);}
   this.s.items=this.s.items.filter(i=>i.uid!==itemUid);this.settleBondRewards();return true;
@@ -6399,11 +6630,46 @@ class NativeSession extends NativeEconomy {
  receiveFangTransfer(record){if(!record?.transferId||record.recipientId!==this.s.playerId||!this.data.profiles[record.chessId]||this.s.strategyClaims[`fang:received:${record.transferId}`]||this.s.transferInbox.some(r=>r.transferId===record.transferId))return false;this.s.transferInbox.push(structuredClone(record));return true;}
  applyTransferInbox(){const due=[],keep=[];for(const record of this.s.transferInbox||[])(record.dueRound??0)<=this.s.round?due.push(record):keep.push(record);this.s.transferInbox=keep;for(const record of due){if(this.s.strategyClaims[`fang:received:${record.transferId}`])continue;const unit=this.gain(record.chessId);unit.bondIds=[...(record.bondIds||this.ownBonds(unit))];unit.skillIndex=record.skillIndex??unit.skillIndex;unit.equipment=(record.equipment||[]).map(i=>({uid:++this.s.seq,chessId:i.chessId}));this.s.strategyClaims[`fang:received:${record.transferId}`]=1;}}
  startPreparation(){const result=super.startPreparation();if(result){this.applyTransferInbox();if(this.s.bandId==='band_amedic'&&!this.s.strategyClaims.touchReserve){const u=this.gain('chess_virtual_prepared_medic');u.touchReserve=true;this.s.strategyClaims.touchReserve=1;}}return result;}
+  // 获得干员是本回合「获得过几名干员」的唯一登记点：天师古鼎的攻速叠层（战斗期）与资金（备战期）都读它。
+  gain(chessId){
+   const u=super.gain(chessId);
+   if(this.s.roundGainedChars?.round!==this.s.round)this.s.roundGainedChars={round:this.s.round,count:0};
+   this.s.roundGainedChars.count++;
+   this.gainCharEquipEffects();
+   return u;
+  }
+  // 携带者装备的全部效果行（备战期按 key 判定）。
+  equipRowsOf(unit){return (unit?.equipment||[]).flatMap(item=>{const def=this.data.season.trapChessDataDict[item.chessId];return (this.data.season.effectBuffInfoDataDict[def?.effectId]||[]).map(row=>({key:row.key,bb:blackboard(row.blackboard)}));});}
+  // 天师古鼎＋炎国短刀：携带者为该行 bond 盟约时，每次获得干员获得 count 资金（每回合最多 max 次）。
+  gainCharEquipEffects(){
+   for(const owner of this.s.units){
+    const row=this.equipRowsOf(owner).find(r=>r.key==='equip_with_another_gain_coin_when_gain_char');if(!row)continue;
+    const bond=String(row.bb.bond||'');if(bond&&!this.ownBonds(owner).includes(bond))continue;
+    const other=String(row.bb.other_equip||'').split(',').map(x=>x.trim()).filter(Boolean);
+    if(!other.length||!(owner.equipment||[]).some(item=>other.some(prefix=>item.chessId===prefix||item.chessId.startsWith(prefix))))continue;
+    const max=Math.max(1,Number(row.bb.max)||3),count=Number(row.bb.count)||0;if(count<=0)continue;
+    if(this.s.tianshiRound!==this.s.round){this.s.tianshiRound=this.s.round;this.s.tianshiCount=0;}
+    if(this.s.tianshiCount>=max)continue;
+    this.s.tianshiCount++;this.addFunds(count);
+   }
+  }
+  // 博士投影（普通）：下个回合开始时销毁该装备并让携带者晋升为精锐干员；装备已被销毁/换下就不再晋升。
+  applyProjectionUpgrades(){
+   for(const u of this.s.units){
+    const pending=u.projectionUpgrade;if(!pending)continue;
+    delete u.projectionUpgrade;
+    const index=(u.equipment||[]).findIndex(i=>i.uid===pending.itemUid);if(index<0)continue;
+    u.equipment.splice(index,1);
+    const next=this.data.season.charChessDataDict[u.chessId]?.upgradeChessId;
+    if(next){u.chessId=next;u.charId=this.data.season.charShopChessDatas[next]?.charId??u.charId;}
+    this.refreshEquipmentBonds(u);
+   }
+  }
  applyTouchReplacement(){if(this.s.bandId!=='band_amedic'||this.s.strategyClaims.touchReplacement)return false;const elites=this.s.units.filter(u=>u.position&&this.data.season.charChessDataDict[u.chessId]?.isGolden).length,target=this.s.units.find(u=>u.touchReserve);if(elites<2||!target)return false;target.chessId='chess_virtual_touch';target.charId='char_613_acmedc';target.rank=6;target.touchReserve=false;this.s.strategyClaims.touchReplacement=1;return true;}
  startBattle(){if(this.s.phase!=='prep'||this.s.rewardPending||!this.s.units.some(u=>u.position))return false;this.applyTouchReplacement();const ok=this.beginBattle();if(!ok)return false;if(this.s.phase==='prep')return true;const turn=buildPhasePlan(this.data,this.s.modeId).find(t=>t.round===this.s.round);this.battle=new NativeBattle(this.data,this,this.map,turn);return true;}
  finishCurrentBattle(){if(!this.battle?.s.finished||this.s.phase!=='battle')return;const r=this.battle.s.result;this.s.history.push(r);if(r.kind==='training-dummy'){this.s.runResult=r;this.s.phase='finished';}else{this.s.hp=Math.max(0,this.s.hp-r.leaks);this.finishBattle({success:this.s.hp>0,leaks:r.leaks});if(!this.s.hp)this.s.runResult=r;}this.applyPostBattleTransforms();}
  tick(){if(this.s.phase==='battle'&&this.battle){this.battle.step();this.finishCurrentBattle();}}
- advanceRound(){if(this.s.phase!=='intermission')return false;const locked=this.s.locked,oldOffers=locked?this.s.offers.slice():null,oldItems=locked?this.s.itemOffers.slice():null;this.s.prepApplied=false;const ok=this.nextRound(locked?[]:this.rollOffers());if(!ok)return false;if(locked){const refillOffers=this.rollOffers();this.s.offers=Array.from({length:this.terms().operatorSlots},(_,i)=>oldOffers[i]??refillOffers[i]);if(this.s.level<3)this.s.itemOffers=[];else{const refillItems=Array.from({length:this.terms().itemSlots},()=>this.drawFromPool({kind:'item'}));this.s.itemOffers=Array.from({length:this.terms().itemSlots},(_,i)=>oldItems[i]??refillItems[i]);}}else this.fillItems();this.s.funds+=this.s.passiveIncome;
+ advanceRound(){if(this.s.phase!=='intermission')return false;const locked=this.s.locked,oldOffers=locked?this.s.offers.slice():null,oldItems=locked?this.s.itemOffers.slice():null;this.s.prepApplied=false;const ok=this.nextRound(locked?[]:this.rollOffers());if(!ok)return false;if(locked){const refillOffers=this.rollOffers();this.s.offers=Array.from({length:this.terms().operatorSlots},(_,i)=>oldOffers[i]??refillOffers[i]);if(this.s.level<3)this.s.itemOffers=[];else{const refillItems=Array.from({length:this.terms().itemSlots},()=>this.drawFromPool({kind:'item'}));this.s.itemOffers=Array.from({length:this.terms().itemSlots},(_,i)=>oldItems[i]??refillItems[i]);}}else this.fillItems();this.addFunds(this.s.passiveIncome);this.applyProjectionUpgrades();
   // 进入新回合只做「按持有者/类型对账」，**不重置已放置的召唤物卡**：召唤物留在原位跨回合存在，
   // 只有持有者撤走（syncSummonCards 会把卡删掉）或主动撤回整备区（withdrawSummonCard）才会离场。
   if(this.s.phase==='prep')this.syncSummonCards();if(this.s.phase==='decision'){const pool=Object.values(this.data.season.effectInfoDataDict).filter(e=>e.effectType==='BUFF_GAIN'&&this.data.season.effectBuffInfoDataDict[e.effectId]?.every(x=>['global_special_choice_gain_coin','global_special_choice_refresh_free','global_special_choice_bond_addlayer','enemy_attribute_add','enemy_attribute_mul','char_attribute_mul'].includes(x.key)));this.s.roundDecisions=[];while(this.s.roundDecisions.length<3&&pool.length){const i=Math.floor(this.random()*pool.length);this.s.roundDecisions.push(pool.splice(i,1)[0].effectId);}}
