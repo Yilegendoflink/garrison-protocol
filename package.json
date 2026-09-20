@@ -5,6 +5,13 @@
   "scripts": {
     "build": "node scripts/build-unlock-manifest.mjs && node scripts/build-operator-adapter-manifest.mjs && node scripts/build-protocol.mjs && node scripts/build-native.mjs && node scripts/build-token-data.mjs && node scripts/build-catalog.mjs && node scripts/build-wave-defaults.mjs && node scripts/build-browser.mjs",
     "test": "node --test tests/*.test.mjs",
+    "test:regression": "node scripts/regression-browser.mjs",
+    "test:browser": "node scripts/regression-browser.mjs smoke",
+    "test:combat": "node scripts/regression-browser.mjs combat",
+    "test:effects": "node scripts/regression-browser.mjs effects",
+    "test:layout": "node scripts/regression-browser.mjs layout",
+    "test:fx-preview": "node scripts/regression-browser.mjs fx-preview",
+    "test:mobile-bonds": "node scripts/regression-browser.mjs mobile-bonds",
     "data:sync": "node scripts/sync-prts.mjs",
     "data:check": "node scripts/prts-db.mjs validate",
     "data:stats": "node scripts/prts-db.mjs stats",
@@ -17,11 +24,8 @@
     "test:browser": "node scripts/browser-smoke.cjs",
     "test:mobile-bonds": "node scripts/mobile-bonds-browser.mjs",
     "data:fetch-mode": "node scripts/fetch-alliance-data.mjs && node scripts/fetch-alliance-levels.mjs",
-    "test:deployment": "node scripts/deployment-browser.cjs",
-    "test:season": "node scripts/season-browser.cjs",
     "release:check": "node scripts/check-release.mjs",
     "data:assets": "node scripts/sync-mode-assets.mjs",
-    "test:benchmark": "node scripts/benchmark-browser.cjs",
     "data:branches": "node scripts/fetch-branch-sources.mjs && node scripts/build-branch-records.mjs"
   },
   "engines": {

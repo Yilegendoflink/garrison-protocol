@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 // 手机端盟约面板：横屏 UI 的左侧竖列必须在卡片被 flex 压扁之前就变成整体上下滚动。
-// 布局行为本身由真浏览器复测（`node scripts/mobile-bonds-browser.mjs`），这里固化 CSS 口径，
+// 布局行为本身由真浏览器复测（`node scripts/regression-browser.mjs mobile-bonds`），这里固化 CSS 口径，
 // 防止后续「清理样式」时把 flex:0 0 auto 删掉、又变回文字挤在一起。
 const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const css=await readFile(path.join(root,'dist/native.css'),'utf8');

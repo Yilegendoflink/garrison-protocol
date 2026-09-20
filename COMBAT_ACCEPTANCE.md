@@ -27,7 +27,7 @@
 ```powershell
 node --test tests/combat.test.mjs tests/native-protocol.test.mjs tests/native-economy.test.mjs tests/native-wave-random.test.mjs tests/native-combat.test.mjs tests/native-sp.test.mjs
 node scripts/build-browser.mjs
-node scripts/combat-acceptance.cjs
+node scripts/regression-browser.mjs combat      # 原 scripts/combat-acceptance.cjs
 ```
 
 ## 适用边界
