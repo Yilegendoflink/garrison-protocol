@@ -41,6 +41,12 @@ export function blackboard(entries=[]){return Object.fromEntries((entries||[]).m
 // 棋盘上该画「上一场战斗的单位」还是「备战期的我方单位」：战斗、结算与休整期都沿用战斗棋盘，
 // 只有真正的备战期（prep）画整备区的布置——否则上一场的召唤物会在备战时留在场上。
 export function battleBoardVisible(phase){return phase==='battle'||phase==='finished'||phase==='intermission';}
+// 隔离平台＝被围栏围住的**地面**（`tile_fence_bound` 的低地可部署格）：地面敌人路线不经过它
+// （原表 passableMask 是 FLY_ONLY），但它是低地、不是高台。表现层据此画「地面＋围栏」，
+// 并且不能像高台那样抬升——抬起来就会和真正的高台长得一模一样（用户 2026-09-19 报的问题）。
+export function isolatedPlatform(tile){return !!tile&&tile.tileKey==='tile_fence_bound'&&tile.heightType!=='HIGHLAND'&&tile.buildableType!=='NONE';}
+// 地块的抬升高度：只有**可部署的高台**才抬起（隔离平台是地面，永远不抬）。
+export function tileLiftAmount(tile,tileHeight){return tile?.heightType==='HIGHLAND'&&tile.buildableType!=='NONE'?Math.min(10,(tileHeight||0)*.22):0;}
 // ── 盟约面板的「当前动态数值」 ─────────────────────────────────────────────
 // 原表用 descParamBaseList / descParamPerStackList 声明哪些数值受层数影响（描述里只写「受层数影响」）。
 // 这里逐项算出当前值，**原表声明了几项就渲染几项**，不再靠手写 switch（叙拉古的持续时间、
