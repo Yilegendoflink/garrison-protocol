@@ -1,4 +1,5 @@
 import {applyDamage,recoverHP,damage} from './combat.js';
+import {equipmentEvent,equipmentFatal} from './native-equipment.js';
 import {allowsHighlandPlacement} from './native-branches.js';
 import {applyStatus,permissions} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes} from './protocol.js';
@@ -200,6 +201,7 @@ function runFatal(battle,target,wouldDie,event){
   log(battle,'fatal-lock',{uid:target.uid,eventId:event.eventId,until:target.lockHp.endsAt});
   return true;
  }
+ if(equipmentFatal(battle,target,event))return true;
  if(target.id==='char_1033_swire2'){
   const t=activeTalentsOf(battle,target).find(x=>x.name==='破财消灾');
   if(t){const base=Math.abs(Number(t.values.cost)||5),times=target.merchantRescueCount||0,cost=base*Math.pow(Number(t.values.cost_multi)||2,times);if(battle.spendCost?.(cost,{considerNegativeCost:true})){target.merchantRescueCount=times+1;target.hp=target.maxHp*(Number(t.values.hp_ratio)||.7);log(battle,'fatal-cost-save',{uid:target.uid,cost,hp:target.hp,eventId:event.eventId});return true;}}
@@ -800,7 +802,7 @@ export function projectSpot(battle,actor,dir,{minDistance=1,maxDistance=1}={}){
 
 export function dispatch(battle,type,payload){
  const {source,target,event}=payload;
- const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,canRelocateTo,projectSpot,nearbySpots,spawnSummon,exit:commitExit,log:(b,t,p)=>log(b,t,p)};
+ const ctx={dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,grantGuard,applyStatus,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,canRelocateTo,projectSpot,nearbySpots,spawnSummon,exit:commitExit,log:(b,t,p)=>log(b,t,p)};
  if(type==='skill-end'&&battle.s.band==='band_humus'&&target?.kind!=='summon'&&target?.deployed&&battle.profile(target).position==='MELEE'){const near=battle.s.units.filter(v=>v!==target&&v.deployed&&v.hp>0&&Math.abs(v.x-target.x)+Math.abs(v.y-target.y)===1);if(near.length){const pick=near[Math.floor(battle.economy.random()*near.length)];gainSp(pick,battle.profile(pick).skill,3,battle.spCost(pick));}}
  if(type==='battle-start'&&battle.s.band==='band_mberry'){const right=Math.max(...battle.s.units.map(u=>u.x));for(const u of battle.s.units)u.mberryEligible=u.x===right;}
  if(type==='after-damage'&&battle.s.band==='band_mberry'&&source?.kind!=='summon'&&source?.mberryEligible&&payload.result?.total>0){const key=payload.event?.attackId??payload.event?.eventId??battle.s.time;if(source.mberryAttackKey!==key){source.mberryAttackKey=key;if(battle.economy.random()<.25)grantGuard(battle,source,{charges:1,sourceUid:source.uid,id:'mberry-'+source.uid});}}
@@ -810,6 +812,7 @@ export function dispatch(battle,type,payload){
  if(type==='exit')bondExit(battle,target,payload.reason);
  if(type==='skill-start')payload.genericSuppress=operatorSkillStart(battle,target,ctx);
  else onEvent(battle,type,payload,ctx);
+ equipmentEvent(battle,type,payload,ctx);
  if(type==='after-damage'&&payload.cause!=='dot'&&payload.cause!=='reflect'){
   if(target&&battle.s.units.includes(target)&&target.id==='char_107_liskam'&&target.deployed){
    const t=activeTalentsOf(battle,target).find(x=>x.name==='战术防御');
