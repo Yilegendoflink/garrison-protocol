@@ -4926,7 +4926,11 @@ function tickLogic(battle,dt){
  }
  let scheduled=0;
  while(true){
-  const due=battle.s.logicEffects.filter(f=>f.nextAt!=null&&f.nextAt<=now+1e-9&&(f.endsAt==null||f.nextAt<=f.endsAt+1e-9)).sort((a,b)=>a.nextAt-b.nextAt||a.id-b.id)[0];
+  // kind:'field'（敌方地面区域：死亡圈／开火燃烧区／常驻光环）由 native-battle.tickEnemyGroundZones 结算：
+  // 那里才有「产生者攻击力留档 sourceAtk」和「圈重叠只按最高一层」的 zoneHitWindow。通用周期调度必须跳过它，
+  // 否则这里会先把 nextAt 推走却不结算（settlePeriodic 没有 field 分支），区域就永远等不到自己的结算点——
+  // 表现就是圈画得出来、一点血都不掉。回归：tests/native-enemy-ground-zone.test.mjs 的「真实 step()」用例。
+  const due=battle.s.logicEffects.filter(f=>f.kind!=='field'&&f.nextAt!=null&&f.nextAt<=now+1e-9&&(f.endsAt==null||f.nextAt<=f.endsAt+1e-9)).sort((a,b)=>a.nextAt-b.nextAt||a.id-b.id)[0];
   if(!due)break;if(++scheduled>10000)throw Error('周期效果队列超限');
   const at=due.nextAt;due.nextAt=due.interval>0?at+due.interval:null;
   battle.s.time=at;try{settlePeriodic(battle,due);}finally{battle.s.time=now;}

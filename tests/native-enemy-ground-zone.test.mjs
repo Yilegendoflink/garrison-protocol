@@ -223,3 +223,30 @@ test('毒雾伤害跟随产生者的攻击力：同一种敌人攻击力翻倍�
  assert.ok(weak.dealt>0);
  assert.ok(Math.abs(strong.dealt-weak.dealt*2)<1,`攻击力 400 的毒雾应当约为 200 的两倍（${strong.dealt} vs ${weak.dealt}）`);
 });
+
+// 这条走**真实 step()**：通用周期调度（native-effects.tickLogic）不能把 kind:'field' 的 nextAt 吃掉。
+// 以前 tickLogic 会先把 field 排到 due 并推进 nextAt（settlePeriodic 没有 field 分支，什么都不做），
+// 于是 native-battle.tickEnemyGroundZones 永远看不到到期的圈——表现就是圈画得出来、一点血都不掉。
+// 旧的用例都直接调 tickEnemyGroundZones，所以全绿却没挡住这个 bug；这里必须经过 step()。
+test('敌方地面区域在真实 step() 里也会结算（死亡圈与开火燃烧区）',()=>{
+ const b=liveBattle(),u=b.s.units[0];
+ u.maxHp=999999;u.hp=999999;
+ // 留一只不参与战斗的木桩，避免清场把战斗提前结束
+ b.s.enemies.push({uid:999999,id:'probe',name:'probe',x:-8,y:-8,hp:1e12,maxHp:1e12,atk:0,def:0,res:0,statuses:[],hidden:true,invulnerable:true,untargetable:true,block:null,leak:0,interval:1,attackSpeed:100,attackCooldown:0,action:null,flying:false,trainingDummy:true,canAttack:false,speed:0,route:null,cmd:0,deployed:true,progress:0});
+ b.step();
+ // ① 死亡圈（固定伤害）：真实死亡入口建圈，然后只走 step()
+ const die=spawnEnemy(b,'enemy_1267_nhpbr',u.x+1,u.y);die.speed=0;
+ commitExit(b,{target:die,reason:'knockdown',killer:u});
+ assert.equal(zones(b).length,1,'击倒后留圈');
+ const hp0=u.hp;
+ for(let i=0;i<95;i++)b.step();
+ assert.equal(hp0-u.hp,150,'3 秒里每秒 50 点，一拍都不能少');
+ // ② 开火燃烧区：同一条 field 通道，同样必须由 step() 结算
+ b.s.logicEffects=[];
+ const arty=spawnEnemy(b,'enemy_10122_uacann_2',u.x,u.y+1);arty.speed=0;arty.canAttack=false;
+ b.resolveEnemyStrike(arty,u,{});
+ assert.equal(zones(b).length,1,'开火后留燃烧区');
+ const hp1=u.hp;
+ for(let i=0;i<35;i++)b.step();
+ assert.ok(hp1-u.hp>=150,`燃烧区在真实循环里也要结算，实际掉 ${Math.round(hp1-u.hp)}`);
+});
