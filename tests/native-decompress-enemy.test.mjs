@@ -2,13 +2,15 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {applyDamage} from '../dist/combat.js';
 import {applyElementDamage,grantGuard} from '../dist/native-effects.js';
+import {enemySprite,FORM_SPRITE_TINTS} from '../dist/protocol.js';
+import {FORM_TINT_STYLE,drawEnemyPhase,formTintedImage} from '../dist/native-fx.js';
 
 // 解压缩类敌人（频次词条）第三批：原表 DeadSpawn（死亡后生成碎片）与 Revive[Trigger]（再生），
 // 以及碎片依赖的「特殊生命值机制」（血条数值 = 需要击倒的伤害次数）。
 // 数值与文案全部来自原表 blackboard 与图鉴 ability 文本，见 DECOMPRESS_ENEMY_PLAN.md。
 const profiles=id=>NATIVE_DATA.enemies[id].enemyBehavior;
 
-function liveBattle({deploy=true}={}){
+function liveSession({deploy=true}={}){
  const g=new NativeSession(NATIVE_DATA,{seed:17});
  g.s.funds=100;g.s.rewardPending=null;g.s.rewardQueue=[];
  const unit=g.gain(Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId&&!s.isHidden).chessId);
@@ -19,8 +21,9 @@ function liveBattle({deploy=true}={}){
  assert.ok(g.perform('start'),g.lastError||'开战失败');
  const b=g.battle;b.s.queue=[];b.s.enemies=[];b.s.limit=1e9;
  if(deploy)b.deploy(b.s.units[0]);else{b.s.units[0].deployed=false;b.s.units[0].deployAt=Infinity;b.s.units[0].action=null;}
- return b;
+ return {g,b};
 }
+function liveBattle(opts){return liveSession(opts).b;}
 function spawnEnemy(b,id,x,y){
  const origin=b.map.origin||{col:0,row:0};
  // 起点与终点同格 + 一个长等待指令：既能用 step() 推进时间，又不会让敌人走到终点漏怪。
@@ -67,7 +70,7 @@ test('次数血条按原表推导：碎片按描述拿次数与类型限定，�
  assert.equal(profiles('enemy_1288_duskls').hitCountHp,false);
 });
 
-test('碎片体型按比例缩小，再生形态不会跟着变小',()=>{
+test('碎片体型按比例缩小，再生形态靠形态缩放变小（不写 spriteScale）',()=>{
  assert.ok(profiles('enemy_1196_msfyin').spriteScale<1,'锅碗瓢盆小怪的立绘要缩小');
  assert.equal(profiles('enemy_1204_msfhu').spriteScale,profiles('enemy_1196_msfyin').spriteScale);
  assert.equal(profiles('enemy_1195_sfyin').spriteScale,1,'解压缩父体保持原尺寸');
@@ -79,7 +82,8 @@ test('碎片体型按比例缩小，再生形态不会跟着变小',()=>{
  b.hit(u,soldier,999999,'physical');
  for(let i=0;i<31;i++)b.step();
  assert.equal(soldier.hitCountHp,true,'余烬确实用的是次数血条');
- assert.equal(soldier.spriteScale,1,'形态切换不改立绘尺寸');
+ assert.equal(soldier.spriteScale,1,'形态切换不写生成时的 spriteScale');
+ assert.equal(enemySprite(soldier).scale,0.6,'变小由渲染层的形态缩放负责（revive.sprite）');
 });
 
 test('碎片实例：一次大伤害只掉一格，元素损伤不算「伤害」',()=>{
@@ -233,8 +237,8 @@ test('沉沙未消耗断刃时按剩余个数生成碎片',()=>{
 // ── 第三批：再生（Revive） ───────────────────────────────────────────────
 
 test('再生参数来自原表：次数血条、间隔、隐蔽与护盾层数',()=>{
- assert.deepEqual(profiles('enemy_1288_duskls').revive,{hitCount:5,interval:10,formName:'怨恨的余烬',invisible:true,noAttack:true,unblockable:false,guardLayers:0,guardRadius:1.8});
- assert.deepEqual(profiles('enemy_1292_duskld').revive,{hitCount:10,interval:10,formName:'贪欲的火灰',invisible:true,noAttack:true,unblockable:false,guardLayers:0,guardRadius:1.8});
+ assert.deepEqual(profiles('enemy_1288_duskls').revive,{hitCount:5,interval:10,formName:'怨恨的余烬',invisible:true,noAttack:true,unblockable:false,guardLayers:0,guardRadius:1.8,sprite:{avatar:null,scale:0.6,tint:'ember'}});
+ assert.deepEqual(profiles('enemy_1292_duskld').revive,{hitCount:10,interval:10,formName:'贪欲的火灰',invisible:true,noAttack:true,unblockable:false,guardLayers:0,guardRadius:1.8,sprite:{avatar:null,scale:0.6,tint:'ember'}});
  const puppet=profiles('enemy_9010_acpupp').revive;
  assert.equal(puppet.hitCount,15,'blackboard 的 prop_max_hp 为准（图鉴文案的 30 与数据不一致）');
  assert.equal(puppet.interval,15);
@@ -373,4 +377,107 @@ test('假想敌：再生进入再生状态时给半径内其他敌人 5 层物�
  const refreshed=near.barriers.filter(g=>String(g.id).startsWith('revive-guard-'));
  assert.equal(refreshed.length,1,'同一来源只保留一层');
  assert.equal(refreshed[0].charges,5);
+});
+
+// ── 第四批补充：形态视觉（再生没有独立立绘） ──────────────────────────────
+// 原表只有 Revive[Trigger].prop_max_hp/interval，形态名只写在文案里；游戏与 PRTS 都没有形态的
+// 独立立绘（`<敌人页>/spine` 只有一个 asset，模型图集里也没有余烬／傀儡专用图块），原作用的是
+// 同一套模型换动作。所以形态视觉＝本体头像 + 形态专属缩放 + 色调，登记在 `revive.sprite`。
+
+test('形态视觉全表门禁：每个再生敌人都有 sprite，色调都有对应画法',()=>{
+ for(const kind of FORM_SPRITE_TINTS)assert.ok(FORM_TINT_STYLE[kind]?.fill,`色调 ${kind} 在 native-fx 里没有画法`);
+ const revived=Object.entries(NATIVE_DATA.enemies).filter(([,e])=>e.enemyBehavior?.revive);
+ assert.equal(revived.length,4,'当前可再生的敌人是逐火战士／精锐战士／逐火护卫／假想敌：再生');
+ for(const [id,e] of revived){
+  const sprite=e.enemyBehavior.revive.sprite;
+  assert.ok(sprite,`${id} 缺 revive.sprite 登记（形态会画得和本体一模一样）`);
+  assert.ok(sprite.avatar===null||NATIVE_DATA.assets[sprite.avatar],`${id} 指定的形态头像必须在 assets 清单里，否则会退化成橙色圆圈`);
+  assert.ok(Number(sprite.scale)>0&&Number(sprite.scale)<=1,`${id} 的形态缩放应在 (0,1]：${sprite.scale}`);
+  assert.ok(FORM_SPRITE_TINTS.includes(sprite.tint),`${id} 的形态色调未登记：${sprite.tint}`);
+ }
+});
+
+test('形态切换改立绘：余烬变小并压灰烬色调，回退后恢复本体',()=>{
+ const b=liveBattle({deploy:false}),u=b.s.units[0];
+ const soldier=spawnEnemy(b,'enemy_1288_duskls',u.x+2,u.y);
+ assert.deepEqual(enemySprite(soldier),{key:'enemy_1288_duskls',scale:1,tint:null},'初始形态就是本体立绘');
+ b.hit(u,soldier,999999,'physical');
+ assert.deepEqual(enemySprite(soldier),{key:'enemy_1288_duskls',scale:1,tint:null},'1s 重生期仍是本体');
+ for(let i=0;i<31;i++)b.step();
+ assert.deepEqual(enemySprite(soldier),{key:'enemy_1288_duskls',scale:.6,tint:'ember'},'余烬形态变小并压灰烬色调');
+ for(let i=0;i<301;i++)b.step();
+ assert.deepEqual(enemySprite(soldier),{key:'enemy_1288_duskls',scale:1,tint:null},'10s 后复原回本体立绘');
+});
+
+test('傀儡形态按幻紫色调，且不借 hitCountHp 推缩放',()=>{
+ const b=liveBattle({deploy:false}),u=b.s.units[0];
+ const boss=spawnEnemy(b,'enemy_9010_acpupp',u.x+2,u.y);
+ b.hit(u,boss,99999999,'physical');
+ for(let i=0;i<31;i++)b.step();
+ assert.equal(boss.revivePhase,'form');
+ assert.deepEqual(enemySprite(boss),{key:'enemy_9010_acpupp',scale:.6,tint:'puppet'});
+});
+
+test('碎片不吃形态缩放：生成时的 spriteScale 才是唯一依据',()=>{
+ const b=liveBattle(),u=b.s.units[0];
+ const parent=spawnEnemy(b,'enemy_1195_sfyin',u.x+1,u.y);
+ b.hit(u,parent,999999,'physical');
+ b.flushEnemySpawns();
+ const fragment=b.s.enemies.find(e=>e.id==='enemy_1196_msfyin');
+ assert.ok(fragment,'木制瑞印应当已生成');
+ assert.equal(fragment.hitCountHp,true,'碎片本身就是次数血条敌人');
+ assert.deepEqual(enemySprite(fragment),{key:'enemy_1196_msfyin',scale:.6,tint:null},'碎片的 0.6 来自生成时，不叠加形态色调');
+});
+
+test('存档恢复后仍处于余烬形态，形态视觉不丢',()=>{
+ const {g,b}=liveSession({deploy:false}),u=b.s.units[0];
+ const soldier=spawnEnemy(b,'enemy_1288_duskls',u.x+2,u.y);
+ b.hit(u,soldier,999999,'physical');
+ for(let i=0;i<31;i++)b.step();
+ assert.equal(soldier.revivePhase,'form');
+ const back=NativeSession.restore(NATIVE_DATA,g.snapshot());
+ const restored=back.battle.s.enemies.find(e=>e.uid===soldier.uid);
+ assert.ok(restored,'恢复后敌人还在');
+ assert.equal(restored.revivePhase,'form','形态本身跟着存档走');
+ assert.deepEqual(enemySprite(restored),{key:'enemy_1288_duskls',scale:.6,tint:'ember'},'恢复后依然画余烬立绘');
+});
+
+test('形态切换有表现：画形态名与剩余次数，过期不画',()=>{
+ const ops=[];
+ const c={globalCompositeOperation:'',lineCap:'',strokeStyle:'',fillStyle:'',lineWidth:1,font:'',textAlign:'',
+  save(){},restore(){},setLineDash(){},createLinearGradient(){return{addColorStop(){}}},createRadialGradient(){return{addColorStop(){}}},
+  fillRect(){},strokeRect(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},quadraticCurveTo(){},
+  stroke(){ops.push({op:'stroke',style:this.strokeStyle});},arc(){},ellipse(){ops.push({op:'ellipse',style:this.strokeStyle});},fill(){},translate(){},rotate(){},drawImage(){},
+  fillText(text){ops.push({op:'text',text,style:this.fillStyle});}};
+ const point=(x,y)=>({x:x*10,y:y*10}),Z={r:{width:800,height:520},tw:64,th:52,ox:0,oy:0};
+ const events=[{type:'enemy-phase',phase:'revive-form',form:'怨恨的余烬',hitCount:5,t:10,x:2,y:3,uid:7}];
+ const draw=extra=>({s:{time:10.5,units:[],enemies:[{uid:7,x:2,y:3}],events},...extra});
+ assert.equal(drawEnemyPhase(c,point,Z,draw()),true,'形态切换要画出来');
+ assert.ok(ops.some(o=>o.op==='text'&&o.text==='怨恨的余烬 ×5'),'浮字要带形态名与剩余次数');
+ assert.ok(ops.some(o=>o.op==='ellipse'),'要有一圈形态光环');
+ // 过期事件不再画（事件只在 s.events 里留 4 秒）
+ assert.equal(drawEnemyPhase(c,point,Z,{s:{time:16,units:[],enemies:[],events}}),false);
+ // 减少动效模式仍画环与文字（只是不画灰烬粒）
+ const reduced=[];
+ const rc={...c,fillText(text){reduced.push(text);}};
+ assert.equal(drawEnemyPhase(rc,point,Z,draw(),{reduceFx:true}),true);
+ assert.deepEqual(reduced,['怨恨的余烬 ×5']);
+ assert.equal(drawEnemyPhase(c,point,Z,{s:{time:10.5,units:[],enemies:[],events:[]}}),false,'没有事件时不画');
+});
+
+test('灰烬色调在离屏画布上按 source-atop 压色，图没解码完就原样返回',()=>{
+ const calls=[];   // node 里没有 document，这里塞一个最小实现把压色路径跑起来
+ const previous=globalThis.document;
+ globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>({drawImage(){calls.push('draw');},fillRect(){calls.push('fill');},
+  set globalCompositeOperation(v){calls.push('op:'+v);},get globalCompositeOperation(){return '';},fillStyle:''})})};
+ try{
+  const image={complete:true,naturalWidth:64,naturalHeight:64,src:'assets/prts/enemy_1288_duskls.png'};
+  const tinted=formTintedImage(image,'ember');
+  assert.notEqual(tinted,image,'登记过的色调要返回压色后的离屏画布');
+  assert.equal(tinted.complete,true);
+  assert.equal(tinted.naturalWidth,64,'要补上 Image 接口，隐匿马赛克才能复用同一张图');
+  assert.deepEqual(calls,['draw','op:source-atop','fill']);
+  assert.equal(formTintedImage({complete:false,naturalWidth:0,src:'assets/prts/other.png'},'ember').complete,false,'没解码完就原样返回，下一帧再试');
+  assert.equal(formTintedImage(image,'unregistered'),image,'未登记的色调不压色');
+ }finally{if(previous===undefined)delete globalThis.document;else globalThis.document=previous;}
 });

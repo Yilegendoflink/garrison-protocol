@@ -522,6 +522,7 @@ export function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,redu
  drawWideSweep(c,point,z,battle,{reduceFx:reduce});
  drawSkillFan(c,point,z,battle,{reduceFx:reduce});
  drawDisplace(c,point,z,battle,{reduceFx:reduce});
+ drawEnemyPhase(c,point,z,battle,{reduceFx:reduce,formatText:opts.formatText});
  drawIceWind(c,z,battle,{reduceFx:reduce});
  for(const e of s.effects||[]){
   if(e.type!=='healing'&&e.type!=='evade'&&e.type!=='block')continue;
@@ -642,4 +643,63 @@ export function drawConcealOverlay(c,actor,box,opts={}){
  }
  c.restore();
  return true;
+}
+// ── 再生形态（Revive）的表现 ──────────────────────────────────────────────
+// 形态没有独立立绘（原表只有 prop_max_hp/interval，`<敌人页>/spine` 与模型图集也只有本体一套），
+// 原作是同一套模型换动作。所以这里做两件事：①把立绘压一层形态色调（灰烬／傀儡）；
+// ②在 enemy-phase 事件上补一次「收缩环 + 形态名 + 剩余次数」，让玩家读得出形态换了。
+// 色调只改绘制结果，不参与任何判定。
+export const FORM_TINT_STYLE={
+ ember:{fill:'rgba(88,40,20,0.45)'},
+ puppet:{fill:'rgba(58,46,78,0.45)'}
+};
+const formTintCache=new Map();
+// 返回的对象被刻意补上 complete/naturalWidth/naturalHeight，好让它顶替 Image 传给
+// drawImage 与 drawConcealOverlay（隐匿马赛克因此取的是同一张图）。立绘没解码完时不缓存，下一帧重试。
+export function formTintedImage(image,kind){
+ const style=FORM_TINT_STYLE[kind];
+ if(!style||!image||!image.complete||!image.naturalWidth||typeof document==='undefined')return image;
+ const key=(image.src||'')+'|'+kind;
+ const cached=formTintCache.get(key);
+ if(cached)return cached;
+ const w=image.naturalWidth,h=image.naturalHeight;
+ const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+ const g=cv.getContext('2d');
+ if(!g)return image;
+ g.drawImage(image,0,0,w,h);
+ g.globalCompositeOperation='source-atop';g.fillStyle=style.fill;g.fillRect(0,0,w,h);
+ cv.src=key;cv.complete=true;cv.naturalWidth=w;cv.naturalHeight=h;
+ formTintCache.set(key,cv);
+ return cv;
+}
+const PHASE_FX={
+ rebirth:{span:1,color:'rgba(255,178,120,'},
+ 'revive-form':{span:2.4,color:'rgba(255,150,90,'},
+ 'revive-revert':{span:1.2,color:'rgba(200,205,215,'}
+};
+export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}={}){
+ const s=battle?.s;
+ if(!s?.events)return false;
+ let drew=false;
+ for(const e of s.events){
+  const cfg=PHASE_FX[e.type==='enemy-phase'?e.phase:null];
+  if(!cfg)continue;
+  const age=s.time-e.t;
+  if(age<0||age>cfg.span)continue;
+  const live=(s.enemies||[]).find(x=>x.uid===e.uid);
+  const p=point(live?live.x:e.x,live?live.y:e.y),lift=live?.flying?15:0;
+  const k=Math.max(0,Math.min(1,age/cfg.span)),fade=1-k;
+  c.save();c.lineWidth=2;
+  c.strokeStyle=cfg.color+(fade*.9).toFixed(3)+')';
+  const radius=z.tw*(.18+(e.phase==='revive-form'?k*.34:.3*fade));
+  c.beginPath();c.ellipse(p.x,p.y-lift,radius,z.th*(radius/z.tw),0,0,Math.PI*2);c.stroke();
+  if(!reduceFx){   // 灰烬粒：往上飘两粒，减少动效时只留环与文字
+   c.fillStyle=cfg.color+(fade*.7).toFixed(3)+')';
+   for(const [dx,scale]of [[8,1.6],[-11,1.2]]){c.beginPath();c.arc(p.x+Math.sin(age*9+dx)*8+dx,p.y-lift-z.th*.2-age*10,scale,0,Math.PI*2);c.fill();}
+  }
+  const text=e.phase==='revive-form'?`${e.form||'重生形态'}${e.hitCount?` ×${e.hitCount}`:''}`:e.phase==='rebirth'?'重生':'复原';
+  if(fade>.15){c.fillStyle=cfg.color+Math.min(1,fade*1.6).toFixed(3)+')';c.font='bold 12px sans-serif';c.textAlign='center';c.fillText(formatText?formatText(text):text,p.x,p.y-lift-z.th*.62);}
+  c.restore();drew=true;
+ }
+ return drew;
 }

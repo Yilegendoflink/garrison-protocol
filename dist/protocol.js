@@ -45,6 +45,21 @@ export function battleBoardVisible(phase){return phase==='battle'||phase==='fini
 // （原表 passableMask 是 FLY_ONLY），但它是低地、不是高台。表现层据此画「地面＋围栏」，
 // 并且不能像高台那样抬升——抬起来就会和真正的高台长得一模一样（用户 2026-09-19 报的问题）。
 export function isolatedPlatform(tile){return !!tile&&tile.tileKey==='tile_fence_bound'&&tile.heightType!=='HIGHLAND'&&tile.buildableType!=='NONE';}
+// ── 再生形态（Revive）的画法 ──────────────────────────────────────────────
+// 原表只有 `Revive[Trigger].prop_max_hp` / `interval`，形态名只写在图鉴文案里；游戏与 PRTS
+// 都没有形态的独立立绘（`<敌人页>/spine` 只有一个 asset，模型图集里也没有余烬／傀儡专用图块，
+// 原作用的是同一套模型换动作）。所以形态视觉只能由「本体头像 + 形态专属缩放 + 色调」表达，
+// 具体数值登记在 `enemy-behavior-overrides.json` 的 `revive.sprite`，**不从 hitCountHp 推**：
+// `hitCountHp` 是运行时状态（碎片、余烬、再生形态都会置真），拿它当缩放依据会让碎片以外的敌人也缩水。
+export const FORM_SPRITE_TINTS=['ember','puppet'];
+export function enemySprite(enemy){
+ const base={key:enemy?.id||null,scale:Number(enemy?.spriteScale)||1,tint:null};
+ if(!enemy||enemy.revivePhase!=='form')return base;
+ const sprite=enemy.revive?.sprite;
+ if(!sprite)return base;
+ const scale=Number(sprite.scale);
+ return {key:sprite.avatar||base.key,scale:Number.isFinite(scale)&&scale>0?scale:base.scale,tint:sprite.tint||null};
+}
 // 地块的抬升高度：只有**可部署的高台**才抬起（隔离平台是地面，永远不抬）。
 export function tileLiftAmount(tile,tileHeight){return tile?.heightType==='HIGHLAND'&&tile.buildableType!=='NONE'?Math.min(10,(tileHeight||0)*.22):0;}
 // ── 盟约面板的「当前动态数值」 ─────────────────────────────────────────────

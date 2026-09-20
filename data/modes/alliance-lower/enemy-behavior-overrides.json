@@ -14,19 +14,47 @@
     },
     "enemy_1288_duskls": {
       "randomPoolEligible": true,
-      "reason": "怨恨的余烬再生（Revive[Trigger]）已实现并通过定向测试，回到 TIMES 词条池"
+      "revive": {
+        "sprite": {
+          "avatar": null,
+          "scale": 0.6,
+          "tint": "ember"
+        }
+      },
+      "reason": "怨恨的余烬再生（Revive[Trigger]）已实现并通过定向测试，回到 TIMES 词条池；形态立绘沿用本体头像（游戏与 PRTS 都没有独立素材），只按形态缩小并压一层灰烬色调"
     },
     "enemy_1288_duskls_2": {
       "randomPoolEligible": true,
-      "reason": "暴怒的余烬再生已实现并通过定向测试，回到 TIMES 词条池"
+      "revive": {
+        "sprite": {
+          "avatar": null,
+          "scale": 0.6,
+          "tint": "ember"
+        }
+      },
+      "reason": "暴怒的余烬再生已实现并通过定向测试，回到 TIMES 词条池；形态立绘同怨恨的余烬"
     },
     "enemy_1292_duskld": {
       "randomPoolEligible": true,
-      "reason": "贪欲的火灰再生已实现并通过定向测试，回到 TIMES 词条池"
+      "revive": {
+        "sprite": {
+          "avatar": null,
+          "scale": 0.6,
+          "tint": "ember"
+        }
+      },
+      "reason": "贪欲的火灰再生已实现并通过定向测试，回到 TIMES 词条池；形态立绘同怨恨的余烬"
     },
     "enemy_9010_acpupp": {
       "randomPoolEligible": true,
-      "reason": "傀儡再生与 5 层物法次数护盾已实现并通过定向测试，回到 TIMES 词条池"
+      "revive": {
+        "sprite": {
+          "avatar": null,
+          "scale": 0.6,
+          "tint": "puppet"
+        }
+      },
+      "reason": "傀儡再生与 5 层物法次数护盾已实现并通过定向测试，回到 TIMES 词条池；傀儡立绘沿用本体头像，色调按源石造物偏暗紫"
     },
     "enemy_1209_sfden": {
       "randomPoolEligible": true,

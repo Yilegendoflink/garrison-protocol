@@ -21,8 +21,6 @@
     "data:fetch-game": "node scripts/fetch-game-data.mjs",
     "data:normalize": "node scripts/normalize-game-data.mjs",
     "data:normalized-sqlite": "node scripts/build-normalized-db.mjs",
-    "test:browser": "node scripts/browser-smoke.cjs",
-    "test:mobile-bonds": "node scripts/mobile-bonds-browser.mjs",
     "data:fetch-mode": "node scripts/fetch-alliance-data.mjs && node scripts/fetch-alliance-levels.mjs",
     "release:check": "node scripts/check-release.mjs",
     "data:assets": "node scripts/sync-mode-assets.mjs",

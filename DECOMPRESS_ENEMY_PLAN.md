@@ -191,6 +191,7 @@ PRTS [特殊机制](https://prts.wiki/index.php?title=%E7%89%B9%E6%AE%8A%E6%9C%B
 1. 缺口 #8：`spawn` 映射 `tauntLevel → taunt`（同时修正伙友卫队、中坚盾卫）。
 2. 碎片与再生的**表现层**：解压缩的 0.7s 抖动、形态切换特效、失败/成功提示；
    余烬的隐匿用 `INVISIBILITY_PLAN.md` 里约定的"暗灰色流动马赛克"。
+   （形态切换特效已于 2026-09-19 补上，具体口径见下方「再生形态的立绘与表现」；解压缩抖动仍未做。）
 3. 不可达敌人的附加能力（清明隐匿光环、烹泉死亡减速、镇纸×15）登记在案，等它们进入词条池或地形系统落地再做。
 4. 若日后加入燃烧的芦苇丛地形，再补逐火家族的 `aura.ep_damage_ratio` / `aura.damage_resistance`。
 
@@ -234,6 +235,30 @@ PRTS [特殊机制](https://prts.wiki/index.php?title=%E7%89%B9%E6%AE%8A%E6%9C%B
 | aura 前缀修正 | `dist/native-combat.js` 的 `aura` 推导 | 只认 `defup.*`；`aura.*` 是自身条件判定，逐火护卫的 50% 减伤不再白送周围敌人 |
 | 嘲讽映射 | `spawn` 的 `taunt:a.tauntLevel` | 同时修好身观、伙友卫队、中坚盾卫 |
 | 随机池放开 | `enemy-behavior-overrides.json` | 4 名再生敌人过了定向测试后放开，TIMES 1/2/3 的池子恢复原样 |
+
+### 再生形态的立绘与表现（2026-09-19 补，用户口径「按 A 来」）
+
+**结论：形态没有独立立绘。** 原表只有 `Revive[Trigger].prop_max_hp` / `interval`，形态名只写在图鉴
+文案里（`formName` 就是从描述正则取的）；PRTS 没有「怨恨的余烬／暴怒的余烬／贪欲的火灰／傀儡」的
+敌人页面，`File:` 命名空间里也没有同名文件；每个敌人的模型走 `<敌人页>/spine` 数据页，
+`深池逐火战士/spine` 与 `假想敌：再生/spine` 都**只有一个 asset**（`enemy_1288_duskls` /
+`enemy_9010_acpupp`），把这两个模型的 atlas 纹理拉下来核对也是**只有本体部件**
+（`C_Arm_L`／`C_Weapon`／`F_Body`…），没有余烬／傀儡专用图块。也就是说原作是**同一套模型换动作
+（+缩放/变色）**渲染的，「对应头像」这类素材在官方资源里并不存在。
+
+所以形态视觉＝**本体头像 + 形态专属缩放 + 形态色调**，走数据登记而不是运行时推导：
+
+| 项 | 位置 | 口径 |
+| --- | --- | --- |
+| 形态视觉数据 | `enemy-behavior-overrides.json` 的 `revive.sprite` | `{avatar,scale,tint}`；`avatar:null`＝沿用本体头像；4 名再生敌人当前都是 `scale:0.6`，余烬／火灰 `tint:'ember'`、傀儡 `tint:'puppet'` |
+| 取值规则 | `protocol.enemySprite(enemy)` | 形态期（`revivePhase==='form'`）返回 `{key:avatar||id,scale,tint}`，其余一律 `{key:id,scale:spriteScale,tint:null}`；**判定用 `revivePhase`，不是 `hitCountHp`** |
+| 色调画法 | `native-fx.FORM_TINT_STYLE` + `formTintedImage` | 离屏画布 `source-atop` 压一层色，结果对象补 `complete/naturalWidth` 以便顶替 `Image` 传给 `drawConcealOverlay`（隐匿马赛克取同一张图）；`reduceFx` 时不压色 |
+| 渲染入口 | `native-play.js` 敌人绘制 | 只有这一处：`img(sprite.key)` + `z.tw*.55*sprite.scale`；**不要写回 `e.spriteScale`**（那是生成时字段） |
+| 形态表现 | `native-fx.drawEnemyPhase` | 消费 `enemy-phase`（`rebirth`／`revive-form`／`revive-revert`）：收缩灰烬环 + 形态名与剩余次数浮字；`reduceFx` 下只留环与文字 |
+| 门禁 | `tests/native-decompress-enemy.test.mjs` | ①每个带 `revive` 的敌人必须登记 `revive.sprite`；②`avatar` 非空时必须在 `data.assets` 里（否则退化成橙色圆圈）；③`tint` 必须在 `FORM_SPRITE_TINTS` 且 `FORM_TINT_STYLE` 里有画法；④形态切换/回退/存档往返后 `enemySprite` 的取值正确 |
+
+若日后拿到形态立绘（或用户提供图片），只需把 PNG 加进 `assets/prts` 清单，并把对应敌人的
+`sprite.avatar` 指向那个素材 id 即可，渲染层不用改。
 
 ### 与原分析不一致的两处（以本节为准）
 
