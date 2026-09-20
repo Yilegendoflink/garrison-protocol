@@ -3,7 +3,7 @@ import {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakne
 import {nativeWavePlan} from './native-waves.js';
 import {damage,applyDamage,recoverHP,attackTiming,FPS} from './combat.js';
 import {applyStatus,tickStatuses,permissions,statusAttributeChanges} from './status.js';
-import {blackboard,skillPolicy,shouldAutoSkill} from './protocol.js';
+import {blackboard,skillPolicy,shouldAutoSkill,ROUND_LEAK_CAP} from './protocol.js';
 import {createTrainingDummy,dummySummary} from './benchmark.js';
 import {usesSp,spTypeOf,skillKind,ammoCount,initSpOf,gainSp,tickTimeSp} from './native-sp.js';
 import {containsTarget} from './targeting.js';
@@ -697,7 +697,7 @@ export class NativeBattle {
   this.advanceNativeProjectiles(dt);
   if(this.s.banner){this.s.banner.life-=dt;if(this.s.banner.life<=0)this.s.banner=null;}
   this.s.effects=this.s.effects.filter(e=>(e.life-=dt)>0);this.s.enemies=this.s.enemies.filter(e=>e.hp>0);pruneEvents(this.s);this.flushEnemySpawns();
-  if(this.s.benchmark){if(this.s.time>=this.s.limit)this.finish('timeout');}else if((!this.s.queue.length&&!this.s.enemies.length)||this.s.time>=this.s.limit||this.s.leaks>=this.economy.s.hp)this.finish('complete');
+  if(this.s.benchmark){if(this.s.time>=this.s.limit)this.finish('timeout');}else if((!this.s.queue.length&&!this.s.enemies.length)||this.s.time>=this.s.limit||Math.min(ROUND_LEAK_CAP,this.s.leaks)>=this.economy.s.hp)this.finish('complete');
  }
  finish(reason='manual'){if(this.s.finished)return;this.s.finished=true;this.s.result=this.s.benchmark?dummySummary(this.s.enemies[0],this.s.time,reason):{kind:'battle',elapsed:this.s.time,kills:this.s.kills,leaks:this.s.leaks+(this.s.time>=this.s.limit?this.s.enemies.reduce((n,e)=>n+e.leak,0):0),units:this.s.units.map(u=>({uid:u.uid,id:u.id,damage:u.damage,healing:u.healing})),totalDamage:Object.values(this.s.damage).reduce((a,b)=>a+b,0)};}
 }

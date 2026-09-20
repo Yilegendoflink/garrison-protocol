@@ -193,3 +193,25 @@ test('multi-hit strikes are queued on later frames',()=>{
  assert.equal(dueStrikes(s).length,1);assert.equal(s.strikes.length,2);
  s.time=2/30;assert.equal(dueStrikes(s).length,1);
 });
+
+// 用户 2026-09-19 口径：每回合无论漏怪多少，生命最多扣 10 点（ROUND_LEAK_CAP）。
+// 只限扣血，漏失真值照旧进战报与 s.lastBattle.leaks。
+test('每回合漏怪掉血上限 10 点：漏失真值留档，扣血按上限',()=>{
+ const b=liveBattle(),g=b.economy;
+ b.s.queue=[{id:'noop',at:1e9,route:0,cost:0}];
+ g.s.hp=g.s.maxHp=23;
+ b.s.leaks=23;b.finish('complete');
+ assert.equal(b.s.result.leaks,23,'战斗记录保留真实漏失数');
+ g.finishCurrentBattle();
+ assert.equal(g.s.hp,13,'单回合最多掉 10 点血');
+ assert.equal(g.s.lastBattle.leaks,23,'战报里的漏失数同样不被截断');
+});
+// 判负条件也用上限后的值：上限救得回来的回合不会因为漏失数超过当前生命就提前结束。
+test('漏失判负按上限后的扣血算，不是按原始漏失数',()=>{
+ const b=liveBattle(),g=b.economy;
+ b.s.queue=[{id:'noop',at:1e9,route:0,cost:0}];   // 场上留一条排队项，避免「清场」提前结束
+ g.s.hp=23;b.s.leaks=12;b.step();
+ assert.equal(b.s.finished,false,'漏失 12 按上限只算 10 点，生命 23 不该判负');
+ g.s.hp=8;b.s.leaks=23;b.step();
+ assert.equal(b.s.finished,true,'上限 10 点已超过当前生命 8 点，才结束战斗');
+});

@@ -606,6 +606,10 @@ function applyEnemyOverrides(base,override){
 // 整备区（手牌）上限：干员、装备、召唤物卡一律占格。干员／策略效果发放的卡牌允许
 // 临时超出（handLength>HAND_LIMIT），但超出期间不允许再购入干员和装备，必须先清出空余。
 const HAND_LIMIT=10;
+// 每回合漏怪掉血上限（用户 2026-09-19 口径）：不管这一回合漏了多少敌人，生命最多扣 10 点。
+// 只影响扣血；漏失真值照旧记进战报与 `s.lastBattle.leaks`。判负也用上限后的值，
+// 所以「上限救得回来」的回合不会因为漏失数超过当前生命就提前结束。
+const ROUND_LEAK_CAP=10;
 // 海猫模式（mode_cat_all）的无限资金哨兵值。资金本身只有「入账／出账／回合重置」三类写入，
 // 全部走 Session.setFunds／addFunds：只要 s.cat 为真，写多少都收敛回这个值。
 // 早先只在开局赋一次 MAX_SAFE_INTEGER，于是 beginBattle 的 `funds=0` 与 nextRound 的
@@ -643,7 +647,7 @@ class PreparationState {
  beginBattle(){if(this.s.phase!=='prep'||this.s.rewardPending)return false;this.setFunds(0);if(!this.s.locked)this.s.offers=[];const cards=this.hand(),overflow=new Set(cards.slice(HAND_LIMIT).map(i=>i.uid));this.s.units=this.s.units.filter(u=>!overflow.has(u.uid));this.s.items=this.s.items.filter(i=>!overflow.has(i.uid));if(Array.isArray(this.s.summonCards))this.s.summonCards=this.s.summonCards.filter(c=>!overflow.has(c.uid));this.s.phase='battle';return true;}
 }
 
-return {STOCK_BY_TIER,initialStock,ensureStock,stockOf,restoreStock,rangeGeometry,skillWidensRange,baseFunding,blackboard,battleBoardVisible,isolatedPlatform,tileLiftAmount,bondScaledParams,bondCurrentPreviewHtml,richText,GARRISON_TIMING_LABELS,garrisonTimingLabel,garrisonText,talentCandidateOpen,resolveActiveTalents,nativeAttributes,resolveChess,skillPolicy,shouldAutoSkill,buildPhasePlan,shopTerms,purchasePrice,activeBonds,applyEnemyOverrides,HAND_LIMIT,INFINITE_FUNDS,suspendState,resumeState,PreparationState};
+return {STOCK_BY_TIER,initialStock,ensureStock,stockOf,restoreStock,rangeGeometry,skillWidensRange,baseFunding,blackboard,battleBoardVisible,isolatedPlatform,tileLiftAmount,bondScaledParams,bondCurrentPreviewHtml,richText,GARRISON_TIMING_LABELS,garrisonTimingLabel,garrisonText,talentCandidateOpen,resolveActiveTalents,nativeAttributes,resolveChess,skillPolicy,shouldAutoSkill,buildPhasePlan,shopTerms,purchasePrice,activeBonds,applyEnemyOverrides,HAND_LIMIT,ROUND_LEAK_CAP,INFINITE_FUNDS,suspendState,resumeState,PreparationState};
 },
 "protocol-data.js": function(load) {
 // Generated from fixed act2autochess snapshot.
@@ -5728,7 +5732,7 @@ const {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeaknes
 const {nativeWavePlan} = load("native-waves.js");
 const {damage,applyDamage,recoverHP,attackTiming,FPS} = load("combat.js");
 const {applyStatus,tickStatuses,permissions,statusAttributeChanges} = load("status.js");
-const {blackboard,skillPolicy,shouldAutoSkill} = load("protocol.js");
+const {blackboard,skillPolicy,shouldAutoSkill,ROUND_LEAK_CAP} = load("protocol.js");
 const {createTrainingDummy,dummySummary} = load("benchmark.js");
 const {usesSp,spTypeOf,skillKind,ammoCount,initSpOf,gainSp,tickTimeSp} = load("native-sp.js");
 const {containsTarget} = load("targeting.js");
@@ -6421,7 +6425,7 @@ class NativeBattle {
   this.advanceNativeProjectiles(dt);
   if(this.s.banner){this.s.banner.life-=dt;if(this.s.banner.life<=0)this.s.banner=null;}
   this.s.effects=this.s.effects.filter(e=>(e.life-=dt)>0);this.s.enemies=this.s.enemies.filter(e=>e.hp>0);pruneEvents(this.s);this.flushEnemySpawns();
-  if(this.s.benchmark){if(this.s.time>=this.s.limit)this.finish('timeout');}else if((!this.s.queue.length&&!this.s.enemies.length)||this.s.time>=this.s.limit||this.s.leaks>=this.economy.s.hp)this.finish('complete');
+  if(this.s.benchmark){if(this.s.time>=this.s.limit)this.finish('timeout');}else if((!this.s.queue.length&&!this.s.enemies.length)||this.s.time>=this.s.limit||Math.min(ROUND_LEAK_CAP,this.s.leaks)>=this.economy.s.hp)this.finish('complete');
  }
  finish(reason='manual'){if(this.s.finished)return;this.s.finished=true;this.s.result=this.s.benchmark?dummySummary(this.s.enemies[0],this.s.time,reason):{kind:'battle',elapsed:this.s.time,kills:this.s.kills,leaks:this.s.leaks+(this.s.time>=this.s.limit?this.s.enemies.reduce((n,e)=>n+e.leak,0):0),units:this.s.units.map(u=>({uid:u.uid,id:u.id,damage:u.damage,healing:u.healing})),totalDamage:Object.values(this.s.damage).reduce((a,b)=>a+b,0)};}
 }
@@ -6431,7 +6435,7 @@ return {NativeBattle};
 "native-session.js": function(load) {
 const {NativeEconomy} = load("native-economy.js");
 const {NativeBattle} = load("native-battle.js");
-const {buildPhasePlan,blackboard,ensureStock,restoreStock,stockOf,INFINITE_FUNDS} = load("protocol.js");
+const {buildPhasePlan,blackboard,ensureStock,restoreStock,stockOf,INFINITE_FUNDS,ROUND_LEAK_CAP} = load("protocol.js");
 const {allowsHighlandPlacement} = load("native-branches.js");
 const {runStrategyEvent} = load("strategy.js");
 const {createWaveRoster} = load("native-wave-random.js");
@@ -6673,7 +6677,7 @@ class NativeSession extends NativeEconomy {
   }
  applyTouchReplacement(){if(this.s.bandId!=='band_amedic'||this.s.strategyClaims.touchReplacement)return false;const elites=this.s.units.filter(u=>u.position&&this.data.season.charChessDataDict[u.chessId]?.isGolden).length,target=this.s.units.find(u=>u.touchReserve);if(elites<2||!target)return false;target.chessId='chess_virtual_touch';target.charId='char_613_acmedc';target.rank=6;target.touchReserve=false;this.s.strategyClaims.touchReplacement=1;return true;}
  startBattle(){if(this.s.phase!=='prep'||this.s.rewardPending||!this.s.units.some(u=>u.position))return false;this.applyTouchReplacement();const ok=this.beginBattle();if(!ok)return false;if(this.s.phase==='prep')return true;const turn=buildPhasePlan(this.data,this.s.modeId).find(t=>t.round===this.s.round);this.battle=new NativeBattle(this.data,this,this.map,turn);return true;}
- finishCurrentBattle(){if(!this.battle?.s.finished||this.s.phase!=='battle')return;const r=this.battle.s.result;this.s.history.push(r);if(r.kind==='training-dummy'){this.s.runResult=r;this.s.phase='finished';}else{this.s.hp=Math.max(0,this.s.hp-r.leaks);this.finishBattle({success:this.s.hp>0,leaks:r.leaks});if(!this.s.hp)this.s.runResult=r;}this.applyPostBattleTransforms();}
+ finishCurrentBattle(){if(!this.battle?.s.finished||this.s.phase!=='battle')return;const r=this.battle.s.result;this.s.history.push(r);if(r.kind==='training-dummy'){this.s.runResult=r;this.s.phase='finished';}else{this.s.hp=Math.max(0,this.s.hp-Math.min(ROUND_LEAK_CAP,r.leaks));this.finishBattle({success:this.s.hp>0,leaks:r.leaks});if(!this.s.hp)this.s.runResult=r;}this.applyPostBattleTransforms();}
  tick(){if(this.s.phase==='battle'&&this.battle){this.battle.step();this.finishCurrentBattle();}}
  advanceRound(){if(this.s.phase!=='intermission')return false;const locked=this.s.locked,oldOffers=locked?this.s.offers.slice():null,oldItems=locked?this.s.itemOffers.slice():null;this.s.prepApplied=false;const ok=this.nextRound(locked?[]:this.rollOffers());if(!ok)return false;if(locked){const refillOffers=this.rollOffers();this.s.offers=Array.from({length:this.terms().operatorSlots},(_,i)=>oldOffers[i]??refillOffers[i]);if(this.s.level<3)this.s.itemOffers=[];else{const refillItems=Array.from({length:this.terms().itemSlots},()=>this.drawFromPool({kind:'item'}));this.s.itemOffers=Array.from({length:this.terms().itemSlots},(_,i)=>oldItems[i]??refillItems[i]);}}else this.fillItems();this.addFunds(this.s.passiveIncome);this.applyProjectionUpgrades();
   // 进入新回合只做「按持有者/类型对账」，**不重置已放置的召唤物卡**：召唤物留在原位跨回合存在，

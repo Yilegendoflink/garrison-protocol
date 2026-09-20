@@ -13,8 +13,10 @@
 | 属性结算 | PRTS 属性公式；`combat.js#attribute` | `V = (基础 + 固定加) × (1 + 同类比例和) × 独立乘积`。盟约／策略／装备／技能写入 `stats().parts` | 已实现盟约／策略／装备比例使用独立倍率，普通技能／分支比例在同类加算层；具体专属效果仍需逐项扩展 | 未实现盟约、元素损伤、目标防御修改以外的独立易伤表 |
 | 路线检查点 | 关卡 `MOVE` / `PATROL_MOVE` / `WAIT_FOR_SECONDS` / `DISAPPEAR` / `APPEAR_AT_POS` | `compileRoute` 保留指令；用 `cmd` + `cmdLeft` 推进。消失期间不可见、不可选、不可挡；出现后重算空间关系。不可达抛出“原始路线不可达” | 无 | 随机偏移、巡逻循环、复杂位移技 |
 | 位移／换位置落点 | 备战期 `canDeploy` 口径（`native-session.js`）＋ `teleportActor` / `validMoveTile` | 目标格必须可通行，且**没有别的「占格子」单位**——只有干员与占格子的召唤物占格子；**敌人不占格子**（被阻挡时本来就与干员同格），所以换位置不用避开敌人。`canRelocateTo` 再叠加 `buildableType!=='NONE'`、无 `obstacle`、近战不上高台；`nearbySpots` 由近及远给候选格，`projectSpot` 沿朝向由远及近取第一个合法格。乌尔比安 S3 船锚位移期间，他让出的原格对**友方**换位置视为被占据（技能结束要返航），对他自己与敌人的位移不设限 | `nearbySpots` 从敌人身边一路枚举到棋盘边界，取最近空位（只搜 3 圈会在满编阵型里静默不落点）；船锚距离取黑板 `projectile_range` | 传送免疫、失衡免疫与重量判定（见 `ABNORMAL_STATUS_AUDIT.md`） |
+| 漏怪掉血上限 | 用户 2026-09-19 口径；`protocol.ROUND_LEAK_CAP` | 每回合（本模式一回合就是一场战斗）漏怪造成的生命扣除**上限 10 点**：结算走 `native-session.finishCurrentBattle` 的 `s.hp -= min(10, result.leaks)`；漏失真值照旧写进 `s.history`、`s.lastBattle.leaks` 与战报，不截断。战斗内的判负条件同样用上限后的值（`min(10, s.leaks) >= hp`，`native-battle.step`），所以上限救得回来的回合不会提前结束 | 上限 10 是项目规定值 | 原作没有这条上限；legacy 演示层（`engine.js` 逐只漏怪立刻扣血）未改 |
 
 本轮按用户“修复直到可通过验收”的要求执行针对性回归和独立浏览器检查，结果见 `COMBAT_ACCEPTANCE.md`。
+
 
 属性来源补证：[PRTS 下半期盟约记录](https://prts.wiki/w/卫戍协议：盟约_下半/PRTS盟约记录)，2026-09-14 核对属性加成说明。等待／消失指令的 position 为非移动元数据，只有移动和出现指令改变路线位置。
 

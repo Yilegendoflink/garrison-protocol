@@ -225,6 +225,10 @@ export function applyEnemyOverrides(base,override){
 // 整备区（手牌）上限：干员、装备、召唤物卡一律占格。干员／策略效果发放的卡牌允许
 // 临时超出（handLength>HAND_LIMIT），但超出期间不允许再购入干员和装备，必须先清出空余。
 export const HAND_LIMIT=10;
+// 每回合漏怪掉血上限（用户 2026-09-19 口径）：不管这一回合漏了多少敌人，生命最多扣 10 点。
+// 只影响扣血；漏失真值照旧记进战报与 `s.lastBattle.leaks`。判负也用上限后的值，
+// 所以「上限救得回来」的回合不会因为漏失数超过当前生命就提前结束。
+export const ROUND_LEAK_CAP=10;
 // 海猫模式（mode_cat_all）的无限资金哨兵值。资金本身只有「入账／出账／回合重置」三类写入，
 // 全部走 Session.setFunds／addFunds：只要 s.cat 为真，写多少都收敛回这个值。
 // 早先只在开局赋一次 MAX_SAFE_INTEGER，于是 beginBattle 的 `funds=0` 与 nextRound 的
