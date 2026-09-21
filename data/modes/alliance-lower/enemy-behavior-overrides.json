@@ -288,6 +288,14 @@
     "enemy_10044_wintun": {
       "randomPoolEligible": true,
       "reason": "PRTS修订414800及本期黑板：携桶三倍移速不普攻、阻挡失桶、一次性强击与30秒品尝区域；真实step回归后允许入池"
+    },
+    "enemy_1439_dslntf": {
+      "randomPoolEligible": false,
+      "reason": "待命/受伤临战、五倍移速和同名不叠加神经毒素已接入；赘生甲壳实体与碰撞自伤/摧毁尚未验收，按复杂敌人门禁暂不入池"
+    },
+    "enemy_1439_dslntf_2": {
+      "randomPoolEligible": false,
+      "reason": "待命/受伤临战、五倍移速和同名不叠加神经毒素已接入；赘生甲壳实体与碰撞自伤/摧毁尚未验收，按复杂敌人门禁暂不入池"
     }
   }
 }

@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
-import {dealDamage,applyLoss,commitExit,addDamageRedirect} from '../dist/native-effects.js';
+import {dealDamage,applyLoss,commitExit,addDamageRedirect,grantGuard,applyHeal} from '../dist/native-effects.js';
 import {applyStatus} from '../dist/status.js';
 
 function arena(){
@@ -72,6 +72,38 @@ test('真实step持续伤害击倒祭司也治疗一次，攻击弱化同步降�
  applyStatus(source,'attackDown',60,{value:-.5});
  b.s.logicEffects.push({id:b.s.settle.nextEffectId++,kind:'dot',sourceUid:null,targetUid:source.uid,interval:1,nextAt:b.s.time+1,endsAt:b.s.time+2,values:{damage:10,type:'true'},snapshot:{damage:10},refKind:'owner',persistAfterSourceGone:true});
  advance(b,1.1);assert.equal(source.hp,0);assert.equal(target.hp,hp+250);advance(b,1);assert.equal(target.hp,hp+250);
+});
+
+test('两种孽生者待命不普攻，受伤后五倍移速且只跳过当前停驻，重复受伤不重复加速',()=>{
+ for(const id of ['enemy_1439_dslntf','enemy_1439_dslntf_2']){
+  const {b}=arena(),e=spawn(b,id);b.step();assert.equal(e.canAttack,false);assert.equal(e.neuroCombat,false);assert.equal(e.route[e.cmd].kind,'wait');const cmd=e.cmd,speed=e.speed;
+  dealDamage(b,{target:e,value:1,type:'true'});assert.equal(e.neuroCombat,true);assert.equal(e.canAttack,true);assert.equal(e.speed,speed*5);assert.equal(e.cmd,cmd+1);assert.equal(e.cmdLeft,null);
+  dealDamage(b,{target:e,value:1,type:'true'});assert.equal(e.speed,speed*5);assert.equal(e.cmd,cmd+1);
+ }
+});
+
+test('护盾抵消/治疗/生命流失不误触发临战，真实step的DOT伤害会触发',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_1439_dslntf');grantGuard(b,e,{charges:1,types:['physical'],id:'test-neuro'});
+ dealDamage(b,{target:e,value:100,type:'physical'});assert.equal(e.neuroCombat,false);
+ applyLoss(b,{target:e,amount:10});assert.equal(e.neuroCombat,false);applyHeal(b,{source:e,target:e,amount:5});assert.equal(e.neuroCombat,false);
+ b.s.logicEffects.push({id:b.s.settle.nextEffectId++,kind:'dot',sourceUid:null,targetUid:e.uid,interval:1,nextAt:b.s.time+1,endsAt:b.s.time+2,values:{damage:1,type:'true'},snapshot:{damage:1},refKind:'owner',persistAfterSourceGone:true});
+ advance(b,1.1);assert.equal(e.neuroCombat,true);assert.equal(e.speed,e.baseSpeed*5);
+});
+
+test('孽生者神经毒素用本期5%/10%倍率与圆形范围，同名取最高，无视迷彩和不可选',()=>{
+ const {b,ally}=arena(),normal=spawn(b,'enemy_1439_dslntf'),elite=spawn(b,'enemy_1439_dslntf_2');normal.atk=elite.atk=100;
+ addAlly(b,ally,4,3);applyStatus(ally,'camouflage',60);ally.untargetable=true;const far=structuredClone(ally);far.uid+=100;far.x=5;far.y=5;b.s.units.push(far);
+ advance(b,.5);assert.equal(ally.elemental?.neural||0,0);dealDamage(b,{target:normal,value:1,type:'true'});dealDamage(b,{target:elite,value:1,type:'true'});
+ // 测试保持两名来源静止，让圈内/圈外断言只取决于半径和叠加规则。
+ normal.route=elite.route=[{kind:'wait',time:600}];normal.cmd=elite.cmd=0;normal.cmdLeft=elite.cmdLeft=null;
+ advance(b,1.1);assert.equal(ally.elemental.neural,10);assert.equal(far.elemental?.neural||0,0);
+ commitExit(b,{target:elite});advance(b,1);assert.equal(ally.elemental.neural,15);commitExit(b,{target:normal});b.step();assert.equal(ally.neurotoxinNextAt,null);
+});
+
+test('临战与目标毒素计时跨JSON继续，控制不额外关闭天赋，离开范围清理定时',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_1439_dslntf');e.atk=100;addAlly(b,ally,4,3);dealDamage(b,{target:e,value:1,type:'true'});applyStatus(e,'stun',60);advance(b,.6);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const source=restored.s.enemies[0],target=restored.s.units[0];assert.equal(source.neuroCombat,true);assert.equal(source.speed,source.baseSpeed*5);
+ advance(restored,.5);assert.equal(target.elemental.neural,5);target.x=9;restored.step();assert.equal(target.neurotoxinNextAt,null);advance(restored,1);assert.equal(target.elemental.neural,5);
 });
 
 test('折射被沉默取消法抗，解除沉默后恢复，连续帧不重复叠加',()=>{

@@ -1,12 +1,14 @@
 import {permissions,applyStatus,statusAttributeChanges} from './status.js';
-import {grantGuard,dealDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor} from './native-effects.js';
+import {grantGuard,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor} from './native-effects.js';
 
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
 const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
+const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
 
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(NEURO_SPAWNERS.has(e.id)){e.neuroCombat??=false;if(!e.neuroCombat)e.canAttack=false;}
  if(YUANZAI.has(e.id)){
   e.unblockable=e.baseUnblockable=true;e.canAttack=e.baseCanAttack=false;
   e.facingX??=Math.sign((e.route?.find(p=>p.kind==='move'&&Math.abs(p.x-e.x)>1e-6)?.x??e.x+1)-e.x);
@@ -33,6 +35,30 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  if(e.specialSkill?.prefab==='InvisibleCombat'&&e.formInvisible)e.invisibleStrikeReady=true;
  if(e.id==='enemy_1367_dseed'){e.unblockable=e.baseUnblockable=true;e.formHold=true;e.nextBloodLossAt=battle.s.time+1;}
  refreshEnemyTraitStats(e);
+}
+
+function activateNeuroSpawner(battle,e){
+ if(e.neuroCombat)return;
+ e.neuroCombat=true;e.canAttack=e.baseCanAttack;e.speed=e.baseSpeed*(1+Number(e.enemyTalent['0.move_speed']));
+ if(e.route?.[e.cmd]?.kind==='wait'){e.cmd++;e.cmdLeft=null;}
+ battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form:'临战'});
+}
+
+export function tickEnemyNeurotoxin(battle){
+ const sources=battle.s.enemies.filter(e=>NEURO_SPAWNERS.has(e.id)&&e.neuroCombat&&e.hp>0&&!e.hidden);
+ for(const target of alliedActors(battle.s)){
+  let best=null,amount=0;
+  if(target.deployed&&target.hp>0&&!target.hidden)for(const e of sources)if(near(e,target,Number(e.enemyTalent['1.range_radius']))){
+   const value=e.atk*(1+Math.min(0,statusAttributeChanges(e).attack||0))*Number(e.enemyTalent['1.ep_damage_ratio']);
+   if(value>amount){best=e;amount=value;}
+  }
+  if(!best){target.neurotoxinNextAt=null;continue;}
+  const interval=Number(best.enemyTalent['1.interval']);target.neurotoxinNextAt??=battle.s.time+interval;
+  while(target.hp>0&&battle.s.time+1e-9>=target.neurotoxinNextAt){
+   target.neurotoxinNextAt+=interval;
+   applyElementDamage(battle,{source:best,target,amount,type:'neural',cause:'dot'});
+  }
+ }
 }
 
 function faceOperatorMajority(battle,e){
@@ -124,6 +150,7 @@ export function enemyTraitAfterDamage(battle,e,opts,result){
   if(battle.s.units.includes(source))applyStatus(source,'exposed',Number(bb['Expose.weak[limit]']),{source:e.uid,value:Number(bb['Expose.damage_scale']),resistible:false});
  }
  if(e.hp<=0)return;
+ if(NEURO_SPAWNERS.has(e.id))activateNeuroSpawner(battle,e);
  if(max>0){
   const old=e.armorLossStacks||0,next=Math.min(max,old+1);e.armorLossStacks=next;
   const delta=(next>=2?next:0)-(old>=2?old:0);
