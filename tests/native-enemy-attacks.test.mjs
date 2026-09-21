@@ -242,6 +242,24 @@ test('爆炸箭读档保留命中标记，来源死亡仍爆炸，已撤退目�
  for(const u of allies){commitExit(b,{target:u,reason:'retreat'});b.deploy(u);applyStatus(u,'disarm',60);}let stale=0;b.hurt=()=>stale++;advance(b,1.6);assert.equal(stale,0);
 });
 
+test('迷路巨像未被阻挡也会独立投石，选择最近未晕眩目标而非部署仇恨，先眩晕再伤害',()=>{
+ const {b,enemy,allies}=arena('enemy_2003_rockman',{positions:[[5,3],[3,4],[4,4]]});applyStatus(allies[1],'stun',60);allies[2].statusResistance=.5;
+ const hits=[];b.hurt=(u,e)=>hits.push({uid:u.uid,atk:e.atk,stun:u.statuses.find(s=>s.kind==='stun')?.remaining});advance(b,12.9);assert.equal(hits.length,0);advance(b,.1);assert.equal(enemy.action?.target,allies[2].uid);
+ advance(b,2);assert.equal(hits.length,1);assert.equal(hits[0].uid,allies[2].uid);assert.equal(hits[0].atk,.7);assert.ok(hits[0].stun>12.4&&hits[0].stun<=12.5);assert.ok(allies[2].statuses.find(s=>s.kind==='stun').remaining<12.5,'不能被伤害后通用眩晕分支覆盖成25秒');
+ enemy.enemySkills[0].nextAt=b.s.time;b.step();assert.equal(enemy.action?.target,allies[0].uid);
+});
+
+test('迷路巨像全体候选已晕眩时保持技能就绪，出现有效目标立即尝试；只投技能、不进行远程普攻',()=>{
+ const {b,enemy,allies,strikes}=arena('enemy_2003_rockman',{positions:[[3,4]]});applyStatus(allies[0],'stun',60);advance(b,20);assert.equal(enemy.enemySkills[0].used,false);assert.equal(enemy.enemySkills[0].nextAt,13);assert.equal(strikes.length,0);
+ allies[0].statuses=allies[0].statuses.filter(s=>s.kind!=='stun');b.step();assert.equal(enemy.action?.special.prefab,'StunAttack');advance(b,2);assert.equal(strikes.length,1);assert.equal(enemy.ranged,false);
+});
+
+test('迷路巨像投石前摇停步，控制中断不发伤害，动作存档恢复后只命中一次',()=>{
+ const {b,g,enemy,allies}=arena('enemy_2003_rockman',{positions:[[4,3]]});enemy.enemySkills[0].nextAt=0;enemy.route=[{kind:'move',x:3,y:3},{kind:'move',x:3,y:6},{kind:'wait',time:600}];enemy.cmd=0;b.step();const x=enemy.x,y=enemy.y;advance(b,.2);assert.equal(enemy.x,x);assert.equal(enemy.y,y);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);let hits=0;restored.hurt=()=>hits++;advance(restored,2);assert.equal(hits,1);
+ applyStatus(enemy,'stun',1);b.step();assert.equal(enemy.action,null);assert.equal(enemy.enemyCast,null);assert.equal(allies[0].statuses.some(s=>s.kind==='stun'),false);assert.ok(enemy.enemySkills[0].nextAt>b.s.time+12.9);
+});
+
 test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{
  const {b,enemy,allies}=arena('enemy_10144_xdelk_2');b.step();const started=b.s.time;
  assert.equal(enemy.enemyCast?.charge,true);const hp=allies[0].hp;advance(b,6.5);assert.equal(allies[0].hp,hp);

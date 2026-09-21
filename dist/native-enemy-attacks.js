@@ -1,4 +1,4 @@
-import {permissions,statusAttributeChanges} from './status.js';
+import {permissions,statusAttributeChanges,applyStatus} from './status.js';
 import {attackableAllies,getActor} from './native-effects.js';
 import {compareEnemyTargets,enemyTargetValid,enemyTargetInRange,scheduleStrikes,TENTATIVE_HIT_GAP} from './native-combat.js';
 import {endEnemySkill} from './native-enemy-skills.js';
@@ -43,6 +43,7 @@ export function deliverEnemyAttack(battle,packet){
   battle.emit('strike',{uid:enemy.uid,x:enemy.x,y:enemy.y,targetX:target.x,targetY:target.y,ranged,enemy:true,type:packet.special?.type||enemy.damageType,style:splash?'splash':packet.special?.prefab||'single',hit:packet.hitIndex??packet.hit});
   if(enemy.powStartedAt!=null&&!enemy.powSpent)enemy.powHit=true;
   for(const victim of victims){
+   if(packet.special?.stunBeforeDamage&&permissions(enemy).skill&&!permissions(enemy).silenced)applyStatus(victim,'stun',packet.special.stun,{source:enemy.uid});
    battle.resolveEnemyStrike(enemy,victim,{...packet,scale,suppressAttackZone:victim!==target});
    battle.resolveEnemyAttackEffects(enemy,victim,{count:false,extra:packet.special});
   }

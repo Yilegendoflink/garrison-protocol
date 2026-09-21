@@ -65,6 +65,7 @@ export function endEnemySkill(battle,enemy,{refund=false}={}){
 export function selectEnemyAttackSkill(battle,enemy,target){
  if(!target||enemy.enemyCast)return null;
  const ready=enemy.enemySkills.filter(s=>ATTACK_SKILLS.has(s.prefab)&&enemySkillReady(enemy,s,battle.s.time)&&
+  !(enemy.id==='enemy_2003_rockman'&&s.prefab==='StunAttack')&&
   !(s.prefab==='ironsandstorm'&&enemy.enemyForm!=='warden')&&
   !(s.prefab==='armorpiercing'&&(enemy.enemyForm!=='assassin'||enemy.block!==target.uid))&&
   !(s.prefab==='CrossAttack'&&Math.abs(enemy.x-target.x)>1e-6&&Math.abs(enemy.y-target.y)>1e-6)&&
@@ -271,6 +272,14 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_2003_rockman'&&!control.silenced&&!enemy.action){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='StunAttack');
+  const targets=battle.enemySkillTargets(enemy,{ranged:true,ignoreBlock:true}).filter(t=>!t.statuses?.some(s=>s.kind==='stun')).sort((a,b)=>Math.hypot(a.x-enemy.x,a.y-enemy.y)-Math.hypot(b.x-enemy.x,b.y-enemy.y));
+  if(skill&&targets.length&&beginEnemySkill(battle,enemy,skill,{holdsPosition:true})){
+   const target=targets[0],timing=battle.enemyAttackTiming(enemy);enemy.attackCooldown=timing.frames;
+   enemy.action={startedAt:battle.s.time,left:timing.windupFrames,target:target.uid,targets:[target.uid],ranged:true,attackId:newAttackId(battle),special:{index:skill.index,prefab:skill.prefab,scale:Number(skill.bb.atk_scale),stun:Number(skill.bb.stun),stunBeforeDamage:true,type:'physical'}};return;
+  }
+ }
  if(enemy.id==='enemy_1539_reid'&&dt===0&&!control.silenced)tryReidRush(battle,enemy);
  if(enemy.id==='enemy_1513_dekght_2'&&!control.silenced&&!enemy.action){
   const skill=enemy.enemySkills.find(s=>s.prefab==='TripleAttack'),targets=battle.enemySkillTargets(enemy).slice(0,3);
