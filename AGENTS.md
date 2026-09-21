@@ -60,7 +60,7 @@
 - **搭桥为范围外关卡机制（用户 2026-09-21 确认）**：架桥船工／扶桥老手的 `BuildBridge`、桥梁维持／销毁及桥面改路不在本模拟补全范围；保留原表资料，用 `ignoredSkillPrefabs` 显式停用，不因该技能将这两种敌人排除随机池。自身隐匿和普通攻击照常；这不是忽略所有环境能力的授权，其他环境缺口仍逐项核对。
 
 - **死亡类能力只有一个入口**：死亡爆炸、死亡区域、解压缩都走 `native-effects` 的 `commitExit` → `battle.onEnemyDeath`，不要再挂在干员攻击路径上（那样被持续伤害击杀就漏触发）。生成的敌人先入队（`queueEnemySpawn`），在敌人状态结算后与战斗结束判定前各刷一次，别在遍历 `s.enemies` 时直接 push。
-- **反推原表字段**：`DeadSpawn.*`、`Revive[Trigger].*`、`Atkup.atk`／`AtkUp.atk`、`shield.dynamic` 等一律从 `talentBlackboard` 取，取不到就不给这个能力，并在 `enemy-behavior-overrides.json` 里显式关闭。`aura.*` 前缀是**自身条件判定**，不是发给周围敌人的光环（真光环是 `defup.*`）。
+- **反推原表字段**：`DeadSpawn.*`、`Revive[Trigger].*`、`Atkup.atk`／`AtkUp.atk`、`shield.dynamic` 等一律从 `talentBlackboard` 取，取不到就不给这个能力，并在 `enemy-behavior-overrides.json` 里显式关闭。`aura.*` 前缀是**自身条件判定**，不是发给周围敌人的光环。`defup.*` 也要核对目标范围：护障的是友军光环，鼠王的 `defup.def` 则只在自身法术屏障存在时加防。
 - **放开随机池要走流程**：复杂敌人先在 `enemy-behavior-overrides.json` 里 `randomPoolEligible:false`，补完专属实现并写了定向测试后再逐条放开；`filterRandomPoolTable` 会把不合格的敌人从词条池里剔掉，没放开就等于没上场。
 - **具名卡池要在 `native-session.js` 显式建表**：`drawFromPool` 只认池名，而原表（`pool_chess_glady`、`pool_char_pinus`、`pool_equip_*`）只给名字不给成员，不建表就等于按商店规则从整池抽。成员只能从效果文案或装备字段推：`members`（可带权重）、`bond`（该盟约的装备）、`any`（文案没限定，等于任意）；推不出来的宁可不做也不要编，并在表里注明依据。
 - **隐匿只有一条判定**：`invisible` = 状态表（`invisible`/`camouflage`）或形态自带的 `formInvisible`，`revealed` = 反隐时间窗（`revealUntil`，每帧由 `syncReveals` 收敛）。被阻挡（`e.block!=null`）视为脱离隐匿（表现层同口径：`concealActive` 在 `actor.block!=null` 时返回 false，马赛克与头顶隐匿图标一并消失）。改索敌时三处一起改：`targets()`、`autoSkillWouldHit()`、敌方 AI 的远程选目标；反隐由 `revealEnemy` 续期，不要写回永久置位的 `e.revealed=true`。敌方隐匿技能只有两条实现路径：`InvisibleCombat` 挂在 `resolveEnemyStrike`（攻击显形），清明 `InvisibleShield` 走独立计时的 `tickEnemyInvisibleShield`（跟攻击解耦）；技能文案里带「技能结束时」的是条件式发放（忍冬 S3 迷彩），通用「开技即获得」分支必须跳过它。

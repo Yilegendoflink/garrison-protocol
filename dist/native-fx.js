@@ -382,7 +382,7 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
  const list=(s.logicEffects||[]).filter(fx=>fx.talentOrSkillId!=='bond-kjerag-storm'&&(fx.kind==='zone'||(fx.kind==='field'&&(Number(fx.values?.damage)>0||Number(fx.values?.atkScale)>0||Number(fx.values?.elementScale)>0)))&&(fx.endsAt==null||fx.endsAt>s.time));
  if(!list.length)return false;
  for(const fx of list){
-  const visual=fx.values?.enemyWineBuff?{shape:'circle',tone:'gold'}:battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
+  const visual=fx.values?.mouseSand?{shape:'square',tone:'gold'}:fx.values?.enemyWineBuff?{shape:'circle',tone:'gold'}:battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
   const [light,deep]=ZONE_TONE[visual.tone]||ZONE_TONE.arts;
   const radius=Number.isFinite(fx.radius)?fx.radius:1;
   // 剩余时间不足 1.5 秒时开始闪烁提示即将结束
@@ -696,6 +696,11 @@ export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}
  const s=battle?.s;
  if(!s?.events)return false;
  let drew=false;
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.mouseMarkEnabled)for(const [uid,label,color]of [[e.mouseMaxUid,'⊕ 最高生命','#ff887d'],[e.mouseMinUid,'▼ 最低生命','#86baff']]){
+  const target=[...(s.units||[]),...(s.summons||[])].find(a=>a.uid===uid&&a.deployed&&a.hp>0);if(!target)continue;
+  const p=point(target.x,target.y);c.save();c.font='bold 10px sans-serif';c.textAlign='center';c.fillStyle=color;c.fillText(formatText?formatText(label):label,p.x,p.y-z.th*.95-(uid===e.mouseMaxUid?26:14));c.restore();drew=true;
+ }
+
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.parrotHasPassenger){const p=point(e.x,e.y);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#f4d38b';c.fillText(formatText?formatText('携带水手'):'携带水手',p.x,p.y-z.th*.95-15);c.restore();drew=true;}
  for(const e of s.enemies||[])for(const bomb of e.enemyCast?.c4Targets||[]){
   const target=[...(s.units||[]),...(s.summons||[])].find(a=>a.uid===bomb.uid&&a.deployGen===bomb.deployGen&&a.deployed&&a.hp>0);if(!target)continue;

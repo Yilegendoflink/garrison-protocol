@@ -124577,11 +124577,7 @@
         "attackElement": null,
         "attackElementScale": 0,
         "deathExplosion": null,
-        "aura": {
-          "def": 3000,
-          "damageResistance": 0,
-          "radius": 1
-        },
+        "aura": null,
         "magicResistanceBonus": 0,
         "lowHpRatio": 0.5,
         "lowHpAttackMultiplier": 1.5,

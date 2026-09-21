@@ -9,6 +9,11 @@ const KNIGHT_PARTNER={enemy_1513_dekght:'enemy_1513_dekght_2',enemy_1513_dekght_
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.id==='enemy_1509_mousek'){
+  e.immunities.sleep=true;e.damageType='arts';e.enemyAttack={...e.enemyAttack,groundOnly:true};e.aura=null;e.lowHpRatio=0;
+  if(e.lowHpTriggered&&e.atk===e.baseAtk*Number(e.enemyTalent['enrage.damage_scale']))e.atk=e.baseAtk;
+  const initial=e.shieldLayers.find(l=>l.id==='enemy-initial-shield');if(initial){initial.id='mouseking-arts';initial.types=['arts'];}
+ }
  if(KNIGHT_PARTNER[e.id]){e.deathExplosion=null;if(e.id==='enemy_1513_dekght_2')e.damageType='arts';}
  if(e.id==='enemy_2008_flking')e.costEffects=[]; // 修复旧存档：原关卡削弱不是墓碑自身能力。
  if(e.id==='enemy_1511_mdrock'){
@@ -194,6 +199,7 @@ export function consumeEnemyLancerRush(e){
 // refreshEnemyAuras 每帧先恢复基础防御/法抗，再调用此处，避免永久写回导致重复累加。
 export function refreshEnemyTraitStats(e){
  const bb=e.enemyTalent||{},silenced=permissions(e).silenced;
+ if(e.id==='enemy_1509_mousek'){e.mouseShieldDef=e.shieldLayers.some(l=>l.id==='mouseking-arts'&&l.remaining>0)?Number(bb['defup.def'])||0:0;e.def+=e.mouseShieldDef;}
  if(e.refractionBonus&&!silenced)e.res+=e.refractionBonus;
  const layers=e.armorLossStacks||0,max=Number(bb['def_reduce.max_stack_cnt']);
  if(layers>=2&&max>0){e.def=Math.max(0,e.def+Number(bb['def_reduce.def'])*layers/max);e.res=Math.max(0,e.res+Number(bb['def_reduce.magic_resistance'])*layers/max);}
@@ -225,6 +231,7 @@ export function tickEnemyTraits(battle,e,dt){
 
 export function enemyTraitAfterDamage(battle,e,opts,result){
  if(!e.enemyTraitsInitialized||result.total<=0)return;
+ if(e.id==='enemy_1509_mousek'&&e.mouseShieldDef&&!e.shieldLayers.some(l=>l.id==='mouseking-arts'&&l.remaining>0)){e.def-=e.mouseShieldDef;e.mouseShieldDef=0;}
  if(e.id==='enemy_1511_mdrock')syncMudrockShield(e);
  const bb=e.enemyTalent||{},max=Number(bb['def_reduce.max_stack_cnt']);
  if(bb['Expose.weak[limit]']>0&&!bb['Expose.range_radius']&&!permissions(e).silenced){

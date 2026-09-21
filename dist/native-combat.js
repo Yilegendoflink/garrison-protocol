@@ -276,7 +276,7 @@ export function enemyBehaviorProfile(raw={}){
   // 只认 defup.* 这类「给周围友军加防」的真光环。aura.* 前缀是自身条件判定
   // （例如「周围半径1.5内存在燃烧的芦苇丛时自身减伤」），不是发给别人的光环，
   // 之前把 aura.damage_resistance 当光环发出去，等于把减伤白送给周围所有敌人。
-  aura:auraDef>0?{def:auraDef,damageResistance:0,radius:Number.isFinite(auraRadius)&&auraRadius>0?auraRadius:1}:null,
+  aura:Object.hasOwn(behavior,'aura')?(behavior.aura||null):auraDef>0?{def:auraDef,damageResistance:0,radius:Number.isFinite(auraRadius)&&auraRadius>0?auraRadius:1}:null,
   magicResistanceBonus:Number.isFinite(magicResistanceBonus)&&magicResistanceBonus>0?magicResistanceBonus:0,
   lowHpRatio:Number.isFinite(lowHpRatio)&&lowHpRatio>0&&lowHpRatio<1?lowHpRatio:0,
   lowHpAttackMultiplier:Number.isFinite(lowHpAttackScale)&&lowHpAttackScale>0?lowHpAttackScale:Number.isFinite(lowHpAttackAdd)&&lowHpAttackAdd>0?1+lowHpAttackAdd:0,

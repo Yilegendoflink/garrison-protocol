@@ -320,6 +320,11 @@
         "rangedScaleKey": "atkdown.atk_scale"
       },
       "reason": "PRTS：未阻挡远程40%倍率及九格溅射（可溅射飞行），被阻挡近战单体；周期刷新10%最大生命全类型屏障。图鉴全场削弱属于地图，不能挂到本体"
+    },
+    "enemy_1509_mousek": {
+      "aura": false,
+      "randomPoolEligible": false,
+      "reason": "defup.def是自身法术屏障在场增防，不是友军光环；双技能与标记按独立处理器实现，完整弹道时序仍待对照"
     }
   }
 }

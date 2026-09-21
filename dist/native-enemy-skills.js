@@ -112,6 +112,31 @@ export function cancelEnemyCast(battle,enemy){
  endEnemySkill(battle,enemy,{refund:enemy.enemySkills[cast.index].prefab==='PollutedRangedAtk'});
 }
 
+function mouseKingTargets(battle,enemy){
+ const targets=battle.enemySkillTargets(enemy,{range:Number.MAX_VALUE,groundOnly:true,ignoreBlock:true});let low=null,high=null;
+ for(const target of targets){const hp=battle.stats(target).maxHp;if(!low||hp<low.hp)low={target,hp};if(!high||hp>high.hp)high={target,hp};}
+ return {low:low?.target,high:high?.target};
+}
+function tickMouseKingSkills(battle,enemy,control){
+ const {low,high}=mouseKingTargets(battle,enemy);
+ if(enemy.mouseMarkEnabled){enemy.mouseMinUid=low?.uid??null;enemy.mouseMaxUid=high?.uid??null;}
+ if(!low||enemy.hidden||enemy.enemyCast||enemy.action||!control.attack||!control.skill||control.silenced||enemy.mouseSkillFrame===battle.s.frame)return;
+ const ready=enemy.enemySkills.filter(s=>['DriftSand','SandStorm','Mark'].includes(s.prefab)&&enemySkillReady(enemy,s,battle.s.time));
+ if(!ready.length)return;
+ const priority=Math.min(...ready.map(s=>s.priority)),choices=ready.filter(s=>s.priority===priority),skill=choices.length===1?choices[0]:choices[Math.floor(battle.economy.random()*choices.length)];
+ if(!beginEnemySkill(battle,enemy,skill))return;enemy.mouseSkillFrame=battle.s.frame;
+ if(skill.prefab==='Mark'){enemy.mouseMarkEnabled=true;enemy.mouseMinUid=low.uid;enemy.mouseMaxUid=high.uid;}
+ else if(skill.prefab==='DriftSand'){
+  const cells=battle.data.ranges['x-7'].grids,attackId=newAttackId(battle);
+  for(const target of attackableAllies(battle.s))if(cells.some(c=>Math.round(target.x)-Math.round(high.x)===c.col&&Math.round(target.y)-Math.round(high.y)===c.row))
+   battle.resolveEnemyStrike(enemy,target,{amount:Number(skill.bb.damage),type:'physical',cause:'extra',attackId,suppressAttackZone:true});
+  battle.emit('impact',{uid:enemy.uid,x:high.x,y:high.y,radius:3,type:'physical',enemy:true});
+ }else{
+  addEffect(battle,{kind:'zone',stackRule:'stack',sourceUid:enemy.uid,talentOrSkillId:'mouse-sand-prison',x:Math.round(low.x),y:Math.round(low.y),radius:1,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+Number(skill.bb.duration),trackSide:'ally',values:{mouseSand:true,damage:Number(skill.bb.damage),attackScale:1+Number(skill.bb.atk),weakDuration:Number(skill.bb.duration)},refKind:'owner',persistAfterSourceGone:true});
+ }
+ endEnemySkill(battle,enemy);
+}
+
 // 自施法/吞噬不依赖普通攻击目标；所有伤害和强制击杀仍进入 native-effects。
 export function tickEnemySkills(battle,enemy,dt){
  if(!enemy.enemySkills)return;
@@ -120,6 +145,7 @@ export function tickEnemySkills(battle,enemy,dt){
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
+ if(enemy.id==='enemy_1509_mousek'){tickMouseKingSkills(battle,enemy,control);return;}
  if(cast?.knightCharge){
   if(enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
   if(battle.s.time+1e-9>=cast.endsAt){
