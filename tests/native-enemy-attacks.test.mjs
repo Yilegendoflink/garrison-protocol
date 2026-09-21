@@ -67,6 +67,23 @@ test('骨刺未暴露时同时攻击3个目标，被阻挡后退回单目标',()
  assert.ok(blocked.enemy.block!=null);assert.equal(blocked.strikes.length,1);
 });
 
+test('骨刺被阻挡仍按远程仇恨选人，空中高仇恨单位不抢走目标',()=>{
+ const {b,enemy,allies}=arena('enemy_9008_acbunn',{positions:[[3,3],[4,3],[3,4]]});allies[1].deployAt=200;allies[2].deployAt=300;allies[2].flying=true;
+ const hits=[];b.hurt=u=>hits.push(u.uid);advance(b,1.4);assert.equal(enemy.block,allies[0].uid);assert.deepEqual(hits,[allies[1].uid]);
+});
+
+test('骨刺解除阻挡当帧恢复隐匿，下一次攻击恢复三目标且沉默不禁用天赋',()=>{
+ const {b,enemy,allies}=arena('enemy_9008_acbunn',{positions:[[3,3],[4,3],[3,4],[4,4]]});applyStatus(enemy,'silence',60);
+ const hits=[];b.hurt=u=>hits.push(u.uid);advance(b,1.4);assert.equal(hits.length,1);allies[0].x=8;b.step();assert.equal(enemy.block,null);assert.equal(enemy.invisible,true);
+ hits.length=0;advance(b,4.1);assert.equal(hits.length,3);assert.equal(new Set(hits).size,3);assert.ok(hits.every(uid=>uid!==allies[0].uid));
+});
+
+test('骨刺反隐期间单目标，JSON恢复后反隐到期恢复三目标',()=>{
+ const {b,g,enemy}=arena('enemy_9008_acbunn',{x:3,y:4,positions:[[2,3],[3,2],[4,3]]});revealEnemy(b,enemy,4);advance(b,1.4);assert.equal(enemy.attackCount,1);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const hits=[];restored.hurt=u=>hits.push(u.uid);advance(restored,4.1);
+ assert.equal(restored.s.enemies[0].invisible,true);assert.equal(hits.length,3);
+});
+
 test('控潮术师普通攻击溅射以目标为中心，仅覆盖相邻四格且附加侵蚀',()=>{
  const {b,allies,enemy}=arena('enemy_1161_tidmag',{x:3,y:5,positions:[[3,3],[4,3],[4,4]]});
  const hp=allies.map(u=>u.hp);advance(b,1);
