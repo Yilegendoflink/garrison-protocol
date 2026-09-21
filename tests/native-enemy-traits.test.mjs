@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
-import {dealDamage,applyLoss,commitExit,addDamageRedirect,grantGuard,grantShield,applyHeal,revealEnemy,enemyWineBuffs} from '../dist/native-effects.js';
+import {dealDamage,applyElementDamage,applyLoss,commitExit,addDamageRedirect,grantGuard,grantShield,applyHeal,revealEnemy,enemyWineBuffs} from '../dist/native-effects.js';
 import {applyStatus,isIsolated} from '../dist/status.js';
 
 function arena(){
@@ -150,6 +150,23 @@ test('骑士同伴死亡或漏怪均狂暴且只加一次，不发生误推导�
   commitExit(b,{target:other,reason});assert.equal(e.speed,e.baseSpeed*2.5);
   const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);assert.equal(restored.s.enemies.find(x=>x.uid===e.uid).knightRage,true);
  }
+});
+
+test('纠缠藤蔓具有抵抗，普通伤害/DOT/生命流失/元素损伤不冒充环境伤害',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_2052_smgia');assert.equal(e.statusResistance,.5);applyStatus(e,'stun',10);assert.equal(e.statuses.find(s=>s.kind==='stun').remaining,5);
+ dealDamage(b,{target:e,value:1,type:'physical'});dealDamage(b,{target:e,value:1,type:'arts',cause:'dot'});applyLoss(b,{target:e,amount:1});applyElementDamage(b,{target:e,amount:1,type:'burn'});
+ assert.equal(e.statuses.some(s=>s.kind==='fragile'),false);dealDamage(b,{target:e,value:1,type:'true',environmental:true});assert.ok(Object.values(b.s.settle.byId).some(event=>event.environmental===true&&event.type==='damage'));assert.equal(e.statuses.find(s=>s.kind==='fragile').remaining,10);
+});
+
+test('真实step的环境标记触发脆弱，预计算/直接伤害均生效但元素伤害和流失不吃普通脆弱',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_2052_smgia');b.s.logicEffects.push({id:b.s.settle.nextEffectId++,kind:'dot',sourceUid:null,targetUid:e.uid,interval:1,nextAt:1,endsAt:1.01,values:{damage:1,type:'true',environmental:true},snapshot:{damage:1},refKind:'owner',persistAfterSourceGone:true});advance(b,1.1);assert.equal(e.fragile,2);
+ assert.equal(dealDamage(b,{target:e,value:100,type:'physical'}).total,200);assert.equal(dealDamage(b,{target:e,amount:100,type:'arts'}).total,140);assert.equal(dealDamage(b,{target:e,value:100,type:'true'}).total,200);assert.equal(dealDamage(b,{target:e,value:100,type:'elemental'}).total,100);assert.equal(applyLoss(b,{target:e,amount:100}),100);
+ advance(b,5);dealDamage(b,{target:e,value:1,type:'true',environmental:true});assert.equal(e.statuses.filter(s=>s.kind==='fragile').length,1);advance(b,9.9);assert.equal(e.fragile,2);advance(b,.2);assert.equal(e.fragile,1);
+});
+
+test('脆弱在递归分摊中不对原接收者重复乘算，状态与环境标记效果可存档',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_2052_smgia'),other=spawn(b,'enemy_1025_reveng');dealDamage(b,{target:e,value:1,type:'true',environmental:true});addDamageRedirect(b,e,{targetUid:other.uid,ratio:.5});const hp=e.hp,hp2=other.hp;dealDamage(b,{target:e,value:100,type:'physical'});assert.equal(hp-e.hp,100);assert.equal(hp2-other.hp,100);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);restored.step();assert.equal(restored.s.enemies.find(x=>x.uid===e.uid).fragile,2);
 });
 
 test('折射被沉默取消法抗，解除沉默后恢复，连续帧不重复叠加',()=>{

@@ -74,7 +74,7 @@ export function selectEnemyAttackSkill(battle,enemy,target){
  const priority=Math.min(...ready.map(s=>s.priority)),top=ready.filter(s=>s.priority===priority);
  const skill=top.length===1?top[0]:top[Math.floor(battle.economy.random()*top.length)];
  return {index:skill.index,prefab:skill.prefab,scale:Number(skill.bb.atk_scale??skill.bb.damage_scale)||1,
-  radius:Number(skill.bb.range_radius)||1,splash:skill.prefab==='AOEAttack',stun:Number(skill.bb.stun)||0,
+  radius:Number(skill.bb.range_radius)||1,splash:skill.prefab==='AOEAttack',stun:Number(skill.bb.stun)||0,stunBeforeDamage:skill.prefab==='StunAttack',
   type:['CrossAttack','ironsandstorm'].includes(skill.prefab)?'arts':skill.prefab==='armorpiercing'?'physical':null,noDirectAttack:skill.prefab==='DeathEye',polluted:skill.prefab==='PollutedRangedAtk',
   targets:skill.prefab==='ironsandstorm'?Number(skill.bb.max_target):undefined,hits:skill.prefab==='armorpiercing'?Number(skill.bb.times):undefined,defPenetration:skill.prefab==='armorpiercing'?Number(skill.bb.def_penetrate):undefined};
 }

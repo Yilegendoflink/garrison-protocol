@@ -61,6 +61,6 @@ export function tickSandStorm(battle){
   u.sandExposed=u.deployed&&exposed(u);u.sandAttackRatio=u.sandExposed?cfg.attackRatio:0;u.sandRespawnMultiplier=u.sandExposed?cfg.respawnMultiplier:1;
   if(!u.sandExposed){u.sandNextAt=null;continue;}
   u.sandNextAt??=now+cfg.interval;
-  while(u.hp>0&&now+1e-9>=u.sandNextAt){u.sandNextAt+=cfg.interval;dealDamage(battle,{target:u,amount:cfg.damage,type:'true',cause:'dot'});}
+  while(u.hp>0&&now+1e-9>=u.sandNextAt){u.sandNextAt+=cfg.interval;dealDamage(battle,{target:u,amount:cfg.damage,type:'true',cause:'dot',environmental:true});}
  }
 }

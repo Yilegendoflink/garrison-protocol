@@ -260,6 +260,11 @@ test('迷路巨像投石前摇停步，控制中断不发伤害，动作存档�
  applyStatus(enemy,'stun',1);b.step();assert.equal(enemy.action,null);assert.equal(enemy.enemyCast,null);assert.equal(allies[0].statuses.some(s=>s.kind==='stun'),false);assert.ok(enemy.enemySkills[0].nextAt>b.s.time+12.9);
 });
 
+test('纠缠藤蔓两次普攻回满2SP，第三次技能消耗一次并施加可被抵抗缩短的15秒眩晕',()=>{
+ const {b,enemy,allies}=arena('enemy_2052_smgia');allies[0].statusResistance=.5;const stuns=[];b.hurt=(u,e)=>{const stun=u.statuses.find(s=>s.kind==='stun');if(stun)stuns.push(stun.remaining);};
+ advance(b,4.1);assert.equal(enemy.sp,2);assert.equal(stuns.length,0);advance(b,3);assert.equal(enemy.sp,0);assert.equal(stuns.length,1);assert.ok(stuns[0]>7.4&&stuns[0]<=7.5);assert.equal(enemy.attackCount,3);
+});
+
 test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{
  const {b,enemy,allies}=arena('enemy_10144_xdelk_2');b.step();const started=b.s.time;
  assert.equal(enemy.enemyCast?.charge,true);const hp=allies[0].hp;advance(b,6.5);assert.equal(allies[0].hp,hp);

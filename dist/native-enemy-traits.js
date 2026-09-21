@@ -232,6 +232,7 @@ export function tickEnemyTraits(battle,e,dt){
 
 export function enemyTraitAfterDamage(battle,e,opts,result){
  if(!e.enemyTraitsInitialized||result.total<=0)return;
+ if(e.id==='enemy_2052_smgia'&&e.hp>0&&opts.environmental===true)applyStatus(e,'fragile',Number(e.enemyTalent['Weak.weak[limit]']),{source:e.uid,value:Number(e.enemyTalent['Weak.damage_scale']),resistible:false});
  if(e.id==='enemy_1509_mousek'&&e.mouseShieldDef&&!e.shieldLayers.some(l=>l.id==='mouseking-arts'&&l.remaining>0)){e.def-=e.mouseShieldDef;e.mouseShieldDef=0;}
  if(e.id==='enemy_1511_mdrock')syncMudrockShield(e);
  const bb=e.enemyTalent||{},max=Number(bb['def_reduce.max_stack_cnt']);

@@ -248,7 +248,7 @@ export function dealDamage(battle,opts){
  const source=opts.source||getActor(battle.s,opts.sourceUid);
  const target=opts.target||getActor(battle.s,opts.targetUid);
  if(!target||target.hp<=0||target.hidden||target.invulnerable)return null;
- const event=nextEvent(battle,{cause:opts.cause||'attack',attackId:opts.attackId??null,parentEventId:opts.parentEventId??null,effectId:opts.effectId??null,type:'damage'});
+ const event=nextEvent(battle,{cause:opts.cause||'attack',attackId:opts.attackId??null,parentEventId:opts.parentEventId??null,effectId:opts.effectId??null,type:'damage',...(opts.environmental?{environmental:true}:{})});
  const triggerId=opts.consumeEventId??opts.parentEventId;
  if(opts.effectId!=null&&triggerId!=null&&!consume(battle,opts.effectId,triggerId))return null;
  if(battle.s.enemies.includes(target)&&battle.enemyBeforeDamage?.(target,opts)){
@@ -262,7 +262,6 @@ export function dealDamage(battle,opts){
   const type=opts.type||'physical';
   const status=battle.s.enemies.includes(target)?statusAttributeChanges(target):{};
   value=damage({amount,type,resistance:(stats.res??stats.magicResistance??0)+(status.resistance||0)+(status.magicResistance||0),defense:stats.def||0,elementResistance:stats.elementResistance??stats.epDamageResistance??0});
-  if(target.fragile)value*=target.fragile;
  }
  let type=opts.type||'physical';
  if(!opts.sourceDamageHandled)value*=battle.enemyOutgoingDamageMultiplier?.(source)??1;
@@ -277,6 +276,7 @@ export function dealDamage(battle,opts){
   const before={source,target,value,type,event,cause:opts.cause};dispatch(battle,'before-damage',before);value=before.value;type=before.type;
  }
  // 同名暴露取最高；递归分摊回同一对象时不能再次乘算。不同接收者仍计算自己的状态。
+ if(opts.fragileHandledFor!==target.uid&&['physical','arts','true'].includes(type))value*=Math.max(1,target.fragile||1);
  const exposure=(target.statuses||[]).filter(s=>s.kind==='exposed').reduce((n,s)=>Math.max(n,Number(s.value)||1),1);
  if(opts.exposureHandledFor!==target.uid)value*=exposure;
  if(opts.directionHandledFor!==target.uid)value*=battle.enemyFacingDamageMultiplier?.(target,source,type)??1;
@@ -288,7 +288,7 @@ export function dealDamage(battle,opts){
   value*=immediateRatio;
  }
  if(!opts.skipBondStead&&value>0&&battle.on?.('steadShip')&&battle.rows?.steadShip?.count>=3&&battle.s.units.includes(target)&&!battle.owns(target,'steadShip')){
-  const guards=battle.s.units.filter(u=>u.deployed&&u.hp>0&&battle.owns(u,'steadShip'));if(guards.length){const shared=value*.4,own=value-shared,common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,exposureHandledFor:target.uid,directionHandledFor:target.uid,skipBondStead:true,skipRedirect:true,skipProtection:true,skipHooks:true};const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;const parts=guards.map(receiver=>dealDamage(battle,{...common,target:receiver,value:shared/guards.length}));return {total:(ownResult?.total||0)+parts.reduce((n,r)=>n+(r?.total||0),0),hp:(ownResult?.hp||0)+parts.reduce((n,r)=>n+(r?.hp||0),0),shield:(ownResult?.shield||0)+parts.reduce((n,r)=>n+(r?.shield||0),0),blocked:!!(ownResult?.blocked&&parts.every(r=>r?.blocked)),potentialHpDamage:(ownResult?.potentialHpDamage||0)+parts.reduce((n,r)=>n+(r?.potentialHpDamage||0),0),redirected:true,bond:'stead',event};}
+  const guards=battle.s.units.filter(u=>u.deployed&&u.hp>0&&battle.owns(u,'steadShip'));if(guards.length){const shared=value*.4,own=value-shared,common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,environmental:opts.environmental===true,fragileHandledFor:target.uid,exposureHandledFor:target.uid,directionHandledFor:target.uid,skipBondStead:true,skipRedirect:true,skipProtection:true,skipHooks:true};const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;const parts=guards.map(receiver=>dealDamage(battle,{...common,target:receiver,value:shared/guards.length}));return {total:(ownResult?.total||0)+parts.reduce((n,r)=>n+(r?.total||0),0),hp:(ownResult?.hp||0)+parts.reduce((n,r)=>n+(r?.hp||0),0),shield:(ownResult?.shield||0)+parts.reduce((n,r)=>n+(r?.shield||0),0),blocked:!!(ownResult?.blocked&&parts.every(r=>r?.blocked)),potentialHpDamage:(ownResult?.potentialHpDamage||0)+parts.reduce((n,r)=>n+(r?.potentialHpDamage||0),0),redirected:true,bond:'stead',event};}
  }
  const reduction=type==='elemental'?0:damageReductionFor(battle,target,type,source);if(reduction>0)value*=1-reduction;
  const redirect=!opts.skipRedirect&&value>0?activeRedirect(battle,target,type):null;
@@ -296,7 +296,7 @@ export function dealDamage(battle,opts){
   const receiver=getActor(battle.s,redirect.targetUid),ratio=Math.max(0,Math.min(1,Number(redirect.ratio??1)));
   if(receiver&&receiver!==target&&receiver.hp>0){
    const shared=value*ratio,own=redirect.mode==='redirect'?0:value-shared;
-   const common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,exposureHandledFor:target.uid,directionHandledFor:target.uid,parentEventId:event.eventId,skipRedirect:true,skipProtection:true,skipHooks:true};
+   const common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,environmental:opts.environmental===true,fragileHandledFor:target.uid,exposureHandledFor:target.uid,directionHandledFor:target.uid,parentEventId:event.eventId,skipRedirect:true,skipProtection:true,skipHooks:true};
    const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;
    const sharedResult=shared>0?dealDamage(battle,{...common,target:receiver,value:shared}):null;
    log(battle,'damage-redirect',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,redirectUid:receiver.uid,amount:value,shared,mode:redirect.mode||'share'});
@@ -678,7 +678,7 @@ function settlePeriodic(battle,fx){
   const amount=fx.snapshot?.damage??fx.values?.damage??0;
   if(fx.values?.spLoss)t.sp=Math.max(0,(t.sp||0)-fx.values.spLoss);
   if(fx.values?.necrosisWeak){const weak=t.statuses?.find(s=>s.kind==='attackDown'&&s.source==='element-necrosis');if(weak)weak.value=-.5*Math.max(0,1-Math.floor(battle.s.time-fx.startedAt)/15);}
-  dealDamage(battle,{source,target:t,amount,type:fx.values?.type||'arts',minHp:fx.values?.minHp,cause:'dot',effectId:fx.id,parentEventId:null});
+  dealDamage(battle,{source,target:t,amount,type:fx.values?.type||'arts',minHp:fx.values?.minHp,cause:'dot',environmental:fx.values?.environmental===true,effectId:fx.id,parentEventId:null});
  }else if(fx.kind==='hot'){
   const t=getActor(battle.s,fx.targetUid);if(!t)return;
   applyHeal(battle,{source,target:t,amount:fx.snapshot?.heal??fx.values?.heal??0,effectId:fx.id,persistAfterSourceGone:fx.persistAfterSourceGone});
@@ -745,7 +745,7 @@ function updateAreas(battle){
 }
 
 function tickAuras(battle){
- for(const e of enemyActors(battle.s))e.fragile=e.bondFragileUntil>battle.s.time?1.4:null;
+ for(const e of enemyActors(battle.s))e.fragile=Math.max(e.bondFragileUntil>battle.s.time?1.4:1,...(e.statuses||[]).filter(s=>s.kind==='fragile').map(s=>Number(s.value)||1));
  for(const e of enemyActors(battle.s))e.yanElementDamageTakenBonus=0;
  for(const e of enemyActors(battle.s))e.operatorAttackSpeedMod=0;
  for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1039_thorn2')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='视界'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s))e.operatorAttackSpeedMod-=Number(bb.attack_speed_enemy)||5;}

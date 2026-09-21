@@ -325,6 +325,12 @@
       "aura": false,
       "randomPoolEligible": false,
       "reason": "defup.def是自身法术屏障在场增防，不是友军光环；双技能与标记按独立处理器实现，完整弹道时序仍待对照"
+    },
+    "enemy_2052_smgia": {
+      "statusResistance": 0.5,
+      "statusResistanceSource": "PRTS纠缠藤蔓天赋：抵抗，持续时间减半",
+      "randomPoolEligible": false,
+      "reason": "攻击回复眩晕、抵抗与环境伤害标记触发脆弱已接入；本期可伤害敌人的自然环境来源仍待接线，暂不入池"
     }
   }
 }

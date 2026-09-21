@@ -126987,7 +126987,7 @@
         "stanceDuration": 0,
         "stallTimeout": 2,
         "complexity": "common",
-        "randomPoolEligible": true,
+        "randomPoolEligible": false,
         "attackStunEvery": 3,
         "attackStunDuration": 15,
         "attackElement": null,
@@ -127029,7 +127029,7 @@
         "selfField": null,
         "deathZone": null,
         "bleeding": null,
-        "statusResistance": 0,
+        "statusResistance": 0.5,
         "behaviorInferred": true
       },
       "modifiedForMode": false,
