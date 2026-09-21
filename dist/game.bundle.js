@@ -4767,8 +4767,8 @@ function nativeWavePlan(data,turn,roster=null){return buildWavePlan(data,turn,ro
 return {nativeWavePlan};
 },
 "native-wave-editor.js": function(load) {
-const {TRAINING_TYPES,saveWaveTable,emptyWaveTable,defaultWaveTable,enemyCost,tierPack,currentTemplate,emptyTemplate,templateLabel} = load("native-wave-fill.js");
-const {fillBudgetWave,waveRng} = load("native-wave-random.js");
+const {TRAINING_TYPES,saveWaveTable,emptyWaveTable,defaultWaveTable,enemyCost,tierPack,currentTemplate,emptyTemplate,templateLabel,enemyActivity,enemyActivitySource,enemyPoolEligible} = load("native-wave-fill.js");
+const {fillBudgetWave,waveRng,filterRandomPoolTable} = load("native-wave-random.js");
 const KIND_LABEL={ 'random-pool':'常规池','mode-effect':'策略／悬赏','template':'生成模板' };
 const SORTS=[['name','名称'],['hp','生命'],['atk','攻击'],['cost','难度'],['id','ID']];
 
@@ -4777,7 +4777,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'
 const {richText} = load("protocol.js");
 const plain=s=>richText(s);
 
-function editorState(){return {type:'SPECIAL',tier:1,template:0,query:'',sort:'name',motion:'all',kind:'all',tag:'all',selected:null,sample:null,scroll:0,caret:0};}
+function editorState(){return {type:'SPECIAL',tier:1,template:0,query:'',sort:'name',motion:'all',kind:'all',tag:'all',activity:'all',readiness:'ready',selected:null,sample:null,scroll:0,caret:0};}
 
 function enemyRows(data){
  if(data.enemyIndex)return data.enemyIndex.map(e=>({...e,desc:plain(e.desc)}));
@@ -4797,12 +4797,15 @@ function portrait(data,id){const file=data.assets?.[id];return file?`<img src=".
 function filterRows(rows,ui,data,table){
  const q=ui.query.trim().toLowerCase();
  return rows.filter(e=>{
+  if(ui.activity&&ui.activity!=='all'&&enemyActivity(e.id)!==ui.activity)return false;
+  if(ui.readiness==='ready'&&!enemyPoolEligible(e.id,data))return false;
+  if(ui.readiness==='pending'&&enemyPoolEligible(e.id,data))return false;
   if(ui.motion==='FLY'&&e.motion!=='FLY')return false;
   if(ui.motion==='WALK'&&e.motion==='FLY')return false;
   if(ui.kind!=='all'&&!(e.kinds||[]).includes(ui.kind))return false;
   if(ui.tag!=='all'&&!tagsOf(data,e.id).includes(ui.tag))return false;
   if(!q)return true;
-  return e.name.toLowerCase().includes(q)||e.id.toLowerCase().includes(q)||(e.tags||[]).join(' ').toLowerCase().includes(q)||(e.desc||'').toLowerCase().includes(q);
+  return e.name.toLowerCase().includes(q)||e.id.toLowerCase().includes(q)||enemyActivity(e.id).toLowerCase().includes(q)||(e.tags||[]).join(' ').toLowerCase().includes(q)||(e.desc||'').toLowerCase().includes(q);
  }).sort((a,b)=>{
   const dir=ui.sort==='name'||ui.sort==='id'?1:-1,key=ui.sort==='cost'?'cost':ui.sort;
   const av=key==='cost'?enemyCost(table,a.id):a[key],bv=key==='cost'?enemyCost(table,b.id):b[key];
@@ -4816,13 +4819,17 @@ function clampTemplate(table,ui){
  if(!Number.isInteger(ui.template)||ui.template<0||ui.template>=n)ui.template=0;
 }
 
-function drawList(data,table,sample,byId){
- const rows=(sample.ids||[]).map((id,i)=>{
-  const e=byId[id]||{id,name:id,motion:'WALK'};
-  return `<li><b>${i+1}</b>${portrait(data,id)}<span><strong>${esc(e.name)}</strong><small>${esc(id)} · ${e.motion==='FLY'?'飞行':'地面'} · 难 ${sample.unfilled?0:enemyCost(table,id)}</small></span></li>`;
- }).join('');
- if(sample.unfilled)return `<p class="wave-ed-sample">抽中 ${esc(sample.templateName)}，池是空的，开战会出 1 只占位模板。</p><ol class="wave-ed-draw">${rows}</ol>`;
- return `<p class="wave-ed-sample">抽中 ${esc(sample.templateName)} · ${sample.ids.length} 只 · 花费 ${sample.spent} / ${sample.budget} · 剩余 ${sample.leftover}</p><ol class="wave-ed-draw">${rows||'<li>预算内买不起池里任何一只。</li>'}</ol>`;
+function drawTestDialog(data,table,sample,byId){
+ if(!sample)return '';
+ const counts=new Map();for(const id of sample.ids)counts.set(id,(counts.get(id)||0)+1);
+ return `<dialog id="wave-ed-test" class="wave-ed-test" aria-labelledby="wave-ed-test-title">
+  <header><div><small>当前模板 · 抽取测试</small><h2 id="wave-ed-test-title">${esc(sample.templateName)}</h2></div><button data-act="ed-close-test" aria-label="关闭抽取测试" autofocus>关闭</button></header>
+  <p class="wave-ed-hint">${esc(sample.activity||'未定活动')} · 仅从当前模板抽取，不影响实战随机数。</p>
+  <div class="wave-ed-test-stats"><div><strong>${sample.ids.length}</strong><span>出怪数量</span></div><div><strong>${sample.spent} <small>/ ${sample.budget}</small></strong><span>使用预算</span></div><div><strong>${sample.leftover}</strong><span>剩余预算</span></div></div>
+  ${sample.unfilled?'<p class="wave-ed-test-warning">当前模板没有可抽取敌人，结果为占位敌人。不会改抽其他模板。</p>':''}
+  <ul class="wave-ed-test-results">${[...counts].map(([id,count])=>`<li>${portrait(data,id)}<span><b>${esc(byId[id]?.name||id)}</b><small>单体难度 ${sample.unfilled?0:enemyCost(table,id)}</small></span><strong>× ${count}</strong></li>`).join('')||'<li>预算不足，无法抽取池中的敌人。</li>'}</ul>
+  <footer><span>同名敌人合并显示</span><button class="wave-ed-primary" data-act="ed-roll">再抽一次</button></footer>
+ </dialog>`;
 }
 
 function renderWaveEditor(data,table,ui){
@@ -4830,68 +4837,69 @@ function renderWaveEditor(data,table,ui){
  const type=TRAINING_TYPES.find(t=>t.id===ui.type)||TRAINING_TYPES[0],pack=tierPack(table,type.id,ui.tier),slot=pack.templates[ui.template],rows=enemyRows(data);
  const byId=Object.fromEntries(rows.map(e=>[e.id,e])),pool=slot.pool.map(id=>byId[id]||{id,name:id,motion:'WALK',hp:0,atk:0,kinds:[]});
  const filtered=filterRows(rows,ui,data,table),kinds=[...new Set(rows.flatMap(e=>e.kinds||[]))];
- const sample=ui.sample||fillBudgetWave(waveRng((type.id.length+ui.tier)*9973),table,type.id,ui.tier);
- const used=sample.unfilled?0:sample.spent,pct=sample.budget?Math.min(100,used/sample.budget*100):0;
+ const activities=[...new Set(rows.map(e=>enemyActivity(e.id)))].sort((a,b)=>a.localeCompare(b,'zh'));
+ const options=(values,current)=>values.map(([id,name])=>`<option value="${esc(id)}" ${current===id?'selected':''}>${esc(name)}</option>`).join('');
  return `<main class="wave-ed">
-  <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>编制台 / WAVE LEDGER</small><h1>敌人波次</h1></div><span>本期 ${rows.length} 条可出怪档案</span></header>
-  <p class="wave-ed-lead">同一词条、同一难度可编多套模板。开战时先随机抽一套，再按那一套的预算从它的池里抽怪，直到买不起为止。</p>
-  <p class="wave-ed-lead">内置默认配置覆盖全部 7 种词条、3 个压力档，每档按登场活动分组；前期 6–8 只、中期 15–20 只、后期 35–40 只。默认预算足够完成数量目标；手动降低预算可能减少出怪数。预算与敌人难度用于测试，不代表原作波次；部分敌人特殊能力仍待完善。恢复默认会覆盖当前整张表。</p>
-  <nav class="wave-ed-types">${TRAINING_TYPES.map(t=>`<button data-act="ed-type" data-id="${t.id}" class="${t.id===type.id?'chosen':''}">${esc(t.name)}<small>${esc(t.id)}</small></button>`).join('')}</nav>
-  <div class="wave-ed-toolbar">
-   <div class="wave-ed-tiers">${[1,2,3].map(n=>`<button data-act="ed-tier" data-tier="${n}" class="${ui.tier===n?'chosen':''}">${'I'.repeat(n)}</button>`).join('')}</div>
-   <nav class="wave-ed-temps">${pack.templates.map((row,i)=>`<button data-act="ed-temp" data-index="${i}" class="${i===ui.template?'chosen':''}">${esc(templateLabel(row,i))}<small>${row.pool.length} 种 · ${row.minCount?row.minCount+'–'+row.maxCount+'只 · ':''}预算 ${row.budget}${row.maxCost?` · ≤${row.maxCost}成本`:''}</small></button>`).join('')}<button data-act="ed-add-temp">＋ 新模板</button><button data-act="ed-copy-temp">复制本套</button><button data-act="ed-del-temp" ${pack.templates.length<=1?'disabled':''}>删除本套</button></nav>
-  </div>
-  <div class="wave-ed-toolbar">
-   <label>名称 <input id="ed-temp-name" data-act="ed-temp-name" value="${esc(slot.name)}" placeholder="模板 ${ui.template+1}" maxlength="24"></label>
-   <label>预算 <input id="ed-budget" data-act="ed-budget" type="number" min="0" step="1" value="${slot.budget}"></label>
-   <label>默认难度 <input id="ed-default" data-act="ed-default" type="number" min="1" step="1" value="${table.defaultCost}"></label>
-   <button data-act="ed-fill-type">填入本期「${esc(type.name)}」名单</button>
-   <button data-act="ed-roll">预演抽取</button>
-   <button data-act="ed-export">导出 JSON</button>
-   <button data-act="ed-import">导入 JSON</button>
-   <button data-act="ed-defaults" title="替换全部词条、模板与费用为内置测试配置">恢复默认配置</button>
-   <button data-act="ed-reset">清空本表</button>
-  </div>
-  <div class="wave-ed-meter" aria-label="预算占用"><i style="width:${pct}%"></i></div>
-  ${drawList(data,table,sample,byId)}
-  <div class="wave-ed-body">
-   <section class="wave-ed-pool">
-    <h2>${esc(type.name)} · ${'I'.repeat(ui.tier)} · ${esc(templateLabel(slot,ui.template))}<small>${pool.length} 种</small></h2>
-    <div class="wave-ed-cards">${pool.map(e=>`<article class="${ui.selected===e.id?'chosen':''}">
-      <button data-act="ed-select" data-id="${esc(e.id)}" class="wave-ed-card">${portrait(data,e.id)}<b>${esc(e.name)}</b><span>${e.motion==='FLY'?'飞行':'地面'} · 难 ${enemyCost(table,e.id)}</span></button>
-      <label>难 <input data-act="ed-cost" data-id="${esc(e.id)}" type="number" min="1" step="1" value="${enemyCost(table,e.id)}"></label>
-      <button data-act="ed-remove" data-id="${esc(e.id)}" class="wave-ed-x" aria-label="移出池">×</button>
-    </article>`).join('')||'<p class="wave-ed-empty">从右侧档案点「加入」写入本套模板。开战只从抽中的那一套出怪。</p>'}</div>
-   </section>
-   <section class="wave-ed-db">
-    <h2>敌人档案<small>${filtered.length} / ${rows.length}</small></h2>
-    <div class="wave-ed-filters">
-     <input id="ed-search" type="search" placeholder="搜索名称、ID、描述" value="${esc(ui.query)}" aria-label="搜索敌人">
-     <select id="ed-motion" data-act="ed-motion">${[['all','全部移动'],['WALK','地面'],['FLY','飞行']].map(([id,name])=>`<option value="${id}" ${ui.motion===id?'selected':''}>${name}</option>`).join('')}</select>
-     <select id="ed-kind" data-act="ed-kind"><option value="all">全部来源</option>${kinds.map(k=>`<option value="${esc(k)}" ${ui.kind===k?'selected':''}>${KIND_LABEL[k]||k}</option>`).join('')}</select>
-     <select id="ed-tag" data-act="ed-tag"><option value="all">全部词条标签</option>${TRAINING_TYPES.map(t=>`<option value="${t.id}" ${ui.tag===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select>
-     <select id="ed-sort" data-act="ed-sort">${SORTS.map(([id,name])=>`<option value="${id}" ${ui.sort===id?'selected':''}>按${name}</option>`).join('')}</select>
+  <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>WAVE EDITOR</small><h1>敌人编制台</h1></div><span class="wave-ed-autosave">编辑自动保存</span><button data-act="ed-tools" aria-expanded="${!!ui.tools}">配置管理</button></header>
+  ${ui.tools?`<section class="wave-ed-management" aria-label="配置管理"><p>每套模板只包含同活动敌人。实战随机选模板；抽取测试仅使用当前模板。恢复默认或清空会覆盖整张表。</p><div><button data-act="ed-export">导出 JSON</button><button data-act="ed-import">导入 JSON</button><button data-act="ed-defaults">恢复默认配置</button><button data-act="ed-reset">清空本表</button><label>缺省难度 <input data-act="ed-default" type="number" min="1" value="${table.defaultCost}"></label></div></section>`:''}
+  <div class="wave-ed-layout">
+   <aside class="wave-ed-sidebar">
+    <label class="wave-ed-field">特训词条<select data-act="ed-type-select" aria-label="选择特训词条">${options(TRAINING_TYPES.map(t=>[t.id,t.name]),type.id)}</select></label>
+    <div class="wave-ed-tiers" aria-label="压力档">${[1,2,3].map(n=>`<button data-act="ed-tier" data-tier="${n}" aria-pressed="${ui.tier===n}" class="${ui.tier===n?'chosen':''}">${['低压','中压','高压'][n-1]}</button>`).join('')}</div>
+    <div class="wave-ed-section-label"><span>模板</span><small>${pack.templates.length} 套</small></div>
+    <nav class="wave-ed-temps" aria-label="模板列表">${pack.templates.map((row,i)=>`<button data-act="ed-temp" data-index="${i}" aria-pressed="${i===ui.template}" class="${i===ui.template?'chosen':''}"><b>${esc(templateLabel(row,i))}</b><small>${row.pool.length} 种敌人 · 预算 ${row.budget}</small></button>`).join('')}</nav>
+    <button class="wave-ed-new" data-act="ed-add-temp">＋ 新建模板</button>
+   </aside>
+   <section class="wave-ed-work">
+    <header class="wave-ed-current"><div><small>${esc(type.name)} / ${['低压','中压','高压'][ui.tier-1]}</small><h2>${esc(templateLabel(slot,ui.template))}</h2></div><button class="wave-ed-primary" data-act="ed-roll">测试当前模板</button></header>
+    <div class="wave-ed-settings">
+     <label class="wave-ed-field">模板名称<input id="ed-temp-name" data-act="ed-temp-name" value="${esc(slot.name)}" placeholder="模板 ${ui.template+1}" maxlength="60"></label>
+     <label class="wave-ed-field">登场活动<select data-act="ed-template-activity" aria-label="模板活动" ${slot.pool.length?'disabled title="移出池中敌人后可更换活动"':''}><option value="">由首名敌人确定</option>${options(activities.map(a=>[a,a]),slot.activity)}</select></label>
+     <label class="wave-ed-field">预算<input id="ed-budget" data-act="ed-budget" type="number" min="0" step="1" value="${slot.budget}"></label>
     </div>
-    <div id="ed-catalog" class="wave-ed-table-wrap">
-     <table class="wave-ed-table"><thead><tr><th></th><th>名称</th><th>移动</th><th>生命</th><th>攻击</th><th>防御</th><th>难度</th><th></th></tr></thead>
-     <tbody>${filtered.map(e=>`<tr data-act="ed-select" data-id="${esc(e.id)}" class="${ui.selected===e.id?'chosen':''}${slot.pool.includes(e.id)?' in-pool':''}">
-      <td>${portrait(data,e.id)}</td>
-      <td><b>${esc(e.name)}</b><small>${esc(e.id)}${tagsOf(data,e.id).length?' · '+tagsOf(data,e.id).map(id=>TRAINING_TYPES.find(t=>t.id===id)?.name||id).join(' / '):''}</small></td>
-      <td>${e.motion==='FLY'?'飞行':'地面'}</td>
-      <td>${e.hp}</td><td>${e.atk}</td><td>${e.def}</td>
-      <td><input data-act="ed-cost" data-id="${esc(e.id)}" type="number" min="1" step="1" value="${enemyCost(table,e.id)}"></td>
-      <td>${slot.pool.includes(e.id)?`<button data-act="ed-remove" data-id="${esc(e.id)}">移出</button>`:`<button data-act="ed-add" data-id="${esc(e.id)}">加入</button>`}</td>
-     </tr>`).join('')||'<tr><td colspan="8">没有符合筛选的敌人。</td></tr>'}</tbody></table>
+    <div class="wave-ed-template-meta"><span>${slot.minCount?`目标 ${slot.minCount}–${slot.maxCount} 只`:'按预算抽取'}${slot.maxCost?` · 单体难度 ≤ ${slot.maxCost}`:''}</span><div><button data-act="ed-copy-temp">复制</button><button data-act="ed-del-temp" ${pack.templates.length<=1?'disabled':''}>删除</button></div></div>
+    <div class="wave-ed-body">
+     <section class="wave-ed-pool">
+      <h2>模板敌人 <small>${pool.length} 种</small></h2>
+      <p class="wave-ed-hint">${esc(slot.activity||'加入首名敌人后锁定活动')}</p>
+      <div class="wave-ed-cards">${pool.map(e=>`<article class="${ui.selected===e.id?'chosen':''}">
+       <button data-act="ed-select" data-id="${esc(e.id)}" class="wave-ed-card">${portrait(data,e.id)}<span><b>${esc(e.name)}</b><small>${enemyPoolEligible(e.id,data)?'已准入':'待补齐'}</small></span></button>
+       <label>难度<input data-act="ed-cost" data-id="${esc(e.id)}" aria-label="${esc(e.name)}难度" type="number" min="1" value="${enemyCost(table,e.id)}"></label>
+       <button data-act="ed-remove" data-id="${esc(e.id)}" class="wave-ed-x" aria-label="移出${esc(e.name)}">×</button>
+      </article>`).join('')||'<p class="wave-ed-empty">模板还是空的<br>从敌人档案中选择并加入。</p>'}</div>
+      <button class="wave-ed-fill" data-act="ed-fill-type">填入同活动词条敌人</button>
+     </section>
+     <section class="wave-ed-db">
+      <h2>敌人档案 <small>${filtered.length} / ${rows.length}</small></h2>
+      <div class="wave-ed-search-row"><input id="ed-search" type="search" placeholder="搜索敌人名称、活动…" value="${esc(ui.query)}" aria-label="搜索敌人"><button data-act="ed-filters" aria-expanded="${!!ui.moreFilters}">${ui.moreFilters?'收起筛选':'更多筛选'}</button></div>
+      <div class="wave-ed-filters">
+       <select data-act="ed-activity" aria-label="筛选登场活动"><option value="all">全部登场活动</option>${options(activities.map(a=>[a,a]),ui.activity)}</select>
+       <select data-act="ed-readiness" aria-label="筛选逻辑状态">${options([['ready','逻辑已准入'],['pending','待补齐'],['all','全部逻辑状态']],ui.readiness)}</select>
+      </div>
+      ${ui.moreFilters?`<div class="wave-ed-extra-filters">
+       <select id="ed-motion" data-act="ed-motion" aria-label="筛选移动方式">${options([['all','全部移动'],['WALK','地面'],['FLY','飞行']],ui.motion)}</select>
+       <select id="ed-kind" data-act="ed-kind" aria-label="筛选来源">${options([['all','全部来源'],...kinds.map(k=>[k,KIND_LABEL[k]||k])],ui.kind)}</select>
+       <select id="ed-tag" data-act="ed-tag" aria-label="筛选词条">${options([['all','全部词条'],...TRAINING_TYPES.map(t=>[t.id,t.name])],ui.tag)}</select>
+       <select id="ed-sort" data-act="ed-sort" aria-label="排序">${options(SORTS.map(([id,name])=>[id,'按'+name]),ui.sort)}</select>
+      </div>`:''}
+      <div id="ed-catalog" class="wave-ed-table-wrap"><table class="wave-ed-table"><thead><tr><th>敌人</th><th>难度</th><th><span class="wave-ed-sr-only">操作</span></th></tr></thead><tbody>
+       ${filtered.map(e=>`<tr class="${ui.selected===e.id?'chosen':''}${slot.pool.includes(e.id)?' in-pool':''}">
+        <td><button class="wave-ed-enemy" data-act="ed-select" data-id="${esc(e.id)}">${portrait(data,e.id)}<span><b>${esc(e.name)}</b><small>${esc(enemyActivity(e.id))} · ${e.motion==='FLY'?'飞行':'地面'}${!enemyPoolEligible(e.id,data)?' · 待补齐':''}</small></span></button></td>
+        <td>${enemyCost(table,e.id)}</td><td>${slot.pool.includes(e.id)?`<button data-act="ed-remove" data-id="${esc(e.id)}">移出</button>`:`<button data-act="ed-add" data-id="${esc(e.id)}" ${!enemyPoolEligible(e.id,data)||slot.activity&&slot.activity!==enemyActivity(e.id)?'disabled':''}>${!enemyPoolEligible(e.id,data)?'待补齐':slot.activity&&slot.activity!==enemyActivity(e.id)?'不同活动':'加入'}</button>`}</td>
+       </tr>`).join('')||'<tr><td colspan="3" class="wave-ed-empty">没有符合筛选的敌人。</td></tr>'}
+      </tbody></table></div>
+      ${detail(data,byId[ui.selected],table)}
+     </section>
     </div>
-    ${detail(data,byId[ui.selected],table)}
    </section>
   </div>
+  ${drawTestDialog(data,table,ui.sample,byId)}
  </main>`;
 }
 
 function detail(data,e,table){
  if(!e)return '<aside class="wave-ed-detail"><p>点选一条档案查看属性。难度值对所有词条共用。</p></aside>';
- return `<aside class="wave-ed-detail">${portrait(data,e.id)}<h3>${esc(e.name)}</h3><p>${esc(e.id)}</p><p>${e.motion==='FLY'?'飞行':'地面'} · ${e.applyWay==='RANGED'?'远程':e.applyWay==='NONE'?'不攻击':'近战'} · 难度 ${enemyCost(table,e.id)}</p><p>生命 ${e.hp} / 攻击 ${e.atk} / 防御 ${e.def} / 法抗 ${e.res}</p><p>移速 ${e.speed} · 攻击间隔 ${e.interval}s</p><p>${esc(e.desc)||'无描述'}</p><p>${(e.kinds||[]).map(k=>KIND_LABEL[k]||k).join(' · ')||'未分类'}</p></aside>`;
+ return `<aside class="wave-ed-detail">${portrait(data,e.id)}<h3>${esc(e.name)}</h3><p>${esc(e.id)}</p><p>${esc(enemyActivity(e.id))} · ${enemyPoolEligible(e.id,data)?'逻辑已准入（本期范围）':'逻辑待补齐'} · <a href="${esc(enemyActivitySource(e.id))}" target="_blank" rel="noopener noreferrer">PRTS 资料</a></p><p>${e.motion==='FLY'?'飞行':'地面'} · ${e.applyWay==='RANGED'?'远程':e.applyWay==='NONE'?'不攻击':'近战'} · 难度 ${enemyCost(table,e.id)}</p><label>难度<input data-act="ed-cost" data-id="${esc(e.id)}" aria-label="${esc(e.name)}难度" type="number" min="1" value="${enemyCost(table,e.id)}"></label><p>生命 ${e.hp} / 攻击 ${e.atk} / 防御 ${e.def} / 法抗 ${e.res}</p><p>移速 ${e.speed} · 攻击间隔 ${e.interval}s</p><p>${esc(e.desc)||'无描述'}</p><p>${(e.kinds||[]).map(k=>KIND_LABEL[k]||k).join(' · ')||'未分类'}</p></aside>`;
 }
 
 function applyEditorAction(act,dataset,table,ui,data){
@@ -4899,13 +4907,16 @@ function applyEditorAction(act,dataset,table,ui,data){
  if(act==='ed-tier'){ui.tier=Number(dataset.tier);ui.template=0;ui.sample=null;return 'render';}
  if(act==='ed-temp'){ui.template=Number(dataset.index)||0;ui.sample=null;return 'render';}
  if(act==='ed-add-temp'){const list=tierPack(table,ui.type,ui.tier).templates;list.push(emptyTemplate(ui.tier));ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
- if(act==='ed-copy-temp'){const list=tierPack(table,ui.type,ui.tier).templates,src=currentTemplate(table,ui.type,ui.tier,ui.template);list.push({name:(src.name||templateLabel(src,ui.template))+' 副本',budget:src.budget,maxCost:src.maxCost,pool:src.pool.slice(),...(src.minCount?{minCount:src.minCount,maxCount:src.maxCount}:{})});ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
+ if(act==='ed-copy-temp'){const list=tierPack(table,ui.type,ui.tier).templates,src=currentTemplate(table,ui.type,ui.tier,ui.template);list.push({activity:src.activity,name:(src.name||templateLabel(src,ui.template))+' 副本',budget:src.budget,maxCost:src.maxCost,pool:src.pool.slice(),...(src.minCount?{minCount:src.minCount,maxCount:src.maxCount}:{})});ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-del-temp'){const list=tierPack(table,ui.type,ui.tier).templates;if(list.length<=1){list[0]=emptyTemplate(ui.tier);ui.template=0;}else{list.splice(ui.template,1);if(ui.template>=list.length)ui.template=list.length-1;}ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-select'){ui.selected=dataset.id;return 'render';}
- if(act==='ed-add'){const pool=currentTemplate(table,ui.type,ui.tier,ui.template).pool;if(!pool.includes(dataset.id))pool.push(dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}
+ if(act==='ed-add'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),pool=slot.pool;if(!enemyPoolEligible(dataset.id,data)||!data.enemies?.[dataset.id]||slot.activity&&slot.activity!==enemyActivity(dataset.id))return 'incompatible';slot.activity=enemyActivity(dataset.id);if(!pool.includes(dataset.id))pool.push(dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-remove'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template);slot.pool=slot.pool.filter(id=>id!==dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}
- if(act==='ed-fill-type'){const ids=originalTypeIds(data,ui.type).filter(id=>data.enemies?.[id]||data.enemyIndex?.some(e=>e.id===id));currentTemplate(table,ui.type,ui.tier,ui.template).pool=[...new Set(ids)];ui.sample=null;saveWaveTable(table);return 'filled';}
- if(act==='ed-roll'){ui.sample=fillBudgetWave(waveRng((Date.now()&0xffffffff)>>>0),table,ui.type,ui.tier);return 'render';}
+ if(act==='ed-fill-type'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),activity=slot.activity||(ui.activity!=='all'?ui.activity:'');if(!activity)return 'choose-activity';slot.activity=activity;const ids=originalTypeIds(data,ui.type).filter(id=>data.enemies?.[id]&&enemyPoolEligible(id,data)&&enemyActivity(id)===activity&&(!slot.maxCost||enemyCost(table,id)<=slot.maxCost));slot.pool=[...new Set(ids)];ui.sample=null;saveWaveTable(table);return 'filled';}
+ if(act==='ed-roll'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),single={...table,types:{[ui.type]:{[ui.tier]:{templates:[{...slot,name:templateLabel(slot,ui.template)}]}}}};ui.sample=fillBudgetWave(waveRng((Date.now()&0xffffffff)>>>0),filterRandomPoolTable(single,data),ui.type,ui.tier);return 'render';}
+ if(act==='ed-close-test'){ui.sample=null;return 'render';}
+ if(act==='ed-tools'){ui.tools=!ui.tools;return 'render';}
+ if(act==='ed-filters'){ui.moreFilters=!ui.moreFilters;return 'render';}
  if(act==='ed-defaults'){Object.assign(table,defaultWaveTable());ui.template=0;ui.sample=null;ui.selected=null;saveWaveTable(table);return 'defaults';}
  if(act==='ed-reset'){Object.assign(table,emptyWaveTable());ui.template=0;ui.sample=null;saveWaveTable(table);return 'reset';}
  if(act==='ed-export'){return 'export';}
@@ -4915,9 +4926,13 @@ function applyEditorAction(act,dataset,table,ui,data){
 
 function applyEditorField(act,id,value,table,ui){
  if(act==='ed-budget'){currentTemplate(table,ui.type,ui.tier,ui.template).budget=Math.max(0,Number(value)||0);ui.sample=null;saveWaveTable(table);}
- else if(act==='ed-temp-name'){currentTemplate(table,ui.type,ui.tier,ui.template).name=String(value||'').slice(0,24);saveWaveTable(table);}
+ else if(act==='ed-temp-name'){currentTemplate(table,ui.type,ui.tier,ui.template).name=String(value||'').slice(0,60);ui.sample=null;saveWaveTable(table);}
  else if(act==='ed-default'){table.defaultCost=Math.max(1,Number(value)||1);ui.sample=null;saveWaveTable(table);}
  else if(act==='ed-cost'&&id){table.costs[id]=Math.max(1,Number(value)||1);ui.sample=null;saveWaveTable(table);}
+ else if(act==='ed-type-select'){ui.type=value;ui.template=0;ui.sample=null;}
+ else if(act==='ed-activity')ui.activity=value;
+ else if(act==='ed-readiness')ui.readiness=value;
+ else if(act==='ed-template-activity'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template);if(slot.pool.length)return false;slot.activity=value;ui.activity=value||'all';ui.sample=null;saveWaveTable(table);}
  else if(act==='ed-motion')ui.motion=value;
  else if(act==='ed-kind')ui.kind=value;
  else if(act==='ed-tag')ui.tag=value;
@@ -4926,7 +4941,7 @@ function applyEditorField(act,id,value,table,ui){
  return true;
 }
 
-return {editorState,enemyRows,originalTypeIds,renderWaveEditor,applyEditorAction,applyEditorField};
+return {editorState,enemyRows,originalTypeIds,filterRows,renderWaveEditor,applyEditorAction,applyEditorField};
 },
 "native-sp.js": function(load) {
 function spTypeOf(skill){
@@ -12436,7 +12451,7 @@ function render(){
   if(state.view==='strategy-select'){root.innerHTML=renderStrategySelectScreen();decorateStrategyCatalog();renderModal();return;}
  if(state.view==='briefing'){root.innerHTML=renderBriefingScreen();renderModal();return;}
  if(state.view==='briefing'){const d=state.draft,mode=data.season.modeDataDict[d.modeId],mapName=data.maps.filter(m=>m.weight>0).findIndex(m=>m.stageId===d.mapId),tags=(d.roster.types||[]).map(id=>trainingType(id)).filter(Boolean),order=(d.roster.order||[]).map(id=>trainingType(id)?.name||id);root.innerHTML=`<main class="native-lobby native-briefing"><header><button data-act="home">‹ 大厅</button><span>战前准备</span></header><h1>战前准备</h1><p>${esc(d.cat?'海猫模式':d.egg325?'325模式':mode?.name||'')} · 阵地 ${mapName+1}</p><h2>本局特训</h2><p>抽中三种词条，战斗按 ${order.map(esc).join(' → ')} 轮换出怪。</p><div class="native-tags">${tags.map(t=>`<article><b>${esc(t.name)}</b><small>${esc(t.id)}</small><p>${esc(t.desc)}</p></article>`).join('')}</div><h2>初始策略</h2><div class="native-strategy-pane"><div class="native-strategies">${Object.values(data.season.bandDataListDict).map(b=>`<button data-act="band" data-id="${b.bandId}" class="${state.band===b.bandId?'chosen':''}">${avatar(b.bandId)}<span><b>${esc(data.common.bandDataDict[b.bandId].bandName)}</b><small>生命 ${b.totalHp}</small><p>${esc(plain(b.bandDesc))}</p></span></button>`).join('')}</div></div><button class="native-primary native-begin" data-act="begin">进入对局 →</button></main>`;renderModal();return;}
- if(state.view==='editor'){root.innerHTML=renderWaveEditor(data,state.waveTable,state.editor);const search=document.getElementById('ed-search'),catalog=document.getElementById('ed-catalog');if(search&&state.editor.keepSearch){search.focus();try{search.setSelectionRange(state.editor.caret,state.editor.caret);}catch{}}state.editor.keepSearch=false;if(catalog)catalog.scrollTop=state.editor.scroll||0;renderModal();return;}
+ if(state.view==='editor'){const oldNav=root.querySelector('.wave-ed-temps'),navTop=oldNav?.scrollTop||0,navLeft=oldNav?.scrollLeft||0;root.innerHTML=renderWaveEditor(data,state.waveTable,state.editor);const nav=root.querySelector('.wave-ed-temps');nav.scrollTop=navTop;nav.scrollLeft=navLeft;const search=document.getElementById('ed-search'),catalog=document.getElementById('ed-catalog');if(search&&state.editor.keepSearch){search.focus();try{search.setSelectionRange(state.editor.caret,state.editor.caret);}catch{}}state.editor.keepSearch=false;if(catalog)catalog.scrollTop=state.editor.scroll||0;const dialog=root.querySelector('#wave-ed-test');if(dialog){dialog.showModal();const close=()=>{state.editor.sample=null;render();root.querySelector('.wave-ed-current [data-act=ed-roll]')?.focus();};dialog.addEventListener('cancel',e=>{e.preventDefault();close();});dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();}});}renderModal();return;}
  const g=state.game,s=g.s,turn=currentTurn(),rows=g.bonds();root.innerHTML=`<main class="native-game${s.phase==='battle'?' is-battle':''}${state.supplyCollapsed?' is-supply-collapsed':''}${state.sandbox?' is-sandbox':''}">${dossier()}<header class="native-top"><button data-act="home">‹ 大厅</button><strong>卫戍协议 / 盟约下半</strong><button class="native-mobile-info" data-act="field-info">战况 / 设置</button><button data-act="limits">已知差异</button><button data-act="branches">分支规则</button><button data-act="export">导出存档</button></header><div class="native-workspace"><aside class="native-bonds">${sortedBondRows(rows,s.bondLayers).map(([id,b])=>`<button data-act="bond-info" data-id="${id}" class="${b.active?'active':''}"><b>${data.season.bondInfoDict[id].name}</b><span>${b.count} / ${data.season.bondInfoDict[id].activeCount}</span><small>${data.season.bondInfoDict[id].noStack?'':(s.bondLayers[id]||0)+' 层'}</small></button>`).join('')||'<p>部署干员以激活盟约</p>'}</aside><section class="native-field"><div class="native-field-caption"><b>${state.sandbox?(s.phase==='battle'?'技能测试':'测试配置'):s.phase==='battle'?(turn.isBossTurn?'木桩测试':'自动作战'):s.phase==='prep'?'阵地休整':s.phase==='finished'?'模拟结束':'回合结算'}</b><span id="native-wave-progress">${s.units.filter(u=>u.position).length} / ${s.capacity} 部署</span></div><div class="native-terrain-legend" aria-label="地块图例"><span><i class="terrain-high"></i>高台</span><span><i class="terrain-ground"></i>可部署地面</span><span><i class="terrain-isolated"></i>隔离平台</span><span><i class="terrain-corridor"></i>可通行通道</span><span><i class="terrain-blocked"></i>阻隔工事</span><span><i class="terrain-entry"></i>敌方入口</span><span><i class="terrain-goal"></i>防守目标</span></div><div class="native-board"><canvas id="native-canvas" tabindex="0" aria-label="战场棋盘，先选位置再拖动朝向确认"></canvas><span class="native-cost" title="战斗费用余额，与商店资金独立"><small>Cost 费用</small><output id="native-cost-balance" aria-label="战斗费用余额">—</output></span></div><div class="native-facing" ${state.preview?'':'hidden'}>拖动选择朝向，松手确认；中心松手取消。${[0,1,2,3].map((d)=>`<button data-act="aim" data-dir="${d}">${['→','↓','←','↑'][d]}</button>`).join('')}<button data-act="place-confirm">确认放置</button><button data-act="cancel">取消</button></div><div class="native-controls"><button data-act="pause" ${s.phase!=='battle'?'disabled':''}>${state.paused?'继续':'暂停'}</button>${[1,2,4].map(n=>`<button data-act="speed" data-speed="${n}" class="${state.speed===n?'chosen':''}">${n}×</button>`).join('')}<button data-act="mute">${state.muted?'声音关':'声音开'}</button><label>音量 <input id="native-volume" aria-label="战斗音量" type="range" min="0" max="1" step="0.05" value="${state.volume}" style="width:72px"></label><button data-act="reduce-fx">${state.reduceFx?'动效少':'动效'}</button>${s.phase==='prep'?(state.sandbox?'<button class="native-primary" data-act="sandbox-start">开始测试 →</button>':'<button class="native-primary" data-act="start">准备完毕 →</button>'):s.phase==='intermission'?'<button class="native-primary" data-act="next">进入下一回合 →</button>':s.phase==='battle'&&turn.isBossTurn?'<button data-act="stop">结束木桩并播报伤害</button>':s.phase==='finished'?'<button data-act="result">查看伤害报告</button>':''}</div><div class="native-bench-label${g.handFull()?' is-over':''}" id="native-hand-label">整备区 ${g.handLength()} / 10 ${g.handFull()?'<em class="native-hand-warn">已满，出售或部署清出空余后才能购买</em>':''}<span id="native-drop-hint" aria-live="polite">可将场上干员拖回此处；换位后重新选朝向</span></div><div class="native-bench" id="native-hand" aria-label="整备区">${s.units.filter(u=>!u.position).map(u=>`<button data-act="select" data-uid="${u.uid}" class="${state.selected===u.uid||inspectSame('unit',u.uid)?'chosen':''}">${avatar(u.charId)}<b>${esc(data.profiles[u.chessId].name)}</b>${data.profiles[u.chessId].isGolden?'<small>精锐</small>':''}</button>`).join('')}${s.items.map(i=>`<div role="button" tabindex="0" data-act="item" data-uid="${i.uid}" class="${state.item===i.uid||inspectSame('pack',i.uid)?'chosen':''}"><span class="native-item-icon">◇</span><b>${esc(itemName(i.chessId))}</b></div>`).join('')}</div></section><aside class="native-detail">${state.sandbox?sandboxDetail():waveIntel()}${detail()}<h3>${esc(data.common.bandDataDict[s.bandId].bandName)}</h3><p>${esc(plain(data.season.bandDataListDict[s.bandId].bandDesc))}</p><p>${turn.isBossTurn?'最终木桩：生命无限，防御0、法抗0，倒计时150秒。':'开局抽取三种特训词条；每档按难度预算从敌人池抽取，空池使用占位模板。'}</p><div id="native-combat-stats"></div></aside></div><div class="native-status" id="native-status"></div><section class="native-shop" id="native-supply-shop"><div><h2>调度中心 ${s.level}</h2><button class="native-supply-toggle" data-act="supply-toggle" aria-controls="native-supply-shop" aria-expanded="${!state.supplyCollapsed}">${state.supplyCollapsed?'展开商店 ▴':'收起商店 ▾'}</button><button data-act="upgrade" ${s.phase!=='prep'?'disabled':''}>升级 ${catOn()?'ALL':(g.terms().upgradeCost??'MAX')} ◆</button><button data-act="refresh" ${s.phase!=='prep'?'disabled':''}${s.forcedRefresh?` title="特殊刷新：此次刷新出现的干员优先为${esc(data.season.bondInfoDict[s.forcedRefresh.bond]?.name||'指定盟约')}干员"`:''}>${s.forcedRefresh?`特殊刷新${s.forcedRefresh.count>1?` ×${s.forcedRefresh.count}`:''}`:'刷新'} ${s.freeRefresh?'免费':catOn()?'ALL':'1 ◆'}</button>${catOn()?'<button data-act="stockview" title="查看各干员剩余库存">库存</button>':''}<button data-act="lock" ${s.phase!=='prep'?'disabled':''}>${s.locked?'❄ 已冻结':'冻结'}</button>${s.rewardPending?.tier?'<span class="native-reward-shop-hint">三合一奖励选择中 · 点击候选卡片预览，再次点击确认</span>':''}${g.handFull()?'<span class="native-reward-shop-hint is-over" title="召唤物卡、干员与装备一起占整备区格">整备区已满，暂不可购入干员／装备</span>':''}</div><div class="native-shop-cards">${shopCards(g,s)}</div></section></main>`;canvas=document.getElementById('native-canvas');updateHud();fitWaveFaces();draw();renderModal();showRequired();
  }finally{painting=false;paint325();}
 }
@@ -12520,16 +12535,18 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
  if(a==='supply-toggle'){state.supplyCollapsed=!state.supplyCollapsed;render();return;}
  if(a==='sandbox'){enterPlayChrome();openSandbox();return;}if(a==='home'&&state.sandbox){const previous=state.sandbox.previousGame||null;state.sandbox=null;state.game=previous;state.view='lobby';state.paused=true;leavePlayChrome();render();return;}if(a==='sandbox-exit'){const previous=state.sandbox?.previousGame||null;state.sandbox=null;state.game=previous;state.view='lobby';state.paused=true;leavePlayChrome();render();return;}if(a==='sandbox-reset'){sandboxReset();return;}if(a==='sandbox-add-op'){sandboxAddOperator(button.dataset.id);return;}if(a==='sandbox-add-enemy'){sandboxSpawnEnemy(button.dataset.id,false);return;}if(a==='sandbox-add-dummy'){sandboxSpawnEnemy('enemy_1041_lazerd',true);return;}if(a==='sandbox-remove-enemy'){sandboxRemoveEnemy(uid);return;}if(a==='sandbox-remove-op'){const sb=state.sandbox;if(sb){sb.economy.s.units=sb.economy.s.units.filter(u=>u.uid!==uid);if(sb.battle)sb.battle.s.units=sb.battle.s.units.filter(u=>u.uid!==uid);render();}return;}if(a==='sandbox-start'){sandboxStart();return;}if(a==='sandbox-pause'){if(state.sandbox?.phase==='battle'){state.paused=!state.paused;render();}return;}if(a==='sandbox-step'){if(state.sandbox?.battle){state.sandbox.battle.step();render();}return;}if(a==='sandbox-clear-enemies'){if(state.sandbox){state.sandbox.enemyDrafts=[];if(state.sandbox.battle)state.sandbox.battle.s.enemies=[];render();}return;}if(a==='sandbox-fill-sp'){const sb=state.sandbox,u=sb?.battle?.s.units.find(v=>v.uid===uid);if(u){u.sp=sb.battle.spCost(u);render();}return;}if(a==='sandbox-skill'){const sb=state.sandbox,u=sb?.battle?.s.units.find(v=>v.uid===uid);if(u){if(u.skillLeft>0||u.ammo>0)sb.battle.deactivate(u);else{u.sp=sb.battle.spCost(u);sb.battle.activate(u);}render();}return;}
  if(a==='field-info'){modal(`<h2>战况 / 设置</h2>${document.querySelector('.native-detail').innerHTML.replace(/ id="[^"]*"/g,'')}${document.querySelector('.native-terrain-legend').outerHTML}<label>音量 <input data-native-volume aria-label="战斗音量" type="range" min="0" max="1" step="0.05" value="${state.volume}"></label><p><button data-act="limits">已知差异</button> <button data-act="branches">分支规则</button> <button data-act="export">导出存档</button></p>`);fitWaveFaces();return;}
- if(a==='editor'){state.view='editor';state.waveTable=loadWaveTable();render();return;}
+ if(a==='editor'){state.view='editor';state.editor.sample=null;state.waveTable=loadWaveTable();render();return;}
  if(a.startsWith('ed-')){
   const catalog=document.getElementById('ed-catalog');state.editor.scroll=catalog?.scrollTop||0;
   const result=applyEditorAction(a,button.dataset,state.waveTable,state.editor,data);
   if(result==='export'){const url=URL.createObjectURL(new Blob([JSON.stringify(state.waveTable,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-wave-table.json';link.click();URL.revokeObjectURL(url);return;}
-  if(result==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{state.waveTable=saveWaveTable(normalizeWaveTable(JSON.parse(await input.files[0].text())));notice('已导入波次表');render();}catch(e){notice(e.message||'无法读取波次表');}};input.click();return;}
-  if(result==='filled')notice('已写入本期该词条名单，难度值仍需逐个设定。');
+  if(result==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{state.waveTable=saveWaveTable(normalizeWaveTable(JSON.parse(await input.files[0].text())));state.editor.sample=null;state.editor.template=0;notice('已导入波次表');render();}catch(e){notice(e.message||'无法读取波次表');}};input.click();return;}
+  if(result==='filled')notice('已写入同活动、已准入且符合难度限制的词条名单。');
+  if(result==='choose-activity')notice('请先选择模板活动，或在档案中筛选一个活动。');
+  if(result==='incompatible')notice('只能加入逻辑已准入、且与本模板同活动的敌人。');
   if(result==='defaults')notice('已恢复内置默认配置，下一次生成波次时生效。');
   if(result==='reset')notice('已清空全部词条池和自定义难度。');
-  if(result)render();return;
+  if(result)render();if(a==='ed-close-test')root.querySelector('.wave-ed-current [data-act=ed-roll]')?.focus();return;
  }
   if(a==='strategy-select'&&state.view==='briefing'){state.strategyDraft=null;state.view='strategy-select';render();return;}if(a==='strategy-pick'&&state.view==='strategy-select'){const catalog=document.querySelector('.native-strategy-catalog'),scrollHost=catalog?.scrollHeight>catalog?.clientHeight?catalog:catalog?.closest('.native-lobby'),scroll=scrollHost?.scrollTop||0,id=button.dataset.id;if(state.strategyDraft===id){state.band=id;state.strategyDraft=null;state.view='briefing';render();return;}state.strategyDraft=id;render();const next=document.querySelector('.native-strategy-catalog'),nextHost=next?.scrollHeight>next?.clientHeight?next:next?.closest('.native-lobby');if(nextHost)nextHost.scrollTop=scroll;return;}if(a==='strategy-cancel'&&state.view==='strategy-select'){state.strategyDraft=null;state.view='briefing';render();return;}
  if(a==='new'){const egg=state.mode===EGG_MODE_ID,cat=state.mode===CAT_MODE_ID,modeId=egg?EGG_BASE_MODE:cat?CAT_BASE_MODE:state.mode,seed=(Date.now()&0xffffffff)>>>0;state.draft={modeId,mapId:state.map,seed,roster:createWaveRoster({random:waveRng(seed),data,modeId}),egg325:egg,cat};state.view='briefing';state.strategyDraft=null;state.modal=null;render();return;}
@@ -12726,7 +12743,7 @@ function draw(){
 }
 root.addEventListener('change',e=>{
  if(e.target.id==='native-mode')state.mode=e.target.value;if(e.target.id==='native-map')state.map=e.target.value;if(e.target.id==='native-skill'){state.game.perform('skill',Number(e.target.dataset.uid),Number(e.target.value));save();render();}
- if(state.view==='editor'&&e.target.dataset.act){const catalog=document.getElementById('ed-catalog');state.editor.scroll=catalog?.scrollTop||0;if(applyEditorField(e.target.dataset.act,e.target.dataset.id,e.target.value,state.waveTable,state.editor)){if(['ed-budget','ed-cost','ed-default','ed-temp-name'].includes(e.target.dataset.act)){const sample=root.querySelector('.wave-ed-sample');if(sample)sample.textContent='配置已更新，点击“预演抽取”查看新结果。';}else queueMicrotask(()=>render());}}
+ if(state.view==='editor'&&e.target.dataset.act){const catalog=document.getElementById('ed-catalog');state.editor.scroll=catalog?.scrollTop||0;if(applyEditorField(e.target.dataset.act,e.target.dataset.id,e.target.value,state.waveTable,state.editor)){if(['ed-budget','ed-cost','ed-default','ed-temp-name'].includes(e.target.dataset.act)){const ui=state.editor,slot=state.waveTable.types[ui.type][ui.tier].templates[ui.template],name=slot.name||`模板 ${ui.template+1}`;root.querySelector('.wave-ed-current h2').textContent=name;root.querySelector('.wave-ed-temps .chosen b').textContent=name;root.querySelector('.wave-ed-temps .chosen small').textContent=`${slot.pool.length} 种敌人 · 预算 ${slot.budget}`;}else{const act=e.target.dataset.act;queueMicrotask(()=>{render();root.querySelector(`[data-act="${act}"]`)?.focus();});}}}
 });
 root.addEventListener('input',e=>{
  if(e.target.id==='native-volume'||e.target.hasAttribute('data-native-volume')){state.volume=Number(e.target.value);savePreference('garrison-volume',String(state.volume));return;}
@@ -12872,7 +12889,7 @@ if(d.kind==='item'&&d.from==='hand'){const u=equipDropTarget(e.clientX,e.clientY
  }
 });
 root.addEventListener('pointercancel',()=>{if(!drag&&!aim&&!state.preview&&!canvasPress)return;clearDrag();aim=null;state.preview=null;render();});
-document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea'))return;if(e.key==='Escape'){clearDrag();aim=null;state.preview=null;state.selected=state.summonSelected=null;state.inspect=null;if(!state.game?.s.rewardPending&&state.game?.s.phase!=='decision')state.modal=null;render();}if(state.preview){const d={ArrowRight:0,ArrowDown:1,ArrowLeft:2,ArrowUp:3}[e.key];if(d!==undefined){e.preventDefault();state.preview.dir=d;draw();}if(e.key==='Enter')commitPreview();}});
+document.addEventListener('keydown',e=>{if(root.querySelector('#wave-ed-test[open]'))return;if(e.target.matches('input,select,textarea'))return;if(e.key==='Escape'){clearDrag();aim=null;state.preview=null;state.selected=state.summonSelected=null;state.inspect=null;if(!state.game?.s.rewardPending&&state.game?.s.phase!=='decision')state.modal=null;render();}if(state.preview){const d={ArrowRight:0,ArrowDown:1,ArrowLeft:2,ArrowUp:3}[e.key];if(d!==undefined){e.preventDefault();state.preview.dir=d;draw();}if(e.key==='Enter')commitPreview();}});
 window.addEventListener('beforeunload',()=>{state.expiresAt??=Date.now()+86400000;save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){state.paused=true;state.expiresAt??=Date.now()+86400000;save();}});
 function frame(now){
  if(runtimeFault){requestAnimationFrame(frame);return;}

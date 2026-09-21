@@ -25,12 +25,71 @@ const {chromium}=pw.default||pw;
 const suites=new Map();
 const suite=(name,fn)=>suites.set(name,fn);
 
+suite('wave-activities',async(browser)=>{
+ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(pathToFileURL(path.resolve('dist/index.html')).href);
+ await page.waitForFunction(()=>window.__garrisonReady);
+ await page.locator('[data-act=editor]').click();
+ await page.locator('[data-act=ed-tools]').click();await page.locator('[data-act=ed-defaults]').click();await page.locator('[data-act=ed-tools]').click();
+ assert.equal(await page.locator('[data-act=ed-readiness]').inputValue(),'ready');
+ await page.locator('[data-act=ed-activity]').selectOption('将进酒');
+ const rows=page.locator('.wave-ed-table tbody tr');
+ assert.ok(await rows.count()>0);
+ for(const row of await rows.all())assert.match(await row.innerText(),/将进酒/);
+ await page.locator('[data-act=ed-add-temp]').click();
+ await page.locator('[data-act=ed-template-activity]').selectOption('将进酒');
+ await page.locator('.wave-ed-table [data-act=ed-add]:enabled').first().click();
+ assert.match(await page.locator('.wave-ed-pool').innerText(),/将进酒/);
+ assert.equal(await page.locator('[data-act=ed-template-activity]').isDisabled(),true);
+ await page.locator('[data-act=ed-activity]').selectOption('初始');
+ assert.equal(await page.locator('.wave-ed-table [data-act=ed-add]:enabled').count(),0);
+ await page.locator('[data-act=ed-readiness]').selectOption('pending');
+ for(const row of await rows.all())assert.match(await row.innerText(),/待补齐/);
+ assert.equal(await page.locator('#wave-ed-test').count(),0);
+ const selectedName=await page.locator('.wave-ed-current h2').innerText();
+ const selectedEnemy=await page.locator('.wave-ed-cards .wave-ed-card b').first().innerText();
+ await page.locator('.wave-ed-current [data-act=ed-roll]').click();
+ const dialog=page.locator('#wave-ed-test');await dialog.waitFor({state:'visible'});
+ assert.equal(await dialog.locator('h2').innerText(),selectedName);
+ assert.equal(await dialog.locator('.wave-ed-test-results li').count(),1);
+ assert.equal(await dialog.locator('.wave-ed-test-results b').innerText(),selectedEnemy);
+ await dialog.locator('[data-act=ed-roll]').click();
+ assert.equal(await page.locator('#wave-ed-test h2').innerText(),selectedName);
+ await fs.mkdir('artifacts/wave-activities',{recursive:true});
+ await page.screenshot({path:'artifacts/wave-activities/test-dialog.png',fullPage:true});
+ await page.keyboard.press('Escape');
+ assert.equal(await page.locator('#wave-ed-test').count(),0);
+ assert.equal(await page.locator('.wave-ed-current [data-act=ed-roll]').evaluate(el=>el===document.activeElement),true);
+ await page.locator('[data-act=ed-activity]').selectOption('all');
+ await page.locator('[data-act=ed-readiness]').selectOption('ready');
+ await page.locator('[data-act=ed-temp][data-index="0"]').click();
+ await page.locator('[data-act=ed-filters]').click();
+ assert.equal(await page.locator('#ed-motion').isVisible(),true);
+ await page.locator('#ed-search').fill('初始');
+ assert.equal(await page.locator('#ed-motion').isVisible(),true);
+ await page.locator('#ed-search').fill('');
+ await page.locator('[data-act=ed-filters]').click();
+ await page.screenshot({path:'artifacts/wave-activities/editor.png',fullPage:true});
+ for(const width of [320,375,414,768]){
+  await page.setViewportSize({width,height:900});
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'页面不得横向溢出 '+width);
+  await page.locator('.wave-ed-current [data-act=ed-roll]').click();
+  const bounds=await page.locator('#wave-ed-test').boundingBox();
+  assert.ok(bounds.x>=0&&bounds.x+bounds.width<=width+1);
+  await page.locator('[data-act=ed-close-test]').click();
+  assert.equal(await page.locator('#wave-ed-test').count(),0);
+  await page.screenshot({path:'artifacts/wave-activities/editor-'+width+'.png',fullPage:true});
+ }
+ assert.deepEqual(errors,[]);await page.close();
+});
+
 // ── smoke｜原 scripts/browser-smoke.cjs ───────────────────────────────
 suite("smoke",async(browser)=>{
 const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await fs.mkdir('artifacts/s0-s3',{recursive:true});
  await page.goto('http://127.0.0.1:5502/');await page.waitForFunction(()=>window.__garrisonReady===true);assert.match(await page.locator('body').innerText(),/卫戍协议/);await page.screenshot({path:'artifacts/s0-s3/lobby.png'});
  await page.locator('[data-act=limits]').click();assert.ok(await page.locator('#native-modal').isVisible());assert.match(await page.locator('#native-modal').innerText(),/已知差异/);await page.locator('#native-modal [data-act=close]').click();
- await page.locator('[data-act=editor]').click();assert.ok(await page.locator('.wave-ed').isVisible());assert.match(await page.locator('body').innerText(),/恢复默认配置/);await page.locator('[data-act=ed-defaults]').click();assert.match(await page.locator('body').innerText(),/初始/);await page.screenshot({path:'artifacts/s0-s3/editor.png'});await page.locator('[data-act=home]').click();
+ await page.locator('[data-act=editor]').click();assert.ok(await page.locator('.wave-ed').isVisible());assert.match(await page.locator('body').innerText(),/配置管理/);await page.locator('[data-act=ed-tools]').click();await page.locator('[data-act=ed-defaults]').click();await page.locator('[data-act=ed-tools]').click();assert.match(await page.locator('body').innerText(),/模板敌人/);await page.screenshot({path:'artifacts/s0-s3/editor.png'});await page.locator('[data-act=home]').click();
  await page.locator('[data-act=sandbox]').click();assert.ok(await page.locator('.native-game.is-sandbox').isVisible());assert.ok(await page.locator('#sandbox-op-search').count());const sandboxAll=await page.locator('[data-sandbox-op]:visible').count();await page.locator('#sandbox-op-search').fill('山');assert.equal(await page.locator('[data-sandbox-op]:visible').count(),2);await page.locator('#sandbox-op-search').fill('');assert.equal(await page.locator('[data-sandbox-op]:visible').count(),sandboxAll);await page.locator('[data-act=sandbox-add-op]').first().click();const sandboxCanvas=page.locator('#native-canvas'),sandboxRect=await sandboxCanvas.boundingBox();assert.ok(sandboxRect);await page.mouse.click(sandboxRect.x+sandboxRect.width*.35,sandboxRect.y+sandboxRect.height*.25);await page.locator('.native-facing').waitFor({state:'visible'});await page.locator('.native-facing [data-act=aim][data-dir="0"]').click();await page.locator('.native-facing [data-act=place-confirm]').click();await page.locator('[data-act=sandbox-add-dummy]').click();assert.match(await page.locator('.sandbox-inline-picked').innerText(),/不行动木桩/);await page.locator('.native-controls [data-act=sandbox-start]').click();assert.ok(await page.locator('.native-game.is-sandbox.is-battle').isVisible());assert.match(await page.locator('#native-wave-progress').innerText(),/击倒 0 \/ 1/);await page.locator('[data-act=sandbox-fill-sp]').first().click();await page.locator('[data-act=sandbox-skill]').first().click();await page.locator('[data-act=sandbox-step]').click();await page.locator('[data-act=sandbox-reset]').click();assert.ok(await page.locator('.native-game.is-sandbox').isVisible());assert.ok(await page.locator('#sandbox-op-search').count());await page.locator('[data-act=sandbox-exit]').click();assert.ok(await page.locator('.native-lobby').isVisible());
  await page.locator('[data-act=new]').click();assert.match(await page.locator('body').innerText(),/战前准备/);await page.locator('[data-act=begin]').click();assert.ok(await page.locator('.native-game').isVisible());
  const buy=page.locator('[data-act=buy]').first();await buy.click();await buy.click();assert.equal(await page.locator('.native-bench [data-act=select]').count(),1);const handUnit=page.locator('.native-bench [data-act=select]').first();await handUnit.click();assert.equal(await page.locator('.native-dossier').count(),1);await page.locator('[data-act=inspect-close]').click();assert.equal(await page.locator('.native-dossier').count(),0);await handUnit.click();assert.equal(await page.locator('.native-dossier').count(),1);await page.locator('[data-act=limits]').click();assert.equal(await page.locator('.native-dossier').count(),0);assert.equal(await page.locator('#native-modal').count(),0);await page.waitForTimeout(550);const canvas=page.locator('#native-canvas');await canvas.scrollIntoViewIfNeeded();const rect=await canvas.boundingBox();assert.ok(rect);await page.mouse.click(rect.x+rect.width*.35,rect.y+rect.height*.25);await page.locator('.native-facing').waitFor({state:'visible'});await page.locator('.native-facing [data-act=aim][data-dir="0"]').click();await page.locator('.native-facing [data-act=place-confirm]').click();assert.match(await page.locator('#native-wave-progress').innerText(),/1 \/ 8/);await page.screenshot({path:'artifacts/s0-s3/prep.png'});
