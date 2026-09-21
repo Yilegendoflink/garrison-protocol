@@ -21,7 +21,7 @@ function fatal(b,e){dealDamage(b,{target:e,value:e.maxHp*10,type:'true'});}
 
 test('余音是10次生命/2阻挡，受伤反击10%法伤与凋亡；DOT不回复受击技力',()=>{
  const {b,e,units:[u]}=arena([[4,3]]);e.canAttack=false;b.step();assert.equal(e.maxHp,10);assert.equal(e.blockCost,2);assert.equal(e.spriteScale,1);const hp=u.hp;
- dealDamage(b,{target:e,value:1000,type:'true',cause:'attack'});assert.equal(e.hp,9);assert.equal(e.sp,1);assert.equal(hp-u.hp,e.baseAtk*.1);assert.equal(u.elemental.necrosis,e.baseAtk*.1);
+ dealDamage(b,{target:e,value:1000,type:'true',cause:'attack'});assert.equal(e.hp,9);assert.equal(e.sp,1);assert.ok(Math.abs((hp-u.hp)-(e.baseAtk*.1))<1e-8);assert.equal(u.elemental.necrosis,e.baseAtk*.1);
  dealDamage(b,{target:e,value:1000,type:'true',cause:'dot'});assert.equal(e.hp,8);assert.equal(e.sp,1);assert.equal(u.elemental.necrosis,e.baseAtk*.2);
 });
 
@@ -35,10 +35,10 @@ test('余音每形态累计10次伤害切换，治疗维持生命时可反复切
 
 test('一个余音满12SP触发全場合奏，各自使用形态范围/倍率并清空全体SP',()=>{
  const {b,e,units}=arena([[3,3],[4,3],[7,3]]);e.canAttack=false;b.spawn({id:e.id,route:0});const other=b.s.enemies.at(-1);other.x=6;other.route=[{kind:'wait',x:6,y:3,time:600}];other.cmd=0;other.canAttack=false;setEchoMode(b,other,'string');e.sp=12;other.sp=7;const hp=units.map(u=>u.hp);advance(b,2.1);
- assert.equal(e.sp,0);assert.equal(other.sp,0);assert.equal(hp[0]-units[0].hp,e.baseAtk);assert.equal(hp[1]-units[1].hp,0);assert.equal(hp[2]-units[2].hp,other.baseAtk*1.5);assert.equal(units[0].elemental.necrosis,e.baseAtk*.3);assert.equal(units[2].elemental.necrosis,other.baseAtk*1.5*.5);
+ assert.equal(e.sp,0);assert.equal(other.sp,0);assert.ok(Math.abs((hp[0]-units[0].hp)-(e.baseAtk))<1e-8);assert.equal(hp[1]-units[1].hp,0);assert.ok(Math.abs((hp[2]-units[2].hp)-(other.baseAtk*1.5))<1e-8);assert.equal(units[0].elemental.necrosis,e.baseAtk*.3);assert.equal(units[2].elemental.necrosis,other.baseAtk*1.5*.5);
 });
 
 test('余音形态、次数与SP跨JSON保存，沉默阻止合奏但不阻止受伤反击天赋',()=>{
- const {b,g,e,units:[u]}=arena([[4,3]]);e.canAttack=false;setEchoMode(b,e,'string');applyStatus(e,'silence',20);e.sp=12;advance(b,2.1);assert.equal(e.sp,12);const hp=u.hp;dealDamage(b,{target:e,value:1,type:'true'});assert.equal(hp-u.hp,e.baseAtk*1.5*.1);
+ const {b,g,e,units:[u]}=arena([[4,3]]);e.canAttack=false;setEchoMode(b,e,'string');applyStatus(e,'silence',20);e.sp=12;advance(b,2.1);assert.equal(e.sp,12);const hp=u.hp;dealDamage(b,{target:e,value:1,type:'true'});assert.ok(Math.abs((hp-u.hp)-(e.baseAtk*1.5*.1))<1e-8);
  const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const echo=restored.s.enemies[0];assert.equal(echo.enemyForm,'string');assert.equal(echo.echoHits,1);assert.equal(echo.sp,12);assert.equal(restored.enemyAttackDamage(echo),echo.baseAtk*1.5);
 });

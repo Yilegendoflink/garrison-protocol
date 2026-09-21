@@ -155,8 +155,8 @@ test('敌方泥岩本期5500屏障只吸收法术，物理/真实/元素伤害�
 });
 
 test('泥岩破盾移除生命上限增益，17秒刷新恢复，重复刷新替换而不叠屏障或生命',()=>{
- const {b}=arena(),e=spawn(b,'enemy_1511_mdrock');e.hp=e.maxHp*.5;dealDamage(b,{target:e,value:5500,type:'arts'});assert.equal(e.shield,0);assert.equal(e.maxHp,e.baseMaxHp);assert.equal(e.hp,e.maxHp*.5);
- advance(b,16.9);assert.equal(e.shield,0);advance(b,.1);assert.equal(e.shield,5500);assert.equal(e.maxHp,e.baseMaxHp*1.5);assert.equal(e.hp,e.maxHp*.5);
+ const {b}=arena(),e=spawn(b,'enemy_1511_mdrock');e.hp=e.maxHp*.5;dealDamage(b,{target:e,value:5500,type:'arts'});assert.equal(e.shield,0);assert.equal(e.maxHp,e.baseMaxHp);assert.ok(Math.abs(e.hp-e.maxHp*.5)<1e-8);
+ advance(b,16.9);assert.equal(e.shield,0);advance(b,.1);assert.equal(e.shield,5500);assert.equal(e.maxHp,e.baseMaxHp*1.5);assert.ok(Math.abs(e.hp-e.maxHp*.5)<1e-8);
  const max=e.maxHp,hp=e.hp;advance(b,17);assert.equal(e.shield,5500);assert.equal(e.shieldLayers.filter(l=>l.id==='mudrock-arts').length,1);assert.equal(e.maxHp,max);assert.equal(e.hp,hp);
 });
 

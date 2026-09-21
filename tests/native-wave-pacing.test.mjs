@@ -71,3 +71,24 @@ test('real battle steps consume the entire wave by 40 seconds',()=>{
  assert.equal(battle.s.queue.length,0);assert.equal(spawned.length,planned.length);
  assert.equal(spawned[0].at,2);assert.equal(spawned.at(-1).at,40);
 });
+
+test('difficulty attack and HP reach real spawns, stacking the first-round HP modifier once',()=>{
+ const id='enemy_1000_gopro_2';
+ for(const round of [1,4,10]){
+  const stats={};
+  for(const difficulty of ['hard','normal','funny']){
+   const modeId=`mode_single_${difficulty}`,session=new NativeSession(data,{modeId,seed:42});
+   const turn=buildPhasePlan(data,modeId).find(t=>t.round===round&&!t.isBossTurn);
+   if(!turn)continue;
+   const battle=new NativeBattle(data,session,session.map,turn);battle.spawn({id,route:0});
+   const enemy=battle.s.enemies.at(-1),raw=battle.enemyRaw(id),scale=enemyCombatScale(data.season.modeDataDict[modeId],round);
+   assert.equal(enemy.atk,raw.attributes.atk*scale.atk);
+   assert.equal(enemy.maxHp,raw.attributes.maxHp*(scale.hp*(round===1?.8:1)));
+   stats[difficulty]=enemy;
+  }
+  for(const [difficulty,factor] of [['normal',.8],['funny',.6]])if(stats[difficulty]){
+   assert.ok(Math.abs(stats[difficulty].atk-stats.hard.atk*factor)<1e-8);
+   assert.ok(Math.abs(stats[difficulty].maxHp-stats.hard.maxHp*factor)<1e-8);
+  }
+ }
+});

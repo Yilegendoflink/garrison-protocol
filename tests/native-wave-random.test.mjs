@@ -45,17 +45,26 @@ test('combat rounds cycle the three types and rise through pressure thirds',()=>
  assert.equal(pressureTier(10,combat.map(t=>t.round)),3);
 });
 
-test('PRTS user-table multipliers cover independent 标准／险境／终极 samples',()=>{
+test('difficulty uses absolute ratios to 绝境 while preserving 终极 scaling',()=>{
  const funny=data.season.modeDataDict.mode_single_funny;
  const normal=data.season.modeDataDict.mode_single_normal;
  const abyss=data.season.modeDataDict.mode_single_abyss;
- assert.equal(enemyCombatScale(funny,1).atk,.7);
- assert.equal(enemyCombatScale(funny,1).hp,.7);
- assert.equal(enemyCombatScale(normal,4).atk,1.1*.7);
- assert.equal(enemyCombatScale(normal,13).atk,1.1**5*.7);
+ assert.equal(enemyCombatScale(funny,1).atk,.8*.6);
+ assert.equal(enemyCombatScale(funny,1).hp,.8*.6);
+ assert.equal(enemyCombatScale(normal,4).atk,.8*.8);
+ assert.equal(enemyCombatScale(normal,13).atk,(1.1**4*.8)*.8);
  assert.equal(enemyCombatScale(abyss,3).moveSpeed,1.15);
  assert.equal(enemyCombatScale(abyss,1).moveSpeed,1);
  assert.equal(enemyCombatScale(abyss,14,{hidden:true}).atk,1.1**7);
+ for(const side of ['single','multi'])for(let round=1;round<=15;round++)for(const hidden of [false,true]){
+  const hard=enemyCombatScale(data.season.modeDataDict[`mode_${side}_hard`],round,{hidden});
+  for(const [difficulty,factor] of [['normal',.8],['funny',.6]]){
+   const scale=enemyCombatScale(data.season.modeDataDict[`mode_${side}_${difficulty}`],round,{hidden});
+   assert.equal(scale.atk,hard.atk*factor);assert.equal(scale.hp,hard.hp*factor);assert.equal(scale.moveSpeed,hard.moveSpeed);
+  }
+ }
+ const training=enemyCombatScale(data.season.modeDataDict.mode_training_1,1);
+ assert.equal(training.atk,.8*.6);assert.equal(training.hp,.8*.6);
 });
 
 test('budget fill never exceeds the cap and stops when no remaining enemy fits',()=>{

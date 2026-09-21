@@ -4983,8 +4983,10 @@ function tableValue(table,round,hidden){
 }
 function enemyCombatScale(mode,round,{hidden=false}={}){
  const side=scaleSide(mode.modeType),col=difficultyColumn(mode.modeDifficulty);
- const atkTable=ATK[side][col],hpTable=HP[side][col];
- const atk=tableValue(atkTable,round,hidden),hp=tableValue(hpTable,round,hidden);
+ // 项目难度：绝境为共同基准，险境80%，标准/入门60%；终极保留原表。
+ const baseColumn=col==='ABYSS'?'ABYSS':'HARD',factor=col==='NORMAL'?.8:col==='FUNNY'?.6:1;
+ const atkTable=ATK[side][baseColumn],hpTable=HP[side][baseColumn];
+ const atk=tableValue(atkTable,round,hidden)*factor,hp=tableValue(hpTable,round,hidden)*factor;
  const moveSpeed=col==='ABYSS'&&(hidden||round>=3)?1.15:1;
  return {atk,hp,moveSpeed,side,column:col};
 }

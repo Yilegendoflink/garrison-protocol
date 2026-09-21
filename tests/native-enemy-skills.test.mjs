@@ -464,7 +464,7 @@ test('拷打者死亡生成血珀，无祭坛时每秒流失10%生命且不移�
  const {b}=arena(),parent=spawn(b,'enemy_1364_spnaxe_2');commitExit(b,{target:parent});b.step();
  const blood=b.s.enemies.filter(e=>e.id==='enemy_1367_dseed');assert.equal(blood.length,2);
  assert.ok(blood.every(e=>e.formHold&&e.unblockable&&!e.canAttack));const first=blood[0],hp=first.hp,x=first.x;
- advance(b,1);assert.equal(first.hp,hp*.9);assert.equal(first.x,x);
+ advance(b,1);assert.ok(Math.abs(first.hp-hp*.9)<1e-8);assert.equal(first.x,x);
 });
 
 test('用户范围豁免搭桥：两种船工保留隐匿/普攻和原表，但不运行BuildBridge且允许随机入池',()=>{

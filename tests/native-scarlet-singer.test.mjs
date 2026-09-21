@@ -38,7 +38,7 @@ test('歌伶只计受击回复类伤害：DOT/流失/无敌/护盾抵消不计�
  hits(b,e,18);const other=cloneSinger(b);fatal(b,e);assert.equal(bonus(other),0,'致死伤害不会在退场后发放攻速');
 });
 test('歌伶普攻造成法术伤害并附带历史黑板20%攻击力神经损伤',()=>{
- const {b,e,units:[u]}=arena([[4,3]]);b.step();const hp=u.hp;advance(b,2);assert.equal(e.damageType,'arts');assert.equal(e.attackElementScale,.2);assert.equal(hp-u.hp,e.atk);assert.equal(u.elemental.neural,e.atk*.2);
+ const {b,e,units:[u]}=arena([[4,3]]);b.step();const hp=u.hp;advance(b,2);assert.equal(e.damageType,'arts');assert.equal(e.attackElementScale,.2);assert.ok(Math.abs((hp-u.hp)-e.atk)<1e-8);assert.equal(u.elemental.neural,e.atk*.2);
 });
 test('歌伶计数与攻速剩余时长跨存档，阈值/持续时间/攻速从黑板读取',()=>{
  const {b,g,e}=arena();e.canAttack=false;hits(b,e,19);const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const singer=restored.s.enemies[0];assert.equal(singer.scarletHits,19);hits(restored,singer,1);restored.step();assert.equal(bonus(singer),100);
