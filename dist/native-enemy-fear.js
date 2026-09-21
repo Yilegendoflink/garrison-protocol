@@ -75,7 +75,7 @@ export function advanceEnemyFear(b,e,dt){
   else{state.path=e.flying?[]:pathTo(tree,state.targetCenter);state.path.push(state.targetOffset);state.index=0;}
  }
  if(state.index>=state.path.length)choosePath(b,e,state);
- let distance=Math.max(0,e.speed*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*dt*((e.statuses||[]).some(s=>s.kind==='sluggish')?.2:1));
+ let distance=Math.max(0,e.speed*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*dt*((e.statuses||[]).some(s=>s.kind==='sluggish')?.2:1));
  while(distance>0&&state.index<state.path.length){
   const to=state.path[state.index],dx=to.x-e.x,dy=to.y-e.y,d=Math.hypot(dx,dy);
   if(d<=distance){e.x=to.x;e.y=to.y;state.index++;distance-=d;}

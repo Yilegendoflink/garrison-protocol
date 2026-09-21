@@ -1,4 +1,4 @@
-import {dealDamage} from './native-effects.js';
+import {dealDamage,alliedActors} from './native-effects.js';
 import {applyStatus,removeStatus} from './status.js';
 
 // 仅处理原始地图显式配置的“深水”控制器；它不同于有时间轴的涨/退潮。
@@ -23,5 +23,25 @@ export function tickDeepWater(battle){
    const extra=Number(e.enemyTalent?.['Drown.damage']);
    if(extra>0&&e.hp>0)dealDamage(battle,{target:e,amount:extra,type:'true',cause:'dot'});
   }
+ }
+}
+
+export function shelteredFromSand(map,actor,direction){
+ const x=Math.round(actor.x),y=Math.round(actor.y);
+ return (map.devices||[]).some(d=>d.id==='trap_032_mound'&&!d.destroyed&&(
+  direction==='DOWN'?d.x===x&&d.y<y:direction==='UP'?d.x===x&&d.y>y:
+  direction==='RIGHT'?d.y===y&&d.x<x:direction==='LEFT'?d.y===y&&d.x>x:false));
+}
+
+export function tickSandStorm(battle){
+ const cfg=battle.map.environment?.sandStorm,now=battle.s.time;
+ const active=!!cfg&&!battle.s.benchmark&&now<cfg.duration;
+ const exposed=a=>active&&a.hp>0&&!a.hidden&&!shelteredFromSand(battle.map,a,cfg.direction);
+ for(const e of battle.s.enemies){e.sandExposed=exposed(e);e.sandMoveScale=e.sandExposed?cfg.moveScale:1;}
+ for(const u of alliedActors(battle.s)){
+  u.sandExposed=u.deployed&&exposed(u);u.sandAttackRatio=u.sandExposed?cfg.attackRatio:0;u.sandRespawnMultiplier=u.sandExposed?cfg.respawnMultiplier:1;
+  if(!u.sandExposed){u.sandNextAt=null;continue;}
+  u.sandNextAt??=now+cfg.interval;
+  while(u.hp>0&&now+1e-9>=u.sandNextAt){u.sandNextAt+=cfg.interval;dealDamage(battle,{target:u,amount:cfg.damage,type:'true',cause:'dot'});}
  }
 }

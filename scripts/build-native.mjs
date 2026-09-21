@@ -24,11 +24,15 @@ for(let i=0;i<pending.length;i++)for(const spec of [pending[i].enemyBehavior?.sp
 const skillTable=JSON.parse(await fs.readFile('data/gamedata/allianceLower/skill_table.json','utf8'));
 for(const map of data.maps){
  const raw=JSON.parse(await fs.readFile('data/modes/alliance-lower/levels/'+map.source.file,'utf8'));
- const controller=(raw.predefines?.tokenInsts||[]).find(x=>x.inst.characterKey==='trap_042_tidectrl'&&x.skillIndex===2);
- if(!controller)continue;
- const skillId=characterTable[controller.inst.characterKey].skills[controller.skillIndex].skillId;
- const skill=skillTable[skillId].levels[controller.mainSkillLvl-1];
- const bb=Object.fromEntries([...skill.blackboard,...(controller.overrideSkillBlackboard||[])].map(x=>[x.key,x.value]));
- map.environment={deepWater:{skillId,level:controller.mainSkillLvl,damage:bb['sea_drown[enemy].damage'],moveScale:bb['sea_drown[enemy].move_speed'],attackSpeedScale:1+bb['sea_drown[enemy].attack_speed'],source:map.source.file}};
+ for(const controller of raw.predefines?.tokenInsts||[]){
+  const id=controller.inst.characterKey;
+  if(controller.hidden||!(id==='trap_042_tidectrl'&&controller.skillIndex===2||id==='trap_036_storm'))continue;
+  const skillId=characterTable[id].skills[controller.skillIndex].skillId;
+  const skill=skillTable[skillId].levels[controller.mainSkillLvl-1];
+  const bb=Object.fromEntries([...skill.blackboard,...(controller.overrideSkillBlackboard||[])].map(x=>[x.key,x.value]));
+  map.environment??={};
+  if(id==='trap_042_tidectrl')map.environment.deepWater={skillId,level:controller.mainSkillLvl,damage:bb['sea_drown[enemy].damage'],moveScale:bb['sea_drown[enemy].move_speed'],attackSpeedScale:1+bb['sea_drown[enemy].attack_speed'],source:map.source.file};
+  else map.environment.sandStorm={skillId,level:controller.mainSkillLvl,direction:controller.direction,damage:bb.damage,interval:bb.interval,attackRatio:bb.atk,moveScale:1+bb['sand_storm[enemy].move_speed'],respawnMultiplier:bb.respawn_time,duration:bb.duration,source:map.source.file};
+ }
 }
 await fs.writeFile('dist/runtime-data.js','// Generated historical mode runtime data.\nexport const NATIVE_DATA = '+JSON.stringify(data)+';\n');console.log('Native runtime: '+Object.keys(profiles).length+' cultivation states, '+Object.keys(levels).length+' levels');

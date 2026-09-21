@@ -1,4 +1,4 @@
-import {tickDeepWater} from './native-environment.js';
+import {tickDeepWater,tickSandStorm} from './native-environment.js';
 import {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} from './native-enemy-parasite.js';
 import {advanceEnemyFear} from './native-enemy-fear.js';
 import {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} from './native-enemy-transport.js';
@@ -180,9 +180,9 @@ export class NativeBattle {
  owns(u,id){const own=this.economy.ownBonds(u.source);return own.includes(id)||(own.includes('maniShip')&&this.data.common.bondInfoDict[id]?.isPower&&this.rows[id]?.active);}
  on(id){return !!this.rows[id]?.active;}
  stats(u){
-  if(u.kind==='summon')return {...u,magicResistance:u.res||0,tauntLevel:0,parts:[]};
+  if(u.kind==='summon')return {...u,atk:u.atk*(1+(u.sandAttackRatio||0)),magicResistance:u.res||0,tauntLevel:0,parts:[]};
   const p=this.profile(u),base={...p.attributes},l=this.layers,has=id=>this.on(id)&&this.owns(u,id),parts=[];
-  let atk=0,hp=0,def=0,as=0;const muls={atk:[],maxHp:[],def:[]};
+  let atk=u.sandAttackRatio||0,hp=0,def=0,as=0;const muls={atk:[],maxHp:[],def:[]};
   const note=(stat,layer,v,src)=>{if(v)parts.push({stat,layer,v,src});};
   const ratio=(stat,v,src)=>{if(!v)return;if(src.startsWith('盟约')||src.startsWith('策略')||src==='装备'||src==='部署加攻'||src==='击倒加攻'){muls[stat].push(1+v);note(stat,'mul',1+v,src);return;}if(stat==='atk')atk+=v;else if(stat==='maxHp')hp+=v;else def+=v;note(stat,'ratio',v,src);};
   const mul=(stat,v,src)=>{if(!Number.isFinite(v)||v===1)return;muls[stat].push(v);note(stat,'mul',v,src);};
@@ -277,7 +277,7 @@ export class NativeBattle {
   const extra=effectStatMods(this,u);atk+=extra.ratio.atk||0;hp+=extra.ratio.maxHp||0;def+=extra.ratio.def||0;as+=extra.attackSpeed;base.magicResistance+=(extra.magicResistance||0)+(extra.add.magicResistance||0);base.spRecoveryPerSec+=extra.spRecoveryPerSec;base.blockCnt=Math.max(0,(base.blockCnt||0)+(extra.add.blockCnt||0));base.tauntLevel=(base.tauntLevel||0)+(extra.add.tauntLevel||0);parts.push(...extra.parts);
   const skillBlackboard=(u.skillLeft>0||u.ammo>0)?blackboard(p.skill?.blackboard):{};if(Object.hasOwn(skillBlackboard,'block_cnt')){const value=Number(skillBlackboard.block_cnt)||0;base.blockCnt=Math.max(0,/阻挡数[^，；。\n]*\+/.test(p.skill?.description||'')?base.blockCnt+value:value);}base.tauntLevel+=(skillBlackboard.taunt_level??0);
   const a={...base,atk:combineStat(base.atk,extra.add.atk||0,atk,muls.atk,extra.finalAdd.atk||0),maxHp:combineStat(base.maxHp,extra.add.maxHp||0,hp,muls.maxHp,extra.finalAdd.maxHp||0),def:combineStat(base.def,extra.add.def||0,def,muls.def,extra.finalAdd.def||0),attackSpeed:Math.max(10,Math.min(600,base.attackSpeed+as+(u.enemyAttackSpeedMod||0))),parts};
-  a.def=Math.max(0,a.def-(u.corrosionDefLoss||0));
+  a.respawnTime*=u.sandRespawnMultiplier??1;a.def=Math.max(0,a.def-(u.corrosionDefLoss||0));
   return a;
  }
  // ── 卫戍（干员特质）通用工具 ───────────────────────────────────────────────
@@ -690,7 +690,7 @@ export class NativeBattle {
   }
   step(){
   if(this.s.finished)return;if(this.s.settle.fault)throw Error('战斗结算异常');if(!this.s.settle.queue.length){this.s.settle.byId={};this.s.settle.consumed=[];}const dt=1/FPS;this.s.frame++;this.s.time=this.s.frame/FPS;while(this.s.queue.length&&this.s.queue[0].at<=this.s.time)this.spawn(this.s.queue.shift());this.refreshEnemyCostEffects();this.tickCost(dt);
-  for(const e of this.s.enemies){tickStatuses(e,dt);this.tickEnemyRevive(e);tickEnemyForm(this,e);tickEnemySkills(this,e,dt);tickEnemyTraits(this,e,dt);if(e.palsyCharges>0&&e.statusResistance>0&&this.s.time>=(e.palsyDecayAt||0)){e.palsyCharges--;e.palsyDecayAt=this.s.time+5;}if(e.artsWeak?.until<this.s.time)e.artsWeak=null;if(e.hp>0&&e.regen>0)e.hp=Math.min(e.maxHp,e.hp+e.regen*dt);if(e.hp>0&&!e.lowHpTriggered&&e.lowHpRatio>0&&e.hp/e.maxHp<=e.lowHpRatio){e.lowHpTriggered=true;if(e.lowHpAttackMultiplier>0)e.atk=e.baseAtk*e.lowHpAttackMultiplier;if(e.lowHpMoveMultiplier>0)e.speed=e.baseSpeed*e.lowHpMoveMultiplier;if(e.lowHpUnblockTime>0){e.unblockable=true;e.unblockableUntil=this.s.time+e.lowHpUnblockTime;}this.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'low-hp'});}if(e.unblockableUntil!=null&&this.s.time>=e.unblockableUntil)e.unblockable=false;}tickDeepWater(this);tickEnemyTransport(this);this.refreshEnemyAuras();this.tickEnemyDeathEye();this.tickEnemyInvisibleShield();this.flushEnemySpawns();
+  for(const e of this.s.enemies){tickStatuses(e,dt);this.tickEnemyRevive(e);tickEnemyForm(this,e);tickEnemySkills(this,e,dt);tickEnemyTraits(this,e,dt);if(e.palsyCharges>0&&e.statusResistance>0&&this.s.time>=(e.palsyDecayAt||0)){e.palsyCharges--;e.palsyDecayAt=this.s.time+5;}if(e.artsWeak?.until<this.s.time)e.artsWeak=null;if(e.hp>0&&e.regen>0)e.hp=Math.min(e.maxHp,e.hp+e.regen*dt);if(e.hp>0&&!e.lowHpTriggered&&e.lowHpRatio>0&&e.hp/e.maxHp<=e.lowHpRatio){e.lowHpTriggered=true;if(e.lowHpAttackMultiplier>0)e.atk=e.baseAtk*e.lowHpAttackMultiplier;if(e.lowHpMoveMultiplier>0)e.speed=e.baseSpeed*e.lowHpMoveMultiplier;if(e.lowHpUnblockTime>0){e.unblockable=true;e.unblockableUntil=this.s.time+e.lowHpUnblockTime;}this.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'low-hp'});}if(e.unblockableUntil!=null&&this.s.time>=e.unblockableUntil)e.unblockable=false;}tickDeepWater(this);tickSandStorm(this);tickEnemyTransport(this);this.refreshEnemyAuras();this.tickEnemyDeathEye();this.tickEnemyInvisibleShield();this.flushEnemySpawns();
   for(const u of this.s.units){
    const previousStatuses=new Set((u.statuses||[]).map(v=>v.kind));tickStatuses(u,dt);for(const status of u.statuses||[])if(!previousStatuses.has(status.kind))dispatch(this,'status-applied',{source:null,target:u,status});const wasSkill=this.skillActive(u);u.skillLeft=Math.max(0,u.skillLeft-dt);u.spLock=Math.max(0,(u.spLock||0)-dt);if(u.focusHealAfter!=null&&this.s.time>=u.focusHealAfter)u.focusHeal=true;
    if(wasSkill&&!this.skillActive(u)){u.action=null;this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'skill-end',{target:u});}
