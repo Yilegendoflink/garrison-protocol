@@ -300,6 +300,10 @@
     "enemy_10031_cnvsld": {
       "randomPoolEligible": false,
       "reason": "隐匿期间孤立及常规治疗/光环筛选已接入；狂欢时刻的场地事件尚未验收，暂不进随机池"
+    },
+    "enemy_1504_cqbw": {
+      "randomPoolEligible": true,
+      "reason": "C4的目标/3.2秒施法/中断引爆/本期20秒冷却及首次半血清CD已完成真实step与存档场景；普攻不对空，技能狂暴后可对空"
     }
   }
 }

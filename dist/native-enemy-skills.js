@@ -13,6 +13,7 @@ export function initEnemySkills(enemy,raw,now){
  if(enemy.id==='enemy_10034_cnvsax'){enemy.jazzCounterMode??=false;enemy.jazzModeChanged??=false;}
  if(raw.skills?.some(s=>s.prefabKey==='boomb'))enemy.canAttack=enemy.baseCanAttack=false;
  if(enemy.id==='enemy_10001_trslim')enemy.lowHpRatio=0; // 逃跑由一次性技能负责，不走通用永久低血强化。
+ if(enemy.id==='enemy_1504_cqbw')enemy.lowHpRatio=0;
  if(enemy.enemySkills)return;
  enemy.enemySkills=(raw.skills||[]).filter(s=>s.prefabKey&&(!VISUAL_SKILLS.has(s.prefabKey)||s.prefabKey==='StartRun'&&enemy.id==='enemy_10001_trslim')&&!(raw.enemyBehavior?.ignoredSkillPrefabs||[]).includes(s.prefabKey)).map((s,index)=>({
   index,prefab:s.prefabKey,priority:Number(s.priority)||0,cooldown:Number(s.cooldown),spCost:Number(s.spCost)||0,
@@ -77,8 +78,29 @@ export function selectEnemyAttackSkill(battle,enemy,target){
 function releaseCaptured(battle,enemy,cast){
  for(const uid of cast.victims||[]){const victim=getActor(battle.s,uid);if(victim?.swallowedBy===enemy.uid){delete victim.swallowedBy;removeStatus(victim,'root',enemy.uid);}}
 }
+export function checkWEnrage(battle,enemy){
+ if(enemy.id!=='enemy_1504_cqbw'||enemy.wEnraged||enemy.hp<=0||enemy.hp>=enemy.maxHp*.5)return;
+ const skill=enemy.enemySkills?.find(s=>s.prefab==='C4');if(!skill)return;
+ enemy.wEnraged=true;skill.nextAt=battle.s.time;enemy.nextSkillAt=skill.nextAt;
+ if(enemy.enemyCast?.c4Targets)enemy.enemyCast.c4CooldownReset=true;
+ battle.emit('enemy-phase',{uid:enemy.uid,x:enemy.x,y:enemy.y,phase:'low-hp'});
+}
+function detonateC4(battle,enemy){
+ const cast=enemy.enemyCast;if(!cast?.c4Targets)return;
+ const skill=enemy.enemySkills[cast.index];
+ // 先结束施法并清引用，避免爆炸引发退场/反伤时重入引爆。
+ endEnemySkill(battle,enemy);enemy.formHold=false;
+ if(cast.c4CooldownReset){skill.nextAt=battle.s.time;enemy.nextSkillAt=skill.nextAt;}
+ for(const bomb of cast.c4Targets){
+  const target=getActor(battle.s,bomb.uid);
+  if(!target?.deployed||target.hp<=0||target.deployGen!==bomb.deployGen)continue;
+  battle.resolveEnemyStrike(enemy,target,{scale:Number(skill.bb.atk_scale),type:'physical',attackId:cast.attackId,suppressAttackZone:true});
+  battle.emit('impact',{uid:enemy.uid,x:target.x,y:target.y,radius:.3,type:'physical',enemy:true});
+ }
+}
 export function cancelEnemyCast(battle,enemy){
  const cast=enemy.enemyCast;if(!cast)return;
+ if(cast.c4Targets){detonateC4(battle,enemy);return;}
  if(cast.bomb){enemy.formHold=false;endEnemySkill(battle,enemy,{refund:true});return;}
  if(cast.charge&&!cast.hitAttempted){
   const short=(enemy.statuses||[]).some(s=>s.kind==='stun'||s.kind==='sleep');
@@ -93,9 +115,14 @@ export function cancelEnemyCast(battle,enemy){
 export function tickEnemySkills(battle,enemy,dt){
  if(!enemy.enemySkills)return;
  if(enemy.hp<=0){cancelEnemyCast(battle,enemy);return;}
+ checkWEnrage(battle,enemy);
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
+ if(cast?.c4Targets){
+  if(enemy.hidden||!control.attack||!control.skill||control.silenced||battle.s.time+1e-9>=cast.endsAt)detonateC4(battle,enemy);
+  return;
+ }
  if(enemy.id==='enemy_10034_cnvsax'){
   const counter=!(enemy.invisible&&!enemy.revealed&&enemy.block==null&&!enemy.immunities?.invisible);
   if(counter!==enemy.jazzCounterMode){enemy.jazzCounterMode=counter;enemy.jazzModeChanged=true;}
@@ -183,6 +210,13 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_1504_cqbw'&&!control.silenced&&!enemy.action){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='C4');
+  const targets=skill?battle.enemySkillTargets(enemy,{groundOnly:!enemy.wEnraged,range:Number(skill.bb.range_radius)}).slice(0,enemy.wEnraged?3:1):[];
+  if(targets.length&&enemySkillReady(enemy,skill,battle.s.time)&&beginEnemySkill(battle,enemy,skill,{c4Targets:targets.map(t=>({uid:t.uid,deployGen:t.deployGen})),endsAt:battle.s.time+3.2,attackId:newAttackId(battle)})){
+   enemy.formHold=true;enemy.attackCooldown=Math.ceil(enemy.interval*FPS);return;
+  }
+ }
  if(enemy.id==='enemy_10001_trslim'&&!control.silenced&&enemy.hp<enemy.maxHp*.5){
   const skill=enemy.enemySkills.find(s=>s.prefab==='StartRun');
   if(skill&&beginEnemySkill(battle,enemy,skill)){

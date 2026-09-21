@@ -3,7 +3,7 @@ import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {applyStatus} from '../dist/status.js';
-import {commitExit,revealEnemy,grantGuard} from '../dist/native-effects.js';
+import {commitExit,revealEnemy,grantGuard,dealDamage,applyLoss} from '../dist/native-effects.js';
 import {drawEnemyProjectiles} from '../dist/native-fx.js';
 
 function arena(id,{x=3,y=3,positions=[[3,3]]}={}){
@@ -151,6 +151,37 @@ test('遗弃者不对空，无目标时清层；叠层与脱战计时可跨JSON�
 test('遗弃者叠层攻速实际缩短攻击周期，沉默不禁用不可沉默天赋',()=>{
  const {b,enemy,allies}=arena('enemy_2005_axetro'),u=allies[0],stats=b.stats.bind(b);b.stats=a=>({...stats(a),def:0,maxHp:100000});u.hp=100000;enemy.atk=1;b.economy.random=()=>.999;applyStatus(enemy,'silence',60);
  for(let i=0;i<28;i++)b.hurt(u,enemy);assert.equal(enemy.axetroStacks,28);const times=[],record=b.recordEnemyAttack.bind(b);b.recordEnemyAttack=(e,s)=>{times.push(b.s.time);record(e,s);};advance(b,4);assert.ok(times.length>=3);assert.ok(Math.abs(times[1]-times[0]-3/2.4)<.04);
+});
+
+test('W按本期9秒初始CD安装单目标C4，3.2秒后只炸标记目标，20秒冷却从施法结束算',()=>{
+ const {b,enemy,allies}=arena('enemy_1504_cqbw',{positions:[[3,4],[4,3],[2,3]]});enemy.canAttack=false;allies[2].flying=true;allies[2].deployAt=200;
+ const hits=[];b.hurt=(u,e)=>hits.push({uid:u.uid,atk:e.atk});advance(b,8.9);assert.equal(enemy.enemyCast,undefined);advance(b,.1);assert.deepEqual(enemy.enemyCast.c4Targets.map(t=>t.uid),[allies[0].uid]);assert.equal(enemy.formHold,true);
+ advance(b,3.1);assert.equal(hits.length,0);advance(b,.1);assert.deepEqual(hits,[{uid:allies[0].uid,atk:1.8}]);assert.equal(enemy.formHold,false);assert.ok(Math.abs(enemy.enemySkills[0].nextAt-(b.s.time+20))<1e-6);
+});
+
+test('W首次严格低于半血立即清技能CD，之后最多标记3人且可对空，回血不撤销也不再次清CD',()=>{
+ const {b,enemy,allies}=arena('enemy_1504_cqbw',{positions:[[3,4],[4,3],[2,3],[3,2]]});enemy.canAttack=false;allies[3].flying=true;allies[3].deployAt=200;
+ enemy.hp=enemy.maxHp*.5;b.step();assert.equal(enemy.wEnraged,undefined);applyLoss(b,{target:enemy,amount:1});assert.equal(enemy.wEnraged,true);assert.equal(enemy.enemySkills[0].nextAt,b.s.time);
+ b.step();assert.equal(enemy.enemyCast.c4Targets.length,3);assert.ok(enemy.enemyCast.c4Targets.some(t=>t.uid===allies[3].uid));b.hurt=()=>{};advance(b,3.3);const next=enemy.enemySkills[0].nextAt;
+ enemy.hp=enemy.maxHp;dealDamage(b,{target:enemy,value:enemy.maxHp*.6,type:'true'});assert.equal(enemy.enemySkills[0].nextAt,next);assert.equal(enemy.wEnraged,true);assert.equal(enemy.enemyAttack.groundOnly,true);
+});
+
+test('W受控或死亡中断施法时立即引爆一次，不等原截止时间，也不重复炸',()=>{
+ for(const mode of ['stun','death']){
+  const {b,enemy}=arena('enemy_1504_cqbw',{positions:[[3,4]]});enemy.canAttack=false;let hits=0;b.hurt=()=>hits++;advance(b,9.5);
+  if(mode==='stun')applyStatus(enemy,'stun',5);else commitExit(b,{target:enemy});b.step();assert.equal(hits,1,mode);assert.equal(enemy.enemyCast,null);assert.equal(enemy.formHold,false);advance(b,4);assert.equal(hits,1,mode);
+ }
+});
+
+test('C4标记随JSON保存且绑定部署代次，不追炸撤退后重部署的同UID',()=>{
+ const {b,g,enemy,allies}=arena('enemy_1504_cqbw',{positions:[[3,4]]});enemy.canAttack=false;advance(b,10);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);let hits=0;restored.hurt=()=>hits++;advance(restored,2.3);assert.equal(hits,1);
+ const u=allies[0];commitExit(b,{target:u,reason:'retreat'});b.deploy(u);applyStatus(u,'disarm',60);let reentryHits=0;b.hurt=()=>reentryHits++;advance(b,2.3);assert.equal(reentryHits,0);assert.equal(enemy.enemyCast,null);
+});
+
+test('W施法期间跨半血保留清冷却效果，当前一枚结算后即可改装三枚',()=>{
+ const {b,enemy,allies}=arena('enemy_1504_cqbw',{positions:[[3,4],[4,3],[2,3]]});enemy.canAttack=false;b.hurt=()=>{};advance(b,10);const current=enemy.enemyCast;assert.equal(current.c4Targets.length,1);
+ dealDamage(b,{target:enemy,value:enemy.maxHp*.6,type:'true'});assert.equal(current.c4CooldownReset,true);advance(b,2.3);assert.ok(enemy.enemyCast);assert.notEqual(enemy.enemyCast,current);assert.equal(enemy.enemyCast.c4Targets.length,allies.length);
 });
 
 test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{

@@ -10,6 +10,7 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
  if(e.id==='enemy_2005_axetro'){e.enemyAttack={...e.enemyAttack,groundOnly:true};e.axetroStacks??=0;}
  if(e.id==='enemy_1050_lslime')e.damageType='arts';
+ if(e.id==='enemy_1504_cqbw')e.enemyAttack={...e.enemyAttack,groundOnly:true};
  if(['enemy_10031_cnvsld','enemy_10034_cnvsax'].includes(e.id))e.isolateWhileConcealed=true;
  if(NEURO_SPAWNERS.has(e.id)){e.neuroCombat??=false;if(!e.neuroCombat)e.canAttack=false;}
  if(YUANZAI.has(e.id)){

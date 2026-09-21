@@ -361,6 +361,7 @@ export function applyLoss(battle,opts){
  const floor=Math.max(minHpOf(target),opts.minHp||0);
  const hp=Math.min(Math.max(0,target.hp-floor),opts.amount);
  target.hp-=hp;
+ if(battle.s.enemies.includes(target))battle.enemyHealthChanged?.(target);
  log(battle,'loss',{eventId:event.eventId,targetUid:target.uid,amount:hp});
  if(target.hp<=0&&!runFatal(battle,target,true,event))commitExit(battle,{target,reason:'knockdown',killer:opts.source||null,event});
  return hp;

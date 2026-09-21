@@ -5,7 +5,7 @@ import {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemy
 import {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,releaseParrotPassenger} from './native-enemy-forms.js';
 import {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} from './native-enemy-attacks.js';
 import {enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} from './native-enemy-traits.js';
-import {initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} from './native-enemy-skills.js';
+import {checkWEnrage,initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} from './native-enemy-skills.js';
 import {branchBehavior,branchTrait,skillAntiAir} from './native-branches.js';
 import {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} from './native-equipment.js';
 import {nativeWavePlan} from './native-waves.js';
@@ -58,12 +58,13 @@ export class NativeBattle {
  enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
  onActorShiftEnd(target){enemyFormShiftEnded(this,target);}
  enemyDamageDealt(enemy,opts,result){enemyTraitDamageDealt(this,enemy,result);}
+ enemyHealthChanged(enemy){checkWEnrage(this,enemy);}
  enemyBeforeDamage(target,opts){return enemyFormBeforeDamage(this,target,opts);}
- enemySkillTargets(enemy){return enemyAttackTargets(this,enemy);}
+ enemySkillTargets(enemy,options=null){return enemyAttackTargets(this,options?{...enemy,range:options.range??enemy.range,enemyAttack:{...enemy.enemyAttack,groundOnly:options.groundOnly??enemy.enemyAttack?.groundOnly}}:enemy);}
  enemyElementMultiplier(target){return parasiteElementMultiplier(this,target);}
  onElementBurst(payload){spreadParasiteElement(this,payload);}
  onActorExit(target,info){detachEnemyParasites(this,target);if(target.enemyFormKind==='parrot')releaseParrotPassenger(this,target);unloadEnemyTransport(this,target);enemyNearbyExit(this,target,info);}
- enemyDamageReceived(enemy,opts,result){enemyFormAfterDamage(this,enemy,result);enemyTraitAfterDamage(this,enemy,opts,result);if(result.total>0&&opts.cause!=='dot'&&opts.cause!=='loss')enemySpEvent(enemy,'INCREASE_WHEN_TAKEN_DAMAGE');}
+ enemyDamageReceived(enemy,opts,result){checkWEnrage(this,enemy);enemyFormAfterDamage(this,enemy,result);enemyTraitAfterDamage(this,enemy,opts,result);if(result.total>0&&opts.cause!=='dot'&&opts.cause!=='loss')enemySpEvent(enemy,'INCREASE_WHEN_TAKEN_DAMAGE');}
  profile(u){if(u.kind==='summon')return {branch:'summon',profession:'TOKEN',position:'MELEE',attributes:{...u,magicResistance:u.res||0},garrisons:[],trait:null,talents:[]};const row=this.data.profiles[u.chessId],selected=row?.skillChoices?.[u.source?.skillIndex??u.skillIndex],profile=selected?{...row,...selected}:row,extra=u.extraGarrisonIds?.map(id=>this.data.season.garrisonDataDict[id]).filter(Boolean)||[];return extra.length?{...profile,garrisons:[...(profile.garrisons||[]),...extra]}:profile;}
  skillActive(u){return u.skillLeft>0||u.ammo>0;}skillTimeLeft(sk){if(!sk)return 0;const text=String(sk.description||''),duration=sk.duration;if(/可以在下列状态和初始状态间切换/.test(text)||/持续时间无限/.test(text))return 1e9;if(typeof duration==='number'&&duration>0)return duration;if(duration!==-1)return 0;const finite=Number(blackboard(sk.blackboard).duration);return Number.isFinite(finite)&&finite>0?finite:0;}
  behavior(u){
