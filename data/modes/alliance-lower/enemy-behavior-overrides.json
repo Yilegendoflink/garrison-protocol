@@ -4,13 +4,31 @@
   "overrides": {
     "enemy_10122_uacann_2": {
       "movementPolicy": "stop-while-attacking",
-      "reason": "集团军重型火炮只在开火动作期间停留，攻击完成后继续沿路线推进"
+      "reason": "集团军重型火炮只在开火动作期间停留，攻击完成后继续沿路线推进",
+      "attackProfile": {
+        "splash": {
+          "shape": "circle",
+          "radius": 1
+        },
+        "groundOnly": true
+      },
+      "attackSource": "PRTS 2026-09-12快照：集团军重型火炮 天赋；本期黑板参数优先"
     },
     "enemy_10162_mnctpt": {
-      "movementPolicy": "burst-then-move",
-      "burstShots": 3,
+      "movementPolicy": "stop-while-attacking",
+      "burstShots": 0,
       "randomPoolEligible": false,
-      "reason": "自制投石机的三连击先固定波次验证"
+      "reason": "三连击按一次攻击内三个命中调度；入戏偏移与抛物弹道仍待场景实现，暂不进随机池",
+      "attackProfile": {
+        "hits": 3,
+        "hitInterval": 0.3,
+        "ignoreBlock": true,
+        "splash": {
+          "shape": "circle",
+          "radius": 1.5
+        }
+      },
+      "attackSource": "PRTS 2026-09-12快照：自制投石机 天赋；本期黑板参数优先"
     },
     "enemy_1288_duskls": {
       "randomPoolEligible": true,
@@ -59,6 +77,209 @@
     "enemy_1209_sfden": {
       "randomPoolEligible": true,
       "reason": "清明的 InvisibleShield（每 15 秒给半径 2 格内其他敌人 5 秒隐匿）已实现并通过定向测试，解除 complex 限制；原表 enemyInfoDict 里它不属于任何词条（只出现在固定关卡 h07_03），因此不进默认随机池，但手工编制台与固定波次可以直接用"
+    },
+    "enemy_10087_hlchgr": {
+      "randomPoolEligible": true,
+      "reason": "圣堂剑士初始5发弹药、每6秒消耗与永久成长已通过真实step定向回归（native-enemy-skills）"
+    },
+    "enemy_9009_acfort": {
+      "randomPoolEligible": true,
+      "reason": "黑云抓取普通飞行敌人、延迟吞噬补弹、全弹发射、多技能优先级及中断清理已通过真实step定向回归（native-enemy-skills）"
+    },
+    "enemy_1234_dsubrl": {
+      "selfField": {
+        "radius": 1.6,
+        "interval": 1,
+        "atkScale": 1,
+        "damage": 0,
+        "damageType": "arts",
+        "elementScale": 0.05,
+        "elementType": "neural"
+      },
+      "source": "https://prts.wiki/w/深溟巢涌者",
+      "reason": "PRTS天赋明确每秒攻击力100%法术伤害；本期原表EpDamage.ep_damage_ratio仅记额外5%神经损伤。补充显式倍率，不能把缺字段当作零伤害。"
+    },
+    "enemy_1234_dsubrl_2": {
+      "selfField": {
+        "radius": 1.6,
+        "interval": 1,
+        "atkScale": 1,
+        "damage": 0,
+        "damageType": "arts",
+        "elementScale": 0.05,
+        "elementType": "neural"
+      },
+      "source": "https://prts.wiki/w/富营养的巢涌者",
+      "reason": "PRTS天赋明确每秒攻击力100%法术伤害；本期原表EpDamage.ep_damage_ratio仅记额外5%神经损伤。补充显式倍率，不能把缺字段当作零伤害。"
+    },
+    "enemy_1321_wdarft": {
+      "periodicSpawn": {
+        "skill": "BornBugs",
+        "enemyKey": "enemy_1269_nhfly",
+        "delay": 0.7,
+        "offsets": [
+          0,
+          -1,
+          1
+        ]
+      },
+      "source": "https://prts.wiki/w/枯朽萃聚使徒",
+      "reason": "PRTS枯朽召唤：0.7秒后在自身、左1格、右1格各生成一个枯朽之种；技能首放与周期冷却取本期原表。",
+      "randomPoolEligible": false
+    },
+    "enemy_1501_demonk": {
+      "attackProfile": {
+        "targets": 2
+      },
+      "attackSource": "PRTS 2026-09-12快照：萨卡兹百夫长 天赋；本期黑板参数优先"
+    },
+    "enemy_1513_dekght_2": {
+      "attackProfile": {
+        "targets": 2
+      },
+      "attackSource": "PRTS 2026-09-12快照：凋零骑士 天赋；本期黑板参数优先"
+    },
+    "enemy_10018_sgrobh": {
+      "attackProfile": {
+        "targets": 2
+      },
+      "attackSource": "PRTS 2026-09-12快照：“独轮车玩具” 天赋；本期黑板参数优先"
+    },
+    "enemy_1050_lslime": {
+      "attackProfile": {
+        "targets": 4,
+        "groundOnly": true
+      },
+      "attackSource": "PRTS 2026-09-12快照：“庞贝” 天赋；本期黑板参数优先"
+    },
+    "enemy_9008_acbunn": {
+      "attackProfile": {
+        "invisibleTargets": 3,
+        "ignoreBlock": true,
+        "groundOnly": true
+      },
+      "attackSource": "PRTS 2026-09-12快照：假想敌：骨刺 天赋；本期黑板参数优先"
+    },
+    "enemy_10118_ymgprc": {
+      "attackProfile": {
+        "hits": 2
+      },
+      "attackSource": "PRTS 2026-09-12快照：澪 天赋；本期黑板参数优先"
+    },
+    "enemy_1161_tidmag": {
+      "attackProfile": {
+        "splash": {
+          "shape": "cross"
+        }
+      },
+      "attackSource": "PRTS 2026-09-12快照：控潮术师 天赋；本期黑板参数优先"
+    },
+    "enemy_1161_tidmag_2": {
+      "attackProfile": {
+        "splash": {
+          "shape": "cross"
+        }
+      },
+      "attackSource": "PRTS 2026-09-12快照：领潮员 天赋；本期黑板参数优先"
+    },
+    "enemy_1162_magmot": {
+      "attackProfile": {
+        "splash": {
+          "shape": "cross"
+        }
+      },
+      "attackSource": "PRTS 2026-09-12快照：术师快艇 天赋；本期黑板参数优先"
+    },
+    "enemy_1203_sfhu": {
+      "attackProfile": {
+        "splash": {
+          "shape": "circle",
+          "radius": 1
+        },
+        "groundOnly": true
+      },
+      "attackSource": "PRTS 2026-09-12快照：烹泉 天赋；本期黑板参数优先"
+    },
+    "enemy_1203_sfhu_2": {
+      "attackProfile": {
+        "splash": {
+          "shape": "circle",
+          "radius": 1
+        },
+        "groundOnly": true
+      },
+      "attackSource": "PRTS 2026-09-12快照：沏虹 天赋；本期黑板参数优先"
+    },
+    "enemy_1513_dekght": {
+      "attackProfile": {
+        "splash": {
+          "shape": "cross"
+        }
+      },
+      "attackSource": "PRTS 2026-09-12快照：腐败骑士 天赋；本期黑板参数优先"
+    },
+    "enemy_10081_mpplai": {
+      "randomPoolEligible": true,
+      "reason": "转译基底原始态伤害取消、物法计数/阻挡三分支、属性变化与读档已通过native-enemy-forms真实step回归"
+    },
+    "enemy_2004_balloon": {
+      "randomPoolEligible": true,
+      "reason": "喷气人阻挡升空、7秒飞行、起降减速窗口和存档恢复已通过native-enemy-forms真实step回归"
+    },
+    "enemy_1112_emppnt": {
+      "attackProfile": {
+        "projectile": {
+          "delay": 3,
+          "radius": 1.2
+        }
+      },
+      "attackSource": "https://prts.wiki/index.php?oldid=414105",
+      "reason": "PRTS帝国炮火：锁定发射时位置、3秒后半径1.2范围无来源物理伤害，缓存攻击力，不强制命中主目标；特殊NPC优先级待环境实体接入"
+    },
+    "enemy_1112_emppnt_2": {
+      "attackProfile": {
+        "projectile": {
+          "delay": 3,
+          "radius": 1.2
+        }
+      },
+      "attackSource": "https://prts.wiki/index.php?oldid=414106",
+      "reason": "PRTS帝国炮火：锁定发射时位置、3秒后半径1.2范围无来源物理伤害，缓存攻击力，不强制命中主目标；特殊NPC优先级待环境实体接入"
+    },
+    "enemy_10065_ftzlc": {
+      "deathExplosionRadius": 1.25,
+      "deathExplosionDelay": 0.4,
+      "deathExplosionGroundOnly": true,
+      "source": "https://prts.wiki/index.php?oldid=421643",
+      "reason": "点燃后才触发死亡爆炸；倍率取boom.atk_scale，半径/延迟/对空限制按PRTS；点燃与条件爆炸通过真实step回归后解除随机池限制",
+      "randomPoolEligible": true
+    },
+    "enemy_1021_bslime": {
+      "deathExplosionRadius": 1.25,
+      "deathExplosionDelay": 1,
+      "deathExplosionGroundOnly": true,
+      "source": "https://prts.wiki/w/高能源石虫"
+    },
+    "enemy_10042_prtrop": {
+      "ignoredSkillPrefabs": [
+        "BuildBridge"
+      ],
+      "randomPoolEligible": true,
+      "scopeNote": "搭桥属于关卡场地机制，本模拟不执行。",
+      "reason": "用户2026-09-21确认忽略搭桥及桥梁维护/改路；保留隐匿与普通攻击，不再因BuildBridge排除随机池"
+    },
+    "enemy_10042_prtrop_2": {
+      "ignoredSkillPrefabs": [
+        "BuildBridge"
+      ],
+      "randomPoolEligible": true,
+      "scopeNote": "搭桥属于关卡场地机制，本模拟不执行。",
+      "reason": "用户2026-09-21确认忽略搭桥及桥梁维护/改路；保留隐匿与普通攻击，不再因BuildBridge排除随机池"
+    },
+    "enemy_10045_parrot": {
+      "randomPoolEligible": true,
+      "reason": "近地悬浮/受控落地/失温坠落、首伤加速、搬运释放与存档通过native-enemy-forms定向回归；本期Mode.mode=0且checkpoint=0，不凭空添加水手",
+      "source": "https://prts.wiki/w/吉兆飞鳞"
     }
   }
 }

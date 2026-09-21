@@ -62,11 +62,11 @@ test('status flags and bounded push/pull share the simulation state',()=>{
 });
 
 test('element damage only keeps one type and same-frame damage keeps the larger accumulation',()=>{
- const {b}=openBattle({name:'焰影苇草',chessId:'chess_char_6_08_b'});deployNow(b);const u=b.s.units[0],e=enemy(b,{hp:1000});
+ const {b}=openBattle({name:'焰影苇草',chessId:'chess_char_6_08_b'});deployNow(b);const u=b.s.units[0],e=enemy(b,{hp:20000});
  const a=applyElementDamage(b,{source:u,target:e,amount:400,type:'burn'});assert.equal(a.burst,false);assert.equal(e.elemental.burn,400);
  const neural=applyElementDamage(b,{source:u,target:e,amount:120,type:'neural'});assert.equal(neural.burst,false);assert.equal(neural.immune,true);assert.equal(e.elemental.neural,undefined);assert.equal(e.elemental.burn,400);
  const c=applyElementDamage(b,{source:u,target:e,amount:600,type:'burn'});assert.equal(c.burst,true);assert.equal(e.elemental.burn||0,0);assert.equal(e.elementBurst,1);assert.equal(b.s.logicLog.filter(x=>x.type==='element').length,2);
- const e2=enemy(b,{hp:1000}),first=applyElementDamage(b,{source:u,target:e2,amount:400,type:'burn'}),higher=applyElementDamage(b,{source:u,target:e2,amount:600,type:'neural'});assert.equal(first.added,400);assert.equal(higher.added,200);assert.equal(e2.elementalType,'neural');assert.equal(e2.elemental.neural,600);assert.equal(applyElementDamage(b,{source:u,target:e2,amount:100,type:'burn'}).immune,true);
+ const e2=enemy(b,{hp:20000}),first=applyElementDamage(b,{source:u,target:e2,amount:400,type:'burn'}),higher=applyElementDamage(b,{source:u,target:e2,amount:600,type:'neural'});assert.equal(first.added,400);assert.equal(higher.added,200);assert.equal(e2.elementalType,'neural');assert.equal(e2.elemental.neural,600);assert.equal(applyElementDamage(b,{source:u,target:e2,amount:100,type:'burn'}).immune,true);
 });
 
 test('shield and lock fields are discoverable from skill blackboards',()=>{

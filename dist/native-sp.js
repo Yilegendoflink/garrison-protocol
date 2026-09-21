@@ -26,7 +26,7 @@ export function spCap(skill,cost){
  if(!usesSp(skill))return 0;
  return (cost??(skill.spData.spCost||0))*Math.max(1,skill.spData.maxChargeTime||1);
 }
-export function spBlocked(u){return !!(u.skillLeft>0||u.ammo>0||(u.spLock||0)>0);}
+export function spBlocked(u){return !!(u.skillLeft>0||u.ammo>0||(u.spLock||0)>0||u.statuses?.some(s=>s.kind==='spBlock'));}
 export function gainSp(u,skill,n,cost){
  if(!usesSp(skill)||spBlocked(u))return 0;
  const add=Number.isFinite(n)?Math.trunc(n):spIncrement(skill);

@@ -163,6 +163,7 @@ function mark(c,x,y,kind){
  if(kind==='stun'){c.beginPath();c.moveTo(-5,-6);c.lineTo(0,6);c.lineTo(5,-6);c.closePath();c.fill();c.stroke();}
  else if(kind==='sleep'){c.font='9px sans-serif';c.fillStyle='#f4f0e4';c.fillText('Z',0,3);}
  else if(kind==='silence'){c.beginPath();c.arc(0,0,5,0,Math.PI*2);c.moveTo(-3,-3);c.lineTo(3,3);c.stroke();}
+ else if(kind==='exposed'){c.strokeStyle='#ff956e';c.beginPath();c.arc(0,0,4,0,Math.PI*2);c.moveTo(-7,0);c.lineTo(7,0);c.moveTo(0,-7);c.lineTo(0,7);c.stroke();}
  else if(kind==='shield'){c.beginPath();c.moveTo(0,-6);c.lineTo(5,-2);c.lineTo(4,5);c.lineTo(0,7);c.lineTo(-4,5);c.lineTo(-5,-2);c.closePath();c.fill();c.stroke();}
  else if(kind==='barrier'){c.strokeRect(-5,-5,10,10);c.beginPath();c.moveTo(-5,0);c.lineTo(5,0);c.stroke();}
  else if(kind==='invisible'||kind==='camouflage'){c.setLineDash([2,2]);c.strokeRect(-5,-5,10,10);c.setLineDash([]);c.beginPath();c.moveTo(-5,5);c.lineTo(5,-5);c.stroke();if(kind==='camouflage'){c.beginPath();c.moveTo(-5,-5);c.lineTo(5,5);c.stroke();}}
@@ -523,6 +524,7 @@ export function drawFx(c,point,z,battle,opts={}){ const s=battle.s,t=s.time,redu
  drawSkillFan(c,point,z,battle,{reduceFx:reduce});
  drawDisplace(c,point,z,battle,{reduceFx:reduce});
  drawEnemyPhase(c,point,z,battle,{reduceFx:reduce,formatText:opts.formatText});
+ drawEnemyProjectiles(c,point,z,battle,{reduceFx:reduce});
  drawIceWind(c,z,battle,{reduceFx:reduce});
  for(const e of s.effects||[]){
   if(e.type!=='healing'&&e.type!=='evade'&&e.type!=='block')continue;
@@ -547,7 +549,7 @@ export function drawStatuses(c,x,y,unit,size){
  // 「看不见」和「只是被挡在后面」。与马赛克同口径：被阻挡（unit.block!=null）视为脱离隐匿，
  // 图标也一并收掉，否则会出现「没有马赛克却还挂着隐匿标」的矛盾画面。
  const kinds=[];
- for(const s of unit.statuses||[])if(['stun','sleep','silence','fear','terror','tremble','root','invisible','camouflage'].includes(s.kind)&&!kinds.includes(s.kind))kinds.push(s.kind);
+ for(const s of unit.statuses||[])if(['stun','sleep','silence','fear','selfFear','terror','tremble','root','invisible','camouflage','exposed'].includes(s.kind)&&!kinds.includes(s.kind))kinds.push(s.kind);
  if(unit.block!=null)for(const kind of ['invisible','camouflage']){const i=kinds.indexOf(kind);if(i>=0)kinds.splice(i,1);}
  if((unit.shield||0)>0||(unit.shieldLayers||[]).some(l=>l.remaining>0))kinds.push('shield');
  if((unit.barriers||[]).some(b=>b.charges>0))kinds.push('barrier');
@@ -555,7 +557,7 @@ export function drawStatuses(c,x,y,unit,size){
 }
 const ELEMENT_RING_COLORS={neural:'#67c9ff',burn:'#ff875c',necrosis:'#c19aff',corrosion:'#b7d875',elemental:'#f3d27f'};
 export function drawElementRing(c,x,y,unit,size){
- const raw=unit?.elemental,max=Number(unit?.elementalMax||unit?.maxHp)||0;
+ const raw=unit?.elemental,max=Number(unit?.elementalMax||(unit?.enemyRank==='BOSS'||unit?.trainingDummy?2000:1000))||0;
  if(!raw||typeof raw!=='object'||max<=0)return;
  const entries=Object.entries(raw).filter(([,value])=>Number(value)>0).map(([type,value])=>[type,Number(value)]).sort((a,b)=>b[1]-a[1]),[type,value]=entries[0]||[];
  if(!type)return;
@@ -673,14 +675,36 @@ export function formTintedImage(image,kind){
  return cv;
 }
 const PHASE_FX={
+ 'enemy-form':{span:1.5,color:'rgba(190,205,255,'},
+ liberation:{span:1.5,color:'rgba(255,155,95,'},
  rebirth:{span:1,color:'rgba(255,178,120,'},
  'revive-form':{span:2.4,color:'rgba(255,150,90,'},
  'revive-revert':{span:1.2,color:'rgba(200,205,215,'}
 };
+export function drawEnemyProjectiles(c,point,z,battle,{reduceFx=false}={}){
+ let drew=false;
+ for(const shot of battle.s.enemyProjectiles||[]){
+  const t=Math.max(0,Math.min(1,(battle.s.time-shot.startedAt)/Math.max(.001,shot.impactAt-shot.startedAt))),from=point(shot.startX,shot.startY),to=point(shot.targetX,shot.targetY);
+  c.save();c.strokeStyle='rgba(255,139,92,.8)';c.lineWidth=1.5;
+  c.beginPath();c.ellipse(to.x,to.y,z.tw*shot.radius*.5,z.th*shot.radius*.5,0,0,Math.PI*2);c.stroke();
+  if(!reduceFx){c.fillStyle='#ffbd7c';c.beginPath();c.arc(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t-Math.sin(t*Math.PI)*z.th,3,0,Math.PI*2);c.fill();}
+  c.restore();drew=true;
+ }
+ return drew;
+}
 export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}={}){
  const s=battle?.s;
  if(!s?.events)return false;
  let drew=false;
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.parrotHasPassenger){const p=point(e.x,e.y);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#f4d38b';c.fillText(formatText?formatText('携带水手'):'携带水手',p.x,p.y-z.th*.95-15);c.restore();drew=true;}
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&(e.parasiteTargetUid!=null||e.palsyCharges>0)){
+  const p=point(e.x,e.y),text=e.parasiteTargetUid!=null?'寄生中':'麻痹 '+e.palsyCharges;
+  c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#dfb1ed';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
+ }
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.transport?.passengers.length){
+  const p=point(e.x,e.y);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#f4d38b';
+  const text='载客 '+e.transport.passengers.length+'/'+e.transport.max;c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95);c.restore();drew=true;
+ }
  for(const e of s.events){
   const cfg=PHASE_FX[e.type==='enemy-phase'?e.phase:null];
   if(!cfg)continue;
@@ -697,7 +721,7 @@ export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}
    c.fillStyle=cfg.color+(fade*.7).toFixed(3)+')';
    for(const [dx,scale]of [[8,1.6],[-11,1.2]]){c.beginPath();c.arc(p.x+Math.sin(age*9+dx)*8+dx,p.y-lift-z.th*.2-age*10,scale,0,Math.PI*2);c.fill();}
   }
-  const text=e.phase==='revive-form'?`${e.form||'重生形态'}${e.hitCount?` ×${e.hitCount}`:''}`:e.phase==='rebirth'?'重生':'复原';
+  const text=e.phase==='enemy-form'?(e.form||'形态变化'):e.phase==='liberation'?'解放':e.phase==='revive-form'?`${e.form||'重生形态'}${e.hitCount?` ×${e.hitCount}`:''}`:e.phase==='rebirth'?'重生':'复原';
   if(fade>.15){c.fillStyle=cfg.color+Math.min(1,fade*1.6).toFixed(3)+')';c.font='bold 12px sans-serif';c.textAlign='center';c.fillText(formatText?formatText(text):text,p.x,p.y-lift-z.th*.62);}
   c.restore();drew=true;
  }

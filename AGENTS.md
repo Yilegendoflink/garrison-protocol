@@ -22,7 +22,7 @@
 
 `npm run release:check` 仍会因 `s4`/`s5` 的 pending 失败。不要用「acceptedScopeComplete=true」宣布发布验收完成。
 
-工作区未提交：`dist/native-battle.js`、`native-economy.js`、`native-effects.js`、`native-session.js` 与 `tests/native-bonds.test.mjs`，正在补战斗盟约效果（炎佑、谢拉格寒风、阿戈尔吞噬/复活、拉特兰弹药、坚守分摊等）。未提交 ≠ 已合并到 Pages。
+当前分支和未提交状态以 `git status` 为准，不沿用历史交接中的未提交文件清单；功能分支已提交也不等于已合并到 Pages。敌人特殊行为的当前完成范围与暂停检查点见 `docs/ENEMY_BEHAVIOR_GAP_AUDIT.md`。
 
 ## 工程分层
 
@@ -55,6 +55,8 @@
 - **手机端盟约面板**：横屏手机 UI（`html.native-landscape-ui`）左侧的盟约竖列是 flex column，卡片必须写 `flex:0 0 auto`（`native.css` 该段内的 `.native-bonds button`）：盟约一多时靠面板自身的 `overflow-y:auto` 整体上下滚动。漏掉它 flex 会把 20 多条盟约压进可视高度，卡片从 41px 挤到 34px 以下、名字和层数叠在一格里（真浏览器复测：`node scripts/regression-browser.mjs mobile-bonds`，静态口径回归：`tests/native-mobile-layout.test.mjs`）。窄屏竖排的横向条（`@media(max-width:600px)`）仍靠 `min-width:80px` 保底宽度横向滚动，不要改成压扁。
 
 ## 敌人能力口径
+
+- **搭桥为范围外关卡机制（用户 2026-09-21 确认）**：架桥船工／扶桥老手的 `BuildBridge`、桥梁维持／销毁及桥面改路不在本模拟补全范围；保留原表资料，用 `ignoredSkillPrefabs` 显式停用，不因该技能将这两种敌人排除随机池。自身隐匿和普通攻击照常；这不是忽略所有环境能力的授权，其他环境缺口仍逐项核对。
 
 - **死亡类能力只有一个入口**：死亡爆炸、死亡区域、解压缩都走 `native-effects` 的 `commitExit` → `battle.onEnemyDeath`，不要再挂在干员攻击路径上（那样被持续伤害击杀就漏触发）。生成的敌人先入队（`queueEnemySpawn`），在敌人状态结算后与战斗结束判定前各刷一次，别在遍历 `s.enemies` 时直接 push。
 - **反推原表字段**：`DeadSpawn.*`、`Revive[Trigger].*`、`Atkup.atk`／`AtkUp.atk`、`shield.dynamic` 等一律从 `talentBlackboard` 取，取不到就不给这个能力，并在 `enemy-behavior-overrides.json` 里显式关闭。`aura.*` 前缀是**自身条件判定**，不是发给周围敌人的光环（真光环是 `defup.*`）。
