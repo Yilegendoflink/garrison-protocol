@@ -1,5 +1,5 @@
 import {permissions,applyStatus,removeStatus,isIsolated} from './status.js';
-import {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId,addEffect,grantShield,teleportActor} from './native-effects.js';
+import {attackableAllies,dealDamage,applyLoss,applyElementDamage,commitExit,getActor,newAttackId,addEffect,grantShield,teleportActor} from './native-effects.js';
 import {FPS} from './combat.js';
 import {windupSeconds,enemyChainTargets,enemyRayHitDistance,enemyTargetValid,compareEnemyTargets} from './native-combat.js';
 
@@ -107,6 +107,7 @@ function detonateC4(battle,enemy){
  }
 }
 export function cancelEnemyCast(battle,enemy,{lostTarget=false}={}){
+ if(enemy.zaroCage&&(enemy.hp<=0||enemy.enemyForm!=='initial'))clearZaroCage(battle,enemy);
  const cast=enemy.enemyCast;if(!cast)return;
  if(cast.c4Targets){detonateC4(battle,enemy);return;}
  if(cast.degenCircle){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
@@ -120,6 +121,39 @@ export function cancelEnemyCast(battle,enemy,{lostTarget=false}={}){
  }
  releaseCaptured(battle,enemy,cast);enemy.stanceUntil=0;
  endEnemySkill(battle,enemy,{refund:lostTarget&&enemy.enemySkills[cast.index].prefab==='PollutedRangedAtk'});
+}
+
+function endZaroVictim(battle,enemy,entry,skill){
+ const target=getActor(battle.s,entry.uid),source='zaro-cage:'+enemy.uid;
+ if(target&&target.deployGen===entry.deployGen){removeStatus(target,'attackSpeedDown',source);removeStatus(target,'cannotRetreat',source);}
+ changeEnemySp(enemy,Number(skill.bb.sp));
+}
+function clearZaroCage(battle,enemy){
+ const cage=enemy.zaroCage;if(!cage)return;enemy.zaroCage=null;const skill=enemy.enemySkills[cage.skillIndex];
+ for(const entry of cage.targets)endZaroVictim(battle,enemy,entry,skill);
+ removeStatus(enemy,'skillLock','zaro-cage:'+enemy.uid);enemy.zaroSilenceUntil=battle.s.time+Number(skill.bb.duration_wait);
+ applyStatus(enemy,'skillLock',Number(skill.bb.duration_wait),{source:'zaro-cage:'+enemy.uid,resistible:false});
+}
+export function checkZaroCageHealth(battle,enemy){
+ if(enemy.zaroCage&&(enemy.hp<=enemy.zaroCage.releaseHp||enemy.enemyForm!=='initial'))clearZaroCage(battle,enemy);
+}
+function tickZaroCage(battle,enemy){
+ checkZaroCageHealth(battle,enemy);const cage=enemy.zaroCage,source='zaro-cage:'+enemy.uid;
+ if(cage){
+  const skill=enemy.enemySkills[cage.skillIndex],bb=skill.bb,duration=Number(bb.duration_bleed),now=battle.s.time;
+  const integral=t=>t<=duration?t*t/(2*duration):t-duration/2;
+  const ratio=Number(bb.hp_ratio)*(integral(Math.max(0,now-cage.startedAt))-integral(Math.max(0,cage.lastAt-cage.startedAt)));cage.lastAt=now;
+  const keep=[];
+  for(const entry of cage.targets){const target=getActor(battle.s,entry.uid);
+   if(target?.hp>0&&target.deployed&&target.deployGen===entry.deployGen){
+    applyStatus(target,'attackSpeedDown',.2,{source,value:Number(bb.attack_speed),resistible:false});applyStatus(target,'cannotRetreat',.2,{source,resistible:false});
+    if(ratio>0)applyLoss(battle,{source:enemy,target,amount:target.maxHp*ratio});
+   }
+   if(target?.hp>0&&target.deployed&&target.deployGen===entry.deployGen)keep.push(entry);else endZaroVictim(battle,enemy,entry,skill);
+  }
+  cage.targets=keep;if(!keep.length)clearZaroCage(battle,enemy);
+ }
+ if(enemy.zaroCage||enemy.zaroSilenceUntil>battle.s.time)applyStatus(enemy,'skillLock',enemy.zaroCage ? .2 : enemy.zaroSilenceUntil-battle.s.time,{source,resistible:false});
 }
 
 function mouseKingTargets(battle,enemy){
@@ -227,6 +261,7 @@ export function tickEnemySkills(battle,enemy,dt){
  if(!enemy.enemySkills)return;
  if(enemy.hp<=0){cancelEnemyCast(battle,enemy);return;}
  if(tickCrownBlink(battle,enemy))return;
+ if(enemy.enemyFormKind==='zaro')tickZaroCage(battle,enemy);
  if(enemy.reidRushUntil!=null&&battle.s.time+1e-9>=enemy.reidRushUntil){enemy.reidRushUntil=null;enemy.speed=enemy.baseSpeed;}
  checkWEnrage(battle,enemy);
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
@@ -368,6 +403,13 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.enemyFormKind==='zaro'&&enemy.enemyForm==='initial'&&!enemy.action&&!(enemy.attackCooldown>0)){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='FearCage'),targets=battle.enemySkillTargets(enemy,{ranged:true,range:Number.MAX_VALUE,ignoreBlock:true}).slice(0,Number(skill?.bb.max_target)||0);
+  if(skill&&targets.length&&beginEnemySkill(battle,enemy,skill)){
+   enemy.zaroCage={skillIndex:skill.index,startedAt:battle.s.time,lastAt:battle.s.time,releaseHp:enemy.hp+enemy.maxHp*Number(skill.bb.hp_ratio_offset),targets:targets.map(t=>({uid:t.uid,deployGen:t.deployGen}))};
+   enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;endEnemySkill(battle,enemy);tickZaroCage(battle,enemy);return;
+  }
+ }
  if(enemy.enemyFormKind==='degen'&&enemy.enemyForm!=='rebirth'&&!control.silenced&&!enemy.action&&!(enemy.attackCooldown>0)){
   const suffix=enemy.enemyForm==='second'?'2':'',candidates=enemy.enemySkills.filter(s=>[ 'Blink'+suffix,'CircleAttack'+suffix].includes(s.prefab)&&enemySkillReady(enemy,s,battle.s.time)&&(s.prefab.startsWith('Blink')?enemy.block!=null:attackableAllies(battle.s).some(t=>enemyTargetValid(t)&&!permissions(t).sleeping&&Math.hypot(t.x-enemy.x,t.y-enemy.y)<=Number(s.bb.range_radius)+1e-9)));
   const priority=Math.min(...candidates.map(s=>s.priority)),top=candidates.filter(s=>s.priority===priority),skill=top.length>1?top[Math.floor(battle.economy.random()*top.length)]:top[0];

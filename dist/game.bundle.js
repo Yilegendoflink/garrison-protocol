@@ -261,7 +261,7 @@ return {FPS,clamp,attribute,attackTiming,damage,applyDamage,recoverHP,spCapacity
 },
 "status.js": function(load) {
 // Common status semantics; durations are simulation seconds, never render time.
-const CONTROL={skillLock:['skill'],unableAct:['attack','move','block','skill'],stun:['attack','move','block','skill'],frozen:['attack','move','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:[],selfFear:[],terror:['attack','move','block','skill'],tremble:['attack','skill'],disarm:['attack'],forcedDisarm:['attack'],root:['move'],silence:[]};
+const CONTROL={skillLock:['skill'],unableAct:['attack','move','block','skill'],stun:['attack','move','block','skill'],frozen:['attack','move','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:[],selfFear:[],terror:['attack','move','block','skill'],tremble:['attack','skill'],disarm:['attack'],forcedDisarm:['attack'],cannotRetreat:['retreat'],root:['move'],silence:[]};
 function applyStatus(target,kind,duration,{source=null,value=1,resistible=true,frostSide='ally'}={}){
  if(!Number.isFinite(duration)||duration<=0||target.hp<=0)return false;if(target.immunities?.[kind])return false;if(['fear','selfFear'].includes(kind)&&target.chessId)return false;
  if(['sleep','levitate','fear','selfFear','terror'].includes(kind)&&Object.hasOwn(target,'block'))target.block=null;target.statuses??=[];
@@ -293,7 +293,7 @@ function removeStatus(target,kind,source){
  return true;
 }
 function tickStatuses(target,dt){if(!Number.isFinite(dt)||dt<0)throw Error('Invalid status delta');target.statuses??=[];for(const s of target.statuses)s.remaining-=dt;target.statuses=target.statuses.filter(s=>s.remaining>1e-9);target.invisible=target.formInvisible===true||(target.statuses.some(s=>['invisible','camouflage'].includes(s.kind))&&!target.revealed);target.levitated=target.statuses.some(s=>s.kind==='levitate');target.fragile=target.statuses.filter(s=>s.kind==='fragile').reduce((v,s)=>Math.max(v,s.value||1),1);}
-function permissions(target){const denied=new Set();for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!(target.statuses||[]).some(s=>['sleep','levitate','fear','selfFear'].includes(s.kind)),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
+function permissions(target){const denied=new Set();for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!(target.statuses||[]).some(s=>['sleep','levitate','fear','selfFear'].includes(s.kind)),retreat:!denied.has('retreat'),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
 function statusAttributeChanges(target){const s=target.statuses||[];return {attackSpeed:(-30*new Set(s.filter(s=>s.kind==='cold').map(s=>s.frostSide||'ally')).size)+s.filter(s=>s.kind==='attackSpeedDown'||s.kind==='attackSpeedUp').reduce((n,s)=>n+(s.value||0),0),resistance:s.some(s=>s.kind==='frozen'&&s.frostSide!=='enemy')?-15:0,attack:s.filter(s=>s.kind==='attackDown').reduce((v,x)=>Math.min(v,x.value??0),0),defense:s.filter(s=>s.kind==='defDown').reduce((v,x)=>Math.min(v,x.value??0),0),magicResistance:s.filter(s=>s.kind==='resDown').reduce((v,x)=>Math.min(v,x.value??0),0)};}
 function abilityEnabled(target,{silenceable=false}={}){return !silenceable||!permissions(target).silenced;}
 function isIsolated(target){
@@ -5952,7 +5952,7 @@ return {dominionCell,paintDominion,tickDeepWater,shelteredFromSand,tickSandStorm
 },
 "native-enemy-skills.js": function(load) {
 const {permissions,applyStatus,removeStatus,isIsolated} = load("status.js");
-const {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId,addEffect,grantShield,teleportActor} = load("native-effects.js");
+const {attackableAllies,dealDamage,applyLoss,applyElementDamage,commitExit,getActor,newAttackId,addEffect,grantShield,teleportActor} = load("native-effects.js");
 const {FPS} = load("combat.js");
 const {windupSeconds,enemyChainTargets,enemyRayHitDistance,enemyTargetValid,compareEnemyTargets} = load("native-combat.js");
 const ATTACK_SKILLS=new Set(['AOEAttack','CrossAttack','PowerAttack','StunAttack','stuncombat','DeathEye','PollutedRangedAtk','ironsandstorm','armorpiercing']);
@@ -6059,6 +6059,7 @@ function detonateC4(battle,enemy){
  }
 }
 function cancelEnemyCast(battle,enemy,{lostTarget=false}={}){
+ if(enemy.zaroCage&&(enemy.hp<=0||enemy.enemyForm!=='initial'))clearZaroCage(battle,enemy);
  const cast=enemy.enemyCast;if(!cast)return;
  if(cast.c4Targets){detonateC4(battle,enemy);return;}
  if(cast.degenCircle){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
@@ -6072,6 +6073,39 @@ function cancelEnemyCast(battle,enemy,{lostTarget=false}={}){
  }
  releaseCaptured(battle,enemy,cast);enemy.stanceUntil=0;
  endEnemySkill(battle,enemy,{refund:lostTarget&&enemy.enemySkills[cast.index].prefab==='PollutedRangedAtk'});
+}
+
+function endZaroVictim(battle,enemy,entry,skill){
+ const target=getActor(battle.s,entry.uid),source='zaro-cage:'+enemy.uid;
+ if(target&&target.deployGen===entry.deployGen){removeStatus(target,'attackSpeedDown',source);removeStatus(target,'cannotRetreat',source);}
+ changeEnemySp(enemy,Number(skill.bb.sp));
+}
+function clearZaroCage(battle,enemy){
+ const cage=enemy.zaroCage;if(!cage)return;enemy.zaroCage=null;const skill=enemy.enemySkills[cage.skillIndex];
+ for(const entry of cage.targets)endZaroVictim(battle,enemy,entry,skill);
+ removeStatus(enemy,'skillLock','zaro-cage:'+enemy.uid);enemy.zaroSilenceUntil=battle.s.time+Number(skill.bb.duration_wait);
+ applyStatus(enemy,'skillLock',Number(skill.bb.duration_wait),{source:'zaro-cage:'+enemy.uid,resistible:false});
+}
+function checkZaroCageHealth(battle,enemy){
+ if(enemy.zaroCage&&(enemy.hp<=enemy.zaroCage.releaseHp||enemy.enemyForm!=='initial'))clearZaroCage(battle,enemy);
+}
+function tickZaroCage(battle,enemy){
+ checkZaroCageHealth(battle,enemy);const cage=enemy.zaroCage,source='zaro-cage:'+enemy.uid;
+ if(cage){
+  const skill=enemy.enemySkills[cage.skillIndex],bb=skill.bb,duration=Number(bb.duration_bleed),now=battle.s.time;
+  const integral=t=>t<=duration?t*t/(2*duration):t-duration/2;
+  const ratio=Number(bb.hp_ratio)*(integral(Math.max(0,now-cage.startedAt))-integral(Math.max(0,cage.lastAt-cage.startedAt)));cage.lastAt=now;
+  const keep=[];
+  for(const entry of cage.targets){const target=getActor(battle.s,entry.uid);
+   if(target?.hp>0&&target.deployed&&target.deployGen===entry.deployGen){
+    applyStatus(target,'attackSpeedDown',.2,{source,value:Number(bb.attack_speed),resistible:false});applyStatus(target,'cannotRetreat',.2,{source,resistible:false});
+    if(ratio>0)applyLoss(battle,{source:enemy,target,amount:target.maxHp*ratio});
+   }
+   if(target?.hp>0&&target.deployed&&target.deployGen===entry.deployGen)keep.push(entry);else endZaroVictim(battle,enemy,entry,skill);
+  }
+  cage.targets=keep;if(!keep.length)clearZaroCage(battle,enemy);
+ }
+ if(enemy.zaroCage||enemy.zaroSilenceUntil>battle.s.time)applyStatus(enemy,'skillLock',enemy.zaroCage ? .2 : enemy.zaroSilenceUntil-battle.s.time,{source,resistible:false});
 }
 
 function mouseKingTargets(battle,enemy){
@@ -6179,6 +6213,7 @@ function tickEnemySkills(battle,enemy,dt){
  if(!enemy.enemySkills)return;
  if(enemy.hp<=0){cancelEnemyCast(battle,enemy);return;}
  if(tickCrownBlink(battle,enemy))return;
+ if(enemy.enemyFormKind==='zaro')tickZaroCage(battle,enemy);
  if(enemy.reidRushUntil!=null&&battle.s.time+1e-9>=enemy.reidRushUntil){enemy.reidRushUntil=null;enemy.speed=enemy.baseSpeed;}
  checkWEnrage(battle,enemy);
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
@@ -6320,6 +6355,13 @@ function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.enemyFormKind==='zaro'&&enemy.enemyForm==='initial'&&!enemy.action&&!(enemy.attackCooldown>0)){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='FearCage'),targets=battle.enemySkillTargets(enemy,{ranged:true,range:Number.MAX_VALUE,ignoreBlock:true}).slice(0,Number(skill?.bb.max_target)||0);
+  if(skill&&targets.length&&beginEnemySkill(battle,enemy,skill)){
+   enemy.zaroCage={skillIndex:skill.index,startedAt:battle.s.time,lastAt:battle.s.time,releaseHp:enemy.hp+enemy.maxHp*Number(skill.bb.hp_ratio_offset),targets:targets.map(t=>({uid:t.uid,deployGen:t.deployGen}))};
+   enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;endEnemySkill(battle,enemy);tickZaroCage(battle,enemy);return;
+  }
+ }
  if(enemy.enemyFormKind==='degen'&&enemy.enemyForm!=='rebirth'&&!control.silenced&&!enemy.action&&!(enemy.attackCooldown>0)){
   const suffix=enemy.enemyForm==='second'?'2':'',candidates=enemy.enemySkills.filter(s=>[ 'Blink'+suffix,'CircleAttack'+suffix].includes(s.prefab)&&enemySkillReady(enemy,s,battle.s.time)&&(s.prefab.startsWith('Blink')?enemy.block!=null:attackableAllies(battle.s).some(t=>enemyTargetValid(t)&&!permissions(t).sleeping&&Math.hypot(t.x-enemy.x,t.y-enemy.y)<=Number(s.bb.range_radius)+1e-9)));
   const priority=Math.min(...candidates.map(s=>s.priority)),top=candidates.filter(s=>s.priority===priority),skill=top.length>1?top[Math.floor(battle.economy.random()*top.length)]:top[0];
@@ -6476,7 +6518,7 @@ function tickEnemySkills(battle,enemy,dt){
  enemy.attackCooldown=Math.max(enemy.attackCooldown,Math.ceil(enemy.interval*FPS));
 }
 
-return {initEnemySkills,changeEnemySp,enemySpEvent,enemySkillReady,beginEnemySkill,endEnemySkill,selectEnemyAttackSkill,checkWEnrage,cancelEnemyCast,tickEnemySkills};
+return {initEnemySkills,changeEnemySp,enemySpEvent,enemySkillReady,beginEnemySkill,endEnemySkill,selectEnemyAttackSkill,checkWEnrage,cancelEnemyCast,checkZaroCageHealth,tickEnemySkills};
 },
 "native-enemy-traits.js": function(load) {
 const {enemyMovementSpeed,permissions,applyStatus,statusAttributeChanges,isIsolated} = load("status.js");
@@ -7429,7 +7471,7 @@ const {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyT
 const {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyPhaseDamageMultiplier,enemyFormFatal,enemyFormAfterDamage,enemyFormHealthChanged,releaseParrotPassenger} = load("native-enemy-forms.js");
 const {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} = load("native-enemy-attacks.js");
 const {liberateEnemyPrisoners,enemyKnightExit,enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
-const {checkWEnrage,initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} = load("native-enemy-skills.js");
+const {checkWEnrage,checkZaroCageHealth,initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} = load("native-enemy-skills.js");
 const {branchBehavior,branchTrait,skillAntiAir} = load("native-branches.js");
 const {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} = load("native-equipment.js");
 const {nativeWavePlan} = load("native-waves.js");
@@ -7489,13 +7531,13 @@ class NativeBattle {
  enemyDamageDealt(enemy,opts,result){enemyTraitDamageDealt(this,enemy,result);}
  liberatePrisoners(){liberateEnemyPrisoners(this);}
  refreshMudrockShield(enemy,bb){refreshEnemyMudrockShield(this,enemy,bb);}
- enemyHealthChanged(enemy){checkWEnrage(this,enemy);enemyFormHealthChanged(this,enemy);}
+ enemyHealthChanged(enemy){checkWEnrage(this,enemy);checkZaroCageHealth(this,enemy);enemyFormHealthChanged(this,enemy);}
  enemyBeforeDamage(target,opts){return enemyFormBeforeDamage(this,target,opts);}
  enemySkillTargets(enemy,options=null){return enemyAttackTargets(this,options?{...enemy,ranged:options.ranged??enemy.ranged,range:options.range??enemy.range,enemyAttack:{...enemy.enemyAttack,groundOnly:options.groundOnly??enemy.enemyAttack?.groundOnly,ignoreBlock:options.ignoreBlock??enemy.enemyAttack?.ignoreBlock}}:enemy);}
  enemyElementMultiplier(target){return parasiteElementMultiplier(this,target);}
  onElementBurst(payload){spreadParasiteElement(this,payload);}
  onActorExit(target,info){enemyKnightExit(this,target);detachEnemyParasites(this,target);if(target.enemyFormKind==='parrot')releaseParrotPassenger(this,target);unloadEnemyTransport(this,target);enemyNearbyExit(this,target,info);}
- enemyDamageReceived(enemy,opts,result){checkWEnrage(this,enemy);enemyFormAfterDamage(this,enemy,result);enemyTraitAfterDamage(this,enemy,opts,result);if(result.total>0&&opts.cause!=='dot'&&opts.cause!=='loss')enemySpEvent(enemy,'INCREASE_WHEN_TAKEN_DAMAGE');}
+ enemyDamageReceived(enemy,opts,result){checkWEnrage(this,enemy);checkZaroCageHealth(this,enemy);enemyFormAfterDamage(this,enemy,result);enemyTraitAfterDamage(this,enemy,opts,result);if(result.total>0&&opts.cause!=='dot'&&opts.cause!=='loss')enemySpEvent(enemy,'INCREASE_WHEN_TAKEN_DAMAGE');}
  profile(u){if(u.kind==='summon')return {branch:'summon',profession:'TOKEN',position:'MELEE',attributes:{...u,magicResistance:u.res||0},garrisons:[],trait:null,talents:[]};const row=this.data.profiles[u.chessId],selected=row?.skillChoices?.[u.source?.skillIndex??u.skillIndex],profile=selected?{...row,...selected}:row,extra=u.extraGarrisonIds?.map(id=>this.data.season.garrisonDataDict[id]).filter(Boolean)||[];return extra.length?{...profile,garrisons:[...(profile.garrisons||[]),...extra]}:profile;}
  skillActive(u){return u.skillLeft>0||u.ammo>0;}skillTimeLeft(sk){if(!sk)return 0;const text=String(sk.description||''),duration=sk.duration;if(/可以在下列状态和初始状态间切换/.test(text)||/持续时间无限/.test(text))return 1e9;if(typeof duration==='number'&&duration>0)return duration;if(duration!==-1)return 0;const finite=Number(blackboard(sk.blackboard).duration);return Number.isFinite(finite)&&finite>0?finite:0;}
  behavior(u){

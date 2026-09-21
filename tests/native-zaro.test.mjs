@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
-import {dealDamage,moveActor,commitExit,addDamageRedirect} from '../dist/native-effects.js';
-import {applyStatus} from '../dist/status.js';
+import {dealDamage,moveActor,commitExit,addDamageRedirect,applyLoss} from '../dist/native-effects.js';
+import {applyStatus,permissions,statusAttributeChanges} from '../dist/status.js';
 
 function arena(positions=[]){
  const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.funds=100;assert.ok(g.perform('buy',0));const u=g.s.units[0];let placed=false;
@@ -17,6 +17,25 @@ function arena(positions=[]){
 }
 function advance(b,t){for(let i=0;i<Math.round(t*30);i++)b.step();}
 function fatal(b,e){dealDamage(b,{target:e,value:e.maxHp*10,type:'true'});}
+
+test('溶血骇惧消耗55SP锁最多3人，线性递增生命流失，扎罗损失20%上限时解除并回点',()=>{
+ const {b,e,units}=arena([[4,3],[3,4],[5,5],[7,3]]);e.atk=1;advance(b,55);assert.equal(e.zaroCage.targets.length,3);assert.ok(e.sp<.04);assert.equal(permissions(e).skill,false);
+ const targets=e.zaroCage.targets.map(row=>units.find(u=>u.uid===row.uid)),hp=targets.map(t=>t.hp);for(const target of targets){assert.equal(statusAttributeChanges(target).attackSpeed,-70);assert.equal(permissions(target).retreat,false);}
+ advance(b,10);targets.forEach((t,i)=>assert.ok(Math.abs(hp[i]-t.hp-t.maxHp*.0375*10)<.01));
+ const sp=e.sp;applyLoss(b,{target:e,amount:e.maxHp*.2});assert.equal(e.zaroCage,null);assert.ok(Math.abs(e.sp-sp-15)<1e-8);assert.equal(permissions(e).skill,false);for(const target of targets){assert.equal(statusAttributeChanges(target).attackSpeed,0);assert.equal(permissions(target).retreat,true);}
+ advance(b,7.1);assert.equal(permissions(e).skill,true);
+});
+
+test('骇惧目标死亡逐个解除，全部结束后7秒静默，重生清理所有绑定',()=>{
+ const {b,e,units}=arena([[4,3],[3,4],[5,5]]);e.atk=1;e.sp=55;b.step();assert.ok(e.zaroCage);const targets=[...e.zaroCage.targets];
+ commitExit(b,{target:units.find(u=>u.uid===targets[0].uid)});b.step();assert.equal(e.zaroCage.targets.length,2);assert.ok(e.sp>=5&&e.sp<5.1);
+ fatal(b,e);assert.equal(e.enemyForm,'rebirth');assert.equal(e.zaroCage,null);for(const target of units.filter(u=>u.hp>0)){assert.equal(permissions(target).retreat,true);assert.equal(statusAttributeChanges(target).attackSpeed,0);}
+});
+
+test('骇惧绑定与累计时间跨JSON，旧目标再部署不会继续流失或重复退款',()=>{
+ const {b,g,e,units:[u]}=arena([[4,3]]);e.atk=1;e.sp=55;b.step();advance(b,1);const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const wolf=restored.s.enemies[0],target=restored.s.units[0];assert.equal(wolf.zaroCage.startedAt,e.zaroCage.startedAt);
+ target.deployGen++;target.statuses=[];const sp=wolf.sp;restored.step();assert.equal(wolf.zaroCage,null);assert.ok(Math.abs(wolf.sp-sp-5-1/30)<1e-8);const after=wolf.sp;advance(restored,.2);assert.ok(Math.abs(wolf.sp-after-.2)<1e-8);assert.equal(permissions(target).retreat,true);
+});
 
 test('扎罗第一形态只减物理/法术30%，预计算和递归分摊不重复减伤',()=>{
  const {b,e,units:[u]}=arena([[5,5]]);e.def=e.res=0;let hp=e.hp;dealDamage(b,{target:e,amount:100,type:'physical'});assert.equal(hp-e.hp,70);hp=e.hp;dealDamage(b,{target:e,value:100,type:'arts'});assert.equal(hp-e.hp,70);hp=e.hp;dealDamage(b,{target:e,value:100,type:'true'});assert.equal(hp-e.hp,100);
