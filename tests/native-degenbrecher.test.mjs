@@ -7,17 +7,54 @@ import {dealDamage,moveActor,commitExit,applyLoss} from '../dist/native-effects.
 import {applyStatus,permissions} from '../dist/status.js';
 import {gainSp,spBlocked} from '../dist/native-sp.js';
 
-function arena(positions=[]){
+function arena(positions=[],{blink=false}={}){
  const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.funds=100;assert.ok(g.perform('buy',0));const u=g.s.units[0];let placed=false;
  for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(g.canDeploy(u.uid,x,y))placed=g.deploy(u.uid,x,y,0);
  assert.ok(placed);assert.ok(g.perform('start'));const b=g.battle,template=b.s.units[0];b.s.queue=[];b.s.enemies=[];b.s.logicEffects=[];b.s.limit=1000;b.map=structuredClone(b.map);
  const stats=b.stats.bind(b);b.stats=a=>({...stats(a),maxHp:50000,def:1000,magicResistance:0,blockCnt:3});
  b.s.units=positions.map(([x,y],i)=>{const a=structuredClone(template);a.uid+=i*100;a.x=x;a.y=y;a.deployed=true;a.hp=a.maxHp=50000;applyStatus(a,'disarm',600);applyStatus(a,'skillLock',600);b.map.grid[y][x].heightType='LOWLAND';return a;});
  const id='enemy_1525_blkswb',o=b.map.origin,p={col:o.col+3,row:o.row-3};b.level={...b.level,routes:[{motionMode:'WALK',startPosition:p,endPosition:p,checkpoints:[{type:'WAIT_FOR_SECONDS',time:600}]}],enemyProfiles:{...b.level.enemyProfiles,[id]:NATIVE_DATA.enemies[id]}};b.spawn({id,route:0});
+ // 非速杀场景单独隔离该技能，避免初始就绪的闪现改变受测位置。
+ if(!blink)for(const skill of b.s.enemies[0].enemySkills)if(skill.prefab.startsWith('Blink')){skill.initCooldown=1000000;skill.nextAt=1000000;}
  return {b,g,e:b.s.enemies[0],units:b.s.units};
 }
 function advance(b,t){for(let i=0;i<Math.round(t*30);i++)b.step();}
 function fatal(b,e){dealDamage(b,{target:e,value:e.maxHp*10,type:'true'});}
+
+function blinkArena(second=false){
+ const scene=arena([[3,3]],{blink:true}),{b,e}=scene;e.atk=e.baseAtk=1000;
+ if(second){applyStatus(e,'forcedDisarm',20,{resistible:false});fatal(b,e);advance(b,5);e.statuses=e.statuses.filter(s=>s.kind!=='forcedDisarm');}
+ for(const skill of e.enemySkills)if(skill.prefab.startsWith('Circle'))skill.nextAt=1000000;
+ for(let x=3;x<=7;x++)Object.assign(b.map.grid[3][x],{passableMask:'ALL',obstacle:false});
+ e.route=[{kind:'move',x:3,y:3},{kind:'move',x:4,y:3},{kind:'move',x:7,y:3,checkpointIndex:1},{kind:'wait',x:7,y:3,time:600}];e.cmd=1;e.cmdLeft=null;e.attackCooldown=0;return scene;
+}
+
+test('锏速杀0.3秒后打原阻挡者，0.5秒完成1.5格传送，1秒不可阻挡且30秒CD',()=>{
+ const {b,e,units:[u]}=blinkArena(),hits=[];b.hurt=(target,source)=>hits.push([target.uid,source.atk]);b.step();const start=b.s.time;assert.ok(e.crownBlink?.degen);assert.equal(e.invulnerable,true);assert.equal(e.block,null);
+ advance(b,.2);assert.equal(hits.length,0);advance(b,.1);assert.deepEqual(hits,[[u.uid,1500]]);advance(b,.2);assert.ok(b.s.events.some(event=>event.type==='move'&&event.mode==='blink'&&event.x===4.5));assert.equal(e.invulnerable,false);assert.equal(e.unblockable,true);assert.ok(Math.abs(e.enemySkills[1].nextAt-start-30)<1e-8);
+ advance(b,.5);assert.equal(e.unblockable,false);
+});
+
+test('锏第二形态速杀双段，同UID再部署不追击，前摇存档不重复伤害',()=>{
+ const {b,g,e,units:[u]}=blinkArena(true);b.step();advance(b,.1);const saved=JSON.parse(JSON.stringify(b.s)),restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,saved);assert.ok(restored);const hits=[];restored.hurt=(target,source)=>hits.push([target.uid,source.atk]);advance(restored,.2);assert.deepEqual(hits,[[u.uid,1500],[u.uid,1500]]);advance(restored,.3);assert.equal(hits.length,2);assert.equal(restored.s.enemies[0].invulnerable,true,'重生后的原有10秒无敌应保留');
+ const redeployed=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,saved);redeployed.s.units[0].deployGen++;const staleHits=[];redeployed.hurt=u=>staleHits.push(u.uid);advance(redeployed,.4);assert.deepEqual(staleHits,[]);
+});
+
+test('速杀目的地不可通行时仍追击和不可阻挡，不生成额外闪现无敌',()=>{
+ const {b,e}=blinkArena();b.map.grid[3][5].passableMask='NONE';applyStatus(e,'root',10);const hits=[];b.hurt=u=>hits.push(u.uid);b.step();assert.equal(!!e.invulnerable,false);advance(b,.3);assert.equal(hits.length,1);assert.equal(e.x,3);advance(b,.7);assert.equal(e.unblockable,false);
+});
+
+test('速杀期间进入重生清除旧追击，不让旧恢复字段解除重生保护',()=>{
+ const {b,e}=blinkArena();b.step();applyLoss(b,{target:e,amount:e.maxHp*2});assert.equal(e.enemyForm,'rebirth');assert.equal(e.crownBlink,null);const hits=[];b.hurt=u=>hits.push(u.uid);advance(b,1.1);assert.equal(hits.length,0);assert.equal(e.invulnerable,true);assert.equal(e.unblockable,true);
+});
+
+test('锏同优先级技能同时就绪时按随机流二选一，不释放另一形态技能',()=>{
+ for(const roll of [0,.99]){
+  const {b,e}=arena([[3,3]],{blink:true});e.block=b.s.units[0].uid;for(const skill of e.enemySkills)skill.nextAt=0;b.economy.random=()=>roll;b.step();
+  if(roll===0){assert.equal(e.enemyCast?.index,0);assert.ok(!e.crownBlink);}else{assert.ok(e.crownBlink?.degen);assert.equal(e.enemySkills[1].used,true);}
+  assert.equal(e.enemySkills[2].used,false);assert.equal(e.enemySkills[3].used,false);
+ }
+});
 
 test('锏第一形态15秒后肆虐风雪，圆形范围可命中飞行及迷彩，结束开始15秒CD',()=>{
  const {b,e,units}=arena([[4,3],[4,4],[5,5]]);units[1].flying=true;applyStatus(units[1],'camouflage',60);e.atk=2000;const hits=[];b.hurt=(u,source)=>hits.push([u.uid,source.atk]);

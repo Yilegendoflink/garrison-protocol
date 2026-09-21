@@ -6135,23 +6135,29 @@ function rejoinCrownRoute(battle,enemy){
 function tickCrownBlink(battle,enemy){
  if(enemy.crownRejoin){const ready=rejoinCrownRoute(battle,enemy);if(enemy.crownBlink)enemy.formHold=true;else if(!ready)return true;}
  const state=enemy.crownBlink;if(!state)return false;
+ if(state.degen&&!state.struck&&battle.s.time+1e-9>=state.strikeAt){
+  state.struck=true;const target=getActor(battle.s,state.targetUid);
+  if(target?.deployed&&target.hp>0&&target.deployGen===state.targetDeployGen)for(let hit=0;hit<state.hits&&enemy.crownBlink===state&&enemy.hp>0;hit++)battle.resolveEnemyStrike(enemy,target,{scale:state.scale,type:'physical',attackId:state.attackId});
+ }
  if(!state.moved&&battle.s.time+1e-9>=state.moveAt){
   state.moved=true;
   if(teleportActor(battle,enemy,{x:state.x,y:state.y,source:enemy,mode:'blink',allowOccupied:true,exactCoordinates:true,allowFlyOnly:false})){
    enemy.cmd=state.cmd;enemy.cmdLeft=null;enemy.lastCheckpoint=Math.max(enemy.lastCheckpoint||0,state.checkpoint||0);enemy.crownRejoin={formHold:state.restore.formHold};rejoinCrownRoute(battle,enemy);enemy.formHold=true;
   }
  }
- if(battle.s.time+1e-9>=state.endsAt){Object.assign(enemy,state.restore);if(enemy.crownRejoin)enemy.formHold=true;enemy.crownBlink=null;return false;}
+ if(battle.s.time+1e-9>=state.endsAt){Object.assign(enemy,state.restore);if(enemy.crownRejoin)enemy.formHold=true;if(state.degen&&battle.s.time<state.unblockEndsAt){enemy.unblockable=true;enemy.unblockableUntil=state.unblockEndsAt;}enemy.crownBlink=null;return false;}
  return true;
 }
 
-function tryCrownBlink(battle,enemy){
+function tryCrownBlink(battle,enemy,skill=enemy.enemySkills.find(s=>s.prefab==='blink')){
  if(enemy.block==null||enemy.action||enemy.attackCooldown>0)return false;
- const skill=enemy.enemySkills.find(s=>s.prefab==='blink');if(!skill||!enemySkillReady(enemy,skill,battle.s.time))return false;
+ if(!skill||!enemySkillReady(enemy,skill,battle.s.time))return false;
+ const degen=enemy.enemyFormKind==='degen',target=getActor(battle.s,enemy.block);
+ if(degen&&(!target?.deployed||target.hp<=0))return false;
  const route=enemy.route||[],index=crownRouteGoal(route,enemy.cmd),goal=route[index];
- const dx=goal?goal.x-enemy.x:enemy.moveDirection?.x??0,dy=goal?goal.y-enemy.y:enemy.moveDirection?.y??0,length=Math.hypot(dx,dy),distance=Number(skill.bb.dist);if(length<1e-9||!(distance>0))return false;
- const x=enemy.x+dx/length*distance,y=enemy.y+dy/length*distance,tile=battle.map.grid[Math.round(y)]?.[Math.round(x)];
- const valid=tile&&tile.passableMask!=='NONE'&&tile.passableMask!=='FLY_ONLY'&&!tile.obstacle;
+ const dx=goal?goal.x-enemy.x:enemy.moveDirection?.x??0,dy=goal?goal.y-enemy.y:enemy.moveDirection?.y??0,length=Math.hypot(dx,dy),distance=Number(skill.bb.dist);if((length<1e-9&&!degen)||!(distance>0))return false;
+ const x=enemy.x+(length>0?dx/length*distance:0),y=enemy.y+(length>0?dy/length*distance:0),tile=battle.map.grid[Math.round(y)]?.[Math.round(x)];
+ const valid=length>1e-9&&tile&&tile.passableMask!=='NONE'&&tile.passableMask!=='FLY_ONLY'&&!tile.obstacle;
  if(!beginEnemySkill(battle,enemy,skill))return false;
  const restore={unblockable:!!enemy.unblockable,invulnerable:!!enemy.invulnerable,shiftImmune:!!enemy.shiftImmune,formHold:!!enemy.formHold,canAttack:enemy.canAttack};
  let cmd=enemy.cmd,checkpoint=enemy.lastCheckpoint||0;
@@ -6160,11 +6166,11 @@ function tryCrownBlink(battle,enemy){
   while(route[cmd]?.kind==='wait'&&route[cmd].x===goal.x&&route[cmd].y===goal.y){checkpoint=Math.max(checkpoint,route[cmd].checkpointIndex||0);cmd++;}
  }
  if(valid)while(cmd<route.length){const p=route[cmd];if(!['move','wait'].includes(p.kind))break;const px=p.x-enemy.x,py=p.y-enemy.y,along=(px*dx+py*dy)/length,lateral=Math.abs(px*dy-py*dx)/length;if(lateral>.01||along<-.01||along>distance+1e-9)break;checkpoint=Math.max(checkpoint,p.checkpointIndex||0);cmd++;}
- enemy.crownBlink={moveAt:battle.s.time+.5,endsAt:battle.s.time+1,moved:!valid,x,y,cmd,checkpoint,restore};
+ enemy.crownBlink={moveAt:battle.s.time+.5,endsAt:battle.s.time+(degen ? .5 : 1),moved:!valid,x,y,cmd,checkpoint,restore,protect:!!valid,...(degen?{degen:true,strikeAt:battle.s.time+.3,struck:false,unblockEndsAt:battle.s.time+1,targetUid:target.uid,targetDeployGen:target.deployGen,hits:enemy.enemyForm==='second'?2:1,scale:Number(skill.bb.atk_scale),attackId:newAttackId(battle)}:{})};
  enemy.unblockable=true;enemy.block=null;
  if(valid){enemy.invulnerable=true;enemy.shiftImmune=true;enemy.formHold=true;enemy.canAttack=false;}
  enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;endEnemySkill(battle,enemy);
- battle.emit('enemy-phase',{uid:enemy.uid,x:enemy.x,y:enemy.y,phase:'blink',text:'闪现'});return true;
+ battle.emit('enemy-phase',{uid:enemy.uid,x:enemy.x,y:enemy.y,phase:'blink',text:degen?'速杀':'闪现'});return true;
 }
 
 // 自施法/吞噬不依赖普通攻击目标；所有伤害和强制击杀仍进入 native-effects。
@@ -6314,7 +6320,9 @@ function tickEnemySkills(battle,enemy,dt){
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
  if(enemy.enemyFormKind==='degen'&&enemy.enemyForm!=='rebirth'&&!control.silenced&&!enemy.action&&!(enemy.attackCooldown>0)){
-  const skill=enemy.enemySkills.find(s=>s.prefab===(enemy.enemyForm==='second'?'CircleAttack2':'CircleAttack'));
+  const suffix=enemy.enemyForm==='second'?'2':'',candidates=enemy.enemySkills.filter(s=>[ 'Blink'+suffix,'CircleAttack'+suffix].includes(s.prefab)&&enemySkillReady(enemy,s,battle.s.time)&&(s.prefab.startsWith('Blink')?enemy.block!=null:attackableAllies(battle.s).some(t=>enemyTargetValid(t)&&!permissions(t).sleeping&&Math.hypot(t.x-enemy.x,t.y-enemy.y)<=Number(s.bb.range_radius)+1e-9)));
+  const priority=Math.min(...candidates.map(s=>s.priority)),top=candidates.filter(s=>s.priority===priority),skill=top.length>1?top[Math.floor(battle.economy.random()*top.length)]:top[0];
+  if(skill?.prefab.startsWith('Blink')&&tryCrownBlink(battle,enemy,skill))return;
   if(skill&&attackableAllies(battle.s).some(t=>enemyTargetValid(t)&&!permissions(t).sleeping&&Math.hypot(t.x-enemy.x,t.y-enemy.y)<=Number(skill.bb.range_radius)+1e-9)){
    const timing=battle.enemyAttackTiming(enemy);
    if(beginEnemySkill(battle,enemy,skill,{degenCircle:true,hits:enemy.enemyForm==='second'?2:1,fireAt:battle.s.time+timing.windupFrames/FPS})){enemy.formHold=true;enemy.attackCooldown=timing.frames;return;}
@@ -7014,7 +7022,7 @@ function tickEnemyForm(b,e){
    announce(b,e,'第二形态');
   }
   if(e.enemyForm==='second'){
-   if(e.degenInvincibleUntil!=null&&b.s.time+1e-9>=e.degenInvincibleUntil){e.invulnerable=false;e.degenInvincibleUntil=null;}
+   if(e.degenInvincibleUntil!=null&&b.s.time+1e-9>=e.degenInvincibleUntil){e.invulnerable=!!e.crownBlink?.protect;if(e.crownBlink)e.crownBlink.restore.invulnerable=false;e.degenInvincibleUntil=null;}
    if(e.block!=null)e.degenRevealUntil=b.s.time+3;
    e.formInvisible=b.s.time+1e-9>=(e.degenRevealUntil||0);e.invisible=e.formInvisible&&!e.revealed;
   }
@@ -7173,6 +7181,7 @@ function enemyFormStats(e){
 
 function enemyFormFatal(b,e){
  if(e.enemyFormKind==='degen'&&e.enemyForm==='initial'){
+  e.crownBlink=null;e.crownRejoin=null;e.unblockableUntil=null;
   cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp;
   e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
  }

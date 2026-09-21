@@ -87,7 +87,7 @@ export function tickEnemyForm(b,e){
    announce(b,e,'第二形态');
   }
   if(e.enemyForm==='second'){
-   if(e.degenInvincibleUntil!=null&&b.s.time+1e-9>=e.degenInvincibleUntil){e.invulnerable=false;e.degenInvincibleUntil=null;}
+   if(e.degenInvincibleUntil!=null&&b.s.time+1e-9>=e.degenInvincibleUntil){e.invulnerable=!!e.crownBlink?.protect;if(e.crownBlink)e.crownBlink.restore.invulnerable=false;e.degenInvincibleUntil=null;}
    if(e.block!=null)e.degenRevealUntil=b.s.time+3;
    e.formInvisible=b.s.time+1e-9>=(e.degenRevealUntil||0);e.invisible=e.formInvisible&&!e.revealed;
   }
@@ -246,6 +246,7 @@ export function enemyFormStats(e){
 
 export function enemyFormFatal(b,e){
  if(e.enemyFormKind==='degen'&&e.enemyForm==='initial'){
+  e.crownBlink=null;e.crownRejoin=null;e.unblockableUntil=null;
   cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp;
   e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
  }
