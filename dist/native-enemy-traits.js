@@ -76,6 +76,9 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  if(e.enemyTalent?.['rush.dlancer_t[trigger].interval']>0&&!e.lancerRush){
   e.lancerRush={active:false,stacks:0,nextCheckAt:battle.s.time,nextStackAt:null};e.speed=e.baseSpeed;
  }
+ if(Number(e.enemyTalent['ColdShield.max_stack_cnt'])>0&&['ColdShield.def','ColdShield.magic_resistance','ColdShield.interval','MeltShield.interval'].every(k=>Number.isFinite(Number(e.enemyTalent[k])))&&e.coldShieldStacks==null){
+  e.coldShieldStacks=0;e.coldShieldWarm=battle.heatedByBrazier(e);e.coldShieldNextAt=battle.s.time+Number(e.enemyTalent[e.coldShieldWarm?'MeltShield.interval':'ColdShield.interval']);
+ }
  if(e.enemyTraitsInitialized)return;
  if(restore){e.baseRes-=Number(raw.enemyBehavior?.magicResistanceBonus)||0;e.res=e.baseRes;}
  e.enemyTraitsInitialized=true;e.attackSpeedMod??=0;
@@ -256,6 +259,7 @@ export function consumeEnemyLancerRush(e){
 // refreshEnemyAuras 每帧先恢复基础防御/法抗，再调用此处，避免永久写回导致重复累加。
 export function refreshEnemyTraitStats(e){
  syncMinerShield(e);
+ if(e.coldShieldStacks>0){e.def+=(e.baseDef||0)*Number(e.enemyTalent['ColdShield.def'])*e.coldShieldStacks;e.res+=Number(e.enemyTalent['ColdShield.magic_resistance'])*e.coldShieldStacks;}
  const bb=e.enemyTalent||{},silenced=permissions(e).silenced;
  if(e.id==='enemy_1509_mousek'){e.mouseShieldDef=e.shieldLayers.some(l=>l.id==='mouseking-arts'&&l.remaining>0)?Number(bb['defup.def'])||0:0;e.def+=e.mouseShieldDef;}
  if(e.refractionBonus&&!silenced)e.res+=e.refractionBonus;
@@ -267,6 +271,14 @@ export function refreshEnemyTraitStats(e){
 
 export function tickEnemyTraits(battle,e,dt){
  if(!e.enemyTraitsInitialized||e.hp<=0)return;
+ if(e.coldShieldStacks!=null){
+  const warm=battle.heatedByBrazier(e),interval=Number(e.enemyTalent[warm?'MeltShield.interval':'ColdShield.interval']);
+  if(interval>0){
+   if(warm!==e.coldShieldWarm){e.coldShieldWarm=warm;e.coldShieldNextAt=battle.s.time+interval;}
+   while(battle.s.time+1e-9>=e.coldShieldNextAt){e.coldShieldNextAt+=interval;e.coldShieldStacks=Math.max(0,Math.min(Number(e.enemyTalent['ColdShield.max_stack_cnt']),e.coldShieldStacks+(warm?-1:1)));}
+  }
+ }
+
  const bb=e.enemyTalent||{};
  if(YUANZAI.has(e.id))faceOperatorMajority(battle,e);
  if(e.id==='enemy_1025_reveng')e.atk=e.baseAtk*(1+(e.hp<=e.maxHp*.5?Number(bb['atkup.atk'])||0:0));

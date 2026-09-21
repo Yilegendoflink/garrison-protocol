@@ -5970,7 +5970,18 @@ function tickSandStorm(battle){
  }
 }
 
-return {dominionCell,paintDominion,tickDeepWater,shelteredFromSand,tickSandStorm};
+// 只接受真正存在且点燃的供暖器实体；图上名字/寒冷状态不能产生供暖。
+function litBraziers(battle){return (battle.s.summons||[]).filter(d=>d.id==='trap_137_winfire'&&d.deployed&&d.hp>0&&d.heaterState==='lit');}
+function heatedByBrazier(battle,actor){
+ if(!actor)return false;const x=Math.round(actor.x),y=Math.round(actor.y);
+ return litBraziers(battle).some(d=>Math.abs(x-d.x)<=1&&Math.abs(y-d.y)<=1&&(x!==d.x||y!==d.y));
+}
+function atBrazierWindDoor(battle,actor){
+ if(!actor?.deployed)return false;
+ return litBraziers(battle).some(d=>Math.round(actor.x)===d.x+1&&Math.round(actor.y)===d.y&&battle.map.grid[d.y]?.[d.x+1]&&battle.map.grid[d.y][d.x+1].buildableType!=='NONE');
+}
+
+return {dominionCell,paintDominion,tickDeepWater,shelteredFromSand,tickSandStorm,litBraziers,heatedByBrazier,atBrazierWindDoor};
 },
 "native-enemy-skills.js": function(load) {
 const {permissions,applyStatus,removeStatus,isIsolated} = load("status.js");
@@ -6718,6 +6729,9 @@ function initEnemyTraits(battle,e,raw,{restore=false}={}){
  if(e.enemyTalent?.['rush.dlancer_t[trigger].interval']>0&&!e.lancerRush){
   e.lancerRush={active:false,stacks:0,nextCheckAt:battle.s.time,nextStackAt:null};e.speed=e.baseSpeed;
  }
+ if(Number(e.enemyTalent['ColdShield.max_stack_cnt'])>0&&['ColdShield.def','ColdShield.magic_resistance','ColdShield.interval','MeltShield.interval'].every(k=>Number.isFinite(Number(e.enemyTalent[k])))&&e.coldShieldStacks==null){
+  e.coldShieldStacks=0;e.coldShieldWarm=battle.heatedByBrazier(e);e.coldShieldNextAt=battle.s.time+Number(e.enemyTalent[e.coldShieldWarm?'MeltShield.interval':'ColdShield.interval']);
+ }
  if(e.enemyTraitsInitialized)return;
  if(restore){e.baseRes-=Number(raw.enemyBehavior?.magicResistanceBonus)||0;e.res=e.baseRes;}
  e.enemyTraitsInitialized=true;e.attackSpeedMod??=0;
@@ -6898,6 +6912,7 @@ function consumeEnemyLancerRush(e){
 // refreshEnemyAuras 每帧先恢复基础防御/法抗，再调用此处，避免永久写回导致重复累加。
 function refreshEnemyTraitStats(e){
  syncMinerShield(e);
+ if(e.coldShieldStacks>0){e.def+=(e.baseDef||0)*Number(e.enemyTalent['ColdShield.def'])*e.coldShieldStacks;e.res+=Number(e.enemyTalent['ColdShield.magic_resistance'])*e.coldShieldStacks;}
  const bb=e.enemyTalent||{},silenced=permissions(e).silenced;
  if(e.id==='enemy_1509_mousek'){e.mouseShieldDef=e.shieldLayers.some(l=>l.id==='mouseking-arts'&&l.remaining>0)?Number(bb['defup.def'])||0:0;e.def+=e.mouseShieldDef;}
  if(e.refractionBonus&&!silenced)e.res+=e.refractionBonus;
@@ -6909,6 +6924,14 @@ function refreshEnemyTraitStats(e){
 
 function tickEnemyTraits(battle,e,dt){
  if(!e.enemyTraitsInitialized||e.hp<=0)return;
+ if(e.coldShieldStacks!=null){
+  const warm=battle.heatedByBrazier(e),interval=Number(e.enemyTalent[warm?'MeltShield.interval':'ColdShield.interval']);
+  if(interval>0){
+   if(warm!==e.coldShieldWarm){e.coldShieldWarm=warm;e.coldShieldNextAt=battle.s.time+interval;}
+   while(battle.s.time+1e-9>=e.coldShieldNextAt){e.coldShieldNextAt+=interval;e.coldShieldStacks=Math.max(0,Math.min(Number(e.enemyTalent['ColdShield.max_stack_cnt']),e.coldShieldStacks+(warm?-1:1)));}
+  }
+ }
+
  const bb=e.enemyTalent||{};
  if(YUANZAI.has(e.id))faceOperatorMajority(battle,e);
  if(e.id==='enemy_1025_reveng')e.atk=e.baseAtk*(1+(e.hp<=e.maxHp*.5?Number(bb['atkup.atk'])||0:0));
@@ -7083,6 +7106,7 @@ function enemyAttackTargets(battle,e,alive=attackableAllies(battle.s)){
   (enemyTargetInRange(e,u)||(e.specialSkill?.prefab==='CrossAttack'&&(Math.abs(e.x-u.x)<=1e-6||Math.abs(e.y-u.y)<=1e-6)))):[];
  targets.sort((a,b)=>compareEnemyTargets({tauntLevel:a.kind==='summon'?0:battle.stats(a).tauntLevel,deployAt:a.deployAt||0,uid:a.uid},{tauntLevel:b.kind==='summon'?0:battle.stats(b).tauntLevel,deployAt:b.deployAt||0,uid:b.uid}));
  if(/^enemy_10122_uacann(?:_2)?$/.test(e.id)&&battle.enemyHasArmyOrder(e))targets.sort((a,b)=>Number(b.id==='enemy_3010_mcreep')-Number(a.id==='enemy_3010_mcreep'));
+ if(/^enemy_1389_winbab(?:_2)?$/.test(e.id))targets.sort((a,b)=>Number(battle.atBrazierWindDoor(b))-Number(battle.atBrazierWindDoor(a)));
  if(blocker&&!spec.ignoreBlock)return [blocker,...targets.filter(t=>t!==blocker)];
  return targets;
 }
@@ -7715,7 +7739,7 @@ return {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detac
 },
 "native-battle.js": function(load) {
 const {advanceEnemyShift} = load("native-shift.js");
-const {paintDominion,dominionCell,tickDeepWater,tickSandStorm} = load("native-environment.js");
+const {heatedByBrazier,atBrazierWindDoor,paintDominion,dominionCell,tickDeepWater,tickSandStorm} = load("native-environment.js");
 const {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} = load("native-enemy-parasite.js");
 const {advanceEnemyFear} = load("native-enemy-fear.js");
 const {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} = load("native-enemy-transport.js");
@@ -7773,6 +7797,8 @@ class NativeBattle {
   b.s=migrated;b.attachRuntime();return b;}catch{return null;}
  }
  enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
+ heatedByBrazier(actor){return heatedByBrazier(this,actor);}
+ atBrazierWindDoor(actor){return atBrazierWindDoor(this,actor);}
  enemyHasArmyOrder(target){return !!target&&!target.flying&&!target.hidden&&!isIsolated(target)&&/^(?:enemy_10120_uaghst|enemy_10121_uasnip|enemy_10122_uacann|enemy_10123_uareap|enemy_10124_uashld)(?:_2)?$/.test(target.id)&&this.s.enemies.some(e=>e.hp>0&&!e.hidden&&/^enemy_10125_uacomd(?:_2)?$/.test(e.id));}
  enemyPhaseDamageMultiplier(target,type,source){return enemyPhaseDamageMultiplier(target,type)*enemyMinerShieldDamageMultiplier(target,source,type)*(this.enemyHasArmyOrder(target)&&['physical','arts'].includes(type)?1-(Number(target.enemyTalent?.['ExtraPower.damage_resistance'])||0):1);}
  enemyChaliceProtection(target){return enemyChaliceProtection(this,target);}

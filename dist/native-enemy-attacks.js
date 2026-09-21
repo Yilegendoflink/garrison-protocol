@@ -10,6 +10,7 @@ export function enemyAttackTargets(battle,e,alive=attackableAllies(battle.s)){
   (enemyTargetInRange(e,u)||(e.specialSkill?.prefab==='CrossAttack'&&(Math.abs(e.x-u.x)<=1e-6||Math.abs(e.y-u.y)<=1e-6)))):[];
  targets.sort((a,b)=>compareEnemyTargets({tauntLevel:a.kind==='summon'?0:battle.stats(a).tauntLevel,deployAt:a.deployAt||0,uid:a.uid},{tauntLevel:b.kind==='summon'?0:battle.stats(b).tauntLevel,deployAt:b.deployAt||0,uid:b.uid}));
  if(/^enemy_10122_uacann(?:_2)?$/.test(e.id)&&battle.enemyHasArmyOrder(e))targets.sort((a,b)=>Number(b.id==='enemy_3010_mcreep')-Number(a.id==='enemy_3010_mcreep'));
+ if(/^enemy_1389_winbab(?:_2)?$/.test(e.id))targets.sort((a,b)=>Number(battle.atBrazierWindDoor(b))-Number(battle.atBrazierWindDoor(a)));
  if(blocker&&!spec.ignoreBlock)return [blocker,...targets.filter(t=>t!==blocker)];
  return targets;
 }

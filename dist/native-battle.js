@@ -1,5 +1,5 @@
 import {advanceEnemyShift} from './native-shift.js';
-import {paintDominion,dominionCell,tickDeepWater,tickSandStorm} from './native-environment.js';
+import {heatedByBrazier,atBrazierWindDoor,paintDominion,dominionCell,tickDeepWater,tickSandStorm} from './native-environment.js';
 import {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} from './native-enemy-parasite.js';
 import {advanceEnemyFear} from './native-enemy-fear.js';
 import {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} from './native-enemy-transport.js';
@@ -58,6 +58,8 @@ export class NativeBattle {
   b.s=migrated;b.attachRuntime();return b;}catch{return null;}
  }
  enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
+ heatedByBrazier(actor){return heatedByBrazier(this,actor);}
+ atBrazierWindDoor(actor){return atBrazierWindDoor(this,actor);}
  enemyHasArmyOrder(target){return !!target&&!target.flying&&!target.hidden&&!isIsolated(target)&&/^(?:enemy_10120_uaghst|enemy_10121_uasnip|enemy_10122_uacann|enemy_10123_uareap|enemy_10124_uashld)(?:_2)?$/.test(target.id)&&this.s.enemies.some(e=>e.hp>0&&!e.hidden&&/^enemy_10125_uacomd(?:_2)?$/.test(e.id));}
  enemyPhaseDamageMultiplier(target,type,source){return enemyPhaseDamageMultiplier(target,type)*enemyMinerShieldDamageMultiplier(target,source,type)*(this.enemyHasArmyOrder(target)&&['physical','arts'].includes(type)?1-(Number(target.enemyTalent?.['ExtraPower.damage_resistance'])||0):1);}
  enemyChaliceProtection(target){return enemyChaliceProtection(this,target);}

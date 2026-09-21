@@ -64,3 +64,14 @@ export function tickSandStorm(battle){
   while(u.hp>0&&now+1e-9>=u.sandNextAt){u.sandNextAt+=cfg.interval;dealDamage(battle,{target:u,amount:cfg.damage,type:'true',cause:'dot',environmental:true});}
  }
 }
+
+// 只接受真正存在且点燃的供暖器实体；图上名字/寒冷状态不能产生供暖。
+export function litBraziers(battle){return (battle.s.summons||[]).filter(d=>d.id==='trap_137_winfire'&&d.deployed&&d.hp>0&&d.heaterState==='lit');}
+export function heatedByBrazier(battle,actor){
+ if(!actor)return false;const x=Math.round(actor.x),y=Math.round(actor.y);
+ return litBraziers(battle).some(d=>Math.abs(x-d.x)<=1&&Math.abs(y-d.y)<=1&&(x!==d.x||y!==d.y));
+}
+export function atBrazierWindDoor(battle,actor){
+ if(!actor?.deployed)return false;
+ return litBraziers(battle).some(d=>Math.round(actor.x)===d.x+1&&Math.round(actor.y)===d.y&&battle.map.grid[d.y]?.[d.x+1]&&battle.map.grid[d.y][d.x+1].buildableType!=='NONE');
+}
