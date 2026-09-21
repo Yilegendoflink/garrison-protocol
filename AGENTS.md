@@ -2,6 +2,13 @@
 
 更新：2026-09-16。下次改代码前先读本页。`NATIVE_RULES_PROGRESS.md`、`S4_S6_PROGRESS.md`、`CODEX_HANDOFF.md` 是历史交接，其中「主入口仍是 35 人演示」「还没建仓库」已经过时。
 
+## 敌人机制范围：2026-09-21用户重筛
+
+- 用户已扩大豁免：**卫戍本期不存在的特殊地块、场景装置及其专属交互不要求实现**，不再只豁免搭桥。以 `docs/ENEMY_SCOPE_FILTER_2026-09-21.md` 与 `docs/ENEMY_BEHAVIOR_REMAINING.md` 为当前施工范围；旧审计中“仍待补场地生产者”的历史记录不覆盖此新口径。
+- 按效果筛选，不能整名敌人删除。摄影区外生效的能力、无污染环境的基础攻击、主角自身重生、裂兽出生屏障/增益、持盾者无供暖时自然叠层仍要实现。
+- 本期已有的深水、沙尘暴、沼泽、传送门、高低台/围栏、箱体/封印地面、盟约寒风继续保留；不能把活性源石地块等同于源石污染区/风暴，也不能把树丛等同于可砍伐巨蕈。敌人/干员实际能生成的召唤物与对象不因“地图未预置”自动豁免。
+- 不再为了补齐缺席场景而新增供暖器、血债账簿、矿道/矿工、烟花发射器、R装甲、摄影/喷泉/锁链等装置或NPC。已完成的可复用实现保留；随机池资格按保留的本体能力逐条复核，禁止因豁免而批量放开。
+
 ## 项目是什么
 
 非官方同人网页，还原国服《卫戍协议：盟约 · 下半期》（锚点 2026-03-14 / 03-27）。公开仓库 [Yilegendoflink/garrison-protocol](https://github.com/Yilegendoflink/garrison-protocol)，Pages 随 `main` 自动构建部署，**工作流不跑测试**。
@@ -33,6 +40,8 @@
 - `native-economy.js` / `garrison.js` / `strategy.js`：整备资金、运营特质、策略
 - `native-battle.js` / `native-combat.js` / `native-effects.js` / `native-operator-effects.js`：战斗循环、结算入口、逐名适配
 - `native-sp.js`：技力（脱手清空、持续倒流、弹药格子）
+- `native-shift.js`：明确力度的推动/默认拖拽逐帧失衡；`moveActor` 第五参 `forceLevel` 启用，取技能 `attack@force/force`，力度0有效。普通推击手有方向转径向/减两级修正，见行者S2固定身前方向例外。物理时段驱动弧光锋卫自伤、雪孩子撞高台、地穴坠落与失衡结束回调；默认拖拽按持续力和距离四次方衰减，绑定来源/部署代次；薄绿向内推走动量例外。捕网、歌蕾蒂娅S3等分段特殊拉力和未核定力度的旧调用仍未迁移，不能把本模块当作完整Unity刚体还原。静态刚体由行为覆盖表逐ID登记：可以进入失衡但零物理速度，不能等同失衡免疫，也不禁止普通导航/传送。新增模块须登记 `scripts/build-browser.mjs`。
+- `native-environment.js`：地图显式控制器的战斗效果及敌人生成的国度；当前接入深水、沙尘暴与现有土石结构遮挡。全局控制器可能在裁切外，构建时按原始地图的启用状态、技能索引/等级与历史黑板保留配置，不可只遍历可见 `map.devices`。沙尘暴不等于活性源石风暴，不能触发后者专属的敌人能力。国度格子保存在 `battle.s.dominionCells`，不改写共享地图；绘制只能读取它。
 - `native-waves.js` / `native-wave-random.js` / `native-wave-editor.js`：词条预算抽怪与编制台
 - `native-branches.js`：职业分支基础层
 - `native-fx.js`：**只画特效**。`s.events` 会裁剪过期，禁止当规则执行依据
@@ -56,10 +65,12 @@
 
 ## 敌人能力口径
 
+- **寒冷/冻结按施加类型区分**：`applyStatus` 的 `frostSide` 默认 `ally`，敌方施加必须显式传 `enemy`，不能按目标阵营推断。两类寒冷互不配对；敌方寒冷在同类冻结期间可续冻，友方寒冷始终两两配对并取已抵抗时长中的较长者。只有友方冻结减15法抗，冻结本身不另减攻速，也不解除我方阻挡（眩晕仍解除）。状态类型随JSON保存；当前无类型旧状态沿用友方语义。回归：`native-status-immunity.test.mjs`、`native-enemy-attacks.test.mjs`。
+
 - **搭桥为范围外关卡机制（用户 2026-09-21 确认）**：架桥船工／扶桥老手的 `BuildBridge`、桥梁维持／销毁及桥面改路不在本模拟补全范围；保留原表资料，用 `ignoredSkillPrefabs` 显式停用，不因该技能将这两种敌人排除随机池。自身隐匿和普通攻击照常；这不是忽略所有环境能力的授权，其他环境缺口仍逐项核对。
 
 - **死亡类能力只有一个入口**：死亡爆炸、死亡区域、解压缩都走 `native-effects` 的 `commitExit` → `battle.onEnemyDeath`，不要再挂在干员攻击路径上（那样被持续伤害击杀就漏触发）。生成的敌人先入队（`queueEnemySpawn`），在敌人状态结算后与战斗结束判定前各刷一次，别在遍历 `s.enemies` 时直接 push。
-- **反推原表字段**：`DeadSpawn.*`、`Revive[Trigger].*`、`Atkup.atk`／`AtkUp.atk`、`shield.dynamic` 等一律从 `talentBlackboard` 取，取不到就不给这个能力，并在 `enemy-behavior-overrides.json` 里显式关闭。`aura.*` 前缀是**自身条件判定**，不是发给周围敌人的光环（真光环是 `defup.*`）。
+- **反推原表字段**：`DeadSpawn.*`、`Revive[Trigger].*`、`Atkup.atk`／`AtkUp.atk`、`shield.dynamic` 等一律从 `talentBlackboard` 取，取不到就不给这个能力，并在 `enemy-behavior-overrides.json` 里显式关闭。`aura.*` 前缀是**自身条件判定**，不是发给周围敌人的光环。`defup.*` 也要核对目标范围：护障的是友军光环，鼠王的 `defup.def` 则只在自身法术屏障存在时加防。
 - **放开随机池要走流程**：复杂敌人先在 `enemy-behavior-overrides.json` 里 `randomPoolEligible:false`，补完专属实现并写了定向测试后再逐条放开；`filterRandomPoolTable` 会把不合格的敌人从词条池里剔掉，没放开就等于没上场。
 - **具名卡池要在 `native-session.js` 显式建表**：`drawFromPool` 只认池名，而原表（`pool_chess_glady`、`pool_char_pinus`、`pool_equip_*`）只给名字不给成员，不建表就等于按商店规则从整池抽。成员只能从效果文案或装备字段推：`members`（可带权重）、`bond`（该盟约的装备）、`any`（文案没限定，等于任意）；推不出来的宁可不做也不要编，并在表里注明依据。
 - **隐匿只有一条判定**：`invisible` = 状态表（`invisible`/`camouflage`）或形态自带的 `formInvisible`，`revealed` = 反隐时间窗（`revealUntil`，每帧由 `syncReveals` 收敛）。被阻挡（`e.block!=null`）视为脱离隐匿（表现层同口径：`concealActive` 在 `actor.block!=null` 时返回 false，马赛克与头顶隐匿图标一并消失）。改索敌时三处一起改：`targets()`、`autoSkillWouldHit()`、敌方 AI 的远程选目标；反隐由 `revealEnemy` 续期，不要写回永久置位的 `e.revealed=true`。敌方隐匿技能只有两条实现路径：`InvisibleCombat` 挂在 `resolveEnemyStrike`（攻击显形），清明 `InvisibleShield` 走独立计时的 `tickEnemyInvisibleShield`（跟攻击解耦）；技能文案里带「技能结束时」的是条件式发放（忍冬 S3 迷彩），通用「开技即获得」分支必须跳过它。

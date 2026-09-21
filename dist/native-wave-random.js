@@ -1,5 +1,5 @@
 import {buildPhasePlan} from './protocol.js';
-import {TRAINING_TYPES,PLACEHOLDER_ENEMY,loadWaveTable,enemyCost,tierPack,templateLabel} from './native-wave-fill.js';
+import {TRAINING_TYPES,PLACEHOLDER_ENEMY,loadWaveTable,enemyCost,tierPack,templateLabel,enemyPoolEligible} from './native-wave-fill.js';
 
 const A=(n,extra=1)=>extra*(1.1**n);
 const H=(n,extra=1)=>extra*(1.2**n);
@@ -46,8 +46,10 @@ function tableValue(table,round,hidden){
 }
 export function enemyCombatScale(mode,round,{hidden=false}={}){
  const side=scaleSide(mode.modeType),col=difficultyColumn(mode.modeDifficulty);
- const atkTable=ATK[side][col],hpTable=HP[side][col];
- const atk=tableValue(atkTable,round,hidden),hp=tableValue(hpTable,round,hidden);
+ // 项目难度：绝境为共同基准，险境80%，标准/入门60%；终极保留原表。
+ const baseColumn=col==='ABYSS'?'ABYSS':'HARD',factor=col==='NORMAL'?.8:col==='FUNNY'?.6:1;
+ const atkTable=ATK[side][baseColumn],hpTable=HP[side][baseColumn];
+ const atk=tableValue(atkTable,round,hidden)*factor,hp=tableValue(hpTable,round,hidden)*factor;
  const moveSpeed=col==='ABYSS'&&(hidden||round>=3)?1.15:1;
  return {atk,hp,moveSpeed,side,column:col};
 }
@@ -77,15 +79,17 @@ export function createWaveRoster({random,data,modeId}){
 export function waveRng(seed){let x=(seed||1)>>>0;const next=()=>{x^=x<<13;x^=x>>>17;x^=x<<5;x>>>=0;return x/4294967296;};next();return next;}
 
 export function fillBudgetWave(random,table,type,tier){
- const list=tierPack(table,type,tier).templates;
+ const eligible=tierPack(table,type,tier).templates.map(slot=>({...slot,pool:slot.pool.filter(id=>enemyPoolEligible(id))}));
+ const available=eligible.filter(slot=>slot.pool.length),list=available.length?available:eligible;
  const templateIndex=list.length<=1?0:Math.floor(random()*list.length);
  const slot=list[templateIndex]||list[0],budget=Math.max(0,Number(slot.budget)||0),maxCost=Number(slot.maxCost),pool=(slot.pool||[]).filter(Boolean).filter(id=>!(Number.isFinite(maxCost)&&maxCost>0)||enemyCost(table,id)<=maxCost);
- const meta={templateIndex,templateName:templateLabel(slot,templateIndex),budget};
+ const meta={templateIndex,templateName:templateLabel(slot,templateIndex),activity:slot.activity,budget};
  if(!pool.length)return {ids:[PLACEHOLDER_ENEMY],spent:0,leftover:budget,unfilled:true,...meta};
  const targetCount=slot.minCount?slot.minCount+Math.floor(random()*(slot.maxCount-slot.minCount+1)):80;
  const ids=[];let spent=0;
  for(let n=0;n<targetCount;n++){
-  const fit=pool.filter(id=>enemyCost(table,id)<=budget-spent);if(!fit.length)break;
+  let fit=pool.filter(id=>enemyCost(table,id)<=budget-spent);if(!fit.length)break;
+  if(new Set(ids).size<(slot.minKinds||0)){const fresh=fit.filter(id=>!ids.includes(id));if(fresh.length)fit=fresh;}
   const id=fit[Math.floor(random()*fit.length)];ids.push(id);spent+=enemyCost(table,id);
  }
  return {ids,spent,leftover:budget-spent,unfilled:false,...meta};
@@ -106,6 +110,25 @@ function visibleRoutes(level,fly){
  return (level.routes||[]).map((route,index)=>({route,index})).filter(({route})=>route&&route.startPosition.col<=10&&route.startPosition.row>=6&&route.startPosition.row<=12&&(fly?route.motionMode==='FLY':route.motionMode!=='FLY'));
 }
 
+// 各种敌人按自身数量的分位交错，再把整波平铺到开场 2–40 秒。
+// 按出生点分桶，避免同一入口路线较多时分走更多敌人。
+export function scheduleWaveQueue(queue,level,round){
+ const groups=new Map();
+ for(const q of queue){if(!groups.has(q.id))groups.set(q.id,[]);groups.get(q.id).push(q);}
+ const lanes=[0,0],entries=[];
+ for(const [id,items] of [...groups].sort(([a],[b])=>a.localeCompare(b))){
+  const first=lanes[0]<=lanes[1]?0:1;
+  items.forEach((q,i)=>{const lane=round<=3?0:(first+i)%2;lanes[lane]++;entries.push({q,lane,rank:(i+.5)/items.length,id,ordinal:i});});
+ }
+ entries.sort((a,b)=>a.rank-b.rank||a.id.localeCompare(b.id)||a.ordinal-b.ordinal);
+ return entries.map(({q,lane},i)=>{
+  const fly=level.routes[q.route]?.motionMode==='FLY',matching=visibleRoutes(level,fly),routes=matching.length?matching:visibleRoutes(level,!fly);
+  const points=[...new Set(routes.map(r=>r.route.startPosition.row))].sort((a,b)=>a-b);
+  const row=lane===0?points[0]:points.at(-1),pool=routes.filter(r=>r.route.startPosition.row===row);
+  return {...q,at:entries.length<=1?2:2+38*i/(entries.length-1),route:pool.length?pool[i%pool.length].index:q.route};
+ });
+}
+
 export function buildWavePlan(data,turn,roster=null,table=null){
  if(!turn)return null;
  if(turn.isBossTurn)return {round:turn.round,benchmark:true,total:0,targets:1,queue:[],level:null,levelId:null,assignment:null};
@@ -114,13 +137,13 @@ export function buildWavePlan(data,turn,roster=null,table=null){
  if(!assignment||assignment.boss)return {round:turn.round,benchmark:false,total:0,targets:0,queue:[],level,levelId,assignment:assignment||null};
  const ground=visibleRoutes(level,false),air=visibleRoutes(level,true),queue=[],mode=data.season.modeDataDict[roster.modeId];
  const scale=mode?enemyCombatScale(mode,turn.round,{hidden:!!turn.isConditional}):{atk:1,hp:1,moveSpeed:1};
+ if(turn.round===1)scale.hp*=.8;
  const sourceTable=table||loadWaveTable(),waveTable=filterRandomPoolTable(sourceTable,data),pack=fillBudgetWave(waveRng(assignment.waveSeed||turn.round),waveTable,assignment.type,assignment.tier);
- const interval=pack.ids.length<=1?0:Math.max(1.2,Math.min(4,24/pack.ids.length));
  pack.ids.forEach((id,i)=>{
   const fly=(data.enemies?.[id]||level.enemyProfiles?.[id])?.motion==='FLY';
   const routes=fly?(air.length?air:ground):(ground.length?ground:air);if(!routes.length)return;
   const pick=routes[i%routes.length];
-  queue.push({id,at:2+i*interval,route:pick.index,cost:enemyCost(waveTable,id),placeholder:pack.unfilled,unfilled:pack.unfilled});
+  queue.push({id,route:pick.index,cost:enemyCost(waveTable,id),placeholder:pack.unfilled,unfilled:pack.unfilled});
  });
- return {round:turn.round,benchmark:false,total:queue.length,targets:queue.length,queue,level,levelId,assignment,scale,pack,filled:pack.unfilled?0:queue.length,placeholders:pack.unfilled?queue.length:0};
+ return {round:turn.round,benchmark:false,total:queue.length,targets:queue.length,queue:scheduleWaveQueue(queue,level,turn.round),level,levelId,assignment,scale,pack,filled:pack.unfilled?0:queue.length,placeholders:pack.unfilled?queue.length:0};
 }

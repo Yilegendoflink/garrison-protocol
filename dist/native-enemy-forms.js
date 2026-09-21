@@ -1,6 +1,7 @@
 import {cancelEnemyCast,beginEnemySkill,endEnemySkill} from './native-enemy-skills.js';
-import {permissions,applyStatus} from './status.js';
+import {permissions,applyStatus,removeStatus} from './status.js';
 import {FPS} from './combat.js';
+import {attackableAllies,alliedActors,newAttackId,dealDamage} from './native-effects.js';
 
 const TRANSLATOR='enemy_10081_mpplai';
 const GARGOYLES=new Set(['enemy_1172_dugago','enemy_1172_dugago_2']);
@@ -9,7 +10,32 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 export function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id===TRANSLATOR){
+ if(e.id==='enemy_10141_xdpeng_2'){
+  e.enemyFormKind='penguin';e.enemyForm='carrying';e.enemyAttack={...e.enemyAttack,groundOnly:true};e.unblockable=e.baseUnblockable=false;
+ }else if(e.id==='enemy_9023_acdums'){
+  e.enemyFormKind='echo';e.enemyForm='pipe';e.echoHits=0;e.damageType='arts';e.blockCost=2;
+ }else if(e.id==='enemy_1517_xi'){
+  e.enemyFormKind='xi';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.damageType='arts';e.ranged=true;e.enemyAttack={groundOnly:true};e.specialSkill=null;
+  // 本期默认明（PRTS415291）；不把无属性单位强制赋色。地块配置仍由环境层另行处理。
+  if(Number(e.enemyTalent['yinyang.dynamic'])===1)e.yinYang={attribute:'light',sameScale:Number(e.enemyTalent['yinyang.buff_yinyang[same].atk_scale']),differentScale:Number(e.enemyTalent['yinyang.buff_yinyang[diff].atk_scale'])};
+ }else if(e.id==='enemy_1512_mcmstr'){
+  e.enemyFormKind='ugly';e.enemyForm='machine';e.formBaseShiftImmune=!!e.shiftImmune;e.unblockable=e.baseUnblockable=false;e.damageType='physical';e.ranged=true;e.range=2.5;e.priestMoveScale=b.combatScale?.moveSpeed??1;
+  e.meleeAttackScale=Number(e.enemyTalent['combat.attack@mcmstr_rage_attack.atk_scale']);e.enemyAttack={groundOnly:true,splashGroundOnly:false,splashOnlyRanged:true,splash:{shape:'square',radius:1}};
+ }else if(e.id==='enemy_1535_wlfmster'){
+  e.enemyFormKind='zaro';e.enemyForm='initial';e.shiftImmune=true;e.formBaseImmunities={...e.immunities};e.immunities.stun=true;e.ranged=false;e.range=0;e.damageType='physical';e.zaroBaseInterval=e.interval;
+ }else if(e.id==='enemy_1525_blkswb'){
+  e.enemyFormKind='degen';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.statusResistance=.5;e.damageType='physical';e.ranged=false;
+  e.enemyBlockedDefPenetration=Number(e.enemyTalent['DefPenetrate.enemy_blkswb_t_2.def_penetrate']);
+ }else if(e.id==='enemy_1539_reid'){
+  e.enemyFormKind='reid';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.lowHpRatio=0;
+  if(e.lowHpTriggered){e.atk=e.baseAtk;e.speed=e.baseSpeed;}
+ }else if(e.id==='enemy_1516_jakill'){
+  e.enemyFormKind='jesselton';e.enemyForm='warden';e.ranged=true;e.damageType='arts';e.res=e.baseRes+Number(e.enemyTalent['enhance.magic_resistance']);
+  e.enemyAttack={...e.enemyAttack,groundOnly:true,excludeIds:['trap_025_prison']};e.formBaseShiftImmune=!!e.shiftImmune;
+  e.jesseltonAtkScale=b.combatScale?.atk??1;e.jesseltonMoveScale=b.combatScale?.moveSpeed??1;
+ }else if(e.id==='enemy_10116_ymgtop'){
+  e.enemyFormKind='rotator';e.enemyForm='normal';e.rotationProtectedUntil=b.s.time+Number(e.enemyTalent['ProtectionTime.protection_duration']);e.ranged=false;
+ }else if(e.id===TRANSLATOR){
   e.enemyFormKind='translator';e.enemyForm='original';e.formDamageCounts={physical:0,arts:0};
   e.formBaseImmunities={...e.immunities};e.formBaseShiftImmune=!!e.shiftImmune;
   e.canAttack=e.baseCanAttack=false;e.shiftImmune=true;
@@ -63,7 +89,86 @@ function finishTranslation(b,e){
 }
 
 export function tickEnemyForm(b,e){
+ if(e.enemyFormKind==='rotator'){tickRotatorForm(b,e);return;}
  if(!e.enemyFormKind||e.hp<=0)return;
+ if(e.enemyFormKind==='penguin'){
+  if(e.enemyForm==='carrying'&&e.eggDropNextAt!=null&&b.s.time+1e-9>=e.eggDropNextAt){
+   e.eggDropNextAt=b.s.time+.1;
+   if((e.statuses||[]).some(s=>['stun','frozen','levitate'].includes(s.kind)))return;
+   removeStatus(e,'tremble');cancelEnemyCast(b,e);e.action=null;const skill=e.enemySkills.find(s=>s.prefab==='switch');if(!skill)return;
+   skill.nextAt=b.s.time;if(!beginEnemySkill(b,e,skill))return;
+   e.enemyForm='lost-egg';e.eggDropNextAt=null;e.canAttack=e.baseCanAttack=false;e.unblockable=true;e.block=null;e.formMoveMultiplier=Number(e.enemyTalent['speed.move_speed']);endEnemySkill(b,e);announce(b,e,'失去蛋');
+  }
+  return;
+ }
+ if(e.enemyFormKind==='xi'){
+  if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
+   e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
+   if(e.yinYang)e.yinYang.attribute=e.yinYang.attribute==='light'?'dark':'light';
+   e.atk=e.baseAtk*(1+Number(e.enemyTalent['reborn.atk']));e.enemyAttack={groundOnly:true,targets:2,repeatTargets:2};e.xiInvincibleUntil=b.s.time+Number(e.enemyTalent['reborn.invincible']);e.invulnerable=true;
+   for(const skill of e.enemySkills||[]){skill.used=false;skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;}
+   announce(b,e,'第二形态');
+  }else if(e.enemyForm==='second'&&e.xiInvincibleUntil!=null&&b.s.time+1e-9>=e.xiInvincibleUntil){e.invulnerable=false;e.xiInvincibleUntil=null;}
+  return;
+ }
+ if(e.enemyFormKind==='ugly'){
+  if(e.enemyForm==='rebirth'){
+   if(!e.uglyExploded&&b.s.time+1e-9>=e.uglyExplosionAt){
+    e.uglyExploded=true;const skill=e.enemySkills.find(s=>s.prefab==='bomb[reborning]'),attackId=newAttackId(b);
+    for(const target of attackableAllies(b.s))if(Math.hypot(target.x-e.x,target.y-e.y)<=3+1e-9){b.resolveEnemyStrike(e,target,{scale:Number(skill.bb.atk_scale),type:'physical',cause:'extra',attackId});applyStatus(target,'stun',Number(skill.bb.stun),{source:e.uid});}
+    b.emit('impact',{uid:e.uid,x:e.x,y:e.y,radius:3,type:'physical',enemy:true});
+   }
+   if(b.s.time+1e-9>=e.enemyFormUntil){
+    const bb=e.enemyTalent;e.enemyForm='priest';e.enemyFormUntil=null;e.formHold=false;e.invulnerable=false;e.shiftImmune=e.formBaseShiftImmune;e.unblockable=true;e.canAttack=false;e.action=null;
+    e.baseDef+=Number(bb['bird_run.def']);e.def=e.baseDef;e.baseRes+=Number(bb['bird_run.magic_resistance']);e.res=e.baseRes;e.baseSpeed+=Number(bb['bird_run.move_speed'])*e.priestMoveScale;e.speed=e.baseSpeed;e.priestNextDamageAt=b.s.time+1;announce(b,e,'大祭司形态');
+   }
+  }else if(e.enemyForm==='priest')while(e.hp>0&&b.s.time+1e-9>=e.priestNextDamageAt){e.priestNextDamageAt+=1;dealDamage(b,{target:e,amount:Number(e.enemyTalent['bird_run.damage']),type:'true',cause:'dot'});}
+  return;
+ }
+ if(e.enemyFormKind==='zaro'){
+  if(e.enemyForm==='rebirth'){
+   e.hp=Math.max(1,e.maxHp*Math.min(1,(b.s.time-e.zaroRebornStartedAt)/Number(e.enemyTalent['Reborn.duration'])));
+   if(b.s.time+1e-9>=e.enemyFormUntil){
+    e.hp=e.maxHp;e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;e.immunities={...e.formBaseImmunities};
+    e.atk=e.baseAtk*(1+Number(e.enemyTalent['Passive2.atk']));e.interval=e.zaroBaseInterval+Number(e.enemyTalent['Passive2.base_attack_time']);e.ranged=true;e.range=1.25;e.enemyAttack={...e.enemyAttack,hits:2};
+    e.zaroInvincibleUntil=b.s.time+Number(e.enemyTalent['Passive2.invincible_time']);e.invulnerable=true;
+    for(const skill of e.enemySkills||[]){skill.used=false;skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;}
+    announce(b,e,'第二形态');
+   }
+  }else if(e.enemyForm==='second'&&e.zaroInvincibleUntil!=null&&b.s.time+1e-9>=e.zaroInvincibleUntil){e.invulnerable=false;e.zaroInvincibleUntil=null;}
+  return;
+ }
+ if(e.enemyFormKind==='degen'){
+  if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
+   e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
+   e.enemyAttack={...e.enemyAttack,hits:2};e.enemyBlockedDefPenetration=Number(e.enemyTalent['DefPenetrate.enemy_blkswb_t_2[reborn].def_penetrate']);
+   e.degenInvincibleUntil=b.s.time+Number(e.enemyTalent['Reborn.invincible']);e.invulnerable=true;
+   for(const skill of e.enemySkills||[]){skill.used=false;skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;}
+   announce(b,e,'第二形态');
+  }
+  if(e.enemyForm==='second'){
+   if(e.degenInvincibleUntil!=null&&b.s.time+1e-9>=e.degenInvincibleUntil){e.invulnerable=!!e.crownBlink?.protect;if(e.crownBlink)e.crownBlink.restore.invulnerable=false;e.degenInvincibleUntil=null;}
+   if(e.block!=null)e.degenRevealUntil=b.s.time+3;
+   e.formInvisible=b.s.time+1e-9>=(e.degenRevealUntil||0);e.invisible=e.formInvisible&&!e.revealed;
+  }
+  return;
+ }
+ if(e.enemyFormKind==='reid'){
+  if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
+   e.enemyForm='revived';e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
+   e.reidInvincibleUntil=b.s.time+Number(e.enemyTalent['Reborn.invincible']);e.invulnerable=b.s.time<e.reidInvincibleUntil;
+   for(const skill of e.enemySkills)skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;
+   announce(b,e,'重生完成');
+  }
+  if(e.enemyForm==='revived'&&b.s.time>=e.reidInvincibleUntil)e.invulnerable=false;
+ }
+ if(e.enemyFormKind==='jesselton'&&e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
+  const bb=e.enemyTalent;e.enemyForm='assassin';e.invulnerable=false;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;
+  e.baseAtk+=Number(bb['enhance.atk'])*e.jesseltonAtkScale;e.atk=e.baseAtk;e.baseDef+=Number(bb['enhance.def']);e.def=e.baseDef;e.res=e.baseRes;
+  e.interval+=Number(bb['enhance.base_attack_time']);e.baseSpeed+=Number(bb['enhance.move_speed'])*e.jesseltonMoveScale;e.speed=e.baseSpeed;
+  e.ranged=false;e.damageType='physical';e.enemyAttack={...e.enemyAttack,excludeIds:[]};e.canAttack=e.baseCanAttack;e.sp=0;e.attackCooldown=0;e.action=null;
+  for(const s of e.enemySkills){s.nextAt=s.cooldown>=0?b.s.time+s.cooldown:null;s.used=false;}b.liberatePrisoners();announce(b,e,'杀手形态');
+ }
  if(e.enemyFormKind==='translator'){
   if(e.enemyForm==='original'&&e.block!=null)startTranslation(b,e,'ghost');
   if(e.enemyForm==='transforming'&&b.s.time+1e-9>=e.enemyFormUntil)finishTranslation(b,e);
@@ -117,9 +222,33 @@ function tickParrotForm(b,e){
 }
 
 export function enemyFormAfterDamage(b,e,result){
+ enemyFormHealthChanged(b,e);
+ if(e.enemyFormKind==='echo'&&result.total>0){
+  b.enemyEchoBurst(e,1.6,Number(e.enemyTalent['3.atk_scale']),Number(e.enemyTalent['3.ep_damage_ratio']));
+  if(e.hp>0){e.echoHits=(e.echoHits||0)+1;const max=Number(e.enemyTalent[(e.enemyForm==='pipe'?'1':'2')+'.hit_times_to_switch']);if(max>0&&e.echoHits>=max)setEchoMode(b,e,e.enemyForm==='pipe'?'string':'pipe');}
+ }
  if(e.enemyFormKind!=='parrot'||e.hp<=0||result.total<=0||e.enemyForm==='grounded'||e.parrotDamageUsed)return;
  e.parrotDamageUsed=true;const prefix=e.enemyForm==='carrying'?'M1SpeedUp':'M0SpeedUp';
  e.parrotBoostUntil=b.s.time+Number(e.enemyTalent[prefix+'.duration']);e.speed=e.baseSpeed*Number(e.enemyTalent[prefix+'.move_speed']);
+}
+
+export function setEchoMode(b,e,mode){
+ if(e.enemyFormKind!=='echo'||!['pipe','string'].includes(mode))return;
+ e.enemyForm=mode;e.echoHits=0;e.speed=e.baseSpeed*(mode==='string'?1+Number(e.enemyTalent['2.move_speed']):1);announce(b,e,mode==='pipe'?'裂管之音':'断弦之音');
+}
+
+export function enemyFormHealthChanged(b,e){
+ if(e.enemyFormKind!=='degen'||e.enemyForm!=='second')return;
+ const bb=e.enemyTalent,ratio=Number(bb['ClearSp.hp_ratio']);if(!(ratio>0))return;
+ const steps=Math.min(Math.floor(1/ratio),Math.floor((1-Math.max(0,e.hp)/e.maxHp+1e-9)/ratio));
+ while((e.degenPressureSteps||0)<steps){
+  e.degenPressureSteps=(e.degenPressureSteps||0)+1;
+  for(const target of alliedActors(b.s))if(target.deployed&&target.hp>0&&Math.hypot(target.x-e.x,target.y-e.y)<=Number(bb['ClearSp.range_radius'])+1e-9){
+   applyStatus(target,'forcedDisarm',Number(bb['ClearSp.duration']),{source:e.uid,resistible:false});applyStatus(target,'spBlock',Number(bb['ClearSp.duration']),{source:e.uid,resistible:false});target.action=null;
+   if(b.s.units.includes(target))target.sp=0;
+  }
+  announce(b,e,'瞬息杀机');
+ }
 }
 
 function tickJetForm(b,e){
@@ -144,13 +273,80 @@ function tickJetForm(b,e){
  }
 }
 
+function stopRotation(b,e){
+ e.enemyForm='normal';e.canAttack=e.baseCanAttack;e.action=null;e.rotationNextAt=null;
+ e.rotationProtectedUntil=b.s.time+Number(e.enemyTalent['ProtectionTime.protection_duration']);
+ const skill=e.enemySkills.find(s=>s.prefab==='SwitchModeTrigger');skill.nextAt=b.s.time+skill.cooldown;e.nextSkillAt=skill.nextAt;
+ announce(b,e,'停止旋转');
+}
+
+// 当前位移求解器是即时推拉；由逻辑入口在成功移动结束时通知，不把普通传送当失衡。
+export function enemyFormShiftEnded(b,e){
+ if(e.hp<=0)return;
+ if(e.id==='enemy_10112_ymgds')applyStatus(e,'stun',Number(e.enemyTalent['StunAfterUnbalance.stun']),{source:e.uid});
+ if(e.enemyFormKind==='penguin'&&e.enemyForm==='carrying')e.eggDropNextAt??=b.s.time+.1;
+ if(e.enemyFormKind==='rotator'&&e.enemyForm==='rotating'&&b.s.time+1e-9>=e.rotationProtectedUntil)stopRotation(b,e);
+}
+
+function tickRotatorForm(b,e){
+ if(e.hp<=0||e.hidden)return;
+ const now=b.s.time,bb=e.enemyTalent,control=permissions(e),skill=e.enemySkills.find(s=>s.prefab==='SwitchModeTrigger');
+ if(!skill)return;
+ if(e.enemyForm==='normal'){
+  if(now+1e-9<e.rotationProtectedUntil||!control.skill||!control.attack||control.silenced||e.action)return;
+  if(!beginEnemySkill(b,e,skill))return;
+  endEnemySkill(b,e);e.enemyForm='rotating';e.canAttack=false;e.action=null;
+  e.rotationProtectedUntil=now+Number(bb['ProtectionTime.protection_duration']);e.enemyFormUntil=now+Number(bb['EndRotate.rotate_duration']);e.rotationNextAt=now+Number(bb['RotateDamage.interval']);announce(b,e,'漩涡形态');return;
+ }
+ while(e.hp>0&&e.rotationNextAt<=e.enemyFormUntil+1e-9&&now+1e-9>=e.rotationNextAt){
+  e.rotationNextAt+=Number(bb['RotateDamage.interval']);
+  if(!control.attack||control.silenced)continue;
+  const attackId=newAttackId(b);
+  for(const target of attackableAllies(b.s))if(!target.flying&&Math.hypot(target.x-e.x,target.y-e.y)<=Number(bb['RotateDamage.attack@range_radius'])+1e-9)
+   b.resolveEnemyStrike(e,target,{scale:Number(bb['RotateDamage.attack@atk_scale']),type:'physical',attackId,suppressAttackZone:true});
+  b.emit('impact',{uid:e.uid,x:e.x,y:e.y,radius:Number(bb['RotateDamage.attack@range_radius']),type:'physical',enemy:true});
+ }
+ if(now+1e-9>=e.enemyFormUntil)stopRotation(b,e);
+}
+
 export function enemyFormStats(e){
+ if(e.enemyFormKind==='jesselton'&&e.enemyForm==='warden')e.res+=Number(e.enemyTalent['enhance.magic_resistance']);
  if(e.enemyFormKind==='gargoyle'&&e.enemyForm==='stone'){
   e.def+=Number(e.enemyTalent['stone.def'])||0;e.res+=Number(e.enemyTalent['stone.magic_resistance'])||0;
  }
 }
 
+export function enemyPhaseDamageMultiplier(e,type){
+ return e.enemyFormKind==='zaro'&&e.enemyForm==='initial'&&['physical','arts'].includes(type)?1-Number(e.enemyTalent['Passive.damage_resistance']):1;
+}
+
 export function enemyFormFatal(b,e){
+ if(e.enemyFormKind==='xi'&&e.enemyForm==='initial'){
+  e.xiMarkEnabled=false;e.xiNearestUid=null;e.xiFarthestUid=null;
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['reborn.duration']);e.hp=e.maxHp;
+  e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
+ if(e.enemyFormKind==='ugly'&&e.enemyForm==='machine'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['reborn.duration']);e.hp=e.maxHp;e.uglyExplosionAt=b.s.time+2.17;e.uglyExploded=false;
+  e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'自爆准备');return true;
+ }
+ if(e.enemyFormKind==='zaro'&&e.enemyForm==='initial'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.zaroRebornStartedAt=b.s.time;e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=1;
+  e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
+ if(e.enemyFormKind==='degen'&&e.enemyForm==='initial'){
+  e.crownBlink=null;e.crownRejoin=null;e.unblockableUntil=null;
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp;
+  e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
+ if(e.enemyFormKind==='reid'&&e.enemyForm==='initial'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp*Number(e.enemyTalent['Reborn.hp_ratio']);
+  e.reidRushUntil=null;e.speed=e.baseSpeed;e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
+ if(e.enemyFormKind==='jesselton'&&e.enemyForm==='warden'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['reborn.duration']);e.hp=e.maxHp;
+  e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
  if(e.enemyFormKind!=='gargoyle'||e.enemyForm!=='ground'||e.pillarBrokenUntil>b.s.time)return false;
  cancelEnemyCast(b,e);
  e.enemyForm='stone';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['stone.duration']);

@@ -1,7 +1,9 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {applyDamage} from '../dist/combat.js';
-import {applyElementDamage,grantGuard} from '../dist/native-effects.js';
+import {applyElementDamage,grantGuard,commitExit,moveActor} from '../dist/native-effects.js';
+import {applyStatus} from '../dist/status.js';
+import {NativeBattle} from '../dist/native-battle.js';
 import {enemySprite,FORM_SPRITE_TINTS} from '../dist/protocol.js';
 import {FORM_TINT_STYLE,drawEnemyPhase,formTintedImage} from '../dist/native-fx.js';
 
@@ -24,6 +26,7 @@ function liveSession({deploy=true}={}){
  return {g,b};
 }
 function liveBattle(opts){return liveSession(opts).b;}
+function flushFragments(b){for(const u of b.s.units)applyStatus(u,'disarm',60);for(let i=0;i<22;i++)b.step();}
 function spawnEnemy(b,id,x,y){
  const origin=b.map.origin||{col:0,row:0};
  // 起点与终点同格 + 一个长等待指令：既能用 step() 推进时间，又不会让敌人走到终点漏怪。
@@ -38,6 +41,42 @@ function walkableSpot(b,x,y){
  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)if(b.tileWalkable(x+dx,y+dy))return {x:x+dx,y:y+dy};
  assert.fail('附近没有可行走地块');
 }
+
+test('解压缩按种子生成连续坐标与独立延迟，等待期不清场，JSON恢复后只生成一次',()=>{
+ const {b,g}=liveSession({deploy:false});b.s.units=[];const parent=spawnEnemy(b,'enemy_1195_sfyin',3,3);
+ const values=[.1,.9,.5,.2,.8,.9];let draws=0;b.economy.random=()=>values[draws++%values.length];
+ commitExit(b,{target:parent});const pending=structuredClone(b.s.pendingEnemySpawns);assert.equal(pending.length,2);
+ assert.deepEqual(pending.map(p=>[p.placement.x,p.placement.y]),[[2.6,3.4],[2.7,3.3]]);assert.ok(Math.abs(pending[0].at-.35)<1e-9);assert.ok(Math.abs(pending[1].at-.63)<1e-9);
+ assert.equal(commitExit(b,{target:parent}),false);assert.equal(b.s.pendingEnemySpawns.length,2);
+ for(let i=0;i<9;i++)b.step();assert.equal(b.s.enemies.length,0);assert.equal(b.s.finished,false);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);
+ for(let i=0;i<3;i++)restored.step();assert.equal(restored.s.enemies.length,1);assert.equal(restored.s.pendingEnemySpawns.length,1);
+ for(let i=0;i<10;i++)restored.step();assert.equal(restored.s.enemies.length,2);assert.equal(restored.s.pendingEnemySpawns.length,0);assert.equal(restored.s.finished,false);
+ for(const e of restored.s.enemies)assert.deepEqual(e.route,parent.route);
+});
+
+test('坠落由统一退场入口计击倒，但不排队解压缩；其他击倒仍生成',()=>{
+ for(const reason of ['fall','knockdown']){
+  const b=liveBattle({deploy:false}),parent=spawnEnemy(b,'enemy_1195_sfyin',3,3),kills=b.s.kills;
+  assert.equal(commitExit(b,{target:parent,reason}),true);assert.equal(b.s.kills,kills+1);assert.equal(b.s.pendingEnemySpawns.length,reason==='fall'?0:2);
+ }
+});
+
+test('断刃耗尽后清空攻击间隔，立即准备一次不带断刃增攻的普通攻击',()=>{
+ const b=liveBattle(),u=b.s.units[0];b.map=structuredClone(b.map);b.map.grid[Math.round(u.y)][Math.round(u.x)].heightType='LOWLAND';
+ applyStatus(u,'disarm',60);applyStatus(u,'skillLock',60);const stats=b.stats.bind(b);b.stats=a=>({...stats(a),blockCnt:3,maxHp:50000});u.hp=50000;
+ const e=spawnEnemy(b,'enemy_1207_sfji',u.x,u.y);e.atk=e.baseAtk=10;e.daggers=1;const hits=[];b.hurt=(target,source)=>hits.push({time:b.s.time,atk:source.atk});
+ for(let i=0;i<180&&hits.length<2;i++)b.step();assert.equal(hits.length,2);assert.equal(e.daggers,0);assert.equal(hits[0].atk,17);assert.equal(hits[1].atk,10);assert.ok(hits[1].time-hits[0].time<e.interval/2);
+});
+
+test('再生过渡期间禁止推拉，进入形态恢复此前失衡免疫且读档不丢失',()=>{
+ for(const initial of [false,true]){
+  const {b,g}=liveSession({deploy:false}),u=b.s.units[0],e=spawnEnemy(b,'enemy_1288_duskls',u.x+1,u.y);e.shiftImmune=initial;
+  b.hit(u,e,999999,'physical');assert.equal(e.revivePhase,'rebirth');assert.equal(e.shiftImmune,true);assert.equal(moveActor(b,e,u,'推动'),false);
+  const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.enemies[0];assert.equal(copy.shiftImmune,true);
+  for(let i=0;i<31;i++)restored.step();assert.equal(copy.revivePhase,'form');assert.equal(copy.shiftImmune,initial);
+ }
+});
 
 // ── 第一批：特殊生命值机制 ────────────────────────────────────────────────
 
@@ -133,7 +172,7 @@ test('解压缩参数来自原表：个数、碎片 key 与断刃扣减',()=>{
  assert.deepEqual(profiles('enemy_1207_sfji_2').daggers,{count:4,atkAdd:0.8,perAttack:1},'新硎用 AtkUp.atk 的写法');
 });
 
-test('磨砻被击倒后按原表生成 2 个木制瑞印，落在自身或相邻可行走格并沿用自身路径',()=>{
+test('磨砻被击倒后按原表生成 2 个木制瑞印，在0.7秒内生成于边长1的正方形并沿用自身路径',()=>{
  const b=liveBattle(),u=b.s.units[0];
  const spot=walkableSpot(b,Math.round(u.x)+2,Math.round(u.y));
  const parent=spawnEnemy(b,'enemy_1195_sfyin',spot.x,spot.y);
@@ -141,16 +180,16 @@ test('磨砻被击倒后按原表生成 2 个木制瑞印，落在自身或相�
  b.hit(u,parent,99999,'physical');
  assert.equal(parent.hp,0);
  assert.equal(b.s.enemies.length,before,'生成的碎片要等同一帧的总控刷出，避免在遍历敌人时改动数组');
- b.flushEnemySpawns();
+ flushFragments(b);
  const shards=b.s.enemies.filter(e=>e.id==='enemy_1196_msfyin');
  assert.equal(shards.length,2);
- assert.equal(b.s.enemies.length,before+2);
+ assert.equal(b.s.enemies.length,2);
  for(const shard of shards){
   assert.equal(shard.hitCountHp,true,'碎片带次数血条');
   assert.equal(shard.unblockable,true,'碎片无法被阻挡');
   assert.equal(shard.canAttack,false,'碎片不攻击');
   assert.equal(shard.route,parent.route,'以自身路径召唤');
-  assert.ok(Math.max(Math.abs(shard.x-parent.x),Math.abs(shard.y-parent.y))<=1.001,'落在 1.0 边长正方形对应的格子内');
+  assert.ok(Math.max(Math.abs(shard.x-parent.x),Math.abs(shard.y-parent.y))<=.500001,'落在以死亡点为中心、1.0边长正方形内');
   assert.ok(b.tileWalkable(Math.round(shard.x),Math.round(shard.y)),'碎片落在可行走地块上');
  }
 });
@@ -160,7 +199,7 @@ test('身观只生成 1 个青铜镜，并带嘲讽等级',()=>{
  const parent=spawnEnemy(b,'enemy_1199_sfjin',u.x+1,u.y);
  assert.equal(parent.taunt,1,'tauntLevel 要落到运行时的 taunt');
  b.hit(u,parent,999999,'physical');
- b.flushEnemySpawns();
+ flushFragments(b);
  const shards=b.s.enemies.filter(e=>e.id==='enemy_1200_msfjin');
  assert.equal(shards.length,1);
  assert.equal(shards[0].maxHp,30,'青铜镜需要 30 次伤害击倒');
@@ -175,7 +214,7 @@ test('漏怪不算死亡，不触发解压缩',()=>{
  assert.equal(b.s.enemies.filter(e=>e.id==='enemy_1196_msfyin').length,0,'走到保护点不算死亡');
  const killed=spawnEnemy(b,'enemy_1195_sfyin',u.x+1,u.y+1);
  b.hit(u,killed,99999,'physical');
- b.flushEnemySpawns();
+ flushFragments(b);
  assert.equal(b.s.enemies.filter(e=>e.id==='enemy_1196_msfyin').length,2,'正常击倒才生成');
 });
 
@@ -184,7 +223,7 @@ test('死亡类能力覆盖全部死因：非干员来源的击杀同样解压�
  const zoneKill=spawnEnemy(b,'enemy_1197_sfshu',u.x+1,u.y);
  zoneKill.hp=0;
  b.onEnemyDeath(zoneKill,{reason:'knockdown'}); // 统一入口，不再只在干员攻击路径里处理
- b.flushEnemySpawns();
+ flushFragments(b);
  assert.equal(b.s.enemies.filter(e=>e.id==='enemy_1198_msfshu').length,3,'俗心生成 3 个小说卷轴');
 });
 
@@ -194,7 +233,7 @@ test('碎片计入待处理目标：父体是最后一个敌人时战斗不结�
  b.s.queue=[];
  b.hit(u,parent,99999,'physical');
  assert.equal(b.s.finished,false);
- b.step();
+ b.step();assert.equal(b.s.finished,false,'待生成的碎片也阻止清场');flushFragments(b);
  const shards=b.s.enemies.filter(e=>e.hp>0&&e.id==='enemy_1196_msfyin');
  assert.equal(shards.length,2,'碎片刷出后仍然占着待处理目标');
  assert.equal(b.s.finished,false,'剩下碎片时不能判战斗结束');
@@ -222,7 +261,7 @@ test('沉沙的断刃：持有期间攻击力 +70%、每次成功攻击消耗 1 
  b.resolveEnemyStrike(parent,u,{});
  assert.equal(seenAtk,base,'断刃耗尽后攻击力回落');
  b.hit(u,parent,999999,'physical');
- b.flushEnemySpawns();
+ flushFragments(b);
  assert.equal(b.s.enemies.filter(e=>e.id==='enemy_1208_msfji').length,1,'断刃耗尽时至少生成 1 个铜矛头');
 });
 
@@ -230,7 +269,7 @@ test('沉沙未消耗断刃时按剩余个数生成碎片',()=>{
  const b=liveBattle(),u=b.s.units[0];
  const parent=spawnEnemy(b,'enemy_1207_sfji',u.x+1,u.y);
  b.hit(u,parent,999999,'physical');
- b.flushEnemySpawns();
+ flushFragments(b);
  assert.equal(b.s.enemies.filter(e=>e.id==='enemy_1208_msfji').length,4,'一个断刃都没用时生成 4 个');
 });
 
@@ -422,7 +461,7 @@ test('碎片不吃形态缩放：生成时的 spriteScale 才是唯一依据',()
  const b=liveBattle(),u=b.s.units[0];
  const parent=spawnEnemy(b,'enemy_1195_sfyin',u.x+1,u.y);
  b.hit(u,parent,999999,'physical');
- b.flushEnemySpawns();
+ flushFragments(b);
  const fragment=b.s.enemies.find(e=>e.id==='enemy_1196_msfyin');
  assert.ok(fragment,'木制瑞印应当已生成');
  assert.equal(fragment.hitCountHp,true,'碎片本身就是次数血条敌人');

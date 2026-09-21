@@ -2,8 +2,8 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
-import {dealDamage,applyLoss,commitExit,addDamageRedirect} from '../dist/native-effects.js';
-import {applyStatus} from '../dist/status.js';
+import {dealDamage,applyElementDamage,applyLoss,commitExit,addDamageRedirect,grantGuard,grantShield,applyHeal,revealEnemy,enemyWineBuffs} from '../dist/native-effects.js';
+import {applyStatus,isIsolated,statusAttributeChanges,enemyMovementSpeed} from '../dist/status.js';
 
 function arena(){
  const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.funds=100;assert.ok(g.perform('buy',0));const unit=g.s.units[0];let placed=false;
@@ -14,6 +14,199 @@ function arena(){
 function spawn(b,id,x=3,y=3){const raw=NATIVE_DATA.enemies[id],o=b.map.origin,p={col:o.col+x,row:o.row-y};b.level={...b.level,routes:[{motionMode:raw.motion,startPosition:p,endPosition:p,checkpoints:[{type:'WAIT_FOR_SECONDS',time:600}]}],enemyProfiles:{...b.level.enemyProfiles,[id]:raw}};b.spawn({id,route:0});return b.s.enemies.at(-1);}
 function advance(b,seconds){for(let i=0;i<Math.round(seconds*30);i++)b.step();}
 function addAlly(b,u,x,y){u.x=x;u.y=y;u.hp=u.maxHp;u.deployed=true;applyStatus(u,'disarm',600);b.s.units.push(u);}
+
+test('伙友联动使用两个独立圆形半径，离开或来源消失立即还原',()=>{
+ const {b,ally}=arena(),guard=spawn(b,'enemy_1174_duholy'),blade=spawn(b,'enemy_1175_dushdo_2',4,4);guard.canAttack=blade.canAttack=false;addAlly(b,ally,3.8,3.8);
+ b.step();assert.equal(ally.enemyAttackSpeedMod,0);assert.equal(blade.attackIntervalMod,0,'方形角落不在伙伴半径1.4内');
+ blade.x=4.3;blade.y=3;b.step();assert.equal(blade.attackIntervalMod,-1.3);assert.equal(ally.enemyAttackSpeedMod,0,'伙伴就位但我方仍在1.1圆形外');
+ ally.x=4;ally.y=3;b.step();assert.equal(ally.enemyAttackSpeedMod,-30);assert.equal(b.enemyAttackTiming(blade).frames,24);
+ blade.hidden=true;b.step();assert.equal(ally.enemyAttackSpeedMod,0);blade.hidden=false;b.step();assert.equal(ally.enemyAttackSpeedMod,-30);
+ commitExit(b,{target:guard});b.step();assert.equal(ally.enemyAttackSpeedMod,0);assert.equal(blade.attackIntervalMod,0);
+});
+
+test('伙友两型卫队不重复叠减速，联动不可沉默但折射可沉默，并覆盖飞行召唤物',()=>{
+ const {b,ally}=arena(),a=spawn(b,'enemy_1174_duholy'),c=spawn(b,'enemy_1174_duholy_2'),blade=spawn(b,'enemy_1175_dushdo_2',4,3);for(const e of [a,c,blade]){e.canAttack=false;applyStatus(e,'silence',20);}addAlly(b,ally,3,4);
+ const summon={uid:900001,kind:'summon',type:'test',x:3,y:4,hp:100,maxHp:100,deployed:true,flying:true,statuses:[],canAttack:false};b.s.summons.push(summon);b.step();
+ assert.equal(a.res,a.baseRes);assert.equal(ally.enemyAttackSpeedMod,-30);assert.equal(summon.enemyAttackSpeedMod,-30);assert.equal(blade.attackIntervalMod,-1.3);
+ ally.x=7;summon.x=7;b.step();assert.equal(ally.enemyAttackSpeedMod,0);assert.equal(summon.enemyAttackSpeedMod,0);
+});
+
+test('伙友数值读取本期黑板，恢复存档重算范围，改为不可选时不残留旧减速',()=>{
+ const {b,ally}=arena(),guard=spawn(b,'enemy_1174_duholy'),blade=spawn(b,'enemy_1175_dushdo_2',4,3);guard.canAttack=blade.canAttack=false;addAlly(b,ally,3,4);guard.enemyTalent['traitAbility.attack_speed']=-60;blade.enemyTalent['traitAbility.base_attack_time']=-.5;b.step();
+ assert.equal(ally.enemyAttackSpeedMod,-60);assert.equal(blade.attackIntervalMod,-.5);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);restored.s.units[0].targetable=false;restored.step();assert.equal(restored.s.units[0].enemyAttackSpeedMod,0);
+});
+
+test('寻仇者半血及以下增攻，治疗跨线即时恢复，反复跨线不叠加且不受沉默影响',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_1025_reveng');const atk=e.baseAtk;
+ e.hp=e.maxHp*.5;b.step();assert.equal(e.atk,atk*2);applyStatus(e,'silence',60);b.step();assert.equal(e.atk,atk*2);
+ e.hp=e.maxHp*.5+1;b.step();assert.equal(e.atk,atk);e.hp=e.maxHp*.4;b.step();assert.equal(e.atk,atk*2);advance(b,1);assert.equal(e.atk,atk*2);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const r=restored.s.enemies[0];r.hp=r.maxHp;restored.step();assert.equal(r.atk,atk);
+});
+
+test('两种圆仔均不攻击/不可阻挡，按左右干员人数转向，忽略可选性且并列维持方向',()=>{
+ for(const id of ['enemy_2085_skzjxd','enemy_2085_skzjxd_2']){
+  const {b,ally}=arena(),e=spawn(b,id);addAlly(b,ally,4,3);b.step();assert.equal(e.facingX,1);assert.equal(e.unblockable,true);assert.equal(e.canAttack,false);
+  const left=structuredClone(ally),hidden=structuredClone(ally);left.uid+=100;left.x=2;hidden.uid+=101;hidden.x=1;hidden.untargetable=true;hidden.hidden=true;b.s.units.push(left,hidden);b.step();assert.equal(e.facingX,-1);
+  hidden.deployed=false;hidden.deployAt=Infinity;b.step();assert.equal(e.facingX,-1);left.deployed=false;left.deployAt=Infinity;b.step();assert.equal(e.facingX,1);
+  ally.x=e.x;ally.y=e.y;b.step();assert.equal(e.block,null);assert.equal(e.attackCount,0);
+ }
+});
+
+test('圆仔正面物理/法术与DOT减伤，背面、真实、元素及无来源伤害不误减',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_2085_skzjxd');addAlly(b,ally,4,3);b.step();
+ const hit=(source,type,cause='attack',amount=false)=>dealDamage(b,{source,target:e,...(amount?{amount:100}:{value:100}),type,cause}).total;
+ for(const type of ['physical','arts'])assert.ok(Math.abs(hit(ally,type)-20)<1e-8);
+ assert.ok(Math.abs(hit(ally,'arts','dot',true)-10)<1e-8,'先计算50法抗，再按正面乘0.2');
+ for(const type of ['true','elemental'])assert.equal(hit(ally,type),100);
+ assert.equal(hit(null,'physical'),100);ally.x=2;assert.equal(hit(ally,'physical'),100,'命中按来源当前所在侧判断');
+});
+
+test('圆仔朝向与倒走炫耀计时随JSON保留，演出不产生伤害或技能消耗',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_2085_skzjxd');addAlly(b,ally,4,3);e.route=[{kind:'move',x:3,y:3},{kind:'move',x:-100,y:3}];e.cmd=0;b.step();
+ assert.equal(e.facingX,1);assert.equal(e.walkingBackward,true);assert.ok(e.nextShowAt>29);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.enemies[0];assert.equal(copy.facingX,1);assert.equal(copy.nextShowAt,e.nextShowAt);
+ const shows=[],emit=restored.emit.bind(restored);restored.emit=(kind,row)=>{if(row.form==='炫耀')shows.push(row);emit(kind,row);};advance(restored,30.1);
+ assert.equal(shows.length,1);assert.equal(copy.attackCount,0);assert.equal(copy.enemySkills.find(s=>s.prefab==='Show').used,false);
+ restored.s.units[0].x=-200;restored.step();assert.equal(copy.facingX,-1);assert.equal(copy.walkingBackward,false);assert.equal(copy.nextShowAt,null);
+});
+
+test('祭司学徒死亡治疗按当前攻击力与原表倍率结算，圆形范围含飞行敌人、不治疗我方或消失目标',()=>{
+ const {b,ally}=arena();addAlly(b,ally,3,3);ally.hp-=100;const alliedHp=ally.hp,source=spawn(b,'enemy_10156_mncrer');source.atk=200;
+ const ground=spawn(b,'enemy_1025_reveng',4,3),air=spawn(b,'enemy_1005_yokai',3,4),far=spawn(b,'enemy_1025_reveng',4,4),hidden=spawn(b,'enemy_1025_reveng',3,3);
+ for(const e of [ground,air,far,hidden]){e.maxHp=e.hp=5000;e.hp-=2000;}hidden.hidden=true;
+ commitExit(b,{target:source,reason:'knockdown'});
+ assert.equal(ground.hp,4000);assert.equal(air.hp,4000);assert.equal(far.hp,3000);assert.equal(hidden.hp,3000);assert.equal(ally.hp,alliedHp);
+ assert.equal(source.healing,2000);assert.equal(commitExit(b,{target:source}),false);assert.equal(ground.hp,4000);
+});
+
+test('祭司死亡治疗受沉默/禁疗限制，漏怪不触发，坠落仍触发且不超过生命上限',()=>{
+ for(const mode of ['silence','blocked','leak','fall']){
+  const {b}=arena(),source=spawn(b,'enemy_10156_mncrer'),target=spawn(b,'enemy_1025_reveng',4,3);source.atk=100;target.hp=target.maxHp-100;
+  if(mode==='silence')applyStatus(source,'silence',60);if(mode==='blocked')applyStatus(target,'healingBlocked',60);
+  const hp=target.hp;commitExit(b,{target:source,reason:mode==='leak'||mode==='fall'?mode:'knockdown'});
+  assert.equal(target.hp,mode==='fall'?target.maxHp:hp,mode);
+ }
+});
+
+test('真实step持续伤害击倒祭司也治疗一次，攻击弱化同步降低死亡治疗量',()=>{
+ const {b}=arena(),source=spawn(b,'enemy_10156_mncrer'),target=spawn(b,'enemy_1025_reveng',4,3);source.atk=100;source.hp=1;target.hp=target.maxHp-1000;const hp=target.hp;
+ applyStatus(source,'attackDown',60,{value:-.5});
+ b.s.logicEffects.push({id:b.s.settle.nextEffectId++,kind:'dot',sourceUid:null,targetUid:source.uid,interval:1,nextAt:b.s.time+1,endsAt:b.s.time+2,values:{damage:10,type:'true'},snapshot:{damage:10},refKind:'owner',persistAfterSourceGone:true});
+ advance(b,1.1);assert.equal(source.hp,0);assert.equal(target.hp,hp+250);advance(b,1);assert.equal(target.hp,hp+250);
+});
+
+test('两种孽生者待命不普攻，受伤后五倍移速且只跳过当前停驻，重复受伤不重复加速',()=>{
+ for(const id of ['enemy_1439_dslntf','enemy_1439_dslntf_2']){
+  const {b}=arena(),e=spawn(b,id);b.step();assert.equal(e.canAttack,false);assert.equal(e.neuroCombat,false);assert.equal(e.route[e.cmd].kind,'wait');const cmd=e.cmd,speed=e.speed;
+  dealDamage(b,{target:e,value:1,type:'true'});assert.equal(e.neuroCombat,true);assert.equal(e.canAttack,true);assert.equal(e.speed,speed*5);assert.equal(e.cmd,cmd+1);assert.equal(e.cmdLeft,null);
+  dealDamage(b,{target:e,value:1,type:'true'});assert.equal(e.speed,speed*5);assert.equal(e.cmd,cmd+1);
+ }
+});
+
+test('护盾抵消/治疗/生命流失不误触发临战，真实step的DOT伤害会触发',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_1439_dslntf');grantGuard(b,e,{charges:1,types:['physical'],id:'test-neuro'});
+ dealDamage(b,{target:e,value:100,type:'physical'});assert.equal(e.neuroCombat,false);
+ applyLoss(b,{target:e,amount:10});assert.equal(e.neuroCombat,false);applyHeal(b,{source:e,target:e,amount:5});assert.equal(e.neuroCombat,false);
+ b.s.logicEffects.push({id:b.s.settle.nextEffectId++,kind:'dot',sourceUid:null,targetUid:e.uid,interval:1,nextAt:b.s.time+1,endsAt:b.s.time+2,values:{damage:1,type:'true'},snapshot:{damage:1},refKind:'owner',persistAfterSourceGone:true});
+ advance(b,1.1);assert.equal(e.neuroCombat,true);assert.equal(e.speed,e.baseSpeed*5);
+});
+
+test('孽生者神经毒素用本期5%/10%倍率与圆形范围，同名取最高，无视迷彩和不可选',()=>{
+ const {b,ally}=arena(),normal=spawn(b,'enemy_1439_dslntf'),elite=spawn(b,'enemy_1439_dslntf_2');normal.atk=elite.atk=100;
+ addAlly(b,ally,4,3);applyStatus(ally,'camouflage',60);ally.untargetable=true;const far=structuredClone(ally);far.uid+=100;far.x=5;far.y=5;b.s.units.push(far);
+ advance(b,.5);assert.equal(ally.elemental?.neural||0,0);dealDamage(b,{target:normal,value:1,type:'true'});dealDamage(b,{target:elite,value:1,type:'true'});
+ // 测试保持两名来源静止，让圈内/圈外断言只取决于半径和叠加规则。
+ normal.route=elite.route=[{kind:'wait',time:600}];normal.cmd=elite.cmd=0;normal.cmdLeft=elite.cmdLeft=null;
+ advance(b,1.1);assert.equal(ally.elemental.neural,10);assert.equal(far.elemental?.neural||0,0);
+ commitExit(b,{target:elite});advance(b,1);assert.equal(ally.elemental.neural,15);commitExit(b,{target:normal});b.step();assert.equal(ally.neurotoxinNextAt,null);
+});
+
+test('临战与目标毒素计时跨JSON继续，控制不额外关闭天赋，离开范围清理定时',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_1439_dslntf');e.atk=100;addAlly(b,ally,4,3);dealDamage(b,{target:e,value:1,type:'true'});applyStatus(e,'stun',60);advance(b,.6);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const source=restored.s.enemies[0],target=restored.s.units[0];assert.equal(source.neuroCombat,true);assert.equal(source.speed,source.baseSpeed*5);
+ advance(restored,.5);assert.equal(target.elemental.neural,5);target.x=9;restored.step();assert.equal(target.neurotoxinNextAt,null);advance(restored,1);assert.equal(target.elemental.neural,5);
+});
+
+test('竞演者与爵士的隐匿孤立阻止同阵营治疗，阻挡和反隐立即解除，恢复隐匿后再生效',()=>{
+ for(const id of ['enemy_10031_cnvsld','enemy_10034_cnvsax']){
+  const {b,ally}=arena(),e=spawn(b,id),healer=spawn(b,'enemy_1007_slime',7,3);e.hp-=1000;assert.equal(isIsolated(e),true);assert.equal(applyHeal(b,{source:healer,target:e,amount:10}),0);
+  b.map=structuredClone(b.map);b.map.grid[3][3].heightType='LOWLAND';addAlly(b,ally,3,3);advance(b,.1);assert.equal(e.block,ally.uid);assert.equal(isIsolated(e),false);assert.equal(applyHeal(b,{source:healer,target:e,amount:10}),10);
+  ally.x=8;advance(b,.1);assert.equal(isIsolated(e),true);revealEnemy(b,e,1);advance(b,.1);assert.equal(isIsolated(e),false);assert.equal(applyHeal(b,{source:healer,target:e,amount:10}),10);advance(b,1.1);assert.equal(isIsolated(e),true);
+ }
+});
+
+test('孤立排除普通友方光环，但不变成对立阵营伤害免疫，不影响明确忽略孤立的品尝区域',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_10031_cnvsld');spawn(b,'enemy_1017_defdrn',4,3);addAlly(b,ally,6,3);b.step();assert.equal(e.def,e.baseDef);assert.equal(isIsolated(e),true);
+ assert.equal(dealDamage(b,{source:ally,target:e,value:10,type:'arts',cause:'dot'}).total,10);
+ b.s.logicEffects.push({id:b.s.settle.nextEffectId++,kind:'zone',sourceUid:null,x:3,y:3,radius:2,endsAt:b.s.time+10,values:{enemyWineBuff:true,attackSpeed:100,physicalDodge:.8},refKind:'owner'});
+ assert.deepEqual(enemyWineBuffs(b,e),{attackSpeed:100,physicalDodge:.8});revealEnemy(b,e,1);advance(b,.1);assert.equal(e.def,e.baseDef+300);
+});
+
+test('孤立竞演者不被同阵营载具装载，反隐解除孤立后恢复装载资格',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_10031_cnvsld'),carrier=spawn(b,'enemy_10159_mntrjn');b.step();assert.equal(e.carriedBy,undefined);assert.equal(carrier.transport.passengers.length,0);
+ revealEnemy(b,e,2);advance(b,.1);assert.equal(e.carriedBy,carrier.uid);assert.deepEqual(carrier.transport.passengers,[e.uid]);
+});
+
+test('敌方泥岩本期5500屏障只吸收法术，物理/真实/元素伤害不消耗，并有沉睡免疫',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_1511_mdrock');assert.equal(e.shield,5500);assert.deepEqual(e.shieldLayers[0].types,['arts']);assert.equal(e.maxHp,e.baseMaxHp*1.5);assert.equal(applyStatus(e,'sleep',5),false);
+ const hp=e.hp;for(const type of ['physical','true','elemental'])dealDamage(b,{target:e,value:100,type});assert.equal(e.shield,5500);assert.equal(e.hp,hp-300);
+ dealDamage(b,{target:e,value:100,type:'arts'});assert.equal(e.shield,5400);assert.equal(e.hp,hp-300);
+});
+
+test('泥岩破盾移除生命上限增益，17秒刷新恢复，重复刷新替换而不叠屏障或生命',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_1511_mdrock');e.hp=e.maxHp*.5;dealDamage(b,{target:e,value:5500,type:'arts'});assert.equal(e.shield,0);assert.equal(e.maxHp,e.baseMaxHp);assert.ok(Math.abs(e.hp-e.maxHp*.5)<1e-8);
+ advance(b,16.9);assert.equal(e.shield,0);advance(b,.1);assert.equal(e.shield,5500);assert.equal(e.maxHp,e.baseMaxHp*1.5);assert.ok(Math.abs(e.hp-e.maxHp*.5)<1e-8);
+ const max=e.maxHp,hp=e.hp;advance(b,17);assert.equal(e.shield,5500);assert.equal(e.shieldLayers.filter(l=>l.id==='mudrock-arts').length,1);assert.equal(e.maxHp,max);assert.equal(e.hp,hp);
+});
+
+test('泥岩增益只认自身法术屏障，其他屏障不延续增益，读档不再乘一次生命上限',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_1511_mdrock');grantShield(b,e,{id:'other',amount:100});dealDamage(b,{target:e,value:5500,type:'arts'});assert.equal(e.shield,100);assert.equal(e.maxHp,e.baseMaxHp);
+ advance(b,17);dealDamage(b,{target:e,value:1000,type:'arts'});const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.enemies[0];assert.equal(copy.maxHp,e.maxHp);assert.equal(copy.hp,e.hp);assert.equal(copy.shield,e.shield);assert.deepEqual(copy.shieldLayers.find(l=>l.id==='mudrock-arts').types,['arts']);
+});
+
+test('骑士同伴死亡或漏怪均狂暴且只加一次，不发生误推导的自身死亡爆炸',()=>{
+ for(const [id,partner]of [['enemy_1513_dekght','enemy_1513_dekght_2'],['enemy_1513_dekght_2','enemy_1513_dekght']])for(const reason of ['knockdown','leak']){
+  const {b,ally}=arena();addAlly(b,ally,3,3);const e=spawn(b,id),other=spawn(b,partner),hp=ally.hp;
+  assert.equal(e.deathExplosion,null);assert.equal(other.deathExplosion,null);commitExit(b,{target:other,reason});assert.equal(e.knightRage,true);assert.equal(e.speed,e.baseSpeed*2.5);assert.equal(ally.hp,hp,'伙伴退场不是死亡炸弹');
+  commitExit(b,{target:other,reason});assert.equal(e.speed,e.baseSpeed*2.5);
+  const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);assert.equal(restored.s.enemies.find(x=>x.uid===e.uid).knightRage,true);
+ }
+});
+
+test('纠缠藤蔓具有抵抗，普通伤害/DOT/生命流失/元素损伤不冒充环境伤害',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_2052_smgia');assert.equal(e.statusResistance,.5);applyStatus(e,'stun',10);assert.equal(e.statuses.find(s=>s.kind==='stun').remaining,5);
+ dealDamage(b,{target:e,value:1,type:'physical'});dealDamage(b,{target:e,value:1,type:'arts',cause:'dot'});applyLoss(b,{target:e,amount:1});applyElementDamage(b,{target:e,amount:1,type:'burn'});
+ assert.equal(e.statuses.some(s=>s.kind==='fragile'),false);dealDamage(b,{target:e,value:1,type:'true',environmental:true});assert.ok(Object.values(b.s.settle.byId).some(event=>event.environmental===true&&event.type==='damage'));assert.equal(e.statuses.find(s=>s.kind==='fragile').remaining,10);
+});
+
+test('真实step的环境标记触发脆弱，预计算/直接伤害均生效但元素伤害和流失不吃普通脆弱',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_2052_smgia');b.s.logicEffects.push({id:b.s.settle.nextEffectId++,kind:'dot',sourceUid:null,targetUid:e.uid,interval:1,nextAt:1,endsAt:1.01,values:{damage:1,type:'true',environmental:true},snapshot:{damage:1},refKind:'owner',persistAfterSourceGone:true});advance(b,1.1);assert.equal(e.fragile,2);
+ assert.equal(dealDamage(b,{target:e,value:100,type:'physical'}).total,200);assert.equal(dealDamage(b,{target:e,amount:100,type:'arts'}).total,140);assert.equal(dealDamage(b,{target:e,value:100,type:'true'}).total,200);assert.equal(dealDamage(b,{target:e,value:100,type:'elemental'}).total,100);assert.equal(applyLoss(b,{target:e,amount:100}),100);
+ advance(b,5);dealDamage(b,{target:e,value:1,type:'true',environmental:true});assert.equal(e.statuses.filter(s=>s.kind==='fragile').length,1);advance(b,9.9);assert.equal(e.fragile,2);advance(b,.2);assert.equal(e.fragile,1);
+});
+
+test('脆弱在递归分摊中不对原接收者重复乘算，状态与环境标记效果可存档',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_2052_smgia'),other=spawn(b,'enemy_1025_reveng');dealDamage(b,{target:e,value:1,type:'true',environmental:true});addDamageRedirect(b,e,{targetUid:other.uid,ratio:.5});const hp=e.hp,hp2=other.hp;dealDamage(b,{target:e,value:100,type:'physical'});assert.equal(hp-e.hp,100);assert.equal(hp2-other.hp,100);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);restored.step();assert.equal(restored.s.enemies.find(x=>x.uid===e.uid).fragile,2);
+});
+
+test('雪祀馈赠先对三名敌人造成10%法伤，再给予10秒攻速/移速，不选择自己或孤立目标',()=>{
+ const {b}=arena(),caster=spawn(b,'enemy_2050_smsha',3,3);caster.atk=100;const a=spawn(b,'enemy_1007_slime',4,3),c=spawn(b,'enemy_1007_slime',5,3),d=spawn(b,'enemy_1007_slime',6,3),isolated=spawn(b,'enemy_10031_cnvsld',4,3);a.taunt=5;
+ const hp=[a,c,d,isolated,caster].map(e=>e.hp);advance(b,15);
+ [a,c,d].forEach((e,i)=>{assert.equal(e.hp,hp[i]-10);assert.equal(statusAttributeChanges(e).attackSpeed,100);assert.equal(enemyMovementSpeed(e),e.baseSpeed*2);});assert.equal(isolated.hp,hp[3]);assert.equal(caster.hp,hp[4]);assert.equal(caster.statuses.some(s=>s.kind==='chainMoveSpeed'),false);
+ a.route=[{kind:'move',x:4,y:3},{kind:'move',x:9,y:3},{kind:'wait',time:600}];a.cmd=0;a.cmdLeft=null;const x=a.x;b.step();assert.ok(Math.abs(a.x-x-a.baseSpeed*2/30)<1e-6);advance(b,10.1);assert.equal(statusAttributeChanges(a).attackSpeed,0);assert.equal(enemyMovementSpeed(a),a.baseSpeed);
+});
+
+test('雪祀馈赠受沉默阻止，目标沉睡不被选中',()=>{
+ const {b}=arena(),caster=spawn(b,'enemy_2050_smsha'),target=spawn(b,'enemy_1007_slime',4,3);applyStatus(caster,'silence',16);advance(b,15.5);assert.equal(caster.enemySkills[0].used,false);
+ applyStatus(target,'sleep',10);advance(b,1);assert.equal(caster.enemySkills[0].used,false);target.statuses=[];b.step();assert.equal(caster.enemySkills[0].used,true);
+});
+
+test('雪祀馈赠状态跨JSON继续倒计时，来源死亡不提前删除，到期恢复',()=>{
+ const {b}=arena(),caster=spawn(b,'enemy_2050_smsha'),target=spawn(b,'enemy_1007_slime',4,3);caster.atk=1;advance(b,15.5);const remaining=target.statuses.find(s=>s.kind==='chainMoveSpeed').remaining;commitExit(b,{target:caster});b.step();
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.enemies.find(e=>e.uid===target.uid);assert.equal(statusAttributeChanges(copy).attackSpeed,100);advance(restored,remaining+.1);assert.equal(statusAttributeChanges(copy).attackSpeed,0);assert.equal(enemyMovementSpeed(copy),copy.baseSpeed);
+});
 
 test('折射被沉默取消法抗，解除沉默后恢复，连续帧不重复叠加',()=>{
  const {b}=arena(),e=spawn(b,'enemy_1166_dusbr');assert.equal(e.res,e.baseRes+70);
@@ -100,7 +293,7 @@ test('死亡之眼终结凋亡仅覆盖目标和相邻四格，不波及对角',
 test('拷打者周围敌人因持续流失退场时治疗并叠攻，同一次退场不重复触发',()=>{
  const {b}=arena(),e=spawn(b,'enemy_1364_spnaxe_2'),victim=spawn(b,'enemy_1007_slime',3,4);
  const base=e.atk;e.hp=e.maxHp*.5;applyLoss(b,{target:victim,amount:victim.hp});
- assert.equal(e.deathGrowthStacks,1);assert.equal(e.atk,base*1.1);assert.equal(e.hp,e.maxHp*.65);
+ assert.equal(e.deathGrowthStacks,1);assert.equal(e.atk,base*1.1);assert.ok(Math.abs(e.hp-e.maxHp*.65)<1e-8);
  commitExit(b,{target:victim});assert.equal(e.deathGrowthStacks,1);
  const far=spawn(b,'enemy_1007_slime',5,5);commitExit(b,{target:far});assert.equal(e.deathGrowthStacks,1);
  for(let i=0;i<18;i++)commitExit(b,{target:spawn(b,'enemy_1007_slime',3,4)});
@@ -179,7 +372,7 @@ test('烹泉/沏虹死亡同时爆炸、减速和解压缩，攻速减益按来�
  const a=spawn(b,'enemy_1203_sfhu'),c=spawn(b,'enemy_1203_sfhu_2');a.atk=c.atk=1;const base=b.stats(ally).attackSpeed,hp=ally.hp;
  commitExit(b,{target:a});commitExit(b,{target:c});commitExit(b,{target:a});b.flushEnemySpawns();
  assert.ok(ally.hp<hp);assert.equal(ally.statuses.filter(s=>s.kind==='attackSpeedDown').length,2);assert.equal(b.stats(ally).attackSpeed,Math.max(10,base-90));
- assert.equal(b.s.enemies.filter(e=>e.id==='enemy_1204_msfhu'||e.id==='enemy_1204_msfhu_2').length,8);
+ assert.equal(b.s.pendingEnemySpawns.length,8);advance(b,.7);assert.equal(b.s.enemies.filter(e=>e.id==='enemy_1204_msfhu'||e.id==='enemy_1204_msfhu_2').length,8);
  advance(b,7.6);assert.equal(b.stats(ally).attackSpeed,base);assert.equal(other.statuses.filter(s=>s.kind==='attackSpeedDown').length,2);
  advance(b,8);assert.equal(other.statuses.filter(s=>s.kind==='attackSpeedDown').length,0);
 });

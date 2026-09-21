@@ -84,7 +84,9 @@
     },
     "enemy_9009_acfort": {
       "randomPoolEligible": true,
-      "reason": "黑云抓取普通飞行敌人、延迟吞噬补弹、全弹发射、多技能优先级及中断清理已通过真实step定向回归（native-enemy-skills）"
+      "reason": "黑云抓取普通飞行敌人、延迟吞噬补弹、全弹发射、多技能优先级及中断清理已通过真实step定向回归（native-enemy-skills）",
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=415578"
     },
     "enemy_1234_dsubrl": {
       "selfField": {
@@ -125,7 +127,9 @@
       },
       "source": "https://prts.wiki/w/枯朽萃聚使徒",
       "reason": "PRTS枯朽召唤：0.7秒后在自身、左1格、右1格各生成一个枯朽之种；技能首放与周期冷却取本期原表。",
-      "randomPoolEligible": false
+      "randomPoolEligible": false,
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414511"
     },
     "enemy_1501_demonk": {
       "attackProfile": {
@@ -137,7 +141,8 @@
       "attackProfile": {
         "targets": 2
       },
-      "attackSource": "PRTS 2026-09-12快照：凋零骑士 天赋；本期黑板参数优先"
+      "attackSource": "PRTS 2026-09-12快照：凋零骑士 天赋；本期黑板参数优先",
+      "deathExplosion": false
     },
     "enemy_10018_sgrobh": {
       "attackProfile": {
@@ -216,7 +221,8 @@
           "shape": "cross"
         }
       },
-      "attackSource": "PRTS 2026-09-12快照：腐败骑士 天赋；本期黑板参数优先"
+      "attackSource": "PRTS 2026-09-12快照：腐败骑士 天赋；本期黑板参数优先",
+      "deathExplosion": false
     },
     "enemy_10081_mpplai": {
       "randomPoolEligible": true,
@@ -234,7 +240,9 @@
         }
       },
       "attackSource": "https://prts.wiki/index.php?oldid=414105",
-      "reason": "PRTS帝国炮火：锁定发射时位置、3秒后半径1.2范围无来源物理伤害，缓存攻击力，不强制命中主目标；特殊NPC优先级待环境实体接入"
+      "reason": "PRTS帝国炮火：锁定发射时位置、3秒后半径1.2范围无来源物理伤害，缓存攻击力，不强制命中主目标；特殊NPC优先级待环境实体接入",
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414105"
     },
     "enemy_1112_emppnt_2": {
       "attackProfile": {
@@ -244,7 +252,9 @@
         }
       },
       "attackSource": "https://prts.wiki/index.php?oldid=414106",
-      "reason": "PRTS帝国炮火：锁定发射时位置、3秒后半径1.2范围无来源物理伤害，缓存攻击力，不强制命中主目标；特殊NPC优先级待环境实体接入"
+      "reason": "PRTS帝国炮火：锁定发射时位置、3秒后半径1.2范围无来源物理伤害，缓存攻击力，不强制命中主目标；特殊NPC优先级待环境实体接入",
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414106"
     },
     "enemy_10065_ftzlc": {
       "deathExplosionRadius": 1.25,
@@ -280,6 +290,186 @@
       "randomPoolEligible": true,
       "reason": "近地悬浮/受控落地/失温坠落、首伤加速、搬运释放与存档通过native-enemy-forms定向回归；本期Mode.mode=0且checkpoint=0，不凭空添加水手",
       "source": "https://prts.wiki/w/吉兆飞鳞"
+    },
+    "enemy_1040_bombd": {
+      "randomPoolEligible": false,
+      "reason": "一次性投弹、九格物理伤害与投弹后双倍移速已接入；静态刚体的失衡交互仍待公共物理机制验收，暂不进随机池",
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=413962"
+    },
+    "enemy_10044_wintun": {
+      "randomPoolEligible": true,
+      "reason": "PRTS修订414800及本期黑板：携桶三倍移速不普攻、阻挡失桶、一次性强击与30秒品尝区域；真实step回归后允许入池"
+    },
+    "enemy_1439_dslntf": {
+      "randomPoolEligible": false,
+      "reason": "待命/受伤临战、五倍移速和同名不叠加神经毒素已接入；赘生甲壳实体与碰撞自伤/摧毁尚未验收，按复杂敌人门禁暂不入池"
+    },
+    "enemy_1439_dslntf_2": {
+      "randomPoolEligible": false,
+      "reason": "待命/受伤临战、五倍移速和同名不叠加神经毒素已接入；赘生甲壳实体与碰撞自伤/摧毁尚未验收，按复杂敌人门禁暂不入池"
+    },
+    "enemy_10031_cnvsld": {
+      "randomPoolEligible": false,
+      "reason": "隐匿期间孤立及常规治疗/光环筛选已接入；狂欢时刻的场地事件尚未验收，暂不进随机池"
+    },
+    "enemy_1504_cqbw": {
+      "randomPoolEligible": true,
+      "reason": "C4的目标/3.2秒施法/中断引爆/本期20秒冷却及首次半血清CD已完成真实step与存档场景；普攻不对空，技能狂暴后可对空"
+    },
+    "enemy_2008_flking": {
+      "randomPoolEligible": true,
+      "attackProfile": {
+        "groundOnly": true,
+        "splashGroundOnly": false,
+        "splashOnlyRanged": true,
+        "splash": {
+          "shape": "square",
+          "radius": 1
+        },
+        "rangedScaleKey": "atkdown.atk_scale"
+      },
+      "reason": "PRTS：未阻挡远程40%倍率及九格溅射（可溅射飞行），被阻挡近战单体；周期刷新10%最大生命全类型屏障。图鉴全场削弱属于地图，不能挂到本体"
+    },
+    "enemy_1509_mousek": {
+      "aura": false,
+      "randomPoolEligible": false,
+      "reason": "defup.def是自身法术屏障在场增防，不是友军光环；双技能与标记按独立处理器实现，完整弹道时序仍待对照"
+    },
+    "enemy_2052_smgia": {
+      "statusResistance": 0.5,
+      "statusResistanceSource": "PRTS纠缠藤蔓天赋：抵抗，持续时间减半",
+      "randomPoolEligible": false,
+      "reason": "攻击回复眩晕、抵抗与环境伤害标记触发脆弱已接入；本期可伤害敌人的自然环境来源仍待接线，暂不入池"
+    },
+    "enemy_1404_msnip": {
+      "randomPoolEligible": false
+    },
+    "enemy_1512_mcmstr": {
+      "initialUnblockable": false,
+      "randomPoolEligible": false,
+      "reason": "已接机械/大祭司转场、自爆与持续自伤；砍伐巨蕈及木桩仍待环境实体实现"
+    },
+    "enemy_1517_xi": {
+      "randomPoolEligible": false,
+      "reason": "已接双形态和重复普攻；专属十字法术、屏障蓄力与明晦交互尚未齐全，禁用随机入池"
+    },
+    "enemy_9023_acdums": {
+      "hitCount": {
+        "hitCountHp": true,
+        "hitCountTypes": null
+      },
+      "spriteScale": 1,
+      "randomPoolEligible": false,
+      "reason": "接入次数生命、受伤反击、复调切形态与合奏；管弦联动和精确施法时序仍待补"
+    },
+    "enemy_1041_lazerd": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=413964"
+    },
+    "enemy_10083_hlbird": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414873"
+    },
+    "enemy_1005_yokai_2": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=422365"
+    },
+    "enemy_1355_mrfly": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414572"
+    },
+    "enemy_1005_yokai": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=413919"
+    },
+    "enemy_1017_defdrn": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=413922"
+    },
+    "enemy_10084_hlegle": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414875"
+    },
+    "enemy_1407_hummbd": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414665"
+    },
+    "enemy_1005_yokai_3": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=422366"
+    },
+    "enemy_1041_lazerd_2": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=413965"
+    },
+    "enemy_1042_frostd": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=413966"
+    },
+    "enemy_1355_mrfly_2": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414573"
+    },
+    "enemy_10040_cnvbln": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414794",
+      "nonPrimary": true,
+      "notCountInTotal": true,
+      "isolated": true
+    },
+    "enemy_9016_acstmr": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=417660"
+    },
+    "enemy_1430_lrrook": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=421185"
+    },
+    "enemy_1521_dslily": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=415294"
+    },
+    "enemy_10085_hllevi_2": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414878"
+    },
+    "enemy_10028_vtswd": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=424034"
+    },
+    "enemy_10029_vtshld": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=424037"
+    },
+    "enemy_10030_vtwand": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=424038"
+    },
+    "enemy_9014_acstma": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=417659"
+    },
+    "enemy_9015_acstmb": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=417658"
+    },
+    "enemy_10040_cnvbln_2": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414795",
+      "nonPrimary": true,
+      "notCountInTotal": true,
+      "isolated": true
+    },
+    "enemy_1269_nhfly": {
+      "staticRigid": true,
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414409"
+    },
+    "enemy_3010_mcreep": {
+      "nonPrimary": true,
+      "notCountInTotal": true,
+      "randomPoolEligible": false,
+      "reason": "中立NPC依赖，不加入敌方随机池；PRTS修订421496"
     }
   }
 }

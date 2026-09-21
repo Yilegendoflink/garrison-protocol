@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "suite": "wave-activities",
+  "checks": [
+    "活动与逻辑状态筛选",
+    "跨活动混编允许加入，待补齐敌人仍禁入",
+    "仅主动点击显示测试弹窗",
+    "抽取固定使用当前模板",
+    "重复抽取与 Esc 关闭",
+    "关闭后恢复焦点",
+    "高级筛选状态保持",
+    "320/375/414/768 像素无横向溢出",
+    "中高压默认模板至少4种且测试实际抽到至少4种"
+  ],
+  "unitTests": {
+    "passed": 1028,
+    "failed": 0
+  },
+  "screenshots": [
+    "editor.png",
+    "test-dialog.png",
+    "editor-320.png",
+    "editor-375.png",
+    "editor-414.png",
+    "editor-768.png"
+  ]
+}

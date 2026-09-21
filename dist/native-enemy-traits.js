@@ -1,15 +1,90 @@
-import {permissions,applyStatus} from './status.js';
-import {grantGuard,dealDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor} from './native-effects.js';
+import {enemyMovementSpeed,permissions,applyStatus,removeStatus,statusAttributeChanges,isIsolated} from './status.js';
+import {gainSp} from './native-sp.js';
+import {grantGuard,grantShield,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} from './native-effects.js';
 
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
+const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
+const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
+const KNIGHT_PARTNER={enemy_1513_dekght:'enemy_1513_dekght_2',enemy_1513_dekght_2:'enemy_1513_dekght'};
+
+export function enemyChaliceProtection(battle,target){
+ if(!battle.s.enemies.includes(target))return null;
+ if(target.hp<=0||target.hidden||target.flying&&!target.groundNavigation||isIsolated(target)){target.chaliceUid=null;return null;}
+ const sources=battle.s.enemies.filter(e=>e!==target&&e.hp>0&&!e.hidden&&e.id==='enemy_1430_lrrook'&&Number.isFinite(Number(e.enemyTalent?.['takeDmg.damage_scale']))&&near(e,target,Number(e.enemyTalent?.['takeDmg.range_radius'])));
+ const source=sources.find(e=>e.uid===target.chaliceUid)||sources.sort((a,b)=>a.uid-b.uid)[0];target.chaliceUid=source?.uid??null;
+ if(!source)return null;return {source,retained:Math.max(0,Math.min(1,Number(source.enemyTalent['takeDmg.damage_scale'])))};
+}
+
+const minerShieldActive=e=>e.shieldLayers?.some(l=>l.id==='rift-miner-shield'&&l.remaining>0);
+function syncMinerShield(e){
+ if(!e.minerShieldInitialized)return;
+ const active=minerShieldActive(e);e.taunt=e.minerShieldBaseTaunt+(active?1:0);
+ for(const kind of ['fear','sleep'])e.immunities[kind]=active?true:e.minerShieldBaseImmunities[kind];
+}
+export function enemyMinerShieldDamageMultiplier(e,source,type){
+ return minerShieldActive(e)&&source?.id!=='enemy_3010_mcreep'&&['physical','arts'].includes(type)?1-(Number(e.enemyTalent['M0Shield.damage_resistance'])||0):1;
+}
 
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
+ e.staticRigid=raw.enemyBehavior?.staticRigid===true;
+ e.nonPrimary=raw.enemyBehavior?.nonPrimary===true;e.notCountInTotal=raw.enemyBehavior?.notCountInTotal??raw.notCountInTotal??false;
+ if(raw.enemyBehavior?.isolated===true)e.isolated=true;
+ if(e.id==='enemy_1367_dseed')e.shiftImmune=true; // 血珀是失衡免疫，不是静态刚体。
+ if(/^enemy_10122_uacann(?:_2)?$/.test(e.id)&&e.attackZone)e.attackZone={...e.attackZone,radius:1.5,shape:'circle',groundOnly:true};
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
+ if(/^enemy_1012[45]_(?:uashld|uacomd)(?:_2)?$/.test(e.id))e.enemyAttack={...e.enemyAttack,unblockedTargetIds:['enemy_3001_upeopl','enemy_3002_ftrtal','enemy_3010_mcreep']};
+ if(/^enemy_10127_rkmbst(?:_2)?$/.test(e.id)){
+  e.enemyAttack={...e.enemyAttack,unblockedTargetIds:['enemy_3001_upeopl','enemy_3002_ftrtal','enemy_3010_mcreep']};
+  if(!e.minerShieldInitialized&&Number(e.enemyTalent['M0Shield.init_shield_hp_ratio'])>0){
+   e.minerShieldInitialized=true;e.minerShieldBaseTaunt=e.taunt;e.minerShieldBaseImmunities={fear:!!e.immunities.fear,sleep:!!e.immunities.sleep};
+   grantShield(battle,e,{id:'rift-miner-shield',amount:e.maxHp*Number(e.enemyTalent['M0Shield.init_shield_hp_ratio']),types:['physical'],absorbSourceIds:['enemy_3010_mcreep']});
+  }
+  syncMinerShield(e);
+ }
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.enemySkills?.some(s=>s.prefab==='PollutedRangedAtk'))e.enemyAttack={...e.enemyAttack,groundOnly:true,lowlandOnly:true};
+ if(e.id==='enemy_1500_skulsr'){
+  // PRTS修订415274：原表未提供的榴弹倍率26%、九格范围；减防量仍读取本期黑板。
+  e.enemyAttack={...e.enemyAttack,groundOnly:true,splashGroundOnly:false,splashOnlyRanged:true,splash:{shape:'square',radius:1},rangedScale:.26};e.lowHpRatio=0;
+  if(e.lowHpTriggered&&e.atk===e.baseAtk*(1+Number(e.enemyTalent['atkup.atk'])))e.atk=e.baseAtk;
+ }
+ if(e.id==='enemy_2050_smsha')e.damageType='arts';
+ if(['enemy_2016_csphtm','enemy_2017_csphts'].includes(e.id)){e.enemyDefPenetration=Number(e.enemyTalent['penetrate.def_penetrate'])||0;e.enemyUnblockedDodge=Number(e.enemyTalent['evade.prob'])||0;}
+ if(e.id==='enemy_2010_csdcr'){e.damageType='arts';e.attackElement='neural';e.attackElementScale=Number(e.enemyTalent['attack.attack@ep_damage_ratio'])||0;e.scarletHits??=0;}
+ if(e.id==='enemy_1509_mousek'){
+  e.immunities.sleep=true;e.damageType='arts';e.enemyAttack={...e.enemyAttack,groundOnly:true};e.aura=null;e.lowHpRatio=0;
+  if(e.lowHpTriggered&&e.atk===e.baseAtk*Number(e.enemyTalent['enrage.damage_scale']))e.atk=e.baseAtk;
+  const initial=e.shieldLayers.find(l=>l.id==='enemy-initial-shield');if(initial){initial.id='mouseking-arts';initial.types=['arts'];}
+ }
+ if(KNIGHT_PARTNER[e.id]){e.deathExplosion=null;if(e.id==='enemy_1513_dekght_2')e.damageType='arts';}
+ if(e.id==='enemy_2008_flking')e.costEffects=[]; // 修复旧存档：原关卡削弱不是墓碑自身能力。
+ if(e.id==='enemy_1511_mdrock'){
+  e.immunities.sleep=true;e.mudrockStacks??=0;
+  e.mudrockShieldHpBonus??=Number(e.enemyTalent['shield.max_hp'])||0;e.mudrockShieldAspd??=Number(e.enemyTalent['shield.attack_speed'])||0;
+  const initial=e.shieldLayers.find(l=>l.id==='enemy-initial-shield');if(initial){initial.id='mudrock-arts';initial.types=['arts'];}
+  syncMudrockShield(e);
+ }
+ if(e.id==='enemy_2005_axetro'){e.enemyAttack={...e.enemyAttack,groundOnly:true};e.axetroStacks??=0;}
+ if(e.id==='enemy_1050_lslime')e.damageType='arts';
+ if(e.id==='enemy_1504_cqbw')e.enemyAttack={...e.enemyAttack,groundOnly:true};
+ if(['enemy_10031_cnvsld','enemy_10034_cnvsax'].includes(e.id))e.isolateWhileConcealed=true;
+ if(NEURO_SPAWNERS.has(e.id)){e.neuroCombat??=false;if(!e.neuroCombat)e.canAttack=false;}
+ if(YUANZAI.has(e.id)){
+  e.unblockable=e.baseUnblockable=true;e.canAttack=e.baseCanAttack=false;
+  e.facingX??=Math.sign((e.route?.find(p=>p.kind==='move'&&Math.abs(p.x-e.x)>1e-6)?.x??e.x+1)-e.x);
+ }
+ if(e.enemyTalent?.['rush.dlancer_t[trigger].interval']>0&&!e.lancerRush){
+  e.lancerRush={active:false,stacks:0,nextCheckAt:battle.s.time,nextStackAt:null};e.speed=e.baseSpeed;
+ }
+ if(Number(e.enemyTalent['ColdShield.max_stack_cnt'])>0&&['ColdShield.def','ColdShield.magic_resistance','ColdShield.interval','MeltShield.interval'].every(k=>Number.isFinite(Number(e.enemyTalent[k])))&&e.coldShieldStacks==null){
+  e.coldShieldStacks=0;e.coldShieldWarm=battle.heatedByBrazier(e);e.coldShieldNextAt=battle.s.time+Number(e.enemyTalent[e.coldShieldWarm?'MeltShield.interval':'ColdShield.interval']);
+ }
  if(e.enemyTraitsInitialized)return;
  if(restore){e.baseRes-=Number(raw.enemyBehavior?.magicResistanceBonus)||0;e.res=e.baseRes;}
  e.enemyTraitsInitialized=true;e.attackSpeedMod??=0;
  const bb=e.enemyTalent||{};
+ if(e.id==='enemy_1158_divman')e.enemyAttack={...e.enemyAttack,groundOnly:true};
+ if(e.id==='enemy_1025_reveng')e.lowHpRatio=0; // 每帧检测血线，不能被通用一次性分支锁住。
  e.refractionBonus=Number(bb['refracting.magic_resistance']??bb['Refracting.magic_resistance'])||0;
  e.refractionHp=Number(bb['Refracting.max_hp'])||0;
  if(e.refractionHp){e.hp*=1+e.refractionHp;e.maxHp*=1+e.refractionHp;}
@@ -25,9 +100,168 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  refreshEnemyTraitStats(e);
 }
 
+export function enemyConditionalAttackSpeed(e){
+ const bb=e.enemyTalent||{};
+ if(minerShieldActive(e))return Number(bb['M0Shield.attack_speed'])||0;
+ if(e.enemyFormKind==='echo'&&e.enemyForm==='pipe')return Number(bb['1.attack_speed']);
+ if(e.knightRage)return Number(bb['triggerrage.attack_speed'])||0;
+ if(e.id==='enemy_1511_mdrock')return mudrockShieldActive(e)?e.mudrockShieldAspd||0:0;
+ if(e.id==='enemy_2005_axetro')return (e.axetroStacks||0)*(Number(bb['atkup.attack_speed'])||0);
+ return e.id==='enemy_1050_lslime'&&e.hp<e.maxHp*Number(bb['selfbuff.hp_ratio'])?Number(bb['selfbuff.attack_speed'])||0:0;
+}
+
+export function enemyConditionalAttackMultiplier(e,target=null){
+ if(e.enemyFormKind==='echo'&&e.enemyForm==='string')return 1+Number(e.enemyTalent['2.atk']);
+ if(/^enemy_1069_icebrk(?:_2)?$/.test(e.id||'')&&target?.statuses?.some(s=>s.kind==='frozen'))return Number(e.enemyTalent?.['atkup.atk_scale'])||1;
+ if(e.id==='enemy_1500_skulsr')return e.hp<e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['atkup.atk']):1;
+ if(e.id==='enemy_1539_reid')return e.hp<=e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['AtkUp.atk']):1;
+ if(e.knightRage)return 1+(Number(e.enemyTalent['triggerrage.atk'])||0);
+ if(e.id==='enemy_1511_mdrock')return 1+(e.mudrockStacks||0)*Number(e.enemyTalent['charge.attack@enemy_mdrock_s_1[charge].atk']);
+ return e.id==='enemy_2005_axetro'?1+(e.axetroStacks||0)*Number(e.enemyTalent['atkup.atk']):1;
+}
+
+export function enemyEchoBurst(battle,enemy,radius,damageScale,elementScale){
+ const atk=battle.enemyAttackDamage(enemy),attackId=newAttackId(battle);
+ for(const target of attackableAllies(battle.s))if(near(enemy,target,radius)){
+  dealDamage(battle,{source:enemy,target,amount:atk*damageScale,type:'arts',cause:'extra',attackId});
+  applyElementDamage(battle,{source:enemy,target,amount:atk*elementScale,type:'necrosis',cause:'extra'});
+ }
+ battle.emit('impact',{uid:enemy.uid,x:enemy.x,y:enemy.y,radius,type:'arts',enemy:true});
+}
+
+export function enemyKnightExit(battle,target){
+ const partner=KNIGHT_PARTNER[target.id];if(!partner||!battle.s.enemies.includes(target))return;
+ for(const e of battle.s.enemies)if(e.id===partner&&e.hp>0&&!e.knightRage){
+  e.knightRage=true;e.speed=e.baseSpeed*(1+(Number(e.enemyTalent['triggerrage.move_speed'])||0));
+  battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form:'狂暴'});
+ }
+}
+
+function mudrockShieldActive(e){return e.shieldLayers?.some(l=>l.id==='mudrock-arts'&&l.remaining>0);}
+function syncMudrockShield(e){
+ const before=e.mudrockHpScale??1,after=mudrockShieldActive(e)?1+e.mudrockShieldHpBonus:1;
+ if(before!==after){e.maxHp=e.baseMaxHp*after;e.hp=Math.min(e.maxHp,e.hp/before*after);}
+ e.mudrockHpScale=after;
+}
+export function refreshEnemyMudrockShield(battle,e,bb){
+ if(!(Number(bb.dynamic)>0))return;
+ e.mudrockShieldHpBonus=Number(bb.max_hp)||0;e.mudrockShieldAspd=Number(bb.attack_speed)||0;
+ grantShield(battle,e,{id:'mudrock-arts',amount:Number(bb.dynamic),types:['arts'],sourceUid:e.uid});syncMudrockShield(e);
+}
+export function enemyTraitBeforeStrike(battle,e,target,action){
+ if(e.id!=='enemy_1511_mdrock'||target.hp<=0)return;
+ if(action.attackId!=null&&e.mudrockLastAttackId===action.attackId)return;
+ e.mudrockLastAttackId=action.attackId??null;e.mudrockStacks=Math.min(6,(e.mudrockStacks||0)+1); // PRTS：最多6层，当前有效攻击也受益。
+}
+
+export function enemyTraitDamageDealt(battle,e,result){
+ if(e.id!=='enemy_2005_axetro'||e.hp<=0||!(result.total>0))return;
+ const max=Number(e.enemyTalent['atkup.max_stack_cnt']);
+ if(max>0){e.axetroStacks=Math.min(max,(e.axetroStacks||0)+1);e.axetroIdleSince=null;}
+}
+
+export function tickEnemyAttackContinuity(battle,e,target){
+ if(e.id!=='enemy_2005_axetro')return;
+ const attacking=e.canAttack&&!e.hidden&&permissions(e).attack&&(e.action||target?.hp>0);
+ if(attacking){e.axetroIdleSince=null;return;}
+ e.axetroIdleSince??=battle.s.time;
+ if(e.axetroStacks>0&&battle.s.time-e.axetroIdleSince+1e-9>=Number(e.enemyTalent['checker.delay'])){
+  e.axetroStacks=0;battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form:'增益清空'});
+ }
+}
+
+export function tickPompeiiExplosion(battle,e,dt){
+ if(e.id!=='enemy_1050_lslime'||e.hp<=0||e.hidden)return;
+ if(e.statuses.some(s=>['stun','unableAct','sleep','frozen','levitate'].includes(s.kind)))return;
+ if(e.block==null){e.pompeiiBlockClock=0;return;}
+ const bb=e.enemyTalent,interval=Number(bb['rangedamage.interval']);if(!(interval>0))return;e.pompeiiBlockClock=(e.pompeiiBlockClock||0)+dt;
+ while(e.pompeiiBlockClock+1e-9>=interval){
+  e.pompeiiBlockClock-=interval;const attackId=newAttackId(battle);
+  // 本期黑板没有爆炸半径；PRTS庞贝页为半径1.4，且不可对空。
+  for(const target of attackableAllies(battle.s))if(!target.flying&&near(e,target,1.4))battle.hurt(target,e,{damageAmount:Number(bb['rangedamage.attack@damage']),cause:'extra',attackId});
+  battle.emit('impact',{uid:e.uid,x:e.x,y:e.y,radius:1.4,type:'arts',enemy:true});
+ }
+}
+
+function activateNeuroSpawner(battle,e){
+ if(e.neuroCombat)return;
+ e.neuroCombat=true;e.canAttack=e.baseCanAttack;e.speed=e.baseSpeed*(1+Number(e.enemyTalent['0.move_speed']));
+ if(e.route?.[e.cmd]?.kind==='wait'){e.cmd++;e.cmdLeft=null;}
+ battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form:'临战'});
+}
+
+export function tickEnemyNeurotoxin(battle){
+ const sources=battle.s.enemies.filter(e=>NEURO_SPAWNERS.has(e.id)&&e.neuroCombat&&e.hp>0&&!e.hidden);
+ for(const target of alliedActors(battle.s)){
+  let best=null,amount=0;
+  if(target.deployed&&target.hp>0&&!target.hidden)for(const e of sources)if(near(e,target,Number(e.enemyTalent['1.range_radius']))){
+   const value=e.atk*(1+Math.min(0,statusAttributeChanges(e).attack||0))*Number(e.enemyTalent['1.ep_damage_ratio']);
+   if(value>amount){best=e;amount=value;}
+  }
+  if(!best){target.neurotoxinNextAt=null;continue;}
+  const interval=Number(best.enemyTalent['1.interval']);target.neurotoxinNextAt??=battle.s.time+interval;
+  while(target.hp>0&&battle.s.time+1e-9>=target.neurotoxinNextAt){
+   target.neurotoxinNextAt+=interval;
+   applyElementDamage(battle,{source:best,target,amount,type:'neural',cause:'dot'});
+  }
+ }
+}
+
+function faceOperatorMajority(battle,e){
+ let left=0,right=0;
+ for(const u of battle.s.units)if(u.deployed&&u.hp>0){if(u.x<e.x)left++;else if(u.x>e.x)right++;}
+ if(left!==right)e.facingX=right>left?1:-1;
+ if(e.walkingBackward&&e.nextShowAt!=null&&battle.s.time+1e-9>=e.nextShowAt){
+  e.nextShowAt=battle.s.time+Number(e.enemyTalent['ShowTrigger.interval']);
+  battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form:'炫耀'});
+ }
+}
+
+export function enemyFacingAfterMove(battle,e,oldX){
+ if(!YUANZAI.has(e.id)||Math.abs(e.x-oldX)<1e-9)return;
+ const backward=Math.sign(e.x-oldX)!==e.facingX;
+ if(backward&&!e.walkingBackward)e.nextShowAt=battle.s.time+Number(e.enemyTalent['ShowTrigger.interval']);
+ if(!backward)e.nextShowAt=null;
+ e.walkingBackward=backward;
+}
+
+export function enemyFacingDamageMultiplier(e,source,type){
+ if(!YUANZAI.has(e.id)||!source||!['physical','arts'].includes(type)||!Number.isFinite(source.x))return 1;
+ // 水平朝向的前半平面；同一竖线按点积为0的边界处理。
+ if((source.x-e.x)*(e.facingX??1)<0)return 1;
+ return 1-Math.max(0,Math.min(1,Number(e.enemyTalent?.['Weakness.damage_resistance'])||0));
+}
+
+function stopLancerRush(e){const r=e.lancerRush;r.active=false;r.stacks=0;r.nextStackAt=null;e.speed=e.baseSpeed;}
+
+export function tickEnemyLancer(battle,e){
+ const r=e.lancerRush;if(!r||e.hp<=0||e.hidden)return;
+ const now=battle.s.time,bb=e.enemyTalent,interval=Number(bb['rush.dlancer_t[trigger].interval']);
+ while(now+1e-9>=r.nextCheckAt){
+  const at=r.nextCheckAt;r.nextCheckAt+=.1;
+  if(e.statuses.some(s=>s.kind==='stun'||s.kind==='root'))stopLancerRush(e);
+  else if(e.block==null&&!r.active){r.active=true;r.nextStackAt=at+interval;}
+ }
+ while(r.active&&r.nextStackAt!=null&&now+1e-9>=r.nextStackAt){
+  r.nextStackAt+=interval;r.stacks=Math.min(Number(bb['rush.dlancer_t[trigger].trig_cnt']),r.stacks+1);
+  e.speed=e.baseSpeed*(1+r.stacks*Number(bb['rush.dlancer_t[trigger].move_speed']));
+ }
+}
+
+export function consumeEnemyLancerRush(e){
+ if(!e.lancerRush?.active)return 0;
+ // “当前移动速度”包含减速，但不是阻挡后的实际位移速度（后者为0）。
+ const slow=e.statuses.some(s=>s.kind==='sluggish')? .2:1;
+ const amount=enemyMovementSpeed(e)*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*slow*Number(e.enemyTalent['firstattack.atk_scale']);
+ stopLancerRush(e);return amount;
+}
+
 // refreshEnemyAuras 每帧先恢复基础防御/法抗，再调用此处，避免永久写回导致重复累加。
 export function refreshEnemyTraitStats(e){
+ syncMinerShield(e);
+ if(e.coldShieldStacks>0){e.def+=(e.baseDef||0)*Number(e.enemyTalent['ColdShield.def'])*e.coldShieldStacks;e.res+=Number(e.enemyTalent['ColdShield.magic_resistance'])*e.coldShieldStacks;}
  const bb=e.enemyTalent||{},silenced=permissions(e).silenced;
+ if(e.id==='enemy_1509_mousek'){e.mouseShieldDef=e.shieldLayers.some(l=>l.id==='mouseking-arts'&&l.remaining>0)?Number(bb['defup.def'])||0:0;e.def+=e.mouseShieldDef;}
  if(e.refractionBonus&&!silenced)e.res+=e.refractionBonus;
  const layers=e.armorLossStacks||0,max=Number(bb['def_reduce.max_stack_cnt']);
  if(layers>=2&&max>0){e.def=Math.max(0,e.def+Number(bb['def_reduce.def'])*layers/max);e.res=Math.max(0,e.res+Number(bb['def_reduce.magic_resistance'])*layers/max);}
@@ -37,7 +271,17 @@ export function refreshEnemyTraitStats(e){
 
 export function tickEnemyTraits(battle,e,dt){
  if(!e.enemyTraitsInitialized||e.hp<=0)return;
+ if(e.coldShieldStacks!=null){
+  const warm=battle.heatedByBrazier(e),interval=Number(e.enemyTalent[warm?'MeltShield.interval':'ColdShield.interval']);
+  if(interval>0){
+   if(warm!==e.coldShieldWarm){e.coldShieldWarm=warm;e.coldShieldNextAt=battle.s.time+interval;}
+   while(battle.s.time+1e-9>=e.coldShieldNextAt){e.coldShieldNextAt+=interval;e.coldShieldStacks=Math.max(0,Math.min(Number(e.enemyTalent['ColdShield.max_stack_cnt']),e.coldShieldStacks+(warm?-1:1)));}
+  }
+ }
+
  const bb=e.enemyTalent||{};
+ if(YUANZAI.has(e.id))faceOperatorMajority(battle,e);
+ if(e.id==='enemy_1025_reveng')e.atk=e.baseAtk*(1+(e.hp<=e.maxHp*.5?Number(bb['atkup.atk'])||0:0));
  if(bb['SelfFear.fear']>0&&!e.selfFearTriggered&&e.hp/e.maxHp<.5){e.selfFearTriggered=true;applyStatus(e,'fear',Number(bb['SelfFear.fear']),{source:e.uid});e.selfFearSpeedUntil=battle.s.time+Number(bb['SelfFear.speed_duration']);e.speed=e.baseSpeed*Number(bb['SelfFear.move_speed']);}
  if(e.selfFearSpeedUntil!=null&&battle.s.time>=e.selfFearSpeedUntil){e.selfFearSpeedUntil=null;e.speed=e.baseSpeed;}
  if(e.powStartedAt!=null&&!e.powSpent){const age=Math.floor((battle.s.time-e.powStartedAt+1e-9)*10)/10;e.atk=e.baseAtk*(1+Number(bb['pow.add_max_atk'])*Math.min(1,age/Number(bb['pow.time'])));}
@@ -55,14 +299,30 @@ export function tickEnemyTraits(battle,e,dt){
  if(e.id==='enemy_1367_dseed')while(e.hp>0&&battle.s.time+1e-9>=e.nextBloodLossAt){e.nextBloodLossAt+=1;applyLoss(battle,{target:e,amount:e.maxHp*Number(bb['Passive.hp_ratio'])});}
 }
 
+// 与受击回复共用命中入口，DOT/生命流失、抵消和无敌不累计；无需自身有SP槽。
+export function enemyTraitOnDamageSp(battle,e){
+ if(e.id!=='enemy_2010_csdcr'||e.hp<=0)return;
+ const bb=e.enemyTalent,limit=Number(bb['AttackSpeedUp.stack_cnt']);if(!(limit>0))return;
+ e.scarletHits=(e.scarletHits||0)+1;
+ if(e.scarletHits<limit)return;e.scarletHits=0;
+ for(const target of battle.s.enemies)if(target.hp>0&&!target.hidden&&(target===e||!isIsolated(target)))
+  applyStatus(target,'attackSpeedUp',Number(bb['AttackSpeedUp.duration']),{source:'scarlet-singer',value:Number(bb['AttackSpeedUp.attack_speed']),resistible:false});
+ battle.emit('enemy-ability',{uid:e.uid,x:e.x,y:e.y,ability:'scarlet-attack-speed'});
+}
+
 export function enemyTraitAfterDamage(battle,e,opts,result){
+ syncMinerShield(e);
  if(!e.enemyTraitsInitialized||result.total<=0)return;
+ if(e.id==='enemy_2052_smgia'&&e.hp>0&&opts.environmental===true)applyStatus(e,'fragile',Number(e.enemyTalent['Weak.weak[limit]']),{source:e.uid,value:Number(e.enemyTalent['Weak.damage_scale']),resistible:false});
+ if(e.id==='enemy_1509_mousek'&&e.mouseShieldDef&&!e.shieldLayers.some(l=>l.id==='mouseking-arts'&&l.remaining>0)){e.def-=e.mouseShieldDef;e.mouseShieldDef=0;}
+ if(e.id==='enemy_1511_mdrock')syncMudrockShield(e);
  const bb=e.enemyTalent||{},max=Number(bb['def_reduce.max_stack_cnt']);
  if(bb['Expose.weak[limit]']>0&&!bb['Expose.range_radius']&&!permissions(e).silenced){
   const source=opts.source||getActor(battle.s,opts.sourceUid);
   if(battle.s.units.includes(source))applyStatus(source,'exposed',Number(bb['Expose.weak[limit]']),{source:e.uid,value:Number(bb['Expose.damage_scale']),resistible:false});
  }
  if(e.hp<=0)return;
+ if(NEURO_SPAWNERS.has(e.id))activateNeuroSpawner(battle,e);
  if(max>0){
   const old=e.armorLossStacks||0,next=Math.min(max,old+1);e.armorLossStacks=next;
   const delta=(next>=2?next:0)-(old>=2?old:0);
@@ -78,6 +338,7 @@ function releasePrisoner(battle,e){
  e.enemyDefPenetration=Number(bb['liberty.def_penetrate'])||0;
  battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'liberation'});
 }
+export function liberateEnemyPrisoners(battle){for(const e of battle.s.enemies)if(e.hp>0)releasePrisoner(battle,e);}
 export function enemyTraitBeforeAttack(battle,e){
  if(e.prisonReleased!==false)return;
  e.prisonAttacks++;
@@ -86,6 +347,13 @@ export function enemyTraitBeforeAttack(battle,e){
  if(/^enemy_1121_lifbos/.test(e.id))for(const other of battle.s.enemies)if(other.hp>0)releasePrisoner(battle,other);
 }
 export function enemyTraitOnHit(battle,e,target){
+ if(e.id==='enemy_1050_lslime'&&e.hp>0&&target.hp>0){
+  const bb=e.enemyTalent,endsAt=battle.s.time+Number(bb['dot.duration']);
+  if(!(bb['dot.duration']>0&&bb['dot.interval']>0&&bb['dot.damage']>0))return;
+  const existing=battle.s.logicEffects.find(f=>f.talentOrSkillId==='pompeii-burn'&&f.targetUid===target.uid&&f.targetDeployGen===target.deployGen&&f.endsAt>battle.s.time);
+  if(existing)existing.endsAt=endsAt;
+  else addEffect(battle,{kind:'dot',sourceUid:null,targetUid:target.uid,targetDeployGen:target.deployGen,talentOrSkillId:'pompeii-burn',stackRule:'stack',interval:Number(bb['dot.interval']),nextAt:battle.s.time+Number(bb['dot.interval']),endsAt,values:{damage:Number(bb['dot.damage']),type:'arts'},snapshot:{damage:Number(bb['dot.damage'])},refKind:'owner',persistAfterSourceGone:true});
+ }
  const stun=Number(e.enemyTalent?.['Combat.attack@stun']);
  if(stun>0&&target.hp>0)applyStatus(target,'stun',stun,{source:e.uid});
 }
@@ -115,6 +383,14 @@ export function enemyTraitAfterAttack(battle,e){
 
 export function enemyTraitOnDeath(battle,e,info){
  const bb=e.enemyTalent||{};
+ const driver=Number(bb['Driver.sp']),killer=info.killer,armorSkill=killer&&battle.data.powerArmorSkills?.[killer.id];
+ if(driver>0&&armorSkill&&killer.hp>0&&killer.deployed!==false){const gained=gainSp(killer,armorSkill,driver);if(gained>0)battle.emit('enemy-ability',{uid:e.uid,x:e.x,y:e.y,ability:'driver-sp',targetUid:killer.uid,amount:gained});}
+ if(bb['Boom.heal_scale']>0&&bb['Boom.projectile_range']>0&&!permissions(e).silenced&&info.reason!=='leak'){
+  const amount=e.atk*(1+Math.min(0,statusAttributeChanges(e).attack||0))*Number(bb['Boom.heal_scale']);
+  for(const target of battle.s.enemies)if(target!==e&&target.hp>0&&!target.hidden&&near(e,target,Number(bb['Boom.projectile_range'])))
+   applyHeal(battle,{source:e,target,amount,persistAfterSourceGone:true,parentEventId:info.event?.eventId});
+  battle.emit('impact',{uid:e.uid,x:e.x,y:e.y,radius:Number(bb['Boom.projectile_range']),type:'healing',enemy:true});
+ }
  if(bb['Expose.range_radius']>0&&!permissions(e).silenced&&!['leak','fall'].includes(info.reason)){
   for(const target of alliedActors(battle.s))if(target.deployed&&target.hp>0&&near(e,target,Number(bb['Expose.range_radius'])))applyStatus(target,'exposed',Number(bb['Expose.weak[limit]']),{source:e.uid,value:Number(bb['Expose.damage_scale']),resistible:false});
  }
@@ -149,12 +425,42 @@ export function applyEnemyTraitAuras(battle){
  const live=battle.s.enemies.filter(e=>e.hp>0&&!e.hidden),allies=attackableAllies(battle.s);
  for(const source of live){const bb=source.enemyTalent||{};
   if(bb['magdef_add.magic_resistance']>0&&!permissions(source).silenced){
-   for(const target of live)if(target!==source&&near(source,target,2.5))target.enemyResAura=Math.max(target.enemyResAura||0,Number(bb['magdef_add.magic_resistance']));
+   for(const target of live)if(target!==source&&!isIsolated(target)&&near(source,target,2.5))target.enemyResAura=Math.max(target.enemyResAura||0,Number(bb['magdef_add.magic_resistance']));
   }
-  if(bb['auraDefup.def']>0){for(const target of live)if(target!==source&&target.enemyTalent?.['auraDefup.def']>0&&near(source,target,1.5))target.def+=Number(bb['auraDefup.def']);}
+  if(bb['auraDefup.def']>0){for(const target of live)if(target!==source&&!isIsolated(target)&&target.enemyTalent?.['auraDefup.def']>0&&near(source,target,1.5))target.def+=Number(bb['auraDefup.def']);}
   if(bb['atkSpeedDown.attack_speed']<0&&!permissions(source).silenced){
    for(const target of allies)if(near(source,target,Number(bb['defup.range_radius'])))target.enemyAttackSpeedMod=Math.min(target.enemyAttackSpeedMod||0,100*Number(bb['atkSpeedDown.attack_speed']));
   }
  }
  for(const target of live){target.res+=target.enemyResAura||0;target.enemyResAura=0;}
+ if(live.some(e=>e.id==='enemy_1430_lrrook')||battle.s.enemies.some(e=>e.chaliceUid!=null))for(const target of battle.s.enemies)enemyChaliceProtection(battle,target);
+ // 远古威慑在重生/第二形态生效；本体黑板未给范围与攻速值，取PRTS修订415307。
+ const wolves=live.filter(e=>e.enemyFormKind==='zaro'&&e.enemyForm!=='initial');
+ for(const target of allies)if(wolves.some(e=>near(e,target,1.5)))target.enemyAttackSpeedMod=(target.enemyAttackSpeedMod||0)-50;
+}
+
+// 交战不是普通阻挡：保留原索敌，仅对已绑定双方施加束缚。
+export function tickMinerEngagements(battle){
+ const state=battle.s,all=[...state.enemies,...state.summons],sources=state.enemies.filter(e=>e.hp>0&&e.deployed!==false&&!e.hidden&&!e.flying&&Number(e.enemyTalent?.['BlockMcreep.block_mcreep_cnt'])>0);
+ if(!sources.length&&!state.minerEngagements?.length)return;
+ if(state.time+1e-9<(state.nextMinerEngagementAt??0))return;
+ state.nextMinerEngagementAt=(state.nextMinerEngagementAt??0)+.3;while(state.nextMinerEngagementAt<=state.time)state.nextMinerEngagementAt+=.3;
+ const live=a=>a&&a.hp>0&&!a.hidden&&a.deployed!==false,gen=a=>a?.deployGen??0,key=p=>'miner-engagement:'+p.enemyUid+':'+p.enemyGen;
+ const byId=new Map(all.map(a=>[a.uid,a])),old=state.minerEngagements||[],pairs=[];
+ for(const pair of old){
+  const enemy=byId.get(pair.enemyUid),miner=byId.get(pair.minerUid),range=Number(enemy?.enemyTalent?.['BlockMcreep.range_radius'])+Number(enemy?.enemyTalent?.['BlockMcreep.range_radius_add']);
+  if(live(enemy)&&live(miner)&&miner.id==='enemy_3010_mcreep'&&gen(enemy)===pair.enemyGen&&gen(miner)===pair.minerGen&&!enemy.flying&&!miner.flying&&Math.hypot(enemy.x-miner.x,enemy.y-miner.y)<=range+1e-9)pairs.push(pair);
+  else if(miner)removeStatus(miner,'root',key(pair));
+ }
+ const claimed=new Set(pairs.map(p=>p.minerUid)),miners=all.filter(a=>a.id==='enemy_3010_mcreep'&&live(a)&&!a.flying);
+ for(const enemy of sources.sort((a,b)=>a.uid-b.uid)){
+  const count=Math.floor(Number(enemy.enemyTalent['BlockMcreep.block_mcreep_cnt'])),range=Number(enemy.enemyTalent['BlockMcreep.range_radius']);if(!(range>0))continue;
+  let free=count-pairs.filter(p=>p.enemyUid===enemy.uid&&p.enemyGen===gen(enemy)).length;
+  const candidates=miners.filter(m=>!claimed.has(m.uid)&&Math.hypot(enemy.x-m.x,enemy.y-m.y)<=range+Math.max(0,Number(m.hitRadius)||0)+1e-9).sort((a,b)=>Math.hypot(enemy.x-a.x,enemy.y-a.y)-Math.hypot(enemy.x-b.x,enemy.y-b.y)||a.uid-b.uid);
+  for(const miner of candidates){if(free--<=0)break;pairs.push({enemyUid:enemy.uid,enemyGen:gen(enemy),minerUid:miner.uid,minerGen:gen(miner)});claimed.add(miner.uid);}
+ }
+ const held=new Set(pairs.map(p=>key(p)));
+ for(const pair of old){const enemy=byId.get(pair.enemyUid);if(enemy&&!held.has(key(pair)))removeStatus(enemy,'root',key(pair));}
+ for(const pair of pairs){applyStatus(byId.get(pair.enemyUid),'root',.4,{source:key(pair),resistible:false});applyStatus(byId.get(pair.minerUid),'root',.4,{source:key(pair),resistible:false});}
+ state.minerEngagements=pairs;
 }

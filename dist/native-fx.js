@@ -379,10 +379,11 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
  // 敌方留下的持续伤害区域（kind:'field'：污染秽蚀、燃烧区域、毒雾）和我方技能区域共用这套绘制。
  // 例外：6 人谢拉格的寒风区域（bond-kjerag-storm）是全场常驻判定，但**不留常驻底色**——
  // 表现只有每 25 秒起风时的全屏冰风（'ice-wind' → drawIceWind）。
+ const dominion=drawDominion(c,point,z,battle);
  const list=(s.logicEffects||[]).filter(fx=>fx.talentOrSkillId!=='bond-kjerag-storm'&&(fx.kind==='zone'||(fx.kind==='field'&&(Number(fx.values?.damage)>0||Number(fx.values?.atkScale)>0||Number(fx.values?.elementScale)>0)))&&(fx.endsAt==null||fx.endsAt>s.time));
- if(!list.length)return false;
+ if(!list.length)return dominion;
  for(const fx of list){
-  const visual=battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
+  const visual=fx.values?.mouseSand?{shape:'square',tone:'gold'}:fx.values?.enemyWineBuff?{shape:'circle',tone:'gold'}:battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
   const [light,deep]=ZONE_TONE[visual.tone]||ZONE_TONE.arts;
   const radius=Number.isFinite(fx.radius)?fx.radius:1;
   // 剩余时间不足 1.5 秒时开始闪烁提示即将结束
@@ -404,7 +405,7 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
     cells.push({x:(fx.x??0)+dx,y:(fx.y??0)+dy});
    }
   }
-  const isField=fx.kind==='field';
+  const isField=fx.kind==='field'||fx.values?.enemyWineBuff;
   // 敌方留下来的持续伤害区域只画「一圈」：铺格 + 逐格描边会变成一堆小方块，加成混合下看着像许多圈拼在一起。
   if(isField){
    const cx=point(fx.x??0,fx.y??0),rx=radius*z.tw,ry=radius*z.th;
@@ -696,7 +697,31 @@ export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}
  const s=battle?.s;
  if(!s?.events)return false;
  let drew=false;
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.enemyCast?.wildCalling){
+  const p=point(e.x,e.y),text='狂暴怒嗥 '+Math.max(0,e.enemyCast.endsAt-s.time).toFixed(1);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#e497a1';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
+ }
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.id==='enemy_2010_csdcr'&&e.scarletHits>=Number(e.enemyTalent?.['AttackSpeedUp.warning_stack_cnt'])){
+  const p=point(e.x,e.y),text='受击 '+e.scarletHits+'/'+e.enemyTalent['AttackSpeedUp.stack_cnt'];c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#ff657b';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
+ }
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.xiMarkEnabled)for(const [uid,label,color]of [[e.xiNearestUid,'◆ 最近','#ff9d86'],[e.xiFarthestUid,'◇ 最远','#8acaff']]){
+  const target=[...(s.units||[]),...(s.summons||[])].find(a=>a.uid===uid&&a.deployed&&a.hp>0);if(!target)continue;
+  const p=point(target.x,target.y);c.save();c.font='bold 10px sans-serif';c.textAlign='center';c.fillStyle=color;c.fillText(formatText?formatText(label):label,p.x,p.y-z.th*.95-18);c.restore();drew=true;
+ }
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.mouseMarkEnabled)for(const [uid,label,color]of [[e.mouseMaxUid,'⊕ 最高生命','#ff887d'],[e.mouseMinUid,'▼ 最低生命','#86baff']]){
+  const target=[...(s.units||[]),...(s.summons||[])].find(a=>a.uid===uid&&a.deployed&&a.hp>0);if(!target)continue;
+  const p=point(target.x,target.y);c.save();c.font='bold 10px sans-serif';c.textAlign='center';c.fillStyle=color;c.fillText(formatText?formatText(label):label,p.x,p.y-z.th*.95-(uid===e.mouseMaxUid?26:14));c.restore();drew=true;
+ }
+
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.parrotHasPassenger){const p=point(e.x,e.y);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#f4d38b';c.fillText(formatText?formatText('携带水手'):'携带水手',p.x,p.y-z.th*.95-15);c.restore();drew=true;}
+ for(const e of s.enemies||[])for(const bomb of e.enemyCast?.c4Targets||[]){
+  const target=[...(s.units||[]),...(s.summons||[])].find(a=>a.uid===bomb.uid&&a.deployGen===bomb.deployGen&&a.deployed&&a.hp>0);if(!target)continue;
+  const p=point(target.x,target.y),text='C4 '+Math.max(0,e.enemyCast.endsAt-s.time).toFixed(1);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#ff997c';c.fillText(text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
+ }
+ for(const fx of s.logicEffects||[])if(fx.values?.knightBomb&&fx.nextAt!=null){
+  const target=[...(s.units||[]),...(s.summons||[])].find(a=>a.uid===fx.targetUid&&a.deployGen===fx.targetDeployGen&&a.deployed&&a.hp>0);if(!target)continue;
+  const p=point(target.x,target.y),text='爆炸箭 '+Math.max(0,fx.nextAt-s.time).toFixed(1);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#d9a5ff';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
+ }
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.facingX!=null){const p=point(e.x,e.y),text=e.facingX>0?'正面 →':'← 正面';c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#f4d38b';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;}
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&(e.parasiteTargetUid!=null||e.palsyCharges>0)){
   const p=point(e.x,e.y),text=e.parasiteTargetUid!=null?'寄生中':'麻痹 '+e.palsyCharges;
   c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#dfb1ed';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
@@ -726,4 +751,11 @@ export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}
   c.restore();drew=true;
  }
  return drew;
+}
+
+export function drawDominion(c,point,z,battle){
+ const cells=Object.values(battle?.s?.dominionCells||{});if(!cells.length||battle.s.benchmark)return false;
+ c.save();c.fillStyle='rgba(33,18,48,.55)';c.strokeStyle='rgba(146,108,170,.55)';c.lineWidth=1;
+ for(const cell of cells){const p=point(cell.x,cell.y);c.fillRect(p.x-z.tw/2,p.y-z.th/2,z.tw,z.th);c.strokeRect(p.x-z.tw/2+.5,p.y-z.th/2+.5,z.tw-1,z.th-1);}
+ c.restore();return true;
 }

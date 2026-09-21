@@ -1,0 +1,1512 @@
+{
+  "source": "https://prts.wiki/w/模板:敌人导航",
+  "retrievedAt": "2026-09-21T12:19:06.114Z",
+  "property": "登场活动",
+  "entries": {
+    "enemy_1041_lazerd": {
+      "name": "法术大师A1",
+      "activities": [
+        "主线第五章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B3%95%E6%9C%AF%E5%A4%A7%E5%B8%88A1"
+    },
+    "enemy_10083_hlbird": {
+      "name": "“萨科塔之翼”",
+      "activities": [
+        "众生行记"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E8%90%A8%E7%A7%91%E5%A1%94%E4%B9%8B%E7%BF%BC%E2%80%9D"
+    },
+    "enemy_1005_yokai_2": {
+      "name": "妖怪MKII",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E5%A6%96%E6%80%AAMKII"
+    },
+    "enemy_1355_mrfly": {
+      "name": "护障",
+      "activities": [
+        "不义之财"
+      ],
+      "url": "https://prts.wiki/w/%E6%8A%A4%E9%9A%9C"
+    },
+    "enemy_1005_yokai": {
+      "name": "妖怪",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E5%A6%96%E6%80%AA"
+    },
+    "enemy_1017_defdrn": {
+      "name": "御4",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E5%BE%A14"
+    },
+    "enemy_10084_hlegle": {
+      "name": "“萨科塔之眼”",
+      "activities": [
+        "众生行记"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E8%90%A8%E7%A7%91%E5%A1%94%E4%B9%8B%E7%9C%BC%E2%80%9D"
+    },
+    "enemy_1407_hummbd": {
+      "name": "远眺",
+      "activities": [
+        "水晶箭行动"
+      ],
+      "url": "https://prts.wiki/w/%E8%BF%9C%E7%9C%BA"
+    },
+    "enemy_1005_yokai_3": {
+      "name": "威龙",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E5%A8%81%E9%BE%99"
+    },
+    "enemy_1112_emppnt": {
+      "name": "帝国炮火先兆者",
+      "activities": [
+        "主线第八章"
+      ],
+      "url": "https://prts.wiki/w/%E5%B8%9D%E5%9B%BD%E7%82%AE%E7%81%AB%E5%85%88%E5%85%86%E8%80%85"
+    },
+    "enemy_1041_lazerd_2": {
+      "name": "法术大师A2",
+      "activities": [
+        "主线第五章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B3%95%E6%9C%AF%E5%A4%A7%E5%B8%88A2"
+    },
+    "enemy_1042_frostd": {
+      "name": "寒霜",
+      "activities": [
+        "主线第五章"
+      ],
+      "url": "https://prts.wiki/w/%E5%AF%92%E9%9C%9C"
+    },
+    "enemy_9009_acfort": {
+      "name": "假想敌：黑云",
+      "activities": [
+        "卫戍协议：盟约"
+      ],
+      "url": "https://prts.wiki/w/%E5%81%87%E6%83%B3%E6%95%8C%EF%BC%9A%E9%BB%91%E4%BA%91"
+    },
+    "enemy_1355_mrfly_2": {
+      "name": "护障·P",
+      "activities": [
+        "不义之财"
+      ],
+      "url": "https://prts.wiki/w/%E6%8A%A4%E9%9A%9C%C2%B7P"
+    },
+    "enemy_1195_sfyin_2": {
+      "name": "明鉴",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E6%98%8E%E9%89%B4"
+    },
+    "enemy_1195_sfyin": {
+      "name": "磨砻",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E7%A3%A8%E7%A0%BB"
+    },
+    "enemy_1197_sfshu": {
+      "name": "俗心",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E4%BF%97%E5%BF%83"
+    },
+    "enemy_1288_duskls_2": {
+      "name": "深池逐火精锐战士",
+      "activities": [
+        "照我以火"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E9%80%90%E7%81%AB%E7%B2%BE%E9%94%90%E6%88%98%E5%A3%AB"
+    },
+    "enemy_1288_duskls": {
+      "name": "深池逐火战士",
+      "activities": [
+        "照我以火"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E9%80%90%E7%81%AB%E6%88%98%E5%A3%AB"
+    },
+    "enemy_1292_duskld": {
+      "name": "深池逐火护卫",
+      "activities": [
+        "照我以火"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E9%80%90%E7%81%AB%E6%8A%A4%E5%8D%AB"
+    },
+    "enemy_1207_sfji": {
+      "name": "沉沙",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E6%B2%89%E6%B2%99"
+    },
+    "enemy_1199_sfjin": {
+      "name": "身观",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E8%BA%AB%E8%A7%82"
+    },
+    "enemy_9010_acpupp": {
+      "name": "假想敌：再生",
+      "activities": [
+        "卫戍协议：盟约"
+      ],
+      "url": "https://prts.wiki/w/%E5%81%87%E6%83%B3%E6%95%8C%EF%BC%9A%E5%86%8D%E7%94%9F"
+    },
+    "enemy_1197_sfshu_2": {
+      "name": "雅气",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E9%9B%85%E6%B0%94"
+    },
+    "enemy_1161_tidmag": {
+      "name": "控潮术师",
+      "activities": [
+        "多索雷斯假日"
+      ],
+      "url": "https://prts.wiki/w/%E6%8E%A7%E6%BD%AE%E6%9C%AF%E5%B8%88"
+    },
+    "enemy_1158_divman": {
+      "name": "潜水员",
+      "activities": [
+        "多索雷斯假日"
+      ],
+      "url": "https://prts.wiki/w/%E6%BD%9C%E6%B0%B4%E5%91%98"
+    },
+    "enemy_1160_hvyslr": {
+      "name": "码头水手",
+      "activities": [
+        "多索雷斯假日"
+      ],
+      "url": "https://prts.wiki/w/%E7%A0%81%E5%A4%B4%E6%B0%B4%E6%89%8B"
+    },
+    "enemy_1305_mhslim_2": {
+      "name": "炽焰源石虫",
+      "activities": [
+        "落叶逐火"
+      ],
+      "url": "https://prts.wiki/w/%E7%82%BD%E7%84%B0%E6%BA%90%E7%9F%B3%E8%99%AB"
+    },
+    "enemy_1305_mhslim": {
+      "name": "灼热源石虫",
+      "activities": [
+        "落叶逐火"
+      ],
+      "url": "https://prts.wiki/w/%E7%81%BC%E7%83%AD%E6%BA%90%E7%9F%B3%E8%99%AB"
+    },
+    "enemy_2025_syufo": {
+      "name": "掠海漂移体",
+      "activities": [
+        "水月与深蓝之树"
+      ],
+      "url": "https://prts.wiki/w/%E6%8E%A0%E6%B5%B7%E6%BC%82%E7%A7%BB%E4%BD%93"
+    },
+    "enemy_2021_syfish": {
+      "name": "骨海漂流体",
+      "activities": [
+        "水月与深蓝之树"
+      ],
+      "url": "https://prts.wiki/w/%E9%AA%A8%E6%B5%B7%E6%BC%82%E6%B5%81%E4%BD%93"
+    },
+    "enemy_1161_tidmag_2": {
+      "name": "领潮员",
+      "activities": [
+        "多索雷斯假日"
+      ],
+      "url": "https://prts.wiki/w/%E9%A2%86%E6%BD%AE%E5%91%98"
+    },
+    "enemy_1160_hvyslr_2": {
+      "name": "码头水手长",
+      "activities": [
+        "多索雷斯假日"
+      ],
+      "url": "https://prts.wiki/w/%E7%A0%81%E5%A4%B4%E6%B0%B4%E6%89%8B%E9%95%BF"
+    },
+    "enemy_1439_dslntf": {
+      "name": "元核孽生者",
+      "activities": [
+        "生路"
+      ],
+      "url": "https://prts.wiki/w/%E5%85%83%E6%A0%B8%E5%AD%BD%E7%94%9F%E8%80%85"
+    },
+    "enemy_1148_dssbr": {
+      "name": "底海滑动者",
+      "activities": [
+        "覆潮之下"
+      ],
+      "url": "https://prts.wiki/w/%E5%BA%95%E6%B5%B7%E6%BB%91%E5%8A%A8%E8%80%85"
+    },
+    "enemy_1148_dssbr_2": {
+      "name": "富营养的滑动者",
+      "activities": [
+        "覆潮之下"
+      ],
+      "url": "https://prts.wiki/w/%E5%AF%8C%E8%90%A5%E5%85%BB%E7%9A%84%E6%BB%91%E5%8A%A8%E8%80%85"
+    },
+    "enemy_1275_dwlock_2": {
+      "name": "萨卡兹王庭军精锐术师",
+      "activities": [
+        "主线第十一章"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E7%8E%8B%E5%BA%AD%E5%86%9B%E7%B2%BE%E9%94%90%E6%9C%AF%E5%B8%88"
+    },
+    "enemy_1229_darmy": {
+      "name": "萨卡兹王庭军战士",
+      "activities": [
+        "主线第十章"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E7%8E%8B%E5%BA%AD%E5%86%9B%E6%88%98%E5%A3%AB"
+    },
+    "enemy_1229_darmy_2": {
+      "name": "萨卡兹王庭军精锐战士",
+      "activities": [
+        "主线第十章"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E7%8E%8B%E5%BA%AD%E5%86%9B%E7%B2%BE%E9%94%90%E6%88%98%E5%A3%AB"
+    },
+    "enemy_9007_acelem": {
+      "name": "假想敌：淤困",
+      "activities": [
+        "卫戍协议：盟约"
+      ],
+      "url": "https://prts.wiki/w/%E5%81%87%E6%83%B3%E6%95%8C%EF%BC%9A%E6%B7%A4%E5%9B%B0"
+    },
+    "enemy_10067_ftsjc": {
+      "name": "灼藤",
+      "activities": [
+        "挽歌燃烧殆尽"
+      ],
+      "url": "https://prts.wiki/w/%E7%81%BC%E8%97%A4"
+    },
+    "enemy_10065_ftzlc": {
+      "name": "卷心籽",
+      "activities": [
+        "挽歌燃烧殆尽"
+      ],
+      "url": "https://prts.wiki/w/%E5%8D%B7%E5%BF%83%E7%B1%BD"
+    },
+    "enemy_1234_dsubrl": {
+      "name": "深溟巢涌者",
+      "activities": [
+        "愚人号"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%BA%9F%E5%B7%A2%E6%B6%8C%E8%80%85"
+    },
+    "enemy_1433_dsbasi": {
+      "name": "单核掠食者",
+      "activities": [
+        "生路"
+      ],
+      "url": "https://prts.wiki/w/%E5%8D%95%E6%A0%B8%E6%8E%A0%E9%A3%9F%E8%80%85"
+    },
+    "enemy_1433_dsbasi_2": {
+      "name": "异光体掠食者",
+      "activities": [
+        "生路"
+      ],
+      "url": "https://prts.wiki/w/%E5%BC%82%E5%85%89%E4%BD%93%E6%8E%A0%E9%A3%9F%E8%80%85"
+    },
+    "enemy_1272_nhtank": {
+      "name": "萨卡兹枯朽战车",
+      "activities": [
+        "主线第十一章"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E6%9E%AF%E6%9C%BD%E6%88%98%E8%BD%A6"
+    },
+    "enemy_1267_nhpbr": {
+      "name": "萨卡兹枯朽战士",
+      "activities": [
+        "主线第十一章"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E6%9E%AF%E6%9C%BD%E6%88%98%E5%A3%AB"
+    },
+    "enemy_1267_nhpbr_2": {
+      "name": "萨卡兹枯朽战士组长",
+      "activities": [
+        "主线第十一章"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E6%9E%AF%E6%9C%BD%E6%88%98%E5%A3%AB%E7%BB%84%E9%95%BF"
+    },
+    "enemy_1270_nhstlk": {
+      "name": "逐腐兽",
+      "activities": [
+        "主线第十一章"
+      ],
+      "url": "https://prts.wiki/w/%E9%80%90%E8%85%90%E5%85%BD"
+    },
+    "enemy_1234_dsubrl_2": {
+      "name": "富营养的巢涌者",
+      "activities": [
+        "愚人号"
+      ],
+      "url": "https://prts.wiki/w/%E5%AF%8C%E8%90%A5%E5%85%BB%E7%9A%84%E5%B7%A2%E6%B6%8C%E8%80%85"
+    },
+    "enemy_10122_uacann_2": {
+      "name": "集团军重型火炮",
+      "activities": [
+        "主线第十六章"
+      ],
+      "url": "https://prts.wiki/w/%E9%9B%86%E5%9B%A2%E5%86%9B%E9%87%8D%E5%9E%8B%E7%81%AB%E7%82%AE"
+    },
+    "enemy_1272_nhtank_2": {
+      "name": "尖端萨卡兹枯朽战车",
+      "activities": [
+        "主线第十一章"
+      ],
+      "url": "https://prts.wiki/w/%E5%B0%96%E7%AB%AF%E8%90%A8%E5%8D%A1%E5%85%B9%E6%9E%AF%E6%9C%BD%E6%88%98%E8%BD%A6"
+    },
+    "enemy_1270_nhstlk_2": {
+      "name": "疯狂的逐腐兽",
+      "activities": [
+        "主线第十一章"
+      ],
+      "url": "https://prts.wiki/w/%E7%96%AF%E7%8B%82%E7%9A%84%E9%80%90%E8%85%90%E5%85%BD"
+    },
+    "enemy_9006_actoxi": {
+      "name": "假想敌：蚀裂",
+      "activities": [
+        "卫戍协议：盟约"
+      ],
+      "url": "https://prts.wiki/w/%E5%81%87%E6%83%B3%E6%95%8C%EF%BC%9A%E8%9A%80%E8%A3%82"
+    },
+    "enemy_1299_ymkilr": {
+      "name": "山海众头目",
+      "activities": [
+        "登临意"
+      ],
+      "url": "https://prts.wiki/w/%E5%B1%B1%E6%B5%B7%E4%BC%97%E5%A4%B4%E7%9B%AE"
+    },
+    "enemy_1043_zomsbr": {
+      "name": "宿主士兵",
+      "activities": [
+        "主线第五章"
+      ],
+      "url": "https://prts.wiki/w/%E5%AE%BF%E4%B8%BB%E5%A3%AB%E5%85%B5"
+    },
+    "enemy_1019_jshoot": {
+      "name": "隐形弩手",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E9%9A%90%E5%BD%A2%E5%BC%A9%E6%89%8B"
+    },
+    "enemy_10034_cnvsax": {
+      "name": "节日爵士乐手",
+      "activities": [
+        "揭幕者们"
+      ],
+      "url": "https://prts.wiki/w/%E8%8A%82%E6%97%A5%E7%88%B5%E5%A3%AB%E4%B9%90%E6%89%8B"
+    },
+    "enemy_10042_prtrop_2": {
+      "name": "扶桥老手",
+      "activities": [
+        "出苍白海"
+      ],
+      "url": "https://prts.wiki/w/%E6%89%B6%E6%A1%A5%E8%80%81%E6%89%8B"
+    },
+    "enemy_10043_sailor": {
+      "name": "寻险水手",
+      "activities": [
+        "出苍白海"
+      ],
+      "url": "https://prts.wiki/w/%E5%AF%BB%E9%99%A9%E6%B0%B4%E6%89%8B"
+    },
+    "enemy_10042_prtrop": {
+      "name": "架桥船工",
+      "activities": [
+        "出苍白海"
+      ],
+      "url": "https://prts.wiki/w/%E6%9E%B6%E6%A1%A5%E8%88%B9%E5%B7%A5"
+    },
+    "enemy_1389_winbab_2": {
+      "name": "访问团强攻冠军",
+      "activities": [
+        "银心湖列车"
+      ],
+      "url": "https://prts.wiki/w/%E8%AE%BF%E9%97%AE%E5%9B%A2%E5%BC%BA%E6%94%BB%E5%86%A0%E5%86%9B"
+    },
+    "enemy_1381_winman": {
+      "name": "访问团新兵",
+      "activities": [
+        "银心湖列车"
+      ],
+      "url": "https://prts.wiki/w/%E8%AE%BF%E9%97%AE%E5%9B%A2%E6%96%B0%E5%85%B5"
+    },
+    "enemy_1019_jshoot_2": {
+      "name": "隐形弩手组长",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E9%9A%90%E5%BD%A2%E5%BC%A9%E6%89%8B%E7%BB%84%E9%95%BF"
+    },
+    "enemy_1299_ymkilr_2": {
+      "name": "山海众秘使",
+      "activities": [
+        "登临意"
+      ],
+      "url": "https://prts.wiki/w/%E5%B1%B1%E6%B5%B7%E4%BC%97%E7%A7%98%E4%BD%BF"
+    },
+    "enemy_1422_lrsldr_2": {
+      "name": "萨卡兹枯朽辟路前锋",
+      "activities": [
+        "主线第十四章"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E6%9E%AF%E6%9C%BD%E8%BE%9F%E8%B7%AF%E5%89%8D%E9%94%8B"
+    },
+    "enemy_1404_msnip": {
+      "name": "重弩突袭者",
+      "activities": [
+        "水晶箭行动"
+      ],
+      "url": "https://prts.wiki/w/%E9%87%8D%E5%BC%A9%E7%AA%81%E8%A2%AD%E8%80%85"
+    },
+    "enemy_1009_lurker": {
+      "name": "潜伏者",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E6%BD%9C%E4%BC%8F%E8%80%85"
+    },
+    "enemy_9008_acbunn": {
+      "name": "假想敌：骨刺",
+      "activities": [
+        "卫戍协议：盟约"
+      ],
+      "url": "https://prts.wiki/w/%E5%81%87%E6%83%B3%E6%95%8C%EF%BC%9A%E9%AA%A8%E5%88%BA"
+    },
+    "enemy_10031_cnvsld": {
+      "name": "业余竞演者",
+      "activities": [
+        "揭幕者们"
+      ],
+      "url": "https://prts.wiki/w/%E4%B8%9A%E4%BD%99%E7%AB%9E%E6%BC%94%E8%80%85"
+    },
+    "enemy_1283_sgkill": {
+      "name": "家族灭迹人",
+      "activities": [
+        "叙拉古人"
+      ],
+      "url": "https://prts.wiki/w/%E5%AE%B6%E6%97%8F%E7%81%AD%E8%BF%B9%E4%BA%BA"
+    },
+    "enemy_1174_duholy": {
+      "name": "深池伙友卫队",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E4%BC%99%E5%8F%8B%E5%8D%AB%E9%98%9F"
+    },
+    "enemy_1166_dusbr": {
+      "name": "深池侦察兵",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E4%BE%A6%E5%AF%9F%E5%85%B5"
+    },
+    "enemy_1170_dushld": {
+      "name": "深池重甲卫士",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E9%87%8D%E7%94%B2%E5%8D%AB%E5%A3%AB"
+    },
+    "enemy_1168_dumage": {
+      "name": "深池暗影术师",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E6%9A%97%E5%BD%B1%E6%9C%AF%E5%B8%88"
+    },
+    "enemy_1165_duhond": {
+      "name": "深池侦察犬",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E4%BE%A6%E5%AF%9F%E7%8A%AC"
+    },
+    "enemy_1169_duphlx": {
+      "name": "深池方阵战士",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E6%96%B9%E9%98%B5%E6%88%98%E5%A3%AB"
+    },
+    "enemy_1174_duholy_2": {
+      "name": "深池伙友卫队精英",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E4%BC%99%E5%8F%8B%E5%8D%AB%E9%98%9F%E7%B2%BE%E8%8B%B1"
+    },
+    "enemy_1166_dusbr_2": {
+      "name": "深池侦察队长",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E4%BE%A6%E5%AF%9F%E9%98%9F%E9%95%BF"
+    },
+    "enemy_1170_dushld_2": {
+      "name": "深池重甲卫士队长",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E9%87%8D%E7%94%B2%E5%8D%AB%E5%A3%AB%E9%98%9F%E9%95%BF"
+    },
+    "enemy_1169_duphlx_2": {
+      "name": "深池方阵指挥官",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E6%96%B9%E9%98%B5%E6%8C%87%E6%8C%A5%E5%AE%98"
+    },
+    "enemy_1172_dugago": {
+      "name": "守墓石像",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E5%AE%88%E5%A2%93%E7%9F%B3%E5%83%8F"
+    },
+    "enemy_9011_acrefr": {
+      "name": "假想敌：镜膜",
+      "activities": [
+        "卫戍协议：盟约"
+      ],
+      "url": "https://prts.wiki/w/%E5%81%87%E6%83%B3%E6%95%8C%EF%BC%9A%E9%95%9C%E8%86%9C"
+    },
+    "enemy_1175_dushdo_2": {
+      "name": "深池伙友影刃精英",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E4%BC%99%E5%8F%8B%E5%BD%B1%E5%88%83%E7%B2%BE%E8%8B%B1"
+    },
+    "enemy_1010_demon_2": {
+      "name": "萨卡兹大剑组长",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E5%A4%A7%E5%89%91%E7%BB%84%E9%95%BF"
+    },
+    "enemy_1071_dftman": {
+      "name": "萨卡兹刀兵",
+      "activities": [
+        "生于黑夜"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E5%88%80%E5%85%B5"
+    },
+    "enemy_1010_demon": {
+      "name": "萨卡兹大剑手",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E5%A4%A7%E5%89%91%E6%89%8B"
+    },
+    "enemy_1045_hammer": {
+      "name": "粉碎攻坚手",
+      "activities": [
+        "主线第五章"
+      ],
+      "url": "https://prts.wiki/w/%E7%B2%89%E7%A2%8E%E6%94%BB%E5%9D%9A%E6%89%8B"
+    },
+    "enemy_1046_agent": {
+      "name": "步兵",
+      "activities": [
+        "火蓝之心"
+      ],
+      "url": "https://prts.wiki/w/%E6%AD%A5%E5%85%B5"
+    },
+    "enemy_1118_lidbox_2": {
+      "name": "拳师囚犯",
+      "activities": [
+        "孤岛风云"
+      ],
+      "url": "https://prts.wiki/w/%E6%8B%B3%E5%B8%88%E5%9B%9A%E7%8A%AF"
+    },
+    "enemy_1116_liprr": {
+      "name": "普通囚犯",
+      "activities": [
+        "孤岛风云"
+      ],
+      "url": "https://prts.wiki/w/%E6%99%AE%E9%80%9A%E5%9B%9A%E7%8A%AF"
+    },
+    "enemy_1116_liprr_2": {
+      "name": "老练囚犯",
+      "activities": [
+        "孤岛风云"
+      ],
+      "url": "https://prts.wiki/w/%E8%80%81%E7%BB%83%E5%9B%9A%E7%8A%AF"
+    },
+    "enemy_1325_cbgpro_2": {
+      "name": "高级军用猎狗",
+      "activities": [
+        "孤星"
+      ],
+      "url": "https://prts.wiki/w/%E9%AB%98%E7%BA%A7%E5%86%9B%E7%94%A8%E7%8C%8E%E7%8B%97"
+    },
+    "enemy_1000_gopro_2": {
+      "name": "猎狗pro",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E7%8C%8E%E7%8B%97pro"
+    },
+    "enemy_1325_cbgpro": {
+      "name": "军用猎狗",
+      "activities": [
+        "孤星"
+      ],
+      "url": "https://prts.wiki/w/%E5%86%9B%E7%94%A8%E7%8C%8E%E7%8B%97"
+    },
+    "enemy_1121_lifbos": {
+      "name": "重犯",
+      "activities": [
+        "孤岛风云"
+      ],
+      "url": "https://prts.wiki/w/%E9%87%8D%E7%8A%AF"
+    },
+    "enemy_1006_shield_3": {
+      "name": "重装五十夫长",
+      "activities": [
+        "骑兵与猎人"
+      ],
+      "url": "https://prts.wiki/w/%E9%87%8D%E8%A3%85%E4%BA%94%E5%8D%81%E5%A4%AB%E9%95%BF"
+    },
+    "enemy_1402_tgshd_2": {
+      "name": "重装侦察兵",
+      "activities": [
+        "水晶箭行动"
+      ],
+      "url": "https://prts.wiki/w/%E9%87%8D%E8%A3%85%E4%BE%A6%E5%AF%9F%E5%85%B5"
+    },
+    "enemy_1329_cbshld": {
+      "name": "弧光镜卫",
+      "activities": [
+        "孤星"
+      ],
+      "url": "https://prts.wiki/w/%E5%BC%A7%E5%85%89%E9%95%9C%E5%8D%AB"
+    },
+    "enemy_1251_lysyta": {
+      "name": "Dor-1号失败品",
+      "activities": [
+        "绿野幻梦"
+      ],
+      "url": "https://prts.wiki/w/Dor-1%E5%8F%B7%E5%A4%B1%E8%B4%A5%E5%93%81"
+    },
+    "enemy_1249_lysdb_2": {
+      "name": "莱茵生命防卫科高级成员",
+      "activities": [
+        "绿野幻梦"
+      ],
+      "url": "https://prts.wiki/w/%E8%8E%B1%E8%8C%B5%E7%94%9F%E5%91%BD%E9%98%B2%E5%8D%AB%E7%A7%91%E9%AB%98%E7%BA%A7%E6%88%90%E5%91%98"
+    },
+    "enemy_1045_hammer_2": {
+      "name": "粉碎攻坚组长",
+      "activities": [
+        "主线第五章"
+      ],
+      "url": "https://prts.wiki/w/%E7%B2%89%E7%A2%8E%E6%94%BB%E5%9D%9A%E7%BB%84%E9%95%BF"
+    },
+    "enemy_1061_zomshd": {
+      "name": "宿主重装士兵",
+      "activities": [
+        "主线第六章"
+      ],
+      "url": "https://prts.wiki/w/%E5%AE%BF%E4%B8%BB%E9%87%8D%E8%A3%85%E5%A3%AB%E5%85%B5"
+    },
+    "enemy_1387_winshd": {
+      "name": "访问团持盾者",
+      "activities": [
+        "银心湖列车"
+      ],
+      "url": "https://prts.wiki/w/%E8%AE%BF%E9%97%AE%E5%9B%A2%E6%8C%81%E7%9B%BE%E8%80%85"
+    },
+    "enemy_1381_winman_2": {
+      "name": "访问团老兵",
+      "activities": [
+        "银心湖列车"
+      ],
+      "url": "https://prts.wiki/w/%E8%AE%BF%E9%97%AE%E5%9B%A2%E8%80%81%E5%85%B5"
+    },
+    "enemy_1121_lifbos_2": {
+      "name": "传奇重犯",
+      "activities": [
+        "孤岛风云"
+      ],
+      "url": "https://prts.wiki/w/%E4%BC%A0%E5%A5%87%E9%87%8D%E7%8A%AF"
+    },
+    "enemy_1119_vofsd": {
+      "name": "强壮囚犯",
+      "activities": [
+        "孤岛风云"
+      ],
+      "url": "https://prts.wiki/w/%E5%BC%BA%E5%A3%AE%E5%9B%9A%E7%8A%AF"
+    },
+    "enemy_1320_wdrrl_2": {
+      "name": "萨卡兹悖谬暴虐兵长",
+      "activities": [
+        "主线第十二章"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E6%82%96%E8%B0%AC%E6%9A%B4%E8%99%90%E5%85%B5%E9%95%BF"
+    },
+    "enemy_10124_uashld_2": {
+      "name": "集团军中坚盾卫",
+      "activities": [
+        "主线第十六章"
+      ],
+      "url": "https://prts.wiki/w/%E9%9B%86%E5%9B%A2%E5%86%9B%E4%B8%AD%E5%9D%9A%E7%9B%BE%E5%8D%AB"
+    },
+    "enemy_1328_cbjedi": {
+      "name": "弧光锋卫",
+      "activities": [
+        "孤星"
+      ],
+      "url": "https://prts.wiki/w/%E5%BC%A7%E5%85%89%E9%94%8B%E5%8D%AB"
+    },
+    "enemy_1254_lypa_2": {
+      "name": "测试用动力装甲",
+      "activities": [
+        "绿野幻梦"
+      ],
+      "url": "https://prts.wiki/w/%E6%B5%8B%E8%AF%95%E7%94%A8%E5%8A%A8%E5%8A%9B%E8%A3%85%E7%94%B2"
+    },
+    "enemy_1425_lrcmra_2": {
+      "name": "渎罪奇美拉",
+      "activities": [
+        "主线第十四章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B8%8E%E7%BD%AA%E5%A5%87%E7%BE%8E%E6%8B%89"
+    },
+    "enemy_1329_cbshld_2": {
+      "name": "弧光镜卫长",
+      "activities": [
+        "孤星"
+      ],
+      "url": "https://prts.wiki/w/%E5%BC%A7%E5%85%89%E9%95%9C%E5%8D%AB%E9%95%BF"
+    },
+    "enemy_1251_lysyta_2": {
+      "name": "Dor-α号失败品",
+      "activities": [
+        "绿野幻梦"
+      ],
+      "url": "https://prts.wiki/w/Dor-%CE%B1%E5%8F%B7%E5%A4%B1%E8%B4%A5%E5%93%81"
+    },
+    "enemy_1252_lysytb_2": {
+      "name": "Dor-β号复制体",
+      "activities": [
+        "绿野幻梦"
+      ],
+      "url": "https://prts.wiki/w/Dor-%CE%B2%E5%8F%B7%E5%A4%8D%E5%88%B6%E4%BD%93"
+    },
+    "enemy_1072_dlancer": {
+      "name": "萨卡兹穿刺手",
+      "activities": [
+        "生于黑夜"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E7%A9%BF%E5%88%BA%E6%89%8B"
+    },
+    "enemy_2002_bearmi_2": {
+      "name": "高普尼克",
+      "activities": [
+        "刻俄柏的灰蕈迷境"
+      ],
+      "url": "https://prts.wiki/w/%E9%AB%98%E6%99%AE%E5%B0%BC%E5%85%8B"
+    },
+    "enemy_2034_sythef_2": {
+      "name": "流泪小子",
+      "activities": [
+        "水月与深蓝之树"
+      ],
+      "url": "https://prts.wiki/w/%E6%B5%81%E6%B3%AA%E5%B0%8F%E5%AD%90"
+    },
+    "enemy_2085_skzjxd_2": {
+      "name": "圆仔",
+      "activities": [
+        "萨卡兹的无终奇语"
+      ],
+      "url": "https://prts.wiki/w/%E5%9C%86%E4%BB%94"
+    },
+    "enemy_2001_duckmi_2": {
+      "name": "鸭爵",
+      "activities": [
+        "刻俄柏的灰蕈迷境"
+      ],
+      "url": "https://prts.wiki/w/%E9%B8%AD%E7%88%B5"
+    },
+    "enemy_1026_aghost": {
+      "name": "幽灵组长",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E5%B9%BD%E7%81%B5%E7%BB%84%E9%95%BF"
+    },
+    "enemy_1006_shield": {
+      "name": "重装防御者",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E9%87%8D%E8%A3%85%E9%98%B2%E5%BE%A1%E8%80%85"
+    },
+    "enemy_1007_slime": {
+      "name": "源石虫",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E6%BA%90%E7%9F%B3%E8%99%AB"
+    },
+    "enemy_2001_duckmi": {
+      "name": "鸭爵",
+      "activities": [
+        "刻俄柏的灰蕈迷境"
+      ],
+      "url": "https://prts.wiki/w/%E9%B8%AD%E7%88%B5"
+    },
+    "enemy_2002_bearmi": {
+      "name": "高普尼克",
+      "activities": [
+        "刻俄柏的灰蕈迷境"
+      ],
+      "url": "https://prts.wiki/w/%E9%AB%98%E6%99%AE%E5%B0%BC%E5%85%8B"
+    },
+    "enemy_2034_sythef": {
+      "name": "流泪小子",
+      "activities": [
+        "水月与深蓝之树"
+      ],
+      "url": "https://prts.wiki/w/%E6%B5%81%E6%B3%AA%E5%B0%8F%E5%AD%90"
+    },
+    "enemy_2085_skzjxd": {
+      "name": "圆仔",
+      "activities": [
+        "萨卡兹的无终奇语"
+      ],
+      "url": "https://prts.wiki/w/%E5%9C%86%E4%BB%94"
+    },
+    "enemy_1500_skulsr": {
+      "name": "碎骨",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E7%A2%8E%E9%AA%A8"
+    },
+    "enemy_1501_demonk": {
+      "name": "萨卡兹百夫长",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E7%99%BE%E5%A4%AB%E9%95%BF"
+    },
+    "enemy_1513_dekght": {
+      "name": "腐败骑士",
+      "activities": [
+        "玛莉娅临光"
+      ],
+      "url": "https://prts.wiki/w/%E8%85%90%E8%B4%A5%E9%AA%91%E5%A3%AB"
+    },
+    "enemy_1513_dekght_2": {
+      "name": "凋零骑士",
+      "activities": [
+        "玛莉娅临光"
+      ],
+      "url": "https://prts.wiki/w/%E5%87%8B%E9%9B%B6%E9%AA%91%E5%A3%AB"
+    },
+    "enemy_2005_axetro": {
+      "name": "“遗弃者”",
+      "activities": [
+        "刻俄柏的灰蕈迷境"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E9%81%97%E5%BC%83%E8%80%85%E2%80%9D"
+    },
+    "enemy_2004_balloon": {
+      "name": "喷气人",
+      "activities": [
+        "刻俄柏的灰蕈迷境"
+      ],
+      "url": "https://prts.wiki/w/%E5%96%B7%E6%B0%94%E4%BA%BA"
+    },
+    "enemy_1516_jakill": {
+      "name": "杰斯顿·威廉姆斯",
+      "activities": [
+        "孤岛风云"
+      ],
+      "url": "https://prts.wiki/w/%E6%9D%B0%E6%96%AF%E9%A1%BF%C2%B7%E5%A8%81%E5%BB%89%E5%A7%86%E6%96%AF"
+    },
+    "enemy_1509_mousek": {
+      "name": "“鼠王”",
+      "activities": [
+        "喧闹法则"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E9%BC%A0%E7%8E%8B%E2%80%9D"
+    },
+    "enemy_1050_lslime": {
+      "name": "“庞贝”",
+      "activities": [
+        "火蓝之心"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E5%BA%9E%E8%B4%9D%E2%80%9D"
+    },
+    "enemy_1001_bigbo": {
+      "name": "大鲍勃",
+      "activities": [
+        "骑兵与猎人"
+      ],
+      "url": "https://prts.wiki/w/%E5%A4%A7%E9%B2%8D%E5%8B%83"
+    },
+    "enemy_1517_xi": {
+      "name": "“自在”",
+      "activities": [
+        "画中人"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E8%87%AA%E5%9C%A8%E2%80%9D"
+    },
+    "enemy_1535_wlfmster": {
+      "name": "扎罗，“狼之主”",
+      "activities": [
+        "叙拉古人"
+      ],
+      "url": "https://prts.wiki/w/%E6%89%8E%E7%BD%97%EF%BC%8C%E2%80%9C%E7%8B%BC%E4%B9%8B%E4%B8%BB%E2%80%9D"
+    },
+    "enemy_2008_flking": {
+      "name": "“墓碑”",
+      "activities": [
+        "刻俄柏的灰蕈迷境"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E5%A2%93%E7%A2%91%E2%80%9D"
+    },
+    "enemy_2003_rockman": {
+      "name": "迷路的巨像",
+      "activities": [
+        "刻俄柏的灰蕈迷境"
+      ],
+      "url": "https://prts.wiki/w/%E8%BF%B7%E8%B7%AF%E7%9A%84%E5%B7%A8%E5%83%8F"
+    },
+    "enemy_10118_ymgprc": {
+      "name": "澪",
+      "activities": [
+        "墟"
+      ],
+      "url": "https://prts.wiki/w/%E6%BE%AA"
+    },
+    "enemy_1512_mcmstr": {
+      "name": "“巨大的丑东西”",
+      "activities": [
+        "密林悍将归来"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E5%B7%A8%E5%A4%A7%E7%9A%84%E4%B8%91%E4%B8%9C%E8%A5%BF%E2%80%9D"
+    },
+    "enemy_1539_reid": {
+      "name": "“复仇者”",
+      "activities": [
+        "起源行动"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E5%A4%8D%E4%BB%87%E8%80%85%E2%80%9D"
+    },
+    "enemy_2048_smgrd": {
+      "name": "“邪魔的利刃”",
+      "activities": [
+        "探索者的银凇止境"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E9%82%AA%E9%AD%94%E7%9A%84%E5%88%A9%E5%88%83%E2%80%9D"
+    },
+    "enemy_2050_smsha": {
+      "name": "陷落雪祀",
+      "activities": [
+        "探索者的银凇止境"
+      ],
+      "url": "https://prts.wiki/w/%E9%99%B7%E8%90%BD%E9%9B%AA%E7%A5%80"
+    },
+    "enemy_2052_smgia": {
+      "name": "纠缠藤蔓",
+      "activities": [
+        "探索者的银凇止境"
+      ],
+      "url": "https://prts.wiki/w/%E7%BA%A0%E7%BC%A0%E8%97%A4%E8%94%93"
+    },
+    "enemy_9012_acloon": {
+      "name": "“炎佑”",
+      "activities": [
+        "卫戍协议：盟约"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E7%82%8E%E4%BD%91%E2%80%9D"
+    },
+    "enemy_1196_msfyin": {
+      "name": "木制瑞印",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E6%9C%A8%E5%88%B6%E7%91%9E%E5%8D%B0"
+    },
+    "enemy_1196_msfyin_2": {
+      "name": "红木瑞印",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E7%BA%A2%E6%9C%A8%E7%91%9E%E5%8D%B0"
+    },
+    "enemy_1198_msfshu": {
+      "name": "小说卷轴",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E5%B0%8F%E8%AF%B4%E5%8D%B7%E8%BD%B4"
+    },
+    "enemy_1198_msfshu_2": {
+      "name": "诗画卷轴",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E8%AF%97%E7%94%BB%E5%8D%B7%E8%BD%B4"
+    },
+    "enemy_1200_msfjin": {
+      "name": "青铜镜",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E9%9D%92%E9%93%9C%E9%95%9C"
+    },
+    "enemy_1200_msfjin_2": {
+      "name": "黄铜镜",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E9%BB%84%E9%93%9C%E9%95%9C"
+    },
+    "enemy_1202_msfzhi": {
+      "name": "木制镇纸",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E6%9C%A8%E5%88%B6%E9%95%87%E7%BA%B8"
+    },
+    "enemy_1202_msfzhi_2": {
+      "name": "红木镇纸",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E7%BA%A2%E6%9C%A8%E9%95%87%E7%BA%B8"
+    },
+    "enemy_1204_msfhu": {
+      "name": "青瓷茶器",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E9%9D%92%E7%93%B7%E8%8C%B6%E5%99%A8"
+    },
+    "enemy_1204_msfhu_2": {
+      "name": "彩瓷茶器",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E5%BD%A9%E7%93%B7%E8%8C%B6%E5%99%A8"
+    },
+    "enemy_1208_msfji": {
+      "name": "铜矛头",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E9%93%9C%E7%9F%9B%E5%A4%B4"
+    },
+    "enemy_1208_msfji_2": {
+      "name": "铁矛头",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E9%93%81%E7%9F%9B%E5%A4%B4"
+    },
+    "enemy_1210_msfden": {
+      "name": "铜灯盘",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E9%93%9C%E7%81%AF%E7%9B%98"
+    },
+    "enemy_1210_msfden_2": {
+      "name": "铁灯盘",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E9%93%81%E7%81%AF%E7%9B%98"
+    },
+    "enemy_1040_bombd": {
+      "name": "暴鸰",
+      "activities": [
+        "主线第五章"
+      ],
+      "url": "https://prts.wiki/w/%E6%9A%B4%E9%B8%B0"
+    },
+    "enemy_1112_emppnt_2": {
+      "name": "帝国炮火中枢先兆者",
+      "activities": [
+        "主线第八章"
+      ],
+      "url": "https://prts.wiki/w/%E5%B8%9D%E5%9B%BD%E7%82%AE%E7%81%AB%E4%B8%AD%E6%9E%A2%E5%85%88%E5%85%86%E8%80%85"
+    },
+    "enemy_1203_sfhu": {
+      "name": "烹泉",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E7%83%B9%E6%B3%89"
+    },
+    "enemy_1207_sfji_2": {
+      "name": "新硎",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E6%96%B0%E7%A1%8E"
+    },
+    "enemy_1209_sfden": {
+      "name": "清明",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E6%B8%85%E6%98%8E"
+    },
+    "enemy_1162_magmot": {
+      "name": "术师快艇",
+      "activities": [
+        "多索雷斯假日"
+      ],
+      "url": "https://prts.wiki/w/%E6%9C%AF%E5%B8%88%E5%BF%AB%E8%89%87"
+    },
+    "enemy_1023_jmage": {
+      "name": "隐形术师",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E9%9A%90%E5%BD%A2%E6%9C%AF%E5%B8%88"
+    },
+    "enemy_1168_dumage_2": {
+      "name": "深池暗影术师队长",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E6%9A%97%E5%BD%B1%E6%9C%AF%E5%B8%88%E9%98%9F%E9%95%BF"
+    },
+    "enemy_1092_mdgint": {
+      "name": "泥岩巨像",
+      "activities": [
+        "沃伦姆德的薄暮"
+      ],
+      "url": "https://prts.wiki/w/%E6%B3%A5%E5%B2%A9%E5%B7%A8%E5%83%8F"
+    },
+    "enemy_1302_ymtro_2": {
+      "name": "“越长尘”",
+      "activities": [
+        "登临意"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E8%B6%8A%E9%95%BF%E5%B0%98%E2%80%9D"
+    },
+    "enemy_1062_rager_2": {
+      "name": "狂暴宿主组长",
+      "activities": [
+        "主线第六章"
+      ],
+      "url": "https://prts.wiki/w/%E7%8B%82%E6%9A%B4%E5%AE%BF%E4%B8%BB%E7%BB%84%E9%95%BF"
+    },
+    "enemy_1415_mmkabi_2": {
+      "name": "温顺的武装大驮兽",
+      "activities": [
+        "巴别塔"
+      ],
+      "url": "https://prts.wiki/w/%E6%B8%A9%E9%A1%BA%E7%9A%84%E6%AD%A6%E8%A3%85%E5%A4%A7%E9%A9%AE%E5%85%BD"
+    },
+    "enemy_1364_spnaxe_2": {
+      "name": "萨卡兹骸骨拷打者",
+      "activities": [
+        "主线第十三章"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E9%AA%B8%E9%AA%A8%E6%8B%B7%E6%89%93%E8%80%85"
+    },
+    "enemy_1273_stmgun_2": {
+      "name": "高准度伦蒂尼姆城防自行炮",
+      "activities": [
+        "主线第十一章"
+      ],
+      "url": "https://prts.wiki/w/%E9%AB%98%E5%87%86%E5%BA%A6%E4%BC%A6%E8%92%82%E5%B0%BC%E5%A7%86%E5%9F%8E%E9%98%B2%E8%87%AA%E8%A1%8C%E7%82%AE"
+    },
+    "enemy_10144_xdelk_2": {
+      "name": "乌顶巨角卢鲁",
+      "activities": [
+        "雪山降临1101"
+      ],
+      "url": "https://prts.wiki/w/%E4%B9%8C%E9%A1%B6%E5%B7%A8%E8%A7%92%E5%8D%A2%E9%B2%81"
+    },
+    "enemy_10159_mntrjn": {
+      "name": "伊利昂的木驮兽",
+      "activities": [
+        "雅赛努斯复仇记"
+      ],
+      "url": "https://prts.wiki/w/%E4%BC%8A%E5%88%A9%E6%98%82%E7%9A%84%E6%9C%A8%E9%A9%AE%E5%85%BD"
+    },
+    "enemy_10141_xdpeng_2": {
+      "name": "拥霜羽兽",
+      "activities": [
+        "雪山降临1101"
+      ],
+      "url": "https://prts.wiki/w/%E6%8B%A5%E9%9C%9C%E7%BE%BD%E5%85%BD"
+    },
+    "enemy_10127_rkmbst_2": {
+      "name": "异质裂兽·α",
+      "activities": [
+        "主线第十六章"
+      ],
+      "url": "https://prts.wiki/w/%E5%BC%82%E8%B4%A8%E8%A3%82%E5%85%BD%C2%B7%CE%B1"
+    },
+    "enemy_10097_crshd": {
+      "name": "心虚设计师",
+      "activities": [
+        "红丝绒"
+      ],
+      "url": "https://prts.wiki/w/%E5%BF%83%E8%99%9A%E8%AE%BE%E8%AE%A1%E5%B8%88"
+    },
+    "enemy_10081_mpplai": {
+      "name": "转译基底·α",
+      "activities": [
+        "主线第十五章"
+      ],
+      "url": "https://prts.wiki/w/%E8%BD%AC%E8%AF%91%E5%9F%BA%E5%BA%95%C2%B7%CE%B1"
+    },
+    "enemy_1321_wdarft": {
+      "name": "枯朽萃聚使徒",
+      "activities": [
+        "主线第十二章"
+      ],
+      "url": "https://prts.wiki/w/%E6%9E%AF%E6%9C%BD%E8%90%83%E8%81%9A%E4%BD%BF%E5%BE%92"
+    },
+    "enemy_1203_sfhu_2": {
+      "name": "沏虹",
+      "activities": [
+        "将进酒"
+      ],
+      "url": "https://prts.wiki/w/%E6%B2%8F%E8%99%B9"
+    },
+    "enemy_1439_dslntf_2": {
+      "name": "异光体孽生者",
+      "activities": [
+        "生路"
+      ],
+      "url": "https://prts.wiki/w/%E5%BC%82%E5%85%89%E4%BD%93%E5%AD%BD%E7%94%9F%E8%80%85"
+    },
+    "enemy_1283_sgkill_2": {
+      "name": "家族暗影灭迹人",
+      "activities": [
+        "叙拉古人"
+      ],
+      "url": "https://prts.wiki/w/%E5%AE%B6%E6%97%8F%E6%9A%97%E5%BD%B1%E7%81%AD%E8%BF%B9%E4%BA%BA"
+    },
+    "enemy_1172_dugago_2": {
+      "name": "愤怒的守墓石像",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%84%A4%E6%80%92%E7%9A%84%E5%AE%88%E5%A2%93%E7%9F%B3%E5%83%8F"
+    },
+    "enemy_10138_xdsnow": {
+      "name": "雪孩子",
+      "activities": [
+        "雪山降临1101"
+      ],
+      "url": "https://prts.wiki/w/%E9%9B%AA%E5%AD%A9%E5%AD%90"
+    },
+    "enemy_10156_mncrer": {
+      "name": "新手祭司学徒",
+      "activities": [
+        "雅赛努斯复仇记"
+      ],
+      "url": "https://prts.wiki/w/%E6%96%B0%E6%89%8B%E7%A5%AD%E5%8F%B8%E5%AD%A6%E5%BE%92"
+    },
+    "enemy_10112_ymgds": {
+      "name": "冒失的小弟",
+      "activities": [
+        "墟"
+      ],
+      "url": "https://prts.wiki/w/%E5%86%92%E5%A4%B1%E7%9A%84%E5%B0%8F%E5%BC%9F"
+    },
+    "enemy_2009_csaudc": {
+      "name": "骇笑看客",
+      "activities": [
+        "傀影与猩红孤钻"
+      ],
+      "url": "https://prts.wiki/w/%E9%AA%87%E7%AC%91%E7%9C%8B%E5%AE%A2"
+    },
+    "enemy_10116_ymgtop": {
+      "name": "水遁忍者",
+      "activities": [
+        "墟"
+      ],
+      "url": "https://prts.wiki/w/%E6%B0%B4%E9%81%81%E5%BF%8D%E8%80%85"
+    },
+    "enemy_10162_mnctpt": {
+      "name": "自制投石机",
+      "activities": [
+        "雅赛努斯复仇记"
+      ],
+      "url": "https://prts.wiki/w/%E8%87%AA%E5%88%B6%E6%8A%95%E7%9F%B3%E6%9C%BA"
+    },
+    "enemy_10094_crstf": {
+      "name": "临时收音师",
+      "activities": [
+        "红丝绒"
+      ],
+      "url": "https://prts.wiki/w/%E4%B8%B4%E6%97%B6%E6%94%B6%E9%9F%B3%E5%B8%88"
+    },
+    "enemy_10073_mpcar": {
+      "name": "迷茫的修理小助手",
+      "activities": [
+        "主线第十五章"
+      ],
+      "url": "https://prts.wiki/w/%E8%BF%B7%E8%8C%AB%E7%9A%84%E4%BF%AE%E7%90%86%E5%B0%8F%E5%8A%A9%E6%89%8B"
+    },
+    "enemy_1021_bslime": {
+      "name": "高能源石虫",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E9%AB%98%E8%83%BD%E6%BA%90%E7%9F%B3%E8%99%AB"
+    },
+    "enemy_10087_hlchgr": {
+      "name": "圣堂剑士",
+      "activities": [
+        "众生行记"
+      ],
+      "url": "https://prts.wiki/w/%E5%9C%A3%E5%A0%82%E5%89%91%E5%A3%AB"
+    },
+    "enemy_1025_reveng": {
+      "name": "寻仇者",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E5%AF%BB%E4%BB%87%E8%80%85"
+    },
+    "enemy_10098_crhro": {
+      "name": "主角阵营角色",
+      "activities": [
+        "红丝绒"
+      ],
+      "url": "https://prts.wiki/w/%E4%B8%BB%E8%A7%92%E9%98%B5%E8%90%A5%E8%A7%92%E8%89%B2"
+    },
+    "enemy_10040_cnvbln": {
+      "name": "节日气球",
+      "activities": [
+        "揭幕者们"
+      ],
+      "url": "https://prts.wiki/w/%E8%8A%82%E6%97%A5%E6%B0%94%E7%90%83"
+    },
+    "enemy_10001_trslim": {
+      "name": "简饲源石虫",
+      "activities": [
+        "泰拉饭"
+      ],
+      "url": "https://prts.wiki/w/%E7%AE%80%E9%A5%B2%E6%BA%90%E7%9F%B3%E8%99%AB"
+    },
+    "enemy_1165_duhond_2": {
+      "name": "深池侦察犬pro",
+      "activities": [
+        "主线第九章"
+      ],
+      "url": "https://prts.wiki/w/%E6%B7%B1%E6%B1%A0%E4%BE%A6%E5%AF%9F%E7%8A%ACpro"
+    },
+    "enemy_10045_parrot": {
+      "name": "吉兆飞鳞",
+      "activities": [
+        "出苍白海"
+      ],
+      "url": "https://prts.wiki/w/%E5%90%89%E5%85%86%E9%A3%9E%E9%B3%9E"
+    },
+    "enemy_10044_wintun": {
+      "name": "咸鳞汁推荐者",
+      "activities": [
+        "出苍白海"
+      ],
+      "url": "https://prts.wiki/w/%E5%92%B8%E9%B3%9E%E6%B1%81%E6%8E%A8%E8%8D%90%E8%80%85"
+    },
+    "enemy_10099_crvln": {
+      "name": "反派阵营角色",
+      "activities": [
+        "红丝绒"
+      ],
+      "url": "https://prts.wiki/w/%E5%8F%8D%E6%B4%BE%E9%98%B5%E8%90%A5%E8%A7%92%E8%89%B2"
+    },
+    "enemy_10018_sgrobh": {
+      "name": "“独轮车玩具”",
+      "activities": [
+        "太阳甩在身后"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E7%8B%AC%E8%BD%AE%E8%BD%A6%E7%8E%A9%E5%85%B7%E2%80%9D"
+    },
+    "enemy_1183_mlasrt": {
+      "name": "无胄盟清扫小队",
+      "activities": [
+        "长夜临光"
+      ],
+      "url": "https://prts.wiki/w/%E6%97%A0%E8%83%84%E7%9B%9F%E6%B8%85%E6%89%AB%E5%B0%8F%E9%98%9F"
+    },
+    "enemy_10054_cjhot": {
+      "name": "鼎沸",
+      "activities": [
+        "相见欢"
+      ],
+      "url": "https://prts.wiki/w/%E9%BC%8E%E6%B2%B8"
+    },
+    "enemy_1422_lrsldr": {
+      "name": "萨卡兹枯朽前锋",
+      "activities": [
+        "主线第十四章"
+      ],
+      "url": "https://prts.wiki/w/%E8%90%A8%E5%8D%A1%E5%85%B9%E6%9E%AF%E6%9C%BD%E5%89%8D%E9%94%8B"
+    },
+    "enemy_1427_lrnazg": {
+      "name": "“灵幛”",
+      "activities": [
+        "主线第十四章"
+      ],
+      "url": "https://prts.wiki/w/%E2%80%9C%E7%81%B5%E5%B9%9B%E2%80%9D"
+    },
+    "enemy_1425_lrcmra": {
+      "name": "孽罪奇美拉",
+      "activities": [
+        "主线第十四章"
+      ],
+      "url": "https://prts.wiki/w/%E5%AD%BD%E7%BD%AA%E5%A5%87%E7%BE%8E%E6%8B%89"
+    },
+    "enemy_1502_crowns": {
+      "name": "弑君者",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/%E5%BC%91%E5%90%9B%E8%80%85(%E6%95%8C%E6%96%B9)"
+    },
+    "enemy_1511_mdrock": {
+      "name": "泥岩",
+      "activities": [
+        "沃伦姆德的薄暮"
+      ],
+      "url": "https://prts.wiki/w/%E6%B3%A5%E5%B2%A9(%E6%95%8C%E6%96%B9)"
+    },
+    "enemy_1504_cqbw": {
+      "name": "W",
+      "activities": [
+        "初始"
+      ],
+      "url": "https://prts.wiki/w/W(%E6%95%8C%E6%96%B9)"
+    },
+    "enemy_1525_blkswb": {
+      "name": "锏",
+      "activities": [
+        "风雪过境"
+      ],
+      "url": "https://prts.wiki/w/%E9%94%8F(%E6%95%8C%E6%96%B9)"
+    }
+  }
+}

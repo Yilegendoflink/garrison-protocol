@@ -236,7 +236,7 @@ test('野鬃待部署近卫减费只作用于尚未入场的近卫，每名最�
 });
 
 test('野鬃 S2 命中后按攻击方向推动目标',()=>{
- const {b}=openBattle({chessId:'chess_char_1_19_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);const before=e.x;b.hit(u,e,10,'physical');assert.ok(e.x>before);
+ const {b}=openBattle({chessId:'chess_char_1_19_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);const before=e.x;b.hit(u,e,10,'physical');assert.equal(e.x,before);assert.ok(e.shift);b.step();assert.ok(e.x>before);
 });
 
 test('缪尔赛思的莱茵生命减费对开局入场单位只结算一次',()=>{
@@ -323,9 +323,9 @@ test('凯瑟琳模组费用字段写入支援装置 token',()=>{
  const {b}=openBattle([{chessId:'chess_char_4_11_b',skillIndex:0},reps.operators.yak]);deployNow(b);b.step();const device=b.s.summons.find(s=>s.type==='cathy-device');assert.ok(device);assert.equal(device.cost,3);
 });
 
-test('墓碑敌方费用效果会减缓回复并延长再部署',()=>{
- const {b}=openBattle(reps.operators.yak);deployNow(b);const u=b.s.units[0],e=enemy(b,{id:'enemy_2008_flking',costEffects:[{costRecoveryMultiplier:.5,respawnTimeMultiplier:2}]});
- assert.ok(NATIVE_DATA.enemies.enemy_2008_flking.costEffects.some(x=>x.costRecoveryMultiplier===.5));b.s.cost=0;b.s.costRecoveryClock=0;b.refreshEnemyCostEffects();b.tickCost(1);assert.equal(b.s.cost,0);b.tickCost(1);assert.equal(b.s.cost,1);
+test('显式敌方费用效果仍可减缓回复与延长再部署，但墓碑不携带原地图削弱',()=>{
+ const {b}=openBattle(reps.operators.yak);deployNow(b);const u=b.s.units[0],e=enemy(b,{costEffects:[{costRecoveryMultiplier:.5,respawnTimeMultiplier:2}]});
+ assert.deepEqual(NATIVE_DATA.enemies.enemy_2008_flking.costEffects,[]);b.s.cost=0;b.s.costRecoveryClock=0;b.refreshEnemyCostEffects();b.tickCost(1);assert.equal(b.s.cost,0);b.tickCost(1);assert.equal(b.s.cost,1);
  commitExit(b,{target:u,reason:'knockdown'});assert.equal(u.down,b.stats(u).respawnTime*2);assert.equal(e.hp>0,true);
 });
 
@@ -500,8 +500,8 @@ test('流星 S2 立即范围攻击并施加防御削弱，空射天赋提高对�
  const {b}=openBattle({chessId:'chess_char_3_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0],ground=enemy(b,{x:u.x+1,y:u.y,hp:10000,def:1000,res:0}),air=enemy(b,{x:u.x+2,y:u.y,hp:10000,def:0,res:0,flying:true});u.sp=b.spCost(u);b.activate(u);assert.ok(ground.hp<10000);assert.ok(ground.statuses.some(s=>s.kind==='defDown'));assert.ok(air.hp<10000);
 });
 
-test('薄绿技能结束释放范围法术爆发并保留命中拖拽',()=>{
- const {b}=openBattle({chessId:'chess_char_3_08_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+2,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.ok(u.skillLeft>0);assert.equal(b.stats(u).tauntLevel,-1);const beforeX=e.x;b.hit(u,e,10,'arts');assert.ok(e.x<beforeX);u.skillLeft=0;dispatch(b,'skill-end',{target:u});assert.ok(e.hp<990);
+test('薄绿技能结束释放范围法术爆发，命中施加连续向内推动',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_08_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+2,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.ok(u.skillLeft>0);assert.equal(b.stats(u).tauntLevel,-1);const beforeX=e.x;b.hit(u,e,10,'arts');assert.equal(e.x,beforeX);assert.ok(e.shift.vx<0);assert.equal(e.shift.pulls.length,0);b.step();assert.ok(e.x<beforeX);u.skillLeft=0;dispatch(b,'skill-end',{target:u});assert.ok(e.hp<990);
 });
 
 test('菲莱技能受击反击造成法伤并积累凋亡损伤',()=>{
