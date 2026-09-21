@@ -383,7 +383,7 @@ export class NativeBattle {
    applyEnemyTraitAuras(this);
   }
   enemySpecialReady(enemy,target){if(enemy.enemySkills)return selectEnemyAttackSkill(this,enemy,target);const skill=enemy?.specialSkill;if(!skill||!target||skill.prefab==='stuncombat'||skill.prefab==='InvisibleCombat'||skill.prefab==='InvisibleShield'||skill.prefab==='Flame')return null;if(skill.prefab==='AOEAttack'&&enemy.firstAttackUsed)return null;if(skill.prefab==='CrossAttack'&&Math.abs(enemy.x-target.x)>1e-6&&Math.abs(enemy.y-target.y)>1e-6)return null;if(skill.prefab==='DeathEye'&&enemy.deathEye)return null;const first=enemy.firstAttackSplash&&!enemy.firstAttackUsed,countReady=skill.spCost>0&&(enemy.skillAttackCount||0)>=skill.spCost,cooldownReady=skill.spCost===0&&Number.isFinite(skill.cooldown)&&skill.cooldown>=0&&this.s.time>=(enemy.nextSkillAt??Infinity);if(!first&&!countReady&&!cooldownReady)return null;return {prefab:skill.prefab,scale:enemy.specialAtkScale||1,radius:Number(skill.bb?.range_radius)||1,splash:first||skill.prefab==='AOEAttack',stun:Number(skill.bb?.stun)||0,type:skill.prefab==='CrossAttack'?'arts':null,noDirectAttack:skill.prefab==='DeathEye',polluted:skill.prefab==='PollutedRangedAtk'};}
-  resolveEnemyStrike(enemy,target,action={}){if(enemyStealAmmo(this,enemy,target))return;const baseAtk=enemy.atk,baseType=enemy.damageType,hasDagger=Boolean(enemy.canAttack&&enemy.daggers>0),dagger=hasDagger?1+(Number(enemy.daggerAtkAdd)||0):1,rush=consumeEnemyLancerRush(enemy);let scale=Number(action.special?.scale??action.scale)||1;if(enemy.block!==target.uid&&Number(enemy.enemyTalent?.['Attack.attack@ranged_atk_scale'])>0)scale*=Number(enemy.enemyTalent['Attack.attack@ranged_atk_scale']);if(enemy.specialSkill?.prefab==='InvisibleCombat'){if((enemy.invisibleStrikeReady??enemy.invisible)&&enemy.block===target.uid&&!permissions(enemy).silenced){scale*=enemy.specialAtkScale||1;enemy.invisibleStrikeReady=false;}enemy.formInvisible=false;enemy.invisible=false;enemy.invisibleCombatWasActive=false;enemy.invisibleRecoverAt=this.s.time+6;}enemy.atk=baseAtk*scale*dagger;if(action.special?.type||action.type)enemy.damageType=action.special?.type||action.type;this.hurt(target,enemy,{attackId:action.attackId,parentEventId:action.parentEventId});if(rush){enemy.damageType='physical';this.hurt(target,enemy,{damageAmount:rush,cause:'extra',attackId:action.attackId,parentEventId:action.parentEventId});}enemy.atk=enemy.deathGrowthStacks!=null?enemy.baseAtk*(1+enemy.deathGrowthStacks*Number(enemy.enemyTalent['Attack.atk'])):baseAtk;enemy.damageType=baseType;if(hasDagger){const used=Math.max(1,Math.floor(Number(enemy.daggerPerAttack)||1));enemy.daggers=Math.max(0,enemy.daggers-used);enemy.daggersUsed=(enemy.daggersUsed||0)+used;}if(!action.suppressAttackZone&&enemy.attackZone&&(!enemy.enemySkills?.some(s=>s.prefab==='PollutedRangedAtk')||action.special?.polluted))this.addEnemyGroundZone(enemy,enemy.attackZone,{x:target.x,y:target.y,follow:!!enemy.attackZone.follow,attackId:action.attackId??null});}
+  resolveEnemyStrike(enemy,target,action={}){if(enemyStealAmmo(this,enemy,target))return;const baseAtk=enemy.atk,baseType=enemy.damageType,hasDagger=Boolean(enemy.canAttack&&enemy.daggers>0),dagger=hasDagger?1+(Number(enemy.daggerAtkAdd)||0):1,rush=consumeEnemyLancerRush(enemy);let scale=Number(action.special?.scale??action.scale)||1;if(enemy.block!==target.uid&&Number(enemy.enemyTalent?.['Attack.attack@ranged_atk_scale'])>0)scale*=Number(enemy.enemyTalent['Attack.attack@ranged_atk_scale']);if(enemy.specialSkill?.prefab==='InvisibleCombat'){if((enemy.invisibleStrikeReady??enemy.invisible)&&enemy.block===target.uid&&!permissions(enemy).silenced){scale*=enemy.specialAtkScale||1;enemy.invisibleStrikeReady=false;}enemy.formInvisible=false;enemy.invisible=false;enemy.invisibleCombatWasActive=false;enemy.invisibleRecoverAt=this.s.time+6;}enemy.atk=baseAtk*scale*dagger;if(action.special?.type||action.type)enemy.damageType=action.special?.type||action.type;this.hurt(target,enemy,{attackId:action.attackId,parentEventId:action.parentEventId});if(rush){enemy.damageType='physical';this.hurt(target,enemy,{damageAmount:rush,cause:'extra',attackId:action.attackId,parentEventId:action.parentEventId});}enemy.atk=enemy.deathGrowthStacks!=null?enemy.baseAtk*(1+enemy.deathGrowthStacks*Number(enemy.enemyTalent['Attack.atk'])):baseAtk;enemy.damageType=baseType;if(hasDagger){const used=Math.max(1,Math.floor(Number(enemy.daggerPerAttack)||1));enemy.daggers=Math.max(0,enemy.daggers-used);enemy.daggersUsed=(enemy.daggersUsed||0)+used;if(enemy.daggers===0)enemy.attackCooldown=0;}if(!action.suppressAttackZone&&enemy.attackZone&&(!enemy.enemySkills?.some(s=>s.prefab==='PollutedRangedAtk')||action.special?.polluted))this.addEnemyGroundZone(enemy,enemy.attackZone,{x:target.x,y:target.y,follow:!!enemy.attackZone.follow,attackId:action.attackId??null});}
   startEnemyDeathEye(enemy,target){const skill=enemy.specialSkill;if(!skill||!target)return false;const duration=Number(skill.bb?.hit_duration)||8,interval=Math.max(0.5,Number(skill.bb?.hit_interval)||1);enemy.deathEye={targetUid:target.uid,endsAt:this.s.time+duration,nextAt:this.s.time,interval,damageScale:Number(skill.bb?.atk_scale)||.4,elementScale:Number(skill.bb?.ep_damage_ratio)||2,radius:Math.max(1,Number(enemy.range)||2.5)};enemy.stanceUntil=enemy.deathEye.endsAt;this.emit('enemy-skill-start',{uid:enemy.uid,x:enemy.x,y:enemy.y,skill:'DeathEye',targetUid:target.uid,endsAt:enemy.deathEye.endsAt});return true;}
   tickEnemyDeathEye(){for(const enemy of this.s.enemies){const channel=enemy.deathEye;if(!channel)continue;const target=getActor(this.s,channel.targetUid);if(enemy.hp<=0||!enemyTargetValid(target)||!permissions(enemy).skill||permissions(enemy).silenced){enemy.deathEye=null;enemy.stanceUntil=0;endEnemySkill(this,enemy);continue;}if(this.s.time<channel.endsAt){while(this.s.time+1e-9>=channel.nextAt){dealDamage(this,{source:enemy,target,amount:enemy.atk*channel.damageScale,type:'arts',cause:'skill'});channel.nextAt+=channel.interval;}continue;}for(const ally of attackableAllies(this.s))if(Math.abs(Math.round(ally.x)-Math.round(target.x))+Math.abs(Math.round(ally.y)-Math.round(target.y))<=1)applyElementDamage(this,{source:enemy,target:ally,amount:enemy.atk*channel.elementScale,type:'necrosis',cause:'skill'});this.emit('enemy-skill-end',{uid:enemy.uid,x:enemy.x,y:enemy.y,skill:'DeathEye',targetUid:target.uid});enemy.deathEye=null;enemy.stanceUntil=0;endEnemySkill(this,enemy);}}
   // 清明（enemy_1209_sfden）的 InvisibleShield：每 cooldown 秒给半径内的**其他**敌人上隐匿，自身不含。
@@ -480,24 +480,19 @@ export class NativeBattle {
  deadSpawnFragments(enemy,{reason}={}){
   const spec=enemy.deadSpawn;
   if(!spec||!spec.enemyKey||!enemy.route?.length)return;
-  if(reason==='leak')return;
+  if(reason==='leak'||reason==='fall')return;
   if(!(this.data.enemies[spec.enemyKey]||this.level.enemyProfiles?.[spec.enemyKey]))return;
   const count=Math.max(1,Math.floor(spec.cnt+(spec.cntAdd||0)*(enemy.daggersUsed||0)));
   const cmd=Number.isInteger(enemy.cmd)?enemy.cmd:0;
   for(let i=0;i<count;i++){
    const spot=this.fragmentSpot(enemy);
-   this.queueEnemySpawn({id:spec.enemyKey},{x:spot.x,y:spot.y,route:enemy.route,cmd});
+   this.queueEnemySpawn({id:spec.enemyKey},{x:spot.x,y:spot.y,route:enemy.route,cmd},this.economy.random()*.7);
   }
   this.emit('enemy-ability',{uid:enemy.uid,x:enemy.x,y:enemy.y,ability:'dead-spawn',enemyKey:spec.enemyKey,count});
  }
- // 原表为「随机位置」，本引擎按格中心落地：取自身与相邻的可行走格等概率。
- // 注意 map.grid 直接用世界坐标索引（与 path() 的 walk 判定一致），不要再做地图行列换算。
+ // PRTS：以死亡位置为中心、边长1的正方形内连续随机取点，不扩成相邻九格中心。
  fragmentSpot(enemy){
-  const cx=Math.round(enemy.x),cy=Math.round(enemy.y),tiles=[];
-  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const x=cx+dx,y=cy+dy;if(this.tileWalkable(x,y))tiles.push({x,y});}
-  if(!tiles.length)return {x:enemy.x,y:enemy.y};
-  const pick=tiles[Math.floor(this.economy.random()*tiles.length)];
-  return {x:pick.x,y:pick.y};
+  return {x:enemy.x+this.economy.random()-.5,y:enemy.y+this.economy.random()-.5};
  }
  // 再生：被击倒时不退场，原地进入重生状态；第二形态再被击倒即为真正死亡。
  fatalHook(target){
@@ -509,6 +504,7 @@ export class NativeBattle {
   target.hp=Math.max(1,target.hp);
   target.action=null;target.block=null;target.formHold=true;
   target.invulnerable=true;target.unblockable=true;target.canAttack=false;
+  target.reviveShiftImmune=!!target.shiftImmune;target.shiftImmune=true;
   this.emit('enemy-phase',{uid:target.uid,x:target.x,y:target.y,phase:'rebirth',form:revive.formName});
   return true;
  }
@@ -520,6 +516,7 @@ export class NativeBattle {
   const revive=e.revive;if(!revive)return;
   e.revivePhase='form';e.revivePhaseUntil=this.s.time+revive.interval;
   e.invulnerable=false;e.formHold=false;e.block=null;e.action=null;
+  e.shiftImmune=!!e.reviveShiftImmune;
   e.unblockable=!!revive.unblockable;
   e.formInvisible=!!revive.invisible;
   e.invisible=!!revive.invisible;

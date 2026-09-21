@@ -186,7 +186,7 @@ test('烹泉/沏虹死亡同时爆炸、减速和解压缩，攻速减益按来�
  const a=spawn(b,'enemy_1203_sfhu'),c=spawn(b,'enemy_1203_sfhu_2');a.atk=c.atk=1;const base=b.stats(ally).attackSpeed,hp=ally.hp;
  commitExit(b,{target:a});commitExit(b,{target:c});commitExit(b,{target:a});b.flushEnemySpawns();
  assert.ok(ally.hp<hp);assert.equal(ally.statuses.filter(s=>s.kind==='attackSpeedDown').length,2);assert.equal(b.stats(ally).attackSpeed,Math.max(10,base-90));
- assert.equal(b.s.enemies.filter(e=>e.id==='enemy_1204_msfhu'||e.id==='enemy_1204_msfhu_2').length,8);
+ assert.equal(b.s.pendingEnemySpawns.length,8);advance(b,.7);assert.equal(b.s.enemies.filter(e=>e.id==='enemy_1204_msfhu'||e.id==='enemy_1204_msfhu_2').length,8);
  advance(b,7.6);assert.equal(b.stats(ally).attackSpeed,base);assert.equal(other.statuses.filter(s=>s.kind==='attackSpeedDown').length,2);
  advance(b,8);assert.equal(other.statuses.filter(s=>s.kind==='attackSpeedDown').length,0);
 });

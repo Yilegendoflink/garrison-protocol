@@ -1,11 +1,9 @@
 # 解压缩类敌人（频次词条）缺口分析与实现计划
 
-> **落地状态（已实现，`npm test` 463 例全绿）**：第一批（特殊生命值机制）、第二批（DeadSpawn + 断刃）、
-> 第三批（Revive 再生 + 再生护盾 + aura 前缀修正 + 嘲讽映射 + 随机池放开）与第四批的嘲讽项已完成，
-> 定向测试见 `tests/native-decompress-enemy.test.mjs`（23 例），实现口径见文末「落地结果」。
-> 未做：不可达敌人的附加能力（清明隐匿光环、烹泉死亡减速）与燃烧的芦苇丛地形（本模式没有该地形）。
+> **当前状态（2026-09-21）**：次数血条、解压缩、断刃和再生已接入。解压缩使用0.7秒内独立随机延迟和边长1的连续随机位置；坠落退场不生成碎片；断刃耗尽清空攻击间隔；再生1秒过渡期间有失衡免疫。定向测试见 `tests/native-decompress-enemy.test.mjs`。
+> 清明隐匿光环、烹泉死亡减速已在后续批次接入；燃烧芦苇等环境交互和完整坠落物理仍未验收。全局进度与测试结果见 [敌人行为审计](docs/ENEMY_BEHAVIOR_GAP_AUDIT.md)，不能用本切片推断全部敌人完成。
 
-本文档只做**分析**，不含任何代码改动。范围：本模式下「死亡后生成碎片」与「死亡后再生」两族敌人，
+本文档保留初始分析、实施路线与文末的当前落地口径。范围：本模式下「死亡后生成碎片」与「死亡后再生」两族敌人，
 它们按 `data/modes/alliance-lower/default-wave-table.json` 的 `types.TIMES`（频次）词条出怪。
 
 配套文档：`docs/ENEMY_BEHAVIOR_DEVELOPMENT.md`（移动/索敌口径与 `enemy-behavior-overrides.json`）、
@@ -142,12 +140,8 @@ PRTS [特殊机制](https://prts.wiki/index.php?title=%E7%89%B9%E6%AE%8A%E6%9C%B
    `dist/native-effects.js:commitExit` 的敌人分支里（在 `reason==='leak'` 早退之后、`dispatch('enemy-death')` 附近），
    通过 `battle.onEnemyDeath?.(target,{reason,killer,event})` 由 `NativeBattle` 实现。
    保留 `enemyDeathHandled` 幂等标记。**这一并修掉缺口 #4**（DoT 击杀不触发死亡效果）。
-3. 位置生成：把 `spawn(q)` 拆出 `spawnAt(q,{route,x,y,cmd})`；把 `path()` 里的可行走判定抽成
-   `tileWalkable(x,y,flying)`；碎片在父体中心 Chebyshev ≤0.5 的 **3×3 候选格**中取可行走格（优先父体所在格，
-   随机挑选；都不行就退回父体格中心），`cmd` 继承父体的 `cmd`、`cmdNext` 指向父体的下一个路径节点
-   （即"以自身路径召唤"，之后自行走向保护点）。
-4. 触发条件：仅 `reason==='knockdown'`（坠落/漏怪不生成），与文本「因坠落以外的原因死亡」一致；
-   延迟用 `economy.random()*0.7` 也可，但本期建议同帧生成（玩法等价，省一个待生成队列），把 0.7s 抖动留作表现层。
+3. 位置生成：通过 `spawn(q,placement)` 支持连续坐标；以死亡点为中心，两个坐标各偏移 `random()-.5`，不能扩成相邻九格中心。`route/cmd` 继承父体，之后沿原路径推进；完整边界碰撞另属公共物理机制。
+4. 触发条件：死亡来源统一进入 `commitExit`；`fall` 坠落与 `leak` 漏怪不生成。每个碎片以 `random()*.7` 独立排入 `pendingEnemySpawns`，队列存入战斗快照并计入清场门禁；随机延迟影响可攻击时机，不能仅当作表现层抖动。
 5. 沉沙的断刃：`readDagger` 计数（初始 `DeadSpawn.cnt=4`），`Atkup.atk` 按「持有断刃时攻击力 ×(1+0.7)」
    实现（**不是**每次消耗叠加），每次成功攻击后消耗 1，耗尽后本次攻击结束即失去加成；
    DeadSpawn 个数 = `max(1, cnt + cntAdd*已消耗)`。同时移除 `Atkup.atk` 被 `lowHpAttackAdd` 误读的路径。
@@ -189,7 +183,7 @@ PRTS [特殊机制](https://prts.wiki/index.php?title=%E7%89%B9%E6%AE%8A%E6%9C%B
 ### 第四批（P1）：清扫与放量
 
 1. 缺口 #8：`spawn` 映射 `tauntLevel → taunt`（同时修正伙友卫队、中坚盾卫）。
-2. 碎片与再生的**表现层**：解压缩的 0.7s 抖动、形态切换特效、失败/成功提示；
+2. 碎片与再生的**表现层**：配合逻辑生成时间的出场表现、形态切换特效、失败/成功提示；
    余烬的隐匿用 `INVISIBILITY_PLAN.md` 里约定的"暗灰色流动马赛克"。
    （形态切换特效已于 2026-09-19 补上，具体口径见下方「再生形态的立绘与表现」；解压缩抖动仍未做。）
 3. 不可达敌人的附加能力（清明隐匿光环、烹泉死亡减速、镇纸×15）登记在案，等它们进入词条池或地形系统落地再做。
@@ -225,11 +219,11 @@ PRTS [特殊机制](https://prts.wiki/index.php?title=%E7%89%B9%E6%AE%8A%E6%9C%B
 | 碎片体型 | `spriteScale`（碎片 0.6，其余 1）+ `dist/native-play.js` 的画布尺寸 | 生成时静态决定，形态切换不改；`hitCountHp` 是运行时状态，不能拿来当缩放依据 |
 | 次数血条不吃缩放 | `dist/native-battle.js:spawn` 的 `countHp` | 次数取原表 `maxHp`，**不乘** `combatScale`，否则 0.7 倍会把「2 次」变成 1.4 |
 | DeadSpawn | `enemyBehavior.deadSpawn` + `NativeBattle.deadSpawnFragments` | `DeadSpawn.enemy_key` 取 `valueStr`；`cnt_add=-1` 按已消耗断刃扣减，至少 1 个 |
-| 碎片位置 | `NativeBattle.fragmentSpot` | 自身与相邻可行走格等概率（原表是 1.0 边长正方形内的随机位置）；`map.grid` 用世界坐标索引，不要做行列换算 |
+| 碎片位置 | `NativeBattle.fragmentSpot` | 死亡位置周围边长1正方形内的连续随机坐标，每轴偏移范围为[-0.5,0.5) |
 | 统一死亡入口 | `dist/native-effects.js:commitExit` → `battle.onEnemyDeath` | 死亡爆炸／死亡区域／解压缩共用，覆盖干员击杀、持续伤害、额外伤害与生命流失；漏怪（`reason==='leak'`）不算死亡 |
 | 生成缓冲 | `queueEnemySpawn` / `flushEnemySpawns` | 不在遍历敌人数组时改动数组；每帧敌人状态结算后与战斗结束判定前各刷一次，保证「父体是最后一个敌人」时波次不会提前结束 |
-| 断刃 | `enemyBehavior.daggers` + `resolveEnemyStrike` | `Atkup.atk` / `AtkUp.atk` 两种写法都认；持有期间攻击力 ×(1+加值)，每次成功攻击消耗 1 个，耗尽后立刻回落 |
-| Revive | `enemyBehavior.revive` + `NativeBattle.fatalHook` / `tickEnemyRevive` | 就地切形态（同一个 uid）：1s 无敌+不可阻挡+不移动 → 第二形态（次数血条 = `prop_max_hp`）→ `interval` 秒未死则回满血并可再次再生 |
+| 断刃 | `enemyBehavior.daggers` + `resolveEnemyStrike` | `Atkup.atk` / `AtkUp.atk` 两种写法都认；持有期间攻击力 ×(1+加值)，每次成功攻击消耗 1 个，耗尽后回落并清空攻击间隔 |
+| Revive | `enemyBehavior.revive` + `NativeBattle.fatalHook` / `tickEnemyRevive` | 就地切形态（同一个 uid）：1s 无敌+不可阻挡+不移动+失衡免疫 → 第二形态（次数血条 = `prop_max_hp`，恢复过渡前的失衡免疫标记）→ `interval` 秒未死则回满血并可再次再生 |
 | 余烬隐匿 | `status.js` 的 `formInvisible` | `e.invisible` 由状态表推导，形态自带的隐匿必须单独标记，否则会被 `tickStatuses` 每帧清掉 |
 | 再生护盾 | `enterReviveForm` → `grantGuard` | 半径 1.8 内其他敌人 5 层 `['physical','arts']` 次数护盾；护盾用尽即从数组移除 |
 | aura 前缀修正 | `dist/native-combat.js` 的 `aura` 推导 | 只认 `defup.*`；`aura.*` 是自身条件判定，逐火护卫的 50% 减伤不再白送周围敌人 |
