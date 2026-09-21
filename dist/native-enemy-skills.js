@@ -1,6 +1,7 @@
 import {permissions,applyStatus,removeStatus} from './status.js';
-import {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId} from './native-effects.js';
+import {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId,addEffect} from './native-effects.js';
 import {FPS} from './combat.js';
+import {windupSeconds} from './native-combat.js';
 
 const ATTACK_SKILLS=new Set(['AOEAttack','CrossAttack','PowerAttack','StunAttack','stuncombat','DeathEye','PollutedRangedAtk']);
 const VISUAL_SKILLS=new Set(['BornAnim','StartRun','EndAnim','BeginAnim']);
@@ -9,8 +10,10 @@ const VISUAL_SKILLS=new Set(['BornAnim','StartRun','EndAnim','BeginAnim']);
 export function initEnemySkills(enemy,raw,now){
  enemy.enemyTags=raw.enemyTags||[];
  enemy.enemyPeriodicSpawn??=raw.enemyBehavior?.periodicSpawn||null;
+ if(raw.skills?.some(s=>s.prefabKey==='boomb'))enemy.canAttack=enemy.baseCanAttack=false;
+ if(enemy.id==='enemy_10001_trslim')enemy.lowHpRatio=0; // 逃跑由一次性技能负责，不走通用永久低血强化。
  if(enemy.enemySkills)return;
- enemy.enemySkills=(raw.skills||[]).filter(s=>s.prefabKey&&!VISUAL_SKILLS.has(s.prefabKey)&&!(raw.enemyBehavior?.ignoredSkillPrefabs||[]).includes(s.prefabKey)).map((s,index)=>({
+ enemy.enemySkills=(raw.skills||[]).filter(s=>s.prefabKey&&(!VISUAL_SKILLS.has(s.prefabKey)||s.prefabKey==='StartRun'&&enemy.id==='enemy_10001_trslim')&&!(raw.enemyBehavior?.ignoredSkillPrefabs||[]).includes(s.prefabKey)).map((s,index)=>({
   index,prefab:s.prefabKey,priority:Number(s.priority)||0,cooldown:Number(s.cooldown),spCost:Number(s.spCost)||0,
   nextAt:Number(s.initCooldown)>=0?now+Number(s.initCooldown):null,used:false,
   bb:Object.fromEntries((s.blackboard||[]).map(r=>[r.key,r.valueStr??r.value]))
@@ -20,6 +23,7 @@ export function initEnemySkills(enemy,raw,now){
  enemy.enemyRank=raw.levelType||'NORMAL';
  enemy.enemyTalent=Object.fromEntries((raw.talentBlackboard||[]).map(r=>[r.key,r.valueStr??r.value]));
  if(enemy.id==='enemy_10087_hlchgr')enemy.nextEnhanceAt=now+Number(enemy.enemyTalent['SkillTrigger.interval']);
+ if(enemy.id==='enemy_10044_wintun'){enemy.wineCarrying=true;enemy.canAttack=false;enemy.speed=enemy.baseSpeed*Number(enemy.enemyTalent['1.move_speed']);}
 }
 
 export function changeEnemySp(enemy,amount,{duringSkill=false}={}){
@@ -31,7 +35,7 @@ export function enemySpEvent(enemy,type){
  return 0;
 }
 export function enemySkillReady(enemy,skill,now){
- if(enemy.enemyCast||skill.used&&skill.prefab==='AOEAttack')return false;
+ if(enemy.enemyCast||skill.used&&['AOEAttack','boomb','BlockedBoom','StartRun'].includes(skill.prefab))return false;
  if(skill.nextAt!=null&&now+1e-9<skill.nextAt)return false;
  if(skill.nextAt==null&&skill.spCost<=0)return false;
  return skill.spCost<=0||enemy.sp+1e-9>=skill.spCost;
@@ -73,6 +77,7 @@ function releaseCaptured(battle,enemy,cast){
 }
 export function cancelEnemyCast(battle,enemy){
  const cast=enemy.enemyCast;if(!cast)return;
+ if(cast.bomb){enemy.formHold=false;endEnemySkill(battle,enemy,{refund:true});return;}
  if(cast.charge&&!cast.hitAttempted){
   const short=(enemy.statuses||[]).some(s=>s.kind==='stun'||s.kind==='sleep');
   enemy.enemyLostUntil=battle.s.time+Number(enemy.enemyTalent[short?'data.attack@fail_duration2':'data.attack@fail_duration']);
@@ -86,9 +91,25 @@ export function cancelEnemyCast(battle,enemy){
 export function tickEnemySkills(battle,enemy,dt){
  if(!enemy.enemySkills)return;
  if(enemy.hp<=0){cancelEnemyCast(battle,enemy);return;}
+ if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
+ if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
  if(cast?.multiAttack&&(!control.attack||!control.skill||control.silenced||enemy.hidden)){cancelEnemyCast(battle,enemy);return;}
  if(enemy.enemySp?.type==='INCREASE_WITH_TIME')changeEnemySp(enemy,enemy.enemySp.increment*dt);
+ if(cast?.bomb){
+  if(enemy.hidden||!control.skill||!control.attack){cancelEnemyCast(battle,enemy);return;}
+  if(battle.s.time+1e-9>=cast.endsAt){
+   const target=getActor(battle.s,cast.targetUid),skill=enemy.enemySkills[cast.index];
+   if(!target?.deployed||target.hp<=0){cancelEnemyCast(battle,enemy);return;}
+   const attackId=newAttackId(battle);
+   for(const victim of attackableAllies(battle.s))if(Math.abs(Math.round(victim.x)-Math.round(target.x))<=1&&Math.abs(Math.round(victim.y)-Math.round(target.y))<=1)
+    battle.resolveEnemyStrike(enemy,victim,{scale:1,type:'physical',attackId,suppressAttackZone:true});
+   enemy.speed=enemy.baseSpeed*Number(skill.bb.move_speed);enemy.formHold=false;
+   battle.emit('impact',{uid:enemy.uid,x:target.x,y:target.y,radius:1,type:'physical',enemy:true});
+   endEnemySkill(battle,enemy);
+  }
+  return;
+ }
  if(cast?.charge){
   if(enemy.hidden||!control.skill||!control.attack||control.silenced){cancelEnemyCast(battle,enemy);return;}
   if(!cast.hitChecked&&battle.s.time+1e-9>=cast.hitAt){
@@ -151,6 +172,30 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_10001_trslim'&&!control.silenced&&enemy.hp<enemy.maxHp*.5){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='StartRun');
+  if(skill&&beginEnemySkill(battle,enemy,skill)){
+   enemy.speed=enemy.baseSpeed*(1+Number(skill.bb.move_speed));enemy.unblockable=true;enemy.block=null;enemy.action=null;
+   enemy.runUntil=battle.s.time+Number(skill.bb.block_free_time);endEnemySkill(battle,enemy);
+   battle.emit('enemy-phase',{uid:enemy.uid,x:enemy.x,y:enemy.y,phase:'low-hp'});return;
+  }
+ }
+ const barrel=enemy.enemySkills.find(s=>s.prefab==='BlockedBoom');
+ if(barrel&&enemy.wineCarrying===false&&!control.silenced&&!enemy.action&&beginEnemySkill(battle,enemy,barrel)){
+  const target=getActor(battle.s,enemy.block);
+  if(target?.deployed&&target.hp>0){
+   // PRTS半径2；本期黑板提供区域持续时间、攻速、闪避与强击倍率。
+   addEffect(battle,{kind:'zone',sourceUid:enemy.uid,talentOrSkillId:'enemy-wine-zone',stackRule:'stack',x:Math.round(target.x),y:Math.round(target.y),radius:2,interval:null,nextAt:null,endsAt:battle.s.time+Number(barrel.bb.fixed_duration),values:{enemyWineBuff:true,attackSpeed:Number(barrel.bb.attack_speed),physicalDodge:Number(barrel.bb.prob)},refKind:'owner',persistAfterSourceGone:true});
+   battle.resolveEnemyStrike(enemy,target,{scale:Number(barrel.bb.blockee_atk_scale),type:'physical',attackId:newAttackId(battle),suppressAttackZone:true});
+  }
+  endEnemySkill(battle,enemy);enemy.attackCooldown=Math.ceil(enemy.interval*FPS);return;
+ }
+ const bomb=enemy.enemySkills.find(s=>s.prefab==='boomb');
+ if(bomb){
+  const target=battle.enemySkillTargets(enemy)[0];
+  if(target&&beginEnemySkill(battle,enemy,bomb,{bomb:true,targetUid:target.uid,endsAt:battle.s.time+windupSeconds(enemy.interval)}))enemy.formHold=true;
+  return;
+ }
  if(enemy.id==='enemy_10144_xdelk_2'&&!control.silenced&&!enemy.action&&enemy.attackCooldown<=1&&enemy.block!=null){
   const skill=enemy.enemySkills.find(s=>s.prefab==='skill');
   if(skill&&beginEnemySkill(battle,enemy,skill,{charge:true,targetUid:enemy.block,hitAt:battle.s.time+6.6,endsAt:battle.s.time+Number(skill.bb.duration),hitAttempted:false})){

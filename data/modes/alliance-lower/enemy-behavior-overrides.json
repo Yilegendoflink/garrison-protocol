@@ -280,6 +280,14 @@
       "randomPoolEligible": true,
       "reason": "近地悬浮/受控落地/失温坠落、首伤加速、搬运释放与存档通过native-enemy-forms定向回归；本期Mode.mode=0且checkpoint=0，不凭空添加水手",
       "source": "https://prts.wiki/w/吉兆飞鳞"
+    },
+    "enemy_1040_bombd": {
+      "randomPoolEligible": false,
+      "reason": "一次性投弹、九格物理伤害与投弹后双倍移速已接入；静态刚体的失衡交互仍待公共物理机制验收，暂不进随机池"
+    },
+    "enemy_10044_wintun": {
+      "randomPoolEligible": true,
+      "reason": "PRTS修订414800及本期黑板：携桶三倍移速不普攻、阻挡失桶、一次性强击与30秒品尝区域；真实step回归后允许入池"
     }
   }
 }

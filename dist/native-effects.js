@@ -70,6 +70,16 @@ export function getActor(s,uid){
  if(uid==null)return null;
  return (s.units||[]).find(u=>u.uid===uid)||(s.summons||[]).find(u=>u.uid===uid)||(s.enemies||[]).find(e=>e.uid===uid)||null;
 }
+
+export function enemyWineBuffs(battle,target){
+ const result={attackSpeed:0,physicalDodge:0};
+ if(target.hp<=0||target.hidden||target.flying)return result;
+ for(const fx of battle.s.logicEffects||[])if(fx.values?.enemyWineBuff&&fx.endsAt>battle.s.time&&Math.hypot(target.x-fx.x,target.y-fx.y)<=fx.radius+(target.hitRadius||0)+1e-9){
+  result.attackSpeed=Math.max(result.attackSpeed,fx.values.attackSpeed);
+  result.physicalDodge=Math.max(result.physicalDodge,fx.values.physicalDodge);
+ }
+ return result;
+}
 export function operators(s){return s.units||[];}
 export function alliedActors(s){return [...(s.units||[]),...(s.summons||[]).filter(x=>x.allied!==false)];}
 export function enemyActors(s){return (s.enemies||[]).filter(e=>e.hp>0);}
@@ -251,6 +261,12 @@ export function dealDamage(battle,opts){
   if(target.fragile)value*=target.fragile;
  }
  let type=opts.type||'physical';
+ const wineDodge=type==='physical'&&opts.cause!=='dot'&&battle.s.enemies.includes(target)?enemyWineBuffs(battle,target).physicalDodge:0;
+ if(wineDodge>0&&battle.economy.random()<wineDodge){
+  log(battle,'evade',{eventId:event.eventId,targetUid:target.uid,sourceUid:source?.uid,type});
+  battle.emit('hit',{uid:target.uid,x:target.x,y:target.y,type:'evade'});
+  return {total:0,hp:0,shield:0,blocked:false,evaded:true,potentialHpDamage:0,event};
+ }
  if(type!=='elemental'&&!Number.isFinite(opts.value)&&target.damageResistance>0)value*=Math.max(0,1-target.damageResistance);
  if(!opts.skipHooks&&opts.cause!=='dot'&&opts.cause!=='extra'&&opts.cause!=='reflect'){
   const before={source,target,value,type,event,cause:opts.cause};dispatch(battle,'before-damage',before);value=before.value;type=before.type;

@@ -10,6 +10,7 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  if(restore){e.baseRes-=Number(raw.enemyBehavior?.magicResistanceBonus)||0;e.res=e.baseRes;}
  e.enemyTraitsInitialized=true;e.attackSpeedMod??=0;
  const bb=e.enemyTalent||{};
+ if(e.id==='enemy_1025_reveng')e.lowHpRatio=0; // 每帧检测血线，不能被通用一次性分支锁住。
  e.refractionBonus=Number(bb['refracting.magic_resistance']??bb['Refracting.magic_resistance'])||0;
  e.refractionHp=Number(bb['Refracting.max_hp'])||0;
  if(e.refractionHp){e.hp*=1+e.refractionHp;e.maxHp*=1+e.refractionHp;}
@@ -38,6 +39,7 @@ export function refreshEnemyTraitStats(e){
 export function tickEnemyTraits(battle,e,dt){
  if(!e.enemyTraitsInitialized||e.hp<=0)return;
  const bb=e.enemyTalent||{};
+ if(e.id==='enemy_1025_reveng')e.atk=e.baseAtk*(1+(e.hp<=e.maxHp*.5?Number(bb['atkup.atk'])||0:0));
  if(bb['SelfFear.fear']>0&&!e.selfFearTriggered&&e.hp/e.maxHp<.5){e.selfFearTriggered=true;applyStatus(e,'fear',Number(bb['SelfFear.fear']),{source:e.uid});e.selfFearSpeedUntil=battle.s.time+Number(bb['SelfFear.speed_duration']);e.speed=e.baseSpeed*Number(bb['SelfFear.move_speed']);}
  if(e.selfFearSpeedUntil!=null&&battle.s.time>=e.selfFearSpeedUntil){e.selfFearSpeedUntil=null;e.speed=e.baseSpeed;}
  if(e.powStartedAt!=null&&!e.powSpent){const age=Math.floor((battle.s.time-e.powStartedAt+1e-9)*10)/10;e.atk=e.baseAtk*(1+Number(bb['pow.add_max_atk'])*Math.min(1,age/Number(bb['pow.time'])));}

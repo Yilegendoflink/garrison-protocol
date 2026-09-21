@@ -15,6 +15,13 @@ function spawn(b,id,x=3,y=3){const raw=NATIVE_DATA.enemies[id],o=b.map.origin,p=
 function advance(b,seconds){for(let i=0;i<Math.round(seconds*30);i++)b.step();}
 function addAlly(b,u,x,y){u.x=x;u.y=y;u.hp=u.maxHp;u.deployed=true;applyStatus(u,'disarm',600);b.s.units.push(u);}
 
+test('寻仇者半血及以下增攻，治疗跨线即时恢复，反复跨线不叠加且不受沉默影响',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_1025_reveng');const atk=e.baseAtk;
+ e.hp=e.maxHp*.5;b.step();assert.equal(e.atk,atk*2);applyStatus(e,'silence',60);b.step();assert.equal(e.atk,atk*2);
+ e.hp=e.maxHp*.5+1;b.step();assert.equal(e.atk,atk);e.hp=e.maxHp*.4;b.step();assert.equal(e.atk,atk*2);advance(b,1);assert.equal(e.atk,atk*2);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const r=restored.s.enemies[0];r.hp=r.maxHp;restored.step();assert.equal(r.atk,atk);
+});
+
 test('折射被沉默取消法抗，解除沉默后恢复，连续帧不重复叠加',()=>{
  const {b}=arena(),e=spawn(b,'enemy_1166_dusbr');assert.equal(e.res,e.baseRes+70);
  advance(b,1);assert.equal(e.res,e.baseRes+70);applyStatus(e,'silence',1);b.step();assert.equal(e.res,e.baseRes);

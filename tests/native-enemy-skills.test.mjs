@@ -4,7 +4,7 @@ import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {applyStatus} from '../dist/status.js';
-import {dealDamage,commitExit} from '../dist/native-effects.js';
+import {dealDamage,commitExit,enemyWineBuffs} from '../dist/native-effects.js';
 import {changeEnemySp} from '../dist/native-enemy-skills.js';
 
 function arena(){
@@ -24,6 +24,65 @@ function spawn(b,id,x=3,y=3,raw=NATIVE_DATA.enemies[id]){
 }
 function advance(b,seconds){for(let i=0;i<Math.round(seconds*30);i++)b.step();}
 function addAlly(b,ally,x,y){ally.x=x;ally.y=y;ally.deployed=true;ally.hp=ally.maxHp;applyStatus(ally,'disarm',600);b.s.units.push(ally);}
+
+test('暴鸰等待技能初始CD且只投弹一次，九格溅射包含迷彩，结束后移速翻倍而非普通攻击',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_1040_bombd',3,3);e.atk=e.baseAtk=100;
+ addAlly(b,ally,4,3);const splash=structuredClone(ally),outside=structuredClone(ally);splash.uid+=100;splash.x=5;splash.y=4;outside.uid+=101;outside.x=6;
+ applyStatus(splash,'camouflage',600);b.s.units.push(splash,outside);applyStatus(e,'silence',60);
+ const hits=[];b.resolveEnemyStrike=(enemy,target)=>hits.push(target.uid);const speed=e.speed;
+ advance(b,.9);assert.equal(e.enemyCast,undefined);assert.equal(hits.length,0);advance(b,.2);assert.equal(e.enemyCast?.bomb,true);
+ advance(b,2);assert.deepEqual(hits.sort((a,b)=>a-b),[ally.uid,splash.uid].sort((a,b)=>a-b));assert.equal(e.speed,speed*2);assert.equal(e.canAttack,false);assert.equal(e.attackCount,0);
+ advance(b,10);assert.equal(hits.length,2);assert.equal(e.enemySkills[0].used,true);
+});
+
+test('暴鸰无目标不消耗弹头，前摇受控取消但可重试；技能存档只结算一次',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_1040_bombd');advance(b,2);assert.equal(e.enemySkills[0].used,false);
+ addAlly(b,ally,4,3);b.step();assert.equal(e.enemyCast.bomb,true);applyStatus(e,'stun',.5);b.step();assert.equal(e.enemyCast,null);assert.equal(e.enemySkills[0].used,false);assert.equal(e.formHold,false);
+ advance(b,1.1);assert.equal(e.enemyCast.bomb,true);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);
+ const shots=[];restored.resolveEnemyStrike=(enemy,target)=>shots.push(target.uid);advance(restored,10);assert.equal(shots.length,1);assert.equal(restored.s.enemies[0].enemySkills[0].used,true);assert.equal(restored.s.enemies[0].attackCount,0);
+});
+
+test('咸鳞汁携桶三倍速度且不普攻，阻挡后280%强击只一次并留下30秒区域',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_10044_wintun');b.map=structuredClone(b.map);b.map.grid[3][3].heightType='LOWLAND';
+ assert.equal(e.speed,e.baseSpeed*3);assert.equal(e.canAttack,false);advance(b,1);assert.equal(e.enemySkills[0].used,false);
+ const strikes=[];b.resolveEnemyStrike=(enemy,target,packet)=>strikes.push({uid:target.uid,scale:packet.scale});addAlly(b,ally,3,3);b.step();
+ assert.equal(e.wineCarrying,false);assert.equal(e.speed,e.baseSpeed);assert.equal(e.canAttack,true);assert.deepEqual(strikes,[{uid:ally.uid,scale:2.8}]);
+ const zones=b.s.logicEffects.filter(f=>f.values?.enemyWineBuff);assert.equal(zones.length,1);assert.equal(zones[0].radius,2);assert.equal(zones[0].endsAt-zones[0].startedAt,30);
+ advance(b,4);assert.equal(b.s.logicEffects.filter(f=>f.values?.enemyWineBuff).length,1);assert.equal(strikes.filter(s=>s.scale===2.8).length,1);assert.ok(e.attackCount>0);
+});
+
+test('咸鳞汁沉默期间失桶但不开技，解除后即使已脱离阻挡也消费一次技能且不生成区域',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_10044_wintun');b.map=structuredClone(b.map);b.map.grid[3][3].heightType='LOWLAND';
+ addAlly(b,ally,3,3);applyStatus(e,'silence',2);b.step();assert.equal(e.wineCarrying,false);assert.equal(e.enemySkills[0].used,false);
+ ally.x=8;ally.y=5;advance(b,3);assert.equal(e.enemySkills[0].used,true);assert.equal(b.s.logicEffects.filter(f=>f.values?.enemyWineBuff).length,0);
+});
+
+test('品尝区域只给地面敌人攻速/物理闪避，同名取最高，来源死亡/读档后持续，离开或到期失效',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_10044_wintun');b.map=structuredClone(b.map);b.map.grid[3][3].heightType='LOWLAND';
+ addAlly(b,ally,3,3);b.resolveEnemyStrike=()=>{};b.step();const fx=b.s.logicEffects.find(f=>f.values?.enemyWineBuff);b.s.logicEffects.push({...structuredClone(fx),id:b.s.settle.nextEffectId++});
+ const ground=spawn(b,'enemy_1007_slime',4,3),fly=spawn(b,'enemy_1005_yokai',4,3);ground.isolated=true;ground.canAttack=false;
+ assert.deepEqual(enemyWineBuffs(b,ground),{attackSpeed:100,physicalDodge:.8});assert.deepEqual(enemyWineBuffs(b,fly),{attackSpeed:0,physicalDodge:0});
+ b.economy.random=()=>.5;let hp=ground.hp;assert.equal(dealDamage(b,{target:ground,value:10,type:'physical',cause:'attack'}).total,0);assert.equal(ground.hp,hp);
+ assert.equal(dealDamage(b,{target:ground,value:10,type:'arts',cause:'attack'}).total,10);assert.equal(dealDamage(b,{target:ground,value:10,type:'physical',cause:'dot'}).total,10);
+ ground.x=6;assert.equal(dealDamage(b,{target:ground,value:10,type:'physical',cause:'attack'}).total,10);ground.x=4;
+ commitExit(b,{target:e,reason:'knockdown'});b.step();assert.equal(enemyWineBuffs(b,ground).attackSpeed,100);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.enemies.find(x=>x.uid===ground.uid);assert.equal(enemyWineBuffs(restored,copy).attackSpeed,100);
+ restored.s.time=fx.endsAt;assert.deepEqual(enemyWineBuffs(restored,copy),{attackSpeed:0,physicalDodge:0});
+});
+
+test('品尝区域攻速实际缩短普通攻击间隔，不被通用光环每帧刷新覆盖',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_10044_wintun');b.map=structuredClone(b.map);b.map.grid[3][3].heightType='LOWLAND';
+ addAlly(b,ally,3,3);b.resolveEnemyStrike=()=>{};const attacks=[],record=b.recordEnemyAttack.bind(b);b.recordEnemyAttack=(enemy,special)=>{attacks.push(b.s.time);record(enemy,special);};
+ advance(b,8);assert.ok(attacks.length>=3);assert.ok(Math.abs(attacks[1]-attacks[0]-e.interval/2)<1/30);assert.ok(Math.abs(attacks[2]-attacks[1]-e.interval/2)<1/30);
+});
+
+test('简饲源石虫严格低于半血才逃跑，沉默阻止触发，三秒后移速与阻挡恢复且不重复',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_10001_trslim');const speed=e.baseSpeed;e.hp=e.maxHp*.5;b.step();assert.equal(e.runUntil,undefined);
+ e.hp--;applyStatus(e,'silence',1);b.step();assert.equal(e.runUntil,undefined);advance(b,1);assert.ok(e.runUntil>b.s.time);assert.equal(e.speed,speed*2.5);assert.equal(e.unblockable,true);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const r=restored.s.enemies[0];advance(restored,3.1);assert.equal(r.speed,speed);assert.equal(r.unblockable,false);assert.equal(r.runUntil,null);
+ r.hp=r.maxHp;restored.step();r.hp=r.maxHp*.1;advance(restored,12);assert.equal(r.speed,speed);assert.equal(r.runUntil,null);assert.equal(r.enemySkills[0].used,true);
+});
 
 test('圣堂剑士无攻击目标也每6秒消耗一发弹药，零自然回复且耗尽后停止成长',()=>{
  const {b}=arena(),e=spawn(b,'enemy_10087_hlchgr');const atk=e.atk,speed=e.speed;

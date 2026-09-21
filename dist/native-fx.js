@@ -382,7 +382,7 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
  const list=(s.logicEffects||[]).filter(fx=>fx.talentOrSkillId!=='bond-kjerag-storm'&&(fx.kind==='zone'||(fx.kind==='field'&&(Number(fx.values?.damage)>0||Number(fx.values?.atkScale)>0||Number(fx.values?.elementScale)>0)))&&(fx.endsAt==null||fx.endsAt>s.time));
  if(!list.length)return false;
  for(const fx of list){
-  const visual=battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
+  const visual=fx.values?.enemyWineBuff?{shape:'circle',tone:'gold'}:battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
   const [light,deep]=ZONE_TONE[visual.tone]||ZONE_TONE.arts;
   const radius=Number.isFinite(fx.radius)?fx.radius:1;
   // 剩余时间不足 1.5 秒时开始闪烁提示即将结束
@@ -404,7 +404,7 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
     cells.push({x:(fx.x??0)+dx,y:(fx.y??0)+dy});
    }
   }
-  const isField=fx.kind==='field';
+  const isField=fx.kind==='field'||fx.values?.enemyWineBuff;
   // 敌方留下来的持续伤害区域只画「一圈」：铺格 + 逐格描边会变成一堆小方块，加成混合下看着像许多圈拼在一起。
   if(isField){
    const cx=point(fx.x??0,fx.y??0),rx=radius*z.tw,ry=radius*z.th;
