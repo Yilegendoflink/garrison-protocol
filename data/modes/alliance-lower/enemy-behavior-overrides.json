@@ -334,6 +334,11 @@
     },
     "enemy_1404_msnip": {
       "randomPoolEligible": false
+    },
+    "enemy_1512_mcmstr": {
+      "initialUnblockable": false,
+      "randomPoolEligible": false,
+      "reason": "已接机械/大祭司转场、自爆与持续自伤；砍伐巨蕈及木桩仍待环境实体实现"
     }
   }
 }

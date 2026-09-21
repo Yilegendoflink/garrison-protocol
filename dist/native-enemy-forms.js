@@ -1,7 +1,7 @@
 import {cancelEnemyCast,beginEnemySkill,endEnemySkill} from './native-enemy-skills.js';
 import {permissions,applyStatus} from './status.js';
 import {FPS} from './combat.js';
-import {attackableAllies,alliedActors,newAttackId} from './native-effects.js';
+import {attackableAllies,alliedActors,newAttackId,dealDamage} from './native-effects.js';
 
 const TRANSLATOR='enemy_10081_mpplai';
 const GARGOYLES=new Set(['enemy_1172_dugago','enemy_1172_dugago_2']);
@@ -10,7 +10,10 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 export function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id==='enemy_1535_wlfmster'){
+ if(e.id==='enemy_1512_mcmstr'){
+  e.enemyFormKind='ugly';e.enemyForm='machine';e.formBaseShiftImmune=!!e.shiftImmune;e.unblockable=e.baseUnblockable=false;e.damageType='physical';e.ranged=true;e.range=2.5;e.priestMoveScale=b.combatScale?.moveSpeed??1;
+  e.meleeAttackScale=Number(e.enemyTalent['combat.attack@mcmstr_rage_attack.atk_scale']);e.enemyAttack={groundOnly:true,splashGroundOnly:false,splashOnlyRanged:true,splash:{shape:'square',radius:1}};
+ }else if(e.id==='enemy_1535_wlfmster'){
   e.enemyFormKind='zaro';e.enemyForm='initial';e.shiftImmune=true;e.formBaseImmunities={...e.immunities};e.immunities.stun=true;e.ranged=false;e.range=0;e.damageType='physical';e.zaroBaseInterval=e.interval;
  }else if(e.id==='enemy_1525_blkswb'){
   e.enemyFormKind='degen';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.statusResistance=.5;e.damageType='physical';e.ranged=false;
@@ -80,6 +83,20 @@ function finishTranslation(b,e){
 export function tickEnemyForm(b,e){
  if(e.enemyFormKind==='rotator'){tickRotatorForm(b,e);return;}
  if(!e.enemyFormKind||e.hp<=0)return;
+ if(e.enemyFormKind==='ugly'){
+  if(e.enemyForm==='rebirth'){
+   if(!e.uglyExploded&&b.s.time+1e-9>=e.uglyExplosionAt){
+    e.uglyExploded=true;const skill=e.enemySkills.find(s=>s.prefab==='bomb[reborning]'),attackId=newAttackId(b);
+    for(const target of attackableAllies(b.s))if(Math.hypot(target.x-e.x,target.y-e.y)<=3+1e-9){b.resolveEnemyStrike(e,target,{scale:Number(skill.bb.atk_scale),type:'physical',cause:'extra',attackId});applyStatus(target,'stun',Number(skill.bb.stun),{source:e.uid});}
+    b.emit('impact',{uid:e.uid,x:e.x,y:e.y,radius:3,type:'physical',enemy:true});
+   }
+   if(b.s.time+1e-9>=e.enemyFormUntil){
+    const bb=e.enemyTalent;e.enemyForm='priest';e.enemyFormUntil=null;e.formHold=false;e.invulnerable=false;e.shiftImmune=e.formBaseShiftImmune;e.unblockable=true;e.canAttack=false;e.action=null;
+    e.baseDef+=Number(bb['bird_run.def']);e.def=e.baseDef;e.baseRes+=Number(bb['bird_run.magic_resistance']);e.res=e.baseRes;e.baseSpeed+=Number(bb['bird_run.move_speed'])*e.priestMoveScale;e.speed=e.baseSpeed;e.priestNextDamageAt=b.s.time+1;announce(b,e,'大祭司形态');
+   }
+  }else if(e.enemyForm==='priest')while(e.hp>0&&b.s.time+1e-9>=e.priestNextDamageAt){e.priestNextDamageAt+=1;dealDamage(b,{target:e,amount:Number(e.enemyTalent['bird_run.damage']),type:'true',cause:'dot'});}
+  return;
+ }
  if(e.enemyFormKind==='zaro'){
   if(e.enemyForm==='rebirth'){
    e.hp=Math.max(1,e.maxHp*Math.min(1,(b.s.time-e.zaroRebornStartedAt)/Number(e.enemyTalent['Reborn.duration'])));
@@ -264,6 +281,10 @@ export function enemyPhaseDamageMultiplier(e,type){
 }
 
 export function enemyFormFatal(b,e){
+ if(e.enemyFormKind==='ugly'&&e.enemyForm==='machine'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['reborn.duration']);e.hp=e.maxHp;e.uglyExplosionAt=b.s.time+2.17;e.uglyExploded=false;
+  e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'自爆准备');return true;
+ }
  if(e.enemyFormKind==='zaro'&&e.enemyForm==='initial'){
   cancelEnemyCast(b,e);e.enemyForm='rebirth';e.zaroRebornStartedAt=b.s.time;e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=1;
   e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.canAttack=false;announce(b,e,'重生中');return true;

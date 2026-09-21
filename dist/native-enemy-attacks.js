@@ -54,7 +54,7 @@ export function deliverEnemyAttack(battle,packet){
   if(enemy.powStartedAt!=null&&!enemy.powSpent)enemy.powHit=true;
   for(const victim of victims){
    if(packet.special?.stunBeforeDamage&&permissions(enemy).skill&&!permissions(enemy).silenced)applyStatus(victim,'stun',packet.special.stun,{source:enemy.uid});
-   battle.resolveEnemyStrike(enemy,victim,{...packet,scale,...(enemy.id==='enemy_1500_skulsr'&&victim!==target?{cause:'splash'}:{}),suppressAttackZone:victim!==target});
+   battle.resolveEnemyStrike(enemy,victim,{...packet,scale,...(['enemy_1500_skulsr','enemy_1512_mcmstr'].includes(enemy.id)&&victim!==target?{cause:'splash'}:{}),suppressAttackZone:victim!==target});
    if(enemy.id==='enemy_1500_skulsr'&&ranged)applyStatus(victim,'defDown',5,{source:enemy.uid,value:Number(enemy.enemyTalent['defdown.def']),resistible:false});
    battle.resolveEnemyAttackEffects(enemy,victim,{count:false,extra:packet.special});
   }

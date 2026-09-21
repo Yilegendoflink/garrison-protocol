@@ -126335,7 +126335,7 @@
         "lowHpMoveMultiplier": 0,
         "lowHpUnblockTime": 0,
         "initialInvisible": false,
-        "initialUnblockable": true,
+        "initialUnblockable": false,
         "initialShield": 0,
         "hitCountHp": false,
         "hitCountTypes": null,
