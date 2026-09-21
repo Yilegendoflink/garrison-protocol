@@ -77,12 +77,12 @@ export function tickEnemyProjectiles(battle){
 }
 
 export function releaseEnemyAttack(battle,enemy,action){
- const targets=action.targets||[action.target],spec=enemy.enemyAttack||{},hits=Math.max(1,action.special?.hits??spec.hits??1),gap=Number(spec.hitInterval)||TENTATIVE_HIT_GAP;
+ const selected=action.targets||[action.target],spec=enemy.enemyAttack||{},targets=spec.repeatTargets&&selected.length?Array.from({length:spec.repeatTargets},(_,i)=>selected[i%selected.length]):selected,hits=Math.max(1,action.special?.hits??spec.hits??1),gap=Number(spec.hitInterval)||TENTATIVE_HIT_GAP;
  battle.recordEnemyAttack(enemy,action.special);
  if(hits>1&&enemy.enemyCast)enemy.enemyCast.multiAttack=true;
  for(let i=0;i<targets.length;i++){
   const packet={enemyAttack:true,owner:enemy.uid,target:targets[i],targetDeployGen:getActor(battle.s,targets[i])?.deployGen,special:action.special,scale:action.scale,ranged:action.ranged,attackId:action.attackId,hit:0,last:hits===1&&i===targets.length-1};
-  deliverEnemyAttack(battle,packet);
+  if(spec.repeatTargets&&i>0)scheduleStrikes(battle.s,1,{...packet,delay:i*gap,hitIndex:i});else deliverEnemyAttack(battle,packet);
   for(let hit=1;hit<hits;hit++)scheduleStrikes(battle.s,1,{...packet,hitIndex:hit,delay:hit*gap,last:hit===hits-1&&i===targets.length-1});
  }
 }

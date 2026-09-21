@@ -67,7 +67,7 @@ export function endEnemySkill(battle,enemy,{refund=false}={}){
 
 export function selectEnemyAttackSkill(battle,enemy,target){
  if(!target||enemy.enemyCast)return null;
- if(enemy.id==='enemy_1404_msnip')return null; // 独立直击施法，不复用通用CrossAttack命中目标。
+ if(['enemy_1404_msnip','enemy_1517_xi'].includes(enemy.id))return null; // 专属施法，不复用通用CrossAttack命中目标。
  const ready=enemy.enemySkills.filter(s=>ATTACK_SKILLS.has(s.prefab)&&enemySkillReady(enemy,s,battle.s.time)&&
   !(enemy.id==='enemy_2003_rockman'&&s.prefab==='StunAttack')&&
   !(s.prefab==='ironsandstorm'&&enemy.enemyForm!=='warden')&&

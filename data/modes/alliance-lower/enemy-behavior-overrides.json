@@ -339,6 +339,10 @@
       "initialUnblockable": false,
       "randomPoolEligible": false,
       "reason": "已接机械/大祭司转场、自爆与持续自伤；砍伐巨蕈及木桩仍待环境实体实现"
+    },
+    "enemy_1517_xi": {
+      "randomPoolEligible": false,
+      "reason": "已接双形态和重复普攻；专属十字法术、屏障蓄力与明晦交互尚未齐全，禁用随机入池"
     }
   }
 }
