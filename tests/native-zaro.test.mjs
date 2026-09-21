@@ -4,6 +4,7 @@ import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {dealDamage,moveActor,commitExit,addDamageRedirect,applyLoss} from '../dist/native-effects.js';
+import {drawEnemyPhase} from '../dist/native-fx.js';
 import {applyStatus,permissions,statusAttributeChanges} from '../dist/status.js';
 
 function arena(positions=[]){
@@ -52,4 +53,27 @@ test('远古威慑仅重生/第二形态在1.5圆内生效，同名不叠加且�
  const {b,e,units:[near,far]}=arena([[4,4],[5,5]]);e.atk=1;b.step();assert.equal(near.enemyAttackSpeedMod,0);fatal(b,e);b.step();assert.equal(near.enemyAttackSpeedMod,-50);assert.equal(far.enemyAttackSpeedMod,0);
  b.spawn({id:e.id,route:0});const second=b.s.enemies.at(-1);fatal(b,second);b.step();assert.equal(near.enemyAttackSpeedMod,-50);advance(b,50.1);assert.equal(near.enemyAttackSpeedMod,-50);
  fatal(b,e);fatal(b,second);b.s.queue.push({id:'enemy_1007_slime',route:0,at:100});b.step();assert.equal(near.enemyAttackSpeedMod,0);
+});
+
+function secondPhase(scene){fatal(scene.b,scene.e);advance(scene.b,40);assert.equal(scene.e.enemyForm,'second');}
+function ledger(b){b.s.bloodDebt={value:0,capacity:500,settlementUntil:0};return b.s.bloodDebt;}
+
+test('扎罗怒嗥仅第二形态5秒后开始，不需要目标，持续5.5秒停移停攻且40秒CD从结束算',()=>{
+ const scene=arena(),{b,e}=scene;advance(b,6);assert.equal(e.enemySkills.find(s=>s.prefab==='WildCalling').used,false);secondPhase(scene);const phaseAt=b.s.time;advance(b,4.9);assert.ok(!e.enemyCast);advance(b,.1);assert.equal(e.enemyCast?.wildCalling,true);assert.equal(e.formHold,true);const started=b.s.time,x=e.x,y=e.y;advance(b,5.4);assert.ok(e.enemyCast);assert.equal(e.x,x);assert.equal(e.y,y);advance(b,.1);assert.equal(e.enemyCast,null);assert.equal(e.formHold,false);assert.ok(Math.abs(e.enemySkills.find(s=>s.prefab==='WildCalling').nextAt-(started+5.5+40))<1e-8);assert.equal(b.s.bloodDebt,undefined,'无环境控制器时不凭空创建账簿');assert.ok(Math.abs(started-phaseAt-5)<1e-8);
+});
+test('扎罗在场每秒1点与怒嗥每秒35点进入独立账款接收端，不写自身SP或资金',()=>{
+ const scene=arena(),{b,e}=scene;const account=ledger(b),funds=b.economy.s.funds;advance(b,2);assert.ok(Math.abs(account.value-2)<1e-8);assert.ok(Math.abs(e.sp-2)<1e-8);secondPhase(scene);account.value=0;advance(b,5);assert.equal(e.enemyCast?.wildCalling,true);const ownSp=e.sp,at=b.s.time;advance(b,5.5);assert.ok(Math.abs(account.value-(b.s.time-at+5+35*5))<1e-7);assert.equal(e.sp,ownSp,'持续施法阻止自身SP自然回复，账款增长不应灌入技能槽');assert.equal(b.economy.s.funds,funds);
+});
+test('清算时刻不触发怒嗥或增加账款，结束后可释放；账款只到容量上限',()=>{
+ const scene=arena(),{b,e}=scene;secondPhase(scene);const account=ledger(b);account.settlementUntil=b.s.time+10;advance(b,9);assert.ok(!e.enemyCast);assert.equal(account.value,0);advance(b,1.1);assert.equal(e.enemyCast?.wildCalling,true);account.value=490;assert.equal(b.addBloodDebt(35),10);assert.equal(account.value,500);
+});
+test('怒嗥受眩晕打断，已入账不回滚，停止后续脉冲且从打断时开始CD',()=>{
+ const scene=arena(),{b,e}=scene;secondPhase(scene);const account=ledger(b);advance(b,7.1);assert.equal(e.enemyCast?.wildCalling,true);assert.ok(account.value>70);const before=account.value;applyStatus(e,'stun',2);b.step();assert.equal(e.enemyCast,null);assert.equal(e.formHold,false);const next=e.enemySkills.find(s=>s.prefab==='WildCalling').nextAt;assert.ok(Math.abs(next-b.s.time-40)<1e-8);advance(b,3);assert.ok(Math.abs(account.value-before-3-1/30)<1e-7);
+});
+test('怒嗥脉冲时间与账款跨JSON恢复，不因一帧两次技能调度而重复入账',()=>{
+ const scene=arena(),{b,g,e}=scene;secondPhase(scene);ledger(b);advance(b,6.4);const original=b.s.bloodDebt.value;const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);advance(b,2);advance(restored,2);assert.ok(Math.abs(b.s.bloodDebt.value-restored.s.bloodDebt.value)<1e-8);assert.ok(Math.abs(b.s.bloodDebt.value-original-72)<1e-7);const bad=JSON.parse(JSON.stringify(restored.s));bad.bloodDebt.value=501;assert.equal(NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,bad),null);
+});
+
+test('怒嗥剩余施法时间可见且绘制不改规则状态',()=>{
+ const scene=arena(),{b,e}=scene;secondPhase(scene);advance(b,5);const before=JSON.stringify(b.s),labels=[],c={save(){},restore(){},fillText(t){labels.push(t);}};assert.equal(drawEnemyPhase(c,(x,y)=>({x,y}),{th:20},b,{reduceFx:true}),true);assert.deepEqual(labels,['狂暴怒嗥 5.5']);assert.equal(JSON.stringify(b.s),before);
 });

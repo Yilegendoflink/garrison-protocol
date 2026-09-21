@@ -65,6 +65,12 @@ export class NativeBattle {
  onActorShiftCollision(target,tile){if(target.id==='enemy_10138_xdsnow'&&tile.heightType==='HIGHLAND'&&this.s.time+1e-9>=(target.snowWallUntil||0)){target.snowWallUntil=this.s.time+5;dealDamage(this,{target,amount:Number(target.enemyTalent['hitWall.value']),type:'true',cause:'extra'});}}
  onActorShiftFall(target){commitExit(this,{target,reason:'fall'});}
  onActorShiftEnd(target){enemyFormShiftEnded(this,target);}
+ // 账款接收端必须由环境提供；敌人不能凭自身天赋创建关卡控制器。
+ isBloodDebtSettlement(){return (this.s.bloodDebt?.settlementUntil||0)>this.s.time;}
+ addBloodDebt(amount){
+  const ledger=this.s.bloodDebt;if(!ledger||this.isBloodDebtSettlement()||!Number.isFinite(amount)||amount<=0)return 0;
+  const before=ledger.value;ledger.value=Math.min(ledger.capacity,ledger.value+amount);return ledger.value-before;
+ }
  enemyOutgoingDamageMultiplier(enemy){return enemy?.id==='enemy_1509_mousek'&&enemy.hp>0&&enemy.hp<enemy.maxHp*Number(enemy.enemyTalent['enrage.hp_ratio'])?Number(enemy.enemyTalent['enrage.damage_scale']):1;}
  dominionAttackSpeed(actor){return actor.deployed&&actor.hp>0&&!actor.hidden?dominionCell(this,actor)?.attackSpeed||0:0;}
  onActorMoved(actor){paintDominion(this,actor);}

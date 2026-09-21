@@ -4607,6 +4607,7 @@ function migrateBattle(saved){
 }
 function validateBattle(s,battle){
  if(!s||!Array.isArray(s.units)||!Array.isArray(s.enemies)||!Number.isFinite(s.time)||!Number.isFinite(s.frame)||!Number.isFinite(s.cost)||!Number.isFinite(s.costInitial)||!Number.isFinite(s.costMin)||!Number.isFinite(s.costMax)||!Number.isFinite(s.costRecoveryInterval)||!Number.isFinite(s.costRecoveryClock)||s.costRecoveryInterval<=0||s.costMin>s.costMax||s.cost<s.costMin)return 'invalid battle snapshot';
+ if(s.bloodDebt!=null&&(!Number.isFinite(s.bloodDebt.value)||!Number.isFinite(s.bloodDebt.capacity)||s.bloodDebt.capacity<=0||s.bloodDebt.value<0||s.bloodDebt.value>s.bloodDebt.capacity||!Number.isFinite(s.bloodDebt.settlementUntil)))return 'invalid blood debt';
  const ids=new Set();
  if(s.dominionCells!=null){
   if(typeof s.dominionCells!=='object'||Array.isArray(s.dominionCells))return 'invalid dominion cells';
@@ -6082,7 +6083,7 @@ function cancelEnemyCast(battle,enemy,{lostTarget=false}={}){
  if(cast.c4Targets){detonateC4(battle,enemy);return;}
  if(cast.xiCross){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.xiBurst){enemy.formHold=false;enemy.shiftImmune=cast.previousShiftImmune;enemy.shieldLayers=(enemy.shieldLayers||[]).filter(l=>l.id!=='xi-burst');enemy.shield=enemy.shieldLayers.reduce((n,l)=>n+l.remaining,0);endEnemySkill(battle,enemy);return;}
- if(cast.degenCircle||cast.phantomAoe){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
+ if(cast.degenCircle||cast.phantomAoe||cast.wildCalling){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.crossShot){enemy.formHold=false;enemy.formInvisible=enemy.baseInvisible;enemy.invisible=enemy.formInvisible&&!enemy.revealed;endEnemySkill(battle,enemy);return;}
  if(cast.knightCharge){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.bomb){enemy.formHold=false;endEnemySkill(battle,enemy,{refund:true});return;}
@@ -6243,12 +6244,19 @@ function tickEnemySkills(battle,enemy,dt){
  if(enemy.hp<=0){cancelEnemyCast(battle,enemy);return;}
  if(tickCrownBlink(battle,enemy))return;
  if(enemy.enemyFormKind==='xi')tickXiMarks(battle,enemy);
- if(enemy.enemyFormKind==='zaro')tickZaroCage(battle,enemy);
+ if(enemy.enemyFormKind==='zaro'){tickZaroCage(battle,enemy);if(!enemy.hidden&&dt>0)battle.addBloodDebt(Number(enemy.enemyTalent['Passive.sp'])*dt);}
  if(enemy.reidRushUntil!=null&&battle.s.time+1e-9>=enemy.reidRushUntil){enemy.reidRushUntil=null;enemy.speed=enemy.baseSpeed;}
  checkWEnrage(battle,enemy);
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
+ if(cast?.wildCalling){
+  if(enemy.hidden||enemy.enemyForm!=='second'||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
+  const skill=enemy.enemySkills[cast.index];
+  while(battle.s.time+1e-9>=cast.nextPulseAt&&cast.nextPulseAt<=cast.endsAt+1e-9){battle.addBloodDebt(Number(skill.bb.sp));cast.nextPulseAt+=1;}
+  if(battle.s.time+1e-9>=cast.endsAt){enemy.formHold=false;endEnemySkill(battle,enemy);}
+  return;
+ }
  if(cast?.phantomAoe){
   if(enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
   if(battle.s.time+1e-9>=cast.fireAt){
@@ -6440,6 +6448,10 @@ function tickEnemySkills(battle,enemy,dt){
   if(skill&&attackableAllies(battle.s).some(t=>enemyTargetValid(t)&&!t.flying&&!t.invisible&&!permissions(t).sleeping&&Math.hypot(t.x-enemy.x,t.y-enemy.y)<=Number(skill.bb.range_radius)+1e-9)&&beginEnemySkill(battle,enemy,skill,{xiBurst:true,fireAt:battle.s.time+14.33,endsAt:battle.s.time+Number(skill.bb.duration),fired:false,previousShiftImmune:!!enemy.shiftImmune})){
    enemy.formHold=true;enemy.shiftImmune=true;enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;grantShield(battle,enemy,{id:'xi-burst',amount:Number(skill.bb.dynamic),types:['physical','arts'],endsAt:enemy.enemyCast.endsAt,sourceUid:enemy.uid});return;
   }
+ }
+ if(enemy.enemyFormKind==='zaro'&&enemy.enemyForm==='second'&&!control.silenced&&!battle.isBloodDebtSettlement()&&!enemy.action&&!(enemy.attackCooldown>0)){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='WildCalling');
+  if(skill&&beginEnemySkill(battle,enemy,skill,{wildCalling:true,nextPulseAt:battle.s.time+1,endsAt:battle.s.time+Number(skill.bb.duration)})){enemy.formHold=true;enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;return;}
  }
  if(enemy.enemyFormKind==='zaro'&&enemy.enemyForm==='initial'&&!enemy.action&&!(enemy.attackCooldown>0)){
   const skill=enemy.enemySkills.find(s=>s.prefab==='FearCage'),targets=battle.enemySkillTargets(enemy,{ranged:true,range:Number.MAX_VALUE,ignoreBlock:true}).slice(0,Number(skill?.bb.max_target)||0);
@@ -7733,6 +7745,12 @@ class NativeBattle {
  onActorShiftCollision(target,tile){if(target.id==='enemy_10138_xdsnow'&&tile.heightType==='HIGHLAND'&&this.s.time+1e-9>=(target.snowWallUntil||0)){target.snowWallUntil=this.s.time+5;dealDamage(this,{target,amount:Number(target.enemyTalent['hitWall.value']),type:'true',cause:'extra'});}}
  onActorShiftFall(target){commitExit(this,{target,reason:'fall'});}
  onActorShiftEnd(target){enemyFormShiftEnded(this,target);}
+ // 账款接收端必须由环境提供；敌人不能凭自身天赋创建关卡控制器。
+ isBloodDebtSettlement(){return (this.s.bloodDebt?.settlementUntil||0)>this.s.time;}
+ addBloodDebt(amount){
+  const ledger=this.s.bloodDebt;if(!ledger||this.isBloodDebtSettlement()||!Number.isFinite(amount)||amount<=0)return 0;
+  const before=ledger.value;ledger.value=Math.min(ledger.capacity,ledger.value+amount);return ledger.value-before;
+ }
  enemyOutgoingDamageMultiplier(enemy){return enemy?.id==='enemy_1509_mousek'&&enemy.hp>0&&enemy.hp<enemy.maxHp*Number(enemy.enemyTalent['enrage.hp_ratio'])?Number(enemy.enemyTalent['enrage.damage_scale']):1;}
  dominionAttackSpeed(actor){return actor.deployed&&actor.hp>0&&!actor.hidden?dominionCell(this,actor)?.attackSpeed||0:0;}
  onActorMoved(actor){paintDominion(this,actor);}
@@ -9418,6 +9436,9 @@ function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}={}){
  const s=battle?.s;
  if(!s?.events)return false;
  let drew=false;
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.enemyCast?.wildCalling){
+  const p=point(e.x,e.y),text='狂暴怒嗥 '+Math.max(0,e.enemyCast.endsAt-s.time).toFixed(1);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#e497a1';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
+ }
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.id==='enemy_2010_csdcr'&&e.scarletHits>=Number(e.enemyTalent?.['AttackSpeedUp.warning_stack_cnt'])){
   const p=point(e.x,e.y),text='受击 '+e.scarletHits+'/'+e.enemyTalent['AttackSpeedUp.stack_cnt'];c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#ff657b';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
  }

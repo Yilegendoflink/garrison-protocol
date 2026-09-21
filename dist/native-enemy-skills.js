@@ -112,7 +112,7 @@ export function cancelEnemyCast(battle,enemy,{lostTarget=false}={}){
  if(cast.c4Targets){detonateC4(battle,enemy);return;}
  if(cast.xiCross){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.xiBurst){enemy.formHold=false;enemy.shiftImmune=cast.previousShiftImmune;enemy.shieldLayers=(enemy.shieldLayers||[]).filter(l=>l.id!=='xi-burst');enemy.shield=enemy.shieldLayers.reduce((n,l)=>n+l.remaining,0);endEnemySkill(battle,enemy);return;}
- if(cast.degenCircle||cast.phantomAoe){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
+ if(cast.degenCircle||cast.phantomAoe||cast.wildCalling){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.crossShot){enemy.formHold=false;enemy.formInvisible=enemy.baseInvisible;enemy.invisible=enemy.formInvisible&&!enemy.revealed;endEnemySkill(battle,enemy);return;}
  if(cast.knightCharge){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.bomb){enemy.formHold=false;endEnemySkill(battle,enemy,{refund:true});return;}
@@ -273,12 +273,19 @@ export function tickEnemySkills(battle,enemy,dt){
  if(enemy.hp<=0){cancelEnemyCast(battle,enemy);return;}
  if(tickCrownBlink(battle,enemy))return;
  if(enemy.enemyFormKind==='xi')tickXiMarks(battle,enemy);
- if(enemy.enemyFormKind==='zaro')tickZaroCage(battle,enemy);
+ if(enemy.enemyFormKind==='zaro'){tickZaroCage(battle,enemy);if(!enemy.hidden&&dt>0)battle.addBloodDebt(Number(enemy.enemyTalent['Passive.sp'])*dt);}
  if(enemy.reidRushUntil!=null&&battle.s.time+1e-9>=enemy.reidRushUntil){enemy.reidRushUntil=null;enemy.speed=enemy.baseSpeed;}
  checkWEnrage(battle,enemy);
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
+ if(cast?.wildCalling){
+  if(enemy.hidden||enemy.enemyForm!=='second'||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
+  const skill=enemy.enemySkills[cast.index];
+  while(battle.s.time+1e-9>=cast.nextPulseAt&&cast.nextPulseAt<=cast.endsAt+1e-9){battle.addBloodDebt(Number(skill.bb.sp));cast.nextPulseAt+=1;}
+  if(battle.s.time+1e-9>=cast.endsAt){enemy.formHold=false;endEnemySkill(battle,enemy);}
+  return;
+ }
  if(cast?.phantomAoe){
   if(enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
   if(battle.s.time+1e-9>=cast.fireAt){
@@ -470,6 +477,10 @@ export function tickEnemySkills(battle,enemy,dt){
   if(skill&&attackableAllies(battle.s).some(t=>enemyTargetValid(t)&&!t.flying&&!t.invisible&&!permissions(t).sleeping&&Math.hypot(t.x-enemy.x,t.y-enemy.y)<=Number(skill.bb.range_radius)+1e-9)&&beginEnemySkill(battle,enemy,skill,{xiBurst:true,fireAt:battle.s.time+14.33,endsAt:battle.s.time+Number(skill.bb.duration),fired:false,previousShiftImmune:!!enemy.shiftImmune})){
    enemy.formHold=true;enemy.shiftImmune=true;enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;grantShield(battle,enemy,{id:'xi-burst',amount:Number(skill.bb.dynamic),types:['physical','arts'],endsAt:enemy.enemyCast.endsAt,sourceUid:enemy.uid});return;
   }
+ }
+ if(enemy.enemyFormKind==='zaro'&&enemy.enemyForm==='second'&&!control.silenced&&!battle.isBloodDebtSettlement()&&!enemy.action&&!(enemy.attackCooldown>0)){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='WildCalling');
+  if(skill&&beginEnemySkill(battle,enemy,skill,{wildCalling:true,nextPulseAt:battle.s.time+1,endsAt:battle.s.time+Number(skill.bb.duration)})){enemy.formHold=true;enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;return;}
  }
  if(enemy.enemyFormKind==='zaro'&&enemy.enemyForm==='initial'&&!enemy.action&&!(enemy.attackCooldown>0)){
   const skill=enemy.enemySkills.find(s=>s.prefab==='FearCage'),targets=battle.enemySkillTargets(enemy,{ranged:true,range:Number.MAX_VALUE,ignoreBlock:true}).slice(0,Number(skill?.bb.max_target)||0);

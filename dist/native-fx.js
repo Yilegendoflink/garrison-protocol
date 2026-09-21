@@ -697,6 +697,9 @@ export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}
  const s=battle?.s;
  if(!s?.events)return false;
  let drew=false;
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.enemyCast?.wildCalling){
+  const p=point(e.x,e.y),text='狂暴怒嗥 '+Math.max(0,e.enemyCast.endsAt-s.time).toFixed(1);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#e497a1';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
+ }
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.id==='enemy_2010_csdcr'&&e.scarletHits>=Number(e.enemyTalent?.['AttackSpeedUp.warning_stack_cnt'])){
   const p=point(e.x,e.y),text='受击 '+e.scarletHits+'/'+e.enemyTalent['AttackSpeedUp.stack_cnt'];c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#ff657b';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
  }
