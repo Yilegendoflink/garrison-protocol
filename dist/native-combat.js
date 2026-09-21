@@ -100,7 +100,8 @@ export function inferAttackZone(raw={}){
  const damage=firstTemplateField(bb,'ProjectileBoomRange','attack@value');
  if(/燃烧区域/.test(text)&&Number.isFinite(damage)&&damage>0){
   const radius=firstTemplateField(bb,'ProjectileBoomRange','attack@projectile_range'),life=firstTemplateField(bb,'ProjectileBoomRange','attack@projectile_life_time');
-  return {trigger:'attack',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:3,interval:1,damage,damageType:'arts'};
+  const cannon=/^enemy_10122_uacann(?:_2)?$/.test(raw.prefabKey||'');
+  return {trigger:'attack',radius:cannon?1.5:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:3,interval:1,damage,damageType:'arts',...(cannon?{shape:'circle',groundOnly:true}: {})};
  }
  const skill=enemySkill(raw),skillBb=skill?.bb||{};
  const polluted=Number(skillBb.polluted_damage_low);

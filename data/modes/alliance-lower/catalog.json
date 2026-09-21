@@ -112935,11 +112935,13 @@
         "groundZone": null,
         "attackZone": {
           "trigger": "attack",
-          "radius": 1,
+          "radius": 1.5,
           "duration": 3,
           "interval": 1,
           "damage": 150,
-          "damageType": "arts"
+          "damageType": "arts",
+          "shape": "circle",
+          "groundOnly": true
         },
         "selfField": null,
         "deathZone": null,

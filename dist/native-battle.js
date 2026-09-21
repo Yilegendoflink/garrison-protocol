@@ -47,6 +47,7 @@ export class NativeBattle {
   }
  }
  attachRuntime(){
+  for(const fx of this.s.logicEffects||[])if(fx.kind==='field'&&/^enemy_10122_uacann(?:_2)?-\d+-zone$/.test(fx.talentOrSkillId||'')){fx.radius=1.5;fx.values={...fx.values,shape:'circle',groundOnly:true};}
   this.rows=this.economy.bonds();this.layers=this.economy.s.bondLayers;this.s.band=this.economy.s.bandId;for(const u of this.s.units){const p=this.profile(u),d=moduleCostData(p);u.runtimeCost??=d.runtimeCost;u.runtimeCostActive??=d.runtimeCostActive;u.runtimeCostUsed??=Boolean(u.deployCount||u.deployed);u.refundRatio??=d.refundRatio;u.refundIgnoresCap??=d.refundIgnoresCap;u.chargerKillCost??=d.chargerKillCost;u.merchantCost??=d.merchantCost;u.merchantInterval??=d.merchantInterval;}
   if(this.s.benchmark){this.combatScale={atk:1,hp:1,moveSpeed:1};return;}
   const plan=nativeWavePlan(this.data,this.turn,this.economy.s.waveRoster);this.level=plan.level;this.combatScale=plan.scale||{atk:1,hp:1,moveSpeed:1};for(const e of this.s.enemies){const raw=this.level.enemyProfiles[e.id]||this.data.enemies[e.id]||this.data.enemyDependencies?.[e.id];if(raw){initEnemySkills(e,raw,this.s.time);initEnemyTraits(this,e,raw,{restore:true});initEnemyForm(this,e);initEnemyTransport(e);}}
@@ -57,7 +58,8 @@ export class NativeBattle {
   b.s=migrated;b.attachRuntime();return b;}catch{return null;}
  }
  enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
- enemyPhaseDamageMultiplier(target,type,source){return enemyPhaseDamageMultiplier(target,type)*enemyMinerShieldDamageMultiplier(target,source,type);}
+ enemyHasArmyOrder(target){return !!target&&!target.flying&&!target.hidden&&!isIsolated(target)&&/^(?:enemy_10120_uaghst|enemy_10121_uasnip|enemy_10122_uacann|enemy_10123_uareap|enemy_10124_uashld)(?:_2)?$/.test(target.id)&&this.s.enemies.some(e=>e.hp>0&&!e.hidden&&/^enemy_10125_uacomd(?:_2)?$/.test(e.id));}
+ enemyPhaseDamageMultiplier(target,type,source){return enemyPhaseDamageMultiplier(target,type)*enemyMinerShieldDamageMultiplier(target,source,type)*(this.enemyHasArmyOrder(target)&&['physical','arts'].includes(type)?1-(Number(target.enemyTalent?.['ExtraPower.damage_resistance'])||0):1);}
  enemyChaliceProtection(target){return enemyChaliceProtection(this,target);}
  enemyEchoBurst(enemy,radius,damageScale,elementScale){return enemyEchoBurst(this,enemy,radius,damageScale,elementScale);}
  onActorShiftStart(target){cancelEnemyCast(this,target);}
@@ -451,7 +453,7 @@ export class NativeBattle {
   // 我方受到治疗时解除「治疗可解除」的敌方持续伤害（目前只有逐腐兽的流血）。
   cureHealCurableEffects(target){for(const fx of this.s.logicEffects||[])if(fx.kind==='dot'&&fx.targetUid===target?.uid&&String(fx.talentOrSkillId||'').endsWith('-bleeding')){fx.endsAt=this.s.time;}}
   // 敌方持续伤害区域统一入口：射击落点、跟随自身的常驻光环、死亡后留下的毒雾都走这里。
-  addEnemyGroundZone(source,spec,{x,y,follow=false,cleanupWithSource=false,attackId=null,key=null}={}){if(!source||!spec||!(Number(spec.damage)>0||Number(spec.atkScale)>0||Number(spec.elementScale)>0))return null;const interval=Math.max(.1,Number(spec.interval)||1),duration=Number(spec.duration),radius=Number(spec.radius)||1;const row=addEffect(this,{kind:'field',sourceUid:source.uid,sourceDeployGen:source.deployGen,x,y,followUid:follow?source.uid:null,radius,interval,nextAt:this.s.time+interval,endsAt:Number.isFinite(duration)&&duration>0?this.s.time+duration:null,talentOrSkillId:key||enemySpecialTraitId(source),sharedStack:!!key,values:{shape:spec.shape,ignoreTargetability:!!spec.ignoreTargetability,damage:Number(spec.damage)||0,damageHigh:Number.isFinite(spec.damageHigh)?spec.damageHigh:null,atkScale:Number(spec.atkScale)||0,damageType:spec.damageType||'true',elementScale:Number(spec.elementScale)||0,elementType:spec.elementType||null},trackSide:'ally',trackArea:true,refKind:cleanupWithSource?'live':'owner',persistAfterSourceGone:!cleanupWithSource,attackId,
+  addEnemyGroundZone(source,spec,{x,y,follow=false,cleanupWithSource=false,attackId=null,key=null}={}){if(!source||!spec||!(Number(spec.damage)>0||Number(spec.atkScale)>0||Number(spec.elementScale)>0))return null;const interval=Math.max(.1,Number(spec.interval)||1),duration=Number(spec.duration),radius=Number(spec.radius)||1;const row=addEffect(this,{kind:'field',sourceUid:source.uid,sourceDeployGen:source.deployGen,x,y,followUid:follow?source.uid:null,radius,interval,nextAt:this.s.time+interval,endsAt:Number.isFinite(duration)&&duration>0?this.s.time+duration:null,talentOrSkillId:key||enemySpecialTraitId(source),sharedStack:!!key,values:{shape:spec.shape,groundOnly:!!spec.groundOnly,ignoreTargetability:!!spec.ignoreTargetability,damage:Number(spec.damage)||0,damageHigh:Number.isFinite(spec.damageHigh)?spec.damageHigh:null,atkScale:Number(spec.atkScale)||0,damageType:spec.damageType||'true',elementScale:Number(spec.elementScale)||0,elementType:spec.elementType||null},trackSide:'ally',trackArea:true,refKind:cleanupWithSource?'live':'owner',persistAfterSourceGone:!cleanupWithSource,attackId,
    // 产生者的攻击力在创建时就留档：死亡圈的产生者会随死亡离场，之后仍要按它生前的攻击力结算。
    sourceAtk:Number.isFinite(Number(source.atk))?Number(source.atk):0});if(row)this.emit('enemy-skill',{uid:source.uid,x:row.x??x,y:row.y??y,skill:spec.trigger||'ground-zone',radius:row.radius,endsAt:row.endsAt});return row;}
   // 常驻范围（如深溟巢涌者）：敌人活着时它自己就是区域中心，每秒结算一次。
@@ -469,7 +471,7 @@ export class NativeBattle {
    if(fresh&&amount<=prev.amount)return false;
    const delta=fresh?Math.max(0,amount-prev.amount):amount;
    this.zoneHitWindow.set(ally.uid,{at:now,amount:fresh?Math.max(prev.amount,amount):amount});
-   if(delta>0)this.hurt(ally,{atk:delta,damageType:type||'true'});
+   if(delta>0)this.hurt(ally,{atk:delta,damageType:type||'true'},{sourceLess:true,cause:'dot'});
    return true;
   }
   // 区域结算：1 秒一次，与其它周期效果共用同一套伤害入口（护盾、闪避、元素损伤都按常规处理）。
@@ -482,7 +484,7 @@ export class NativeBattle {
      // （毒雾 = 攻击力的 15%，敌人被击倒后原本会算成 0）。
      const liveAtk=source&&Number.isFinite(Number(source.atk))?Number(source.atk):null;
      const sourceAtk=liveAtk??(Number(fx.sourceAtk)||0);
-     for(const ally of (values.ignoreTargetability?alliedActors(this.s).filter(a=>a.deployed&&a.hp>0):attackableAllies(this.s))){if((values.shape==='circle'?Math.hypot(fx.x-ally.x,fx.y-ally.y):chebyshev(fx,ally))>fx.radius+1e-9)continue;
+     for(const ally of (values.ignoreTargetability?alliedActors(this.s).filter(a=>a.deployed&&a.hp>0):attackableAllies(this.s))){if(values.groundOnly&&ally.flying)continue;if((values.shape==='circle'?Math.hypot(fx.x-ally.x,fx.y-ally.y):chebyshev(fx,ally))>fx.radius+1e-9)continue;
       const fixed=values.damageHigh!=null&&this.map.grid[Math.round(ally.y)]?.[Math.round(ally.x)]?.heightType==='HIGHLAND'?values.damageHigh:values.damage;
       const base=values.atkScale>0?sourceAtk*values.atkScale:fixed;
       if(base>0)this.applyEnemyZoneDamage(ally,base,values.damageType,fx.nextAt,Math.max(.45,(Number(fx.interval)||1)*.9));

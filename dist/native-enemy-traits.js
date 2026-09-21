@@ -30,7 +30,9 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.nonPrimary=raw.enemyBehavior?.nonPrimary===true;e.notCountInTotal=raw.enemyBehavior?.notCountInTotal??raw.notCountInTotal??false;
  if(raw.enemyBehavior?.isolated===true)e.isolated=true;
  if(e.id==='enemy_1367_dseed')e.shiftImmune=true; // 血珀是失衡免疫，不是静态刚体。
+ if(/^enemy_10122_uacann(?:_2)?$/.test(e.id)&&e.attackZone)e.attackZone={...e.attackZone,radius:1.5,shape:'circle',groundOnly:true};
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
+ if(/^enemy_1012[45]_(?:uashld|uacomd)(?:_2)?$/.test(e.id))e.enemyAttack={...e.enemyAttack,unblockedTargetIds:['enemy_3001_upeopl','enemy_3002_ftrtal','enemy_3010_mcreep']};
  if(/^enemy_10127_rkmbst(?:_2)?$/.test(e.id)){
   e.enemyAttack={...e.enemyAttack,unblockedTargetIds:['enemy_3001_upeopl','enemy_3002_ftrtal','enemy_3010_mcreep']};
   if(!e.minerShieldInitialized&&Number(e.enemyTalent['M0Shield.init_shield_hp_ratio'])>0){

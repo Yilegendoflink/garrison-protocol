@@ -1,4 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
+import {NativeBattle} from '../dist/native-battle.js';
 import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {enemyBehaviorProfile} from '../dist/native-combat.js';
 import {tickLogic,commitExit} from '../dist/native-effects.js';
@@ -30,7 +31,7 @@ const profiles=id=>NATIVE_DATA.enemies[id].enemyBehavior;
 
 test('持续伤害范围参数来自原表及显式PRTS覆盖：六类敌人各自的区域字段',()=>{
  const artillery=profiles('enemy_10122_uacann_2').attackZone;
- assert.deepEqual({r:artillery.radius,d:artillery.duration,i:artillery.interval,dmg:artillery.damage},{r:1,d:3,i:1,dmg:150});
+ assert.deepEqual({r:artillery.radius,d:artillery.duration,i:artillery.interval,dmg:artillery.damage},{r:1.5,d:3,i:1,dmg:150});
  const tank=profiles('enemy_1272_nhtank').attackZone;
  assert.deepEqual({r:tank.radius,d:tank.duration,dmg:tank.damage},{r:1.7,d:10,dmg:50});
  const nest=profiles('enemy_1234_dsubrl').selfField;
@@ -73,7 +74,7 @@ test('集团军重型火炮开火后留下燃烧区域，按原表数值持续�
  b.resolveEnemyStrike(enemy,u,{});
  const zone=zones(b)[0];
  assert.ok(zone,'开火后应当留下一片区域');
- assert.equal(zone.radius,1);assert.equal(zone.values.damage,150);assert.equal(zone.values.damageType,'arts','PRTS燃烧区域为法术持续伤害');
+ assert.equal(zone.radius,1.5);assert.equal(zone.values.damage,150);assert.equal(zone.values.damageType,'arts','PRTS燃烧区域为法术持续伤害');
  assert.equal(Math.round(zone.endsAt-b.s.time),3);
  const hp=u.hp;
  b.s.time+=1.1;b.tickEnemyGroundZones();
@@ -268,4 +269,18 @@ test('敌方地面区域在真实 step() 里也会结算（死亡圈与开火燃
  const hp1=u.hp;
  for(let i=0;i<35;i++)b.step();
  assert.ok(hp1-u.hp>=150,`燃烧区在真实循环里也要结算，实际掉 ${Math.round(hp1-u.hp)}`);
+});
+
+test('火炮燃烧区1.5圆形只打地面，真实step结算为无来源DOT且不回受击技力',()=>{
+ const b=liveBattle(),u=b.s.units[0];u.x=3;u.y=3;applyStatus(u,'disarm',100);applyStatus(u,'skillLock',100);u.sp=0;
+ const originalProfile=b.profile.bind(b);b.profile=actor=>{const p=originalProfile(actor);return {...p,skill:{...p.skill,spData:{...p.skill.spData,spType:'INCREASE_WHEN_TAKEN_DAMAGE',spCost:100,initSp:0,increment:1}}};};
+ const ground=structuredClone(u),corner=structuredClone(u),air=structuredClone(u);ground.uid+=100;ground.x=4.4;corner.uid+=200;corner.x=4.1;corner.y=4.1;air.uid+=300;air.flying=true;b.s.units.push(ground,corner,air);
+ const e=spawnEnemy(b,'enemy_10122_uacann_2',6,3);e.canAttack=false;e.route=[{kind:'wait',x:6,y:3,time:600}];e.cmd=0;b.addEnemyGroundZone(e,e.attackZone,{x:3,y:3});const hp=[u,ground,corner,air].map(a=>a.hp);
+ for(let i=0;i<31;i++)b.step();assert.ok(u.hp<hp[0]);assert.ok(ground.hp<hp[1]);assert.equal(corner.hp,hp[2]);assert.equal(air.hp,hp[3]);assert.equal(u.sp,0);const hits=b.s.logicLog.filter(r=>r.type==='damage'&&r.targetUid===u.uid);assert.equal(hits.length,1);assert.equal(hits[0].cause,'dot');assert.ok(hits[0].sourceUid==null);
+});
+
+test('旧存档中火炮本体和已留下燃烧区恢复正确几何，不重置区域排定时刻',()=>{
+ const b=liveBattle(),u=b.s.units[0],e=spawnEnemy(b,'enemy_10122_uacann_2',6,3);e.canAttack=false;e.route=[{kind:'wait',x:6,y:3,time:600}];e.cmd=0;
+ const fx=b.addEnemyGroundZone(e,e.attackZone,{x:u.x,y:u.y});e.attackZone.radius=1;delete e.attackZone.groundOnly;fx.radius=1;delete fx.values.shape;delete fx.values.groundOnly;const next=fx.nextAt;
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);restored.step();assert.equal(restored.s.enemies[0].attackZone.radius,1.5);const zone=zones(restored)[0];assert.equal(zone.radius,1.5);assert.equal(zone.values.shape,'circle');assert.equal(zone.values.groundOnly,true);assert.equal(zone.nextAt,next);
 });
