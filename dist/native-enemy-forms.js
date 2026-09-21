@@ -10,7 +10,9 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 export function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id==='enemy_1525_blkswb'){
+ if(e.id==='enemy_1535_wlfmster'){
+  e.enemyFormKind='zaro';e.enemyForm='initial';e.shiftImmune=true;e.formBaseImmunities={...e.immunities};e.immunities.stun=true;e.ranged=false;e.range=0;e.damageType='physical';e.zaroBaseInterval=e.interval;
+ }else if(e.id==='enemy_1525_blkswb'){
   e.enemyFormKind='degen';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.statusResistance=.5;e.damageType='physical';e.ranged=false;
   e.enemyBlockedDefPenetration=Number(e.enemyTalent['DefPenetrate.enemy_blkswb_t_2.def_penetrate']);
  }else if(e.id==='enemy_1539_reid'){
@@ -78,6 +80,19 @@ function finishTranslation(b,e){
 export function tickEnemyForm(b,e){
  if(e.enemyFormKind==='rotator'){tickRotatorForm(b,e);return;}
  if(!e.enemyFormKind||e.hp<=0)return;
+ if(e.enemyFormKind==='zaro'){
+  if(e.enemyForm==='rebirth'){
+   e.hp=Math.max(1,e.maxHp*Math.min(1,(b.s.time-e.zaroRebornStartedAt)/Number(e.enemyTalent['Reborn.duration'])));
+   if(b.s.time+1e-9>=e.enemyFormUntil){
+    e.hp=e.maxHp;e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;e.immunities={...e.formBaseImmunities};
+    e.atk=e.baseAtk*(1+Number(e.enemyTalent['Passive2.atk']));e.interval=e.zaroBaseInterval+Number(e.enemyTalent['Passive2.base_attack_time']);e.ranged=true;e.range=1.25;e.enemyAttack={...e.enemyAttack,hits:2};
+    e.zaroInvincibleUntil=b.s.time+Number(e.enemyTalent['Passive2.invincible_time']);e.invulnerable=true;
+    for(const skill of e.enemySkills||[]){skill.used=false;skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;}
+    announce(b,e,'第二形态');
+   }
+  }else if(e.enemyForm==='second'&&e.zaroInvincibleUntil!=null&&b.s.time+1e-9>=e.zaroInvincibleUntil){e.invulnerable=false;e.zaroInvincibleUntil=null;}
+  return;
+ }
  if(e.enemyFormKind==='degen'){
   if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
    e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
@@ -244,7 +259,15 @@ export function enemyFormStats(e){
  }
 }
 
+export function enemyPhaseDamageMultiplier(e,type){
+ return e.enemyFormKind==='zaro'&&e.enemyForm==='initial'&&['physical','arts'].includes(type)?1-Number(e.enemyTalent['Passive.damage_resistance']):1;
+}
+
 export function enemyFormFatal(b,e){
+ if(e.enemyFormKind==='zaro'&&e.enemyForm==='initial'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.zaroRebornStartedAt=b.s.time;e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=1;
+  e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
  if(e.enemyFormKind==='degen'&&e.enemyForm==='initial'){
   e.crownBlink=null;e.crownRejoin=null;e.unblockableUntil=null;
   cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp;

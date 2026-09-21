@@ -2,7 +2,7 @@ import {paintDominion,dominionCell,tickDeepWater,tickSandStorm} from './native-e
 import {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} from './native-enemy-parasite.js';
 import {advanceEnemyFear} from './native-enemy-fear.js';
 import {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} from './native-enemy-transport.js';
-import {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,enemyFormHealthChanged,releaseParrotPassenger} from './native-enemy-forms.js';
+import {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyPhaseDamageMultiplier,enemyFormFatal,enemyFormAfterDamage,enemyFormHealthChanged,releaseParrotPassenger} from './native-enemy-forms.js';
 import {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} from './native-enemy-attacks.js';
 import {liberateEnemyPrisoners,enemyKnightExit,enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} from './native-enemy-traits.js';
 import {checkWEnrage,initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} from './native-enemy-skills.js';
@@ -56,6 +56,7 @@ export class NativeBattle {
   b.s=migrated;b.attachRuntime();return b;}catch{return null;}
  }
  enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
+ enemyPhaseDamageMultiplier(target,type){return enemyPhaseDamageMultiplier(target,type);}
  onActorShiftEnd(target){enemyFormShiftEnded(this,target);}
  enemyOutgoingDamageMultiplier(enemy){return enemy?.id==='enemy_1509_mousek'&&enemy.hp>0&&enemy.hp<enemy.maxHp*Number(enemy.enemyTalent['enrage.hp_ratio'])?Number(enemy.enemyTalent['enrage.damage_scale']):1;}
  dominionAttackSpeed(actor){return actor.deployed&&actor.hp>0&&!actor.hidden?dominionCell(this,actor)?.attackSpeed||0:0;}

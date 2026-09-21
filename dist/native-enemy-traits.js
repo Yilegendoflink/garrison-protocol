@@ -359,4 +359,7 @@ export function applyEnemyTraitAuras(battle){
   }
  }
  for(const target of live){target.res+=target.enemyResAura||0;target.enemyResAura=0;}
+ // 远古威慑在重生/第二形态生效；本体黑板未给范围与攻速值，取PRTS修订415307。
+ const wolves=live.filter(e=>e.enemyFormKind==='zaro'&&e.enemyForm!=='initial');
+ for(const target of allies)if(wolves.some(e=>near(e,target,1.5)))target.enemyAttackSpeedMod=(target.enemyAttackSpeedMod||0)-50;
 }

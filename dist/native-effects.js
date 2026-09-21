@@ -280,6 +280,7 @@ export function dealDamage(battle,opts){
  const exposure=(target.statuses||[]).filter(s=>s.kind==='exposed').reduce((n,s)=>Math.max(n,Number(s.value)||1),1);
  if(opts.exposureHandledFor!==target.uid)value*=exposure;
  if(opts.directionHandledFor!==target.uid)value*=battle.enemyFacingDamageMultiplier?.(target,source,type)??1;
+ if(opts.phaseHandledFor!==target.uid)value*=battle.enemyPhaseDamageMultiplier?.(target,type)??1;
  const protection=target.damageProtection;
  if(!opts.skipProtection&&protection&&protection.until!=null&&battle.s.time<protection.until){
   const immediateRatio=Math.max(0,Math.min(1,Number(protection.immediateRatio??1)));
@@ -288,7 +289,7 @@ export function dealDamage(battle,opts){
   value*=immediateRatio;
  }
  if(!opts.skipBondStead&&value>0&&battle.on?.('steadShip')&&battle.rows?.steadShip?.count>=3&&battle.s.units.includes(target)&&!battle.owns(target,'steadShip')){
-  const guards=battle.s.units.filter(u=>u.deployed&&u.hp>0&&battle.owns(u,'steadShip'));if(guards.length){const shared=value*.4,own=value-shared,common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,environmental:opts.environmental===true,fragileHandledFor:target.uid,exposureHandledFor:target.uid,directionHandledFor:target.uid,skipBondStead:true,skipRedirect:true,skipProtection:true,skipHooks:true};const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;const parts=guards.map(receiver=>dealDamage(battle,{...common,target:receiver,value:shared/guards.length}));return {total:(ownResult?.total||0)+parts.reduce((n,r)=>n+(r?.total||0),0),hp:(ownResult?.hp||0)+parts.reduce((n,r)=>n+(r?.hp||0),0),shield:(ownResult?.shield||0)+parts.reduce((n,r)=>n+(r?.shield||0),0),blocked:!!(ownResult?.blocked&&parts.every(r=>r?.blocked)),potentialHpDamage:(ownResult?.potentialHpDamage||0)+parts.reduce((n,r)=>n+(r?.potentialHpDamage||0),0),redirected:true,bond:'stead',event};}
+  const guards=battle.s.units.filter(u=>u.deployed&&u.hp>0&&battle.owns(u,'steadShip'));if(guards.length){const shared=value*.4,own=value-shared,common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,environmental:opts.environmental===true,fragileHandledFor:target.uid,exposureHandledFor:target.uid,directionHandledFor:target.uid,phaseHandledFor:target.uid,skipBondStead:true,skipRedirect:true,skipProtection:true,skipHooks:true};const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;const parts=guards.map(receiver=>dealDamage(battle,{...common,target:receiver,value:shared/guards.length}));return {total:(ownResult?.total||0)+parts.reduce((n,r)=>n+(r?.total||0),0),hp:(ownResult?.hp||0)+parts.reduce((n,r)=>n+(r?.hp||0),0),shield:(ownResult?.shield||0)+parts.reduce((n,r)=>n+(r?.shield||0),0),blocked:!!(ownResult?.blocked&&parts.every(r=>r?.blocked)),potentialHpDamage:(ownResult?.potentialHpDamage||0)+parts.reduce((n,r)=>n+(r?.potentialHpDamage||0),0),redirected:true,bond:'stead',event};}
  }
  const reduction=type==='elemental'?0:damageReductionFor(battle,target,type,source);if(reduction>0)value*=1-reduction;
  const redirect=!opts.skipRedirect&&value>0?activeRedirect(battle,target,type):null;
@@ -296,7 +297,7 @@ export function dealDamage(battle,opts){
   const receiver=getActor(battle.s,redirect.targetUid),ratio=Math.max(0,Math.min(1,Number(redirect.ratio??1)));
   if(receiver&&receiver!==target&&receiver.hp>0){
    const shared=value*ratio,own=redirect.mode==='redirect'?0:value-shared;
-   const common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,environmental:opts.environmental===true,fragileHandledFor:target.uid,exposureHandledFor:target.uid,directionHandledFor:target.uid,parentEventId:event.eventId,skipRedirect:true,skipProtection:true,skipHooks:true};
+   const common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,environmental:opts.environmental===true,fragileHandledFor:target.uid,exposureHandledFor:target.uid,directionHandledFor:target.uid,phaseHandledFor:target.uid,parentEventId:event.eventId,skipRedirect:true,skipProtection:true,skipHooks:true};
    const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;
    const sharedResult=shared>0?dealDamage(battle,{...common,target:receiver,value:shared}):null;
    log(battle,'damage-redirect',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,redirectUid:receiver.uid,amount:value,shared,mode:redirect.mode||'share'});

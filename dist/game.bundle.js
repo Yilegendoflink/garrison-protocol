@@ -4839,6 +4839,7 @@ function dealDamage(battle,opts){
  const exposure=(target.statuses||[]).filter(s=>s.kind==='exposed').reduce((n,s)=>Math.max(n,Number(s.value)||1),1);
  if(opts.exposureHandledFor!==target.uid)value*=exposure;
  if(opts.directionHandledFor!==target.uid)value*=battle.enemyFacingDamageMultiplier?.(target,source,type)??1;
+ if(opts.phaseHandledFor!==target.uid)value*=battle.enemyPhaseDamageMultiplier?.(target,type)??1;
  const protection=target.damageProtection;
  if(!opts.skipProtection&&protection&&protection.until!=null&&battle.s.time<protection.until){
   const immediateRatio=Math.max(0,Math.min(1,Number(protection.immediateRatio??1)));
@@ -4847,7 +4848,7 @@ function dealDamage(battle,opts){
   value*=immediateRatio;
  }
  if(!opts.skipBondStead&&value>0&&battle.on?.('steadShip')&&battle.rows?.steadShip?.count>=3&&battle.s.units.includes(target)&&!battle.owns(target,'steadShip')){
-  const guards=battle.s.units.filter(u=>u.deployed&&u.hp>0&&battle.owns(u,'steadShip'));if(guards.length){const shared=value*.4,own=value-shared,common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,environmental:opts.environmental===true,fragileHandledFor:target.uid,exposureHandledFor:target.uid,directionHandledFor:target.uid,skipBondStead:true,skipRedirect:true,skipProtection:true,skipHooks:true};const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;const parts=guards.map(receiver=>dealDamage(battle,{...common,target:receiver,value:shared/guards.length}));return {total:(ownResult?.total||0)+parts.reduce((n,r)=>n+(r?.total||0),0),hp:(ownResult?.hp||0)+parts.reduce((n,r)=>n+(r?.hp||0),0),shield:(ownResult?.shield||0)+parts.reduce((n,r)=>n+(r?.shield||0),0),blocked:!!(ownResult?.blocked&&parts.every(r=>r?.blocked)),potentialHpDamage:(ownResult?.potentialHpDamage||0)+parts.reduce((n,r)=>n+(r?.potentialHpDamage||0),0),redirected:true,bond:'stead',event};}
+  const guards=battle.s.units.filter(u=>u.deployed&&u.hp>0&&battle.owns(u,'steadShip'));if(guards.length){const shared=value*.4,own=value-shared,common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,environmental:opts.environmental===true,fragileHandledFor:target.uid,exposureHandledFor:target.uid,directionHandledFor:target.uid,phaseHandledFor:target.uid,skipBondStead:true,skipRedirect:true,skipProtection:true,skipHooks:true};const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;const parts=guards.map(receiver=>dealDamage(battle,{...common,target:receiver,value:shared/guards.length}));return {total:(ownResult?.total||0)+parts.reduce((n,r)=>n+(r?.total||0),0),hp:(ownResult?.hp||0)+parts.reduce((n,r)=>n+(r?.hp||0),0),shield:(ownResult?.shield||0)+parts.reduce((n,r)=>n+(r?.shield||0),0),blocked:!!(ownResult?.blocked&&parts.every(r=>r?.blocked)),potentialHpDamage:(ownResult?.potentialHpDamage||0)+parts.reduce((n,r)=>n+(r?.potentialHpDamage||0),0),redirected:true,bond:'stead',event};}
  }
  const reduction=type==='elemental'?0:damageReductionFor(battle,target,type,source);if(reduction>0)value*=1-reduction;
  const redirect=!opts.skipRedirect&&value>0?activeRedirect(battle,target,type):null;
@@ -4855,7 +4856,7 @@ function dealDamage(battle,opts){
   const receiver=getActor(battle.s,redirect.targetUid),ratio=Math.max(0,Math.min(1,Number(redirect.ratio??1)));
   if(receiver&&receiver!==target&&receiver.hp>0){
    const shared=value*ratio,own=redirect.mode==='redirect'?0:value-shared;
-   const common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,environmental:opts.environmental===true,fragileHandledFor:target.uid,exposureHandledFor:target.uid,directionHandledFor:target.uid,parentEventId:event.eventId,skipRedirect:true,skipProtection:true,skipHooks:true};
+   const common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,sourceDamageHandled:true,environmental:opts.environmental===true,fragileHandledFor:target.uid,exposureHandledFor:target.uid,directionHandledFor:target.uid,phaseHandledFor:target.uid,parentEventId:event.eventId,skipRedirect:true,skipProtection:true,skipHooks:true};
    const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;
    const sharedResult=shared>0?dealDamage(battle,{...common,target:receiver,value:shared}):null;
    log(battle,'damage-redirect',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,redirectUid:receiver.uid,amount:value,shared,mode:redirect.mode||'share'});
@@ -6838,6 +6839,9 @@ function applyEnemyTraitAuras(battle){
   }
  }
  for(const target of live){target.res+=target.enemyResAura||0;target.enemyResAura=0;}
+ // 远古威慑在重生/第二形态生效；本体黑板未给范围与攻速值，取PRTS修订415307。
+ const wolves=live.filter(e=>e.enemyFormKind==='zaro'&&e.enemyForm!=='initial');
+ for(const target of allies)if(wolves.some(e=>near(e,target,1.5)))target.enemyAttackSpeedMod=(target.enemyAttackSpeedMod||0)-50;
 }
 
 return {initEnemyTraits,enemyConditionalAttackSpeed,enemyConditionalAttackMultiplier,enemyKnightExit,refreshEnemyMudrockShield,enemyTraitBeforeStrike,enemyTraitDamageDealt,tickEnemyAttackContinuity,tickPompeiiExplosion,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,liberateEnemyPrisoners,enemyTraitBeforeAttack,enemyTraitOnHit,syncEnemyConcealMarker,enemyStealAmmo,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,applyEnemyTraitAuras};
@@ -6945,7 +6949,9 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id==='enemy_1525_blkswb'){
+ if(e.id==='enemy_1535_wlfmster'){
+  e.enemyFormKind='zaro';e.enemyForm='initial';e.shiftImmune=true;e.formBaseImmunities={...e.immunities};e.immunities.stun=true;e.ranged=false;e.range=0;e.damageType='physical';e.zaroBaseInterval=e.interval;
+ }else if(e.id==='enemy_1525_blkswb'){
   e.enemyFormKind='degen';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.statusResistance=.5;e.damageType='physical';e.ranged=false;
   e.enemyBlockedDefPenetration=Number(e.enemyTalent['DefPenetrate.enemy_blkswb_t_2.def_penetrate']);
  }else if(e.id==='enemy_1539_reid'){
@@ -7013,6 +7019,19 @@ function finishTranslation(b,e){
 function tickEnemyForm(b,e){
  if(e.enemyFormKind==='rotator'){tickRotatorForm(b,e);return;}
  if(!e.enemyFormKind||e.hp<=0)return;
+ if(e.enemyFormKind==='zaro'){
+  if(e.enemyForm==='rebirth'){
+   e.hp=Math.max(1,e.maxHp*Math.min(1,(b.s.time-e.zaroRebornStartedAt)/Number(e.enemyTalent['Reborn.duration'])));
+   if(b.s.time+1e-9>=e.enemyFormUntil){
+    e.hp=e.maxHp;e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;e.immunities={...e.formBaseImmunities};
+    e.atk=e.baseAtk*(1+Number(e.enemyTalent['Passive2.atk']));e.interval=e.zaroBaseInterval+Number(e.enemyTalent['Passive2.base_attack_time']);e.ranged=true;e.range=1.25;e.enemyAttack={...e.enemyAttack,hits:2};
+    e.zaroInvincibleUntil=b.s.time+Number(e.enemyTalent['Passive2.invincible_time']);e.invulnerable=true;
+    for(const skill of e.enemySkills||[]){skill.used=false;skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;}
+    announce(b,e,'第二形态');
+   }
+  }else if(e.enemyForm==='second'&&e.zaroInvincibleUntil!=null&&b.s.time+1e-9>=e.zaroInvincibleUntil){e.invulnerable=false;e.zaroInvincibleUntil=null;}
+  return;
+ }
  if(e.enemyFormKind==='degen'){
   if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
    e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
@@ -7179,7 +7198,15 @@ function enemyFormStats(e){
  }
 }
 
+function enemyPhaseDamageMultiplier(e,type){
+ return e.enemyFormKind==='zaro'&&e.enemyForm==='initial'&&['physical','arts'].includes(type)?1-Number(e.enemyTalent['Passive.damage_resistance']):1;
+}
+
 function enemyFormFatal(b,e){
+ if(e.enemyFormKind==='zaro'&&e.enemyForm==='initial'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.zaroRebornStartedAt=b.s.time;e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=1;
+  e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
  if(e.enemyFormKind==='degen'&&e.enemyForm==='initial'){
   e.crownBlink=null;e.crownRejoin=null;e.unblockableUntil=null;
   cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp;
@@ -7201,7 +7228,7 @@ function enemyFormFatal(b,e){
  announce(b,e,'石像形态');return true;
 }
 
-return {initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,releaseParrotPassenger,enemyFormAfterDamage,enemyFormHealthChanged,enemyFormShiftEnded,enemyFormStats,enemyFormFatal};
+return {initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,releaseParrotPassenger,enemyFormAfterDamage,enemyFormHealthChanged,enemyFormShiftEnded,enemyFormStats,enemyPhaseDamageMultiplier,enemyFormFatal};
 },
 "native-enemy-transport.js": function(load) {
 const {isIsolated} = load("status.js");
@@ -7399,7 +7426,7 @@ const {paintDominion,dominionCell,tickDeepWater,tickSandStorm} = load("native-en
 const {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} = load("native-enemy-parasite.js");
 const {advanceEnemyFear} = load("native-enemy-fear.js");
 const {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} = load("native-enemy-transport.js");
-const {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,enemyFormHealthChanged,releaseParrotPassenger} = load("native-enemy-forms.js");
+const {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyPhaseDamageMultiplier,enemyFormFatal,enemyFormAfterDamage,enemyFormHealthChanged,releaseParrotPassenger} = load("native-enemy-forms.js");
 const {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} = load("native-enemy-attacks.js");
 const {liberateEnemyPrisoners,enemyKnightExit,enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
 const {checkWEnrage,initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} = load("native-enemy-skills.js");
@@ -7452,6 +7479,7 @@ class NativeBattle {
   b.s=migrated;b.attachRuntime();return b;}catch{return null;}
  }
  enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
+ enemyPhaseDamageMultiplier(target,type){return enemyPhaseDamageMultiplier(target,type);}
  onActorShiftEnd(target){enemyFormShiftEnded(this,target);}
  enemyOutgoingDamageMultiplier(enemy){return enemy?.id==='enemy_1509_mousek'&&enemy.hp>0&&enemy.hp<enemy.maxHp*Number(enemy.enemyTalent['enrage.hp_ratio'])?Number(enemy.enemyTalent['enrage.damage_scale']):1;}
  dominionAttackSpeed(actor){return actor.deployed&&actor.hp>0&&!actor.hidden?dominionCell(this,actor)?.attackSpeed||0:0;}
