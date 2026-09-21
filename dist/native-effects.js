@@ -305,7 +305,9 @@ export function dealDamage(battle,opts){
   }
  }
  const floor=Math.max(minHpOf(target),Number(opts.minHp)||0);
- const result=applyDamage(target,value,{type,sourceId:source?.id,sourceUid:source?.uid,minHp:floor});
+ const chalice=!opts.skipChalice&&!opts.execution&&opts.cause!=='execute'&&type!=='elemental'?battle.enemyChaliceProtection?.(target):null;let shared=0;
+ const result=applyDamage(target,value,{type,sourceId:source?.id,sourceUid:source?.uid,minHp:floor,beforeHpDamage:chalice?remaining=>{shared=remaining*(1-chalice.retained);return remaining-shared;}:null});
+ if(shared>0){dealDamage(battle,{source,target:chalice.source,value:shared,type:'true',cause:'chalice-share',attackId:opts.attackId,parentEventId:event.eventId,sourceDamageHandled:true,skipChalice:true});log(battle,'chalice-share',{eventId:event.eventId,targetUid:target.uid,receiverUid:chalice.source.uid,amount:shared});}
  if(result.consumedGuard){
   log(battle,'guardLayerConsumed',{uid:target.uid,guardId:result.consumedGuard.id,eventId:event.eventId,sourceUid:source?.uid});
   dispatch(battle,'guardLayerConsumed',{target,guard:result.consumedGuard,source,event});
@@ -314,7 +316,7 @@ export function dealDamage(battle,opts){
   log(battle,'barrierDepletedByDamage',{uid:target.uid,layerId:layer.id,eventId:event.eventId});
   dispatch(battle,'barrierDepletedByDamage',{target,layer,source,event});
  }
- result.potentialHpDamage=result.blocked?0:Math.max(0,value-result.shield);
+ result.potentialHpDamage=result.blocked?0:(result.raw??Math.max(0,value-result.shield));
  const wouldDie=target.hp<=0;
  if(wouldDie&&runFatal(battle,target,true,event)){/* still alive */}
  const credit=source?.kind==='summon'?getActor(battle.s,source.ownerUid):source;

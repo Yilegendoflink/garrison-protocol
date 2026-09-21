@@ -4,7 +4,7 @@ import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {applyStatus} from '../dist/status.js';
-import {dealDamage,commitExit,enemyWineBuffs} from '../dist/native-effects.js';
+import {dealDamage,applyLoss,commitExit,enemyWineBuffs} from '../dist/native-effects.js';
 import {changeEnemySp} from '../dist/native-enemy-skills.js';
 
 function arena(){
@@ -49,6 +49,26 @@ test('重弩蓄力被沉默中断后不射击，恢复隐匿且只开始一次8�
 });
 
 const iceBugRaw=Object.values(NATIVE_DATA.levels).map(l=>l.enemyProfiles?.enemy_1067_snslime).find(Boolean);
+const chaliceRaw=Object.values(NATIVE_DATA.levels).map(l=>l.enemyProfiles?.enemy_1430_lrrook).find(Boolean);
+
+test('魂灵圣杯按伤害结算后保留5%，余量由圣杯承担真实伤害，重叠圣杯不重复保护',()=>{
+ const {b}=arena(),a=spawn(b,'enemy_1430_lrrook',3,3,chaliceRaw),c=spawn(b,'enemy_1430_lrrook',3,3,chaliceRaw),target=spawn(b,'enemy_1007_slime',4,3);a.canAttack=c.canAttack=target.canAttack=false;b.step();target.def=100;target.res=50;
+ const hp=target.hp,ahp=a.hp,chp=c.hp;dealDamage(b,{target,amount:200,type:'physical'});assert.equal(hp-target.hp,5);assert.equal(ahp-a.hp,95);assert.equal(c.hp,chp);
+ const before=target.hp,next=a.hp;dealDamage(b,{target,amount:200,type:'arts'});assert.equal(before-target.hp,5);assert.equal(next-a.hp,95);assert.equal(a.res,30,'承担伤害不再扣一次圣杯法抗');
+});
+
+test('圣杯分摊在次数护盾/屏障之后，真实伤害可分摊，生命流失与斩杀标记绕过',()=>{
+ const {b}=arena(),cup=spawn(b,'enemy_1430_lrrook',3,3,chaliceRaw),target=spawn(b,'enemy_1007_slime',4,3);target.shield=60;const chp=cup.hp,hp=target.hp;
+ dealDamage(b,{target,value:100,type:'true'});assert.equal(hp-target.hp,2);assert.equal(chp-cup.hp,38);target.barriers=[{charges:1}];const before=cup.hp;dealDamage(b,{target,value:100,type:'true'});assert.equal(cup.hp,before);
+ const thp=target.hp;applyLoss(b,{target,amount:10});dealDamage(b,{target,value:10,type:'true',execution:true});assert.equal(thp-target.hp,20);assert.equal(cup.hp,before);
+});
+
+test('圣杯消失/死亡或离开圆形范围立即失效，飞行与孤立目标不被保护，存档维持单一来源',()=>{
+ const {b,g}=arena(),cup=spawn(b,'enemy_1430_lrrook',3,3,chaliceRaw),target=spawn(b,'enemy_1007_slime',4,3);cup.canAttack=target.canAttack=false;b.step();dealDamage(b,{target,value:100,type:'true'});assert.equal(target.chaliceUid,cup.uid);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const c=restored.s.enemies.find(e=>e.uid===cup.uid),t=restored.s.enemies.find(e=>e.uid===target.uid);let hp=c.hp;dealDamage(restored,{target:t,value:100,type:'true'});assert.equal(hp-c.hp,95);
+ for(const mode of ['hidden','outside','air','isolated']){c.hidden=mode==='hidden';t.x=mode==='outside'?5:4;t.y=mode==='outside'?5:3;t.flying=mode==='air';t.isolated=mode==='isolated';hp=c.hp;const before=t.hp;dealDamage(restored,{target:t,value:10,type:'true'});assert.equal(before-t.hp,10);assert.equal(c.hp,hp);}
+ c.hidden=false;t.isolated=false;t.flying=false;commitExit(restored,{target:c});hp=t.hp;dealDamage(restored,{target:t,value:10,type:'true'});assert.equal(hp-t.hp,10);
+});
 const iceBreakerRaw=Object.values(NATIVE_DATA.levels).map(l=>l.enemyProfiles?.enemy_1069_icebrk_2).find(Boolean);
 
 test('破冰者在命中时对冻结目标按300%攻击扣防，冻结不解除阻挡且解冻后恢复',()=>{

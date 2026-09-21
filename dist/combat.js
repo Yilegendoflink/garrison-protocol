@@ -24,7 +24,7 @@ export function damage({amount, type = 'physical', attackScale = 1, attackAdd = 
   else throw new Error(`Unsupported damage type: ${type}`);
   return Math.max(0, mitigated * multiplier * (1 - clamp(reduction, 0, 1)));
 }
-export function applyDamage(target, amount, {immortal = false, minHp = 0, type = 'physical', sourceId = null, sourceUid = null} = {}) {
+export function applyDamage(target, amount, {immortal = false, minHp = 0, type = 'physical', sourceId = null, sourceUid = null, beforeHpDamage = null} = {}) {
   if(target.infiniteHealth)return recordDummyDamage(target,amount,{type,sourceId,sourceUid});
   if (target.hp <= 0) return {hp: 0, shield: 0, total: 0, blocked:false, consumedGuard:null, depletedLayers:[]};
   const floor = Math.max(minHp, immortal ? 1 : 0);
@@ -53,6 +53,7 @@ export function applyDamage(target, amount, {immortal = false, minHp = 0, type =
     target.shield=Math.max(0, (target.shield || 0) - shield);
     leftover-=shield;
   }
+  if(leftover>0&&beforeHpDamage)leftover=Math.max(0,beforeHpDamage(leftover));
   // 「特殊生命值机制」：成功受到伤害时生命值只降低 1 点（不论伤害多少）；部分单位仅接受部分伤害类型，
   // 类型不符时生命值完全不降低。被屏障／护盾全额吸收（leftover 为 0）时不算「受到伤害」，同样不减。
   let hp;

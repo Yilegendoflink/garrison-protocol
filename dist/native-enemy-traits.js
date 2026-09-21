@@ -6,6 +6,14 @@ const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
 const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
 const KNIGHT_PARTNER={enemy_1513_dekght:'enemy_1513_dekght_2',enemy_1513_dekght_2:'enemy_1513_dekght'};
 
+export function enemyChaliceProtection(battle,target){
+ if(!battle.s.enemies.includes(target))return null;
+ if(target.hidden||target.flying&&!target.groundNavigation||isIsolated(target)){target.chaliceUid=null;return null;}
+ const sources=battle.s.enemies.filter(e=>e!==target&&e.hp>0&&!e.hidden&&e.id==='enemy_1430_lrrook'&&Number.isFinite(Number(e.enemyTalent?.['takeDmg.damage_scale']))&&near(e,target,Number(e.enemyTalent?.['takeDmg.range_radius'])));
+ const source=sources.find(e=>e.uid===target.chaliceUid)||sources.sort((a,b)=>a.uid-b.uid)[0];target.chaliceUid=source?.uid??null;
+ if(!source)return null;return {source,retained:Math.max(0,Math.min(1,Number(source.enemyTalent['takeDmg.damage_scale'])))};
+}
+
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
