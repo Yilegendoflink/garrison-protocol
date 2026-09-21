@@ -458,6 +458,14 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(/^enemy_10085_hllevi(?:_2)?$/.test(enemy.id)&&!control.silenced&&!enemy.action){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='Roar');
+  if(skill&&beginEnemySkill(battle,enemy,skill)){
+   for(const target of attackableAllies(battle.s))if(!target.flying&&enemyTargetValid(target)&&!permissions(target).sleeping)
+    applyStatus(target,'attackSpeedDown',Number(skill.bb.duration),{source:'invited-prayer',value:Number(skill.bb.attack_speed),resistible:false});
+   endEnemySkill(battle,enemy);return;
+  }
+ }
  if(enemy.enemyFormKind==='echo'&&!control.silenced&&!enemy.action&&!(enemy.attackCooldown>0)){
   const skill=enemy.enemySkills.find(s=>s.prefab==='Skill');
   if(skill&&beginEnemySkill(battle,enemy,skill)){
