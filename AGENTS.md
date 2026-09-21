@@ -33,6 +33,7 @@
 - `native-economy.js` / `garrison.js` / `strategy.js`：整备资金、运营特质、策略
 - `native-battle.js` / `native-combat.js` / `native-effects.js` / `native-operator-effects.js`：战斗循环、结算入口、逐名适配
 - `native-sp.js`：技力（脱手清空、持续倒流、弹药格子）
+- `native-shift.js`：明确力度的推动逐帧失衡；`moveActor` 第五参 `forceLevel` 启用，取技能 `attack@force/force`，力度0有效。普通推击手有方向转径向/减两级修正，见行者S2固定身前方向例外。物理时段驱动弧光锋卫自伤、雪孩子撞高台、地穴坠落与失衡结束回调；拖拽/捕网和未核定力度的旧调用仍未迁移，不能把本模块当作完整Unity刚体还原。新增模块须登记 `scripts/build-browser.mjs`。
 - `native-environment.js`：地图显式控制器的战斗效果及敌人生成的国度；当前接入深水、沙尘暴与现有土石结构遮挡。全局控制器可能在裁切外，构建时按原始地图的启用状态、技能索引/等级与历史黑板保留配置，不可只遍历可见 `map.devices`。沙尘暴不等于活性源石风暴，不能触发后者专属的敌人能力。国度格子保存在 `battle.s.dominionCells`，不改写共享地图；绘制只能读取它。
 - `native-waves.js` / `native-wave-random.js` / `native-wave-editor.js`：词条预算抽怪与编制台
 - `native-branches.js`：职业分支基础层

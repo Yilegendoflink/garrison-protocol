@@ -1,3 +1,4 @@
+import {startEnemyPush} from './native-shift.js';
 import {applyDamage,recoverHP,damage} from './combat.js';
 import {equipmentEvent,equipmentFatal,equipmentTick} from './native-equipment.js';
 import {allowsHighlandPlacement} from './native-branches.js';
@@ -52,6 +53,7 @@ export function validateBattle(s,battle){
   ids.add(actor.uid);
  }
  for(const e of s.enemies){
+  if(e.shift&&!['vx','vy','startedAt','hardUntil','nextDamageAt'].every(k=>Number.isFinite(e.shift[k])))return 'invalid enemy shift';
   if(e.transport){const t=e.transport;if(!Number.isInteger(t.max)||t.max<=0||!Array.isArray(t.passengers)||t.passengers.length>t.max||new Set(t.passengers).size!==t.passengers.length)return 'invalid enemy transport';
    for(const uid of t.passengers)if(!s.enemies.some(p=>p.uid===uid&&p.carriedBy===e.uid&&p.hp>0))return 'missing passenger';}
   if(e.carriedBy!=null&&!s.enemies.some(c=>c.uid===e.carriedBy&&c.hp>0&&c.transport?.passengers.includes(e.uid)))return 'missing passenger carrier';
@@ -862,11 +864,13 @@ function validMoveTile(battle,target,x,y,{allowOccupied=false,allowFlyOnly=false
 export function teleportActor(battle,target,{x,y,source=null,mode='teleport',allowOccupied=false,exactCoordinates=false,allowFlyOnly=true}={}){
  if(!target||target.hp<=0||target.hidden||x==null||y==null)return false;
  const nx=exactCoordinates?x:Math.round(x),ny=exactCoordinates?y:Math.round(y);if(!validMoveTile(battle,target,Math.round(nx),Math.round(ny),{allowOccupied,allowFlyOnly}))return false;
+ if(target.shift){target.shift=null;target.shiftRejoin=false;if(!['push','pull'].includes(mode))battle.onActorShiftEnd?.(target);}
  const fx0=target.x,fy0=target.y;target.x=nx;target.y=ny;target.block=null;target.action=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode});battle.onActorMoved?.(target);battle.emit('move',{uid:target.uid,x:nx,y:ny,fromX:fx0,fromY:fy0,mode});return true;
 }
-export function moveActor(battle,target,source,description=''){
+export function moveActor(battle,target,source,description='',options={}){
  if(!target||target.hp<=0||target.hidden||target.levitated||target.shiftImmune)return false;
  const away=/推开|推动|击退/.test(description),toward=/拖拽|拉向|拉至/.test(description);if(!away&&!toward)return false;
+ if(away&&Number.isFinite(options.forceLevel))return startEnemyPush(battle,target,source,options);
  const dx=target.x-source.x,dy=target.y-source.y,len=Math.hypot(dx,dy)||1,step=away?1:-1,nx=Math.round(target.x+(dx/len)*step),ny=Math.round(target.y+(dy/len)*step);
  if(!validMoveTile(battle,target,nx,ny))return false;
  const moved=teleportActor(battle,target,{x:nx,y:ny,source,mode:away?'push':'pull'});

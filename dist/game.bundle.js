@@ -294,7 +294,7 @@ function removeStatus(target,kind,source){
  return true;
 }
 function tickStatuses(target,dt){if(!Number.isFinite(dt)||dt<0)throw Error('Invalid status delta');target.statuses??=[];for(const s of target.statuses)s.remaining-=dt;target.statuses=target.statuses.filter(s=>s.remaining>1e-9);target.invisible=target.formInvisible===true||(target.statuses.some(s=>['invisible','camouflage'].includes(s.kind))&&!target.revealed);target.levitated=target.statuses.some(s=>s.kind==='levitate');target.fragile=target.statuses.filter(s=>s.kind==='fragile').reduce((v,s)=>Math.max(v,s.value||1),1);}
-function permissions(target){const denied=new Set();for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!(target.statuses||[]).some(s=>['sleep','levitate','fear','selfFear'].includes(s.kind)),retreat:!denied.has('retreat'),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
+function permissions(target){const denied=new Set(target.shift?['attack','skill','block']:[]);for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!target.shift&&!(target.statuses||[]).some(s=>['sleep','levitate','fear','selfFear'].includes(s.kind)),retreat:!denied.has('retreat'),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
 function statusAttributeChanges(target){const s=target.statuses||[];return {attackSpeed:(-30*new Set(s.filter(s=>s.kind==='cold').map(s=>s.frostSide||'ally')).size)+s.filter(s=>s.kind==='attackSpeedDown'||s.kind==='attackSpeedUp').reduce((n,s)=>n+(s.value||0),0),resistance:s.some(s=>s.kind==='frozen'&&s.frostSide!=='enemy')?-15:0,attack:s.filter(s=>s.kind==='attackDown').reduce((v,x)=>Math.min(v,x.value??0),0),defense:s.filter(s=>s.kind==='defDown').reduce((v,x)=>Math.min(v,x.value??0),0),magicResistance:s.filter(s=>s.kind==='resDown').reduce((v,x)=>Math.min(v,x.value??0),0)};}
 function abilityEnabled(target,{silenceable=false}={}){return !silenceable||!permissions(target).silenced;}
 function isIsolated(target){
@@ -4451,7 +4451,7 @@ function onEvent(battle,type,payload,ctx){
    if(Number(config.bb.def)<0&&has(config.description,/防御力/))applyStatus(target,'defDown',Number(config.bb.duration)||5,{source:source.uid,value:Number(config.bb.def),resistible:false});
    if(Number(config.bb.magic_resistance)<0&&has(config.description,/法术抗性/))applyStatus(target,'resDown',Number(config.bb.duration)||5,{source:source.uid,value:Number(config.bb.magic_resistance),resistible:false});
    if(has(config.description,/隐匿失效|隐匿效果失效/))ctx.revealEnemy(battle,target);
-   if(has(config.description,/推开|推动|拖拽|拉向|拉至|击退/)&&ctx.moveActor)ctx.moveActor(battle,target,source,config.description);
+   if(has(config.description,/推开|推动|拖拽|拉向|拉至|击退/)&&ctx.moveActor)ctx.moveActor(battle,target,source,config.description,{forceLevel:Number(config.bb['attack@force']??config.bb.force),directional:battle.profile(source).branch==='pusher',fixedDirection:source.id==='char_4036_forcer'&&(source.source?.skillIndex??battle.profile(source).skillIndex)===1});
    const elementScale=Number(config.bb.elementScale??(has(config.description,/灼燃|凋亡|元素损伤|元素伤害|神经损伤/)?config.atkScale:NaN));if(Number.isFinite(elementScale)&&has(config.description,/灼燃|凋亡|元素损伤|元素伤害|神经损伤/)&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*elementScale,type:has(config.description,/凋亡/)?'necrosis':has(config.description,/灼燃/)?'burn':has(config.description,/神经损伤/)?'neural':'elemental',cause:'skill',parentEventId:payload.event?.eventId});
   const bb=config.bb;if(Number.isFinite(bb.value)&&has(config.description,/恢复自身|回复自身/))ctx.applyHeal(battle,{source,target:source,amount:bb.value});
   // Defense penetration is applied before mitigation by NativeBattle.hit; do not mutate the target.
@@ -4564,6 +4564,7 @@ function periodicMods(battle,u,ctx){
 return {blackboardValues,talentValues,coinCapFor,grantCoins,spendCoins,coinGainAtSkillStart,zoneVisual,moduleCostData,tokenCostFor,targetFilter,operatorRegistry,skillConfig,costValue,textCostValue,costValueForText,statMods,attackModifier,attackPenetration,damageReductionFor,operatorSkillStart,onEvent,periodicMods};
 },
 "native-effects.js": function(load) {
+const {startEnemyPush} = load("native-shift.js");
 const {applyDamage,recoverHP,damage} = load("combat.js");
 const {equipmentEvent,equipmentFatal,equipmentTick} = load("native-equipment.js");
 const {allowsHighlandPlacement} = load("native-branches.js");
@@ -4617,6 +4618,7 @@ function validateBattle(s,battle){
   ids.add(actor.uid);
  }
  for(const e of s.enemies){
+  if(e.shift&&!['vx','vy','startedAt','hardUntil','nextDamageAt'].every(k=>Number.isFinite(e.shift[k])))return 'invalid enemy shift';
   if(e.transport){const t=e.transport;if(!Number.isInteger(t.max)||t.max<=0||!Array.isArray(t.passengers)||t.passengers.length>t.max||new Set(t.passengers).size!==t.passengers.length)return 'invalid enemy transport';
    for(const uid of t.passengers)if(!s.enemies.some(p=>p.uid===uid&&p.carriedBy===e.uid&&p.hp>0))return 'missing passenger';}
   if(e.carriedBy!=null&&!s.enemies.some(c=>c.uid===e.carriedBy&&c.hp>0&&c.transport?.passengers.includes(e.uid)))return 'missing passenger carrier';
@@ -5427,11 +5429,13 @@ function validMoveTile(battle,target,x,y,{allowOccupied=false,allowFlyOnly=false
 function teleportActor(battle,target,{x,y,source=null,mode='teleport',allowOccupied=false,exactCoordinates=false,allowFlyOnly=true}={}){
  if(!target||target.hp<=0||target.hidden||x==null||y==null)return false;
  const nx=exactCoordinates?x:Math.round(x),ny=exactCoordinates?y:Math.round(y);if(!validMoveTile(battle,target,Math.round(nx),Math.round(ny),{allowOccupied,allowFlyOnly}))return false;
+ if(target.shift){target.shift=null;target.shiftRejoin=false;if(!['push','pull'].includes(mode))battle.onActorShiftEnd?.(target);}
  const fx0=target.x,fy0=target.y;target.x=nx;target.y=ny;target.block=null;target.action=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode});battle.onActorMoved?.(target);battle.emit('move',{uid:target.uid,x:nx,y:ny,fromX:fx0,fromY:fy0,mode});return true;
 }
-function moveActor(battle,target,source,description=''){
+function moveActor(battle,target,source,description='',options={}){
  if(!target||target.hp<=0||target.hidden||target.levitated||target.shiftImmune)return false;
  const away=/推开|推动|击退/.test(description),toward=/拖拽|拉向|拉至/.test(description);if(!away&&!toward)return false;
+ if(away&&Number.isFinite(options.forceLevel))return startEnemyPush(battle,target,source,options);
  const dx=target.x-source.x,dy=target.y-source.y,len=Math.hypot(dx,dy)||1,step=away?1:-1,nx=Math.round(target.x+(dx/len)*step),ny=Math.round(target.y+(dy/len)*step);
  if(!validMoveTile(battle,target,nx,ny))return false;
  const moved=teleportActor(battle,target,{x:nx,y:ny,source,mode:away?'push':'pull'});
@@ -7611,6 +7615,7 @@ function detachEnemyParasites(b,actor){
 return {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites};
 },
 "native-battle.js": function(load) {
+const {advanceEnemyShift} = load("native-shift.js");
 const {paintDominion,dominionCell,tickDeepWater,tickSandStorm} = load("native-environment.js");
 const {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} = load("native-enemy-parasite.js");
 const {advanceEnemyFear} = load("native-enemy-fear.js");
@@ -7671,6 +7676,10 @@ class NativeBattle {
  enemyPhaseDamageMultiplier(target,type){return enemyPhaseDamageMultiplier(target,type);}
  enemyChaliceProtection(target){return enemyChaliceProtection(this,target);}
  enemyEchoBurst(enemy,radius,damageScale,elementScale){return enemyEchoBurst(this,enemy,radius,damageScale,elementScale);}
+ onActorShiftStart(target){cancelEnemyCast(this,target);}
+ onActorShiftTick(target,state){const bb=target.enemyTalent||{},interval=Number(bb['unbalanced_bleed.interval']);if(!(interval>0))return;while(target.hp>0&&this.s.time+1e-9>=state.nextDamageAt){state.nextDamageAt+=interval;dealDamage(this,{target,amount:Number(bb['unbalanced_bleed.damage']),type:'true',cause:'dot'});}}
+ onActorShiftCollision(target,tile){if(target.id==='enemy_10138_xdsnow'&&tile.heightType==='HIGHLAND'&&this.s.time+1e-9>=(target.snowWallUntil||0)){target.snowWallUntil=this.s.time+5;dealDamage(this,{target,amount:Number(target.enemyTalent['hitWall.value']),type:'true',cause:'extra'});}}
+ onActorShiftFall(target){commitExit(this,{target,reason:'fall'});}
  onActorShiftEnd(target){enemyFormShiftEnded(this,target);}
  enemyOutgoingDamageMultiplier(enemy){return enemy?.id==='enemy_1509_mousek'&&enemy.hp>0&&enemy.hp<enemy.maxHp*Number(enemy.enemyTalent['enrage.hp_ratio'])?Number(enemy.enemyTalent['enrage.damage_scale']):1;}
  dominionAttackSpeed(actor){return actor.deployed&&actor.hp>0&&!actor.hidden?dominionCell(this,actor)?.attackSpeed||0:0;}
@@ -8371,7 +8380,7 @@ class NativeBattle {
    if(e.palsyCharges>0&&e.action&&(e.action.left<=1||this.s.time-(e.action.startedAt??this.s.time)>=2)){e.palsyCharges--;cancelEnemyCast(this,e);e.action=null;applyStatus(e,'tremble',.5,{source:'element-neural',resistible:false});control=permissions(e);}
    if((!control.attack||e.hidden||(e.action?.special?.index!=null&&(!control.skill||control.silenced)))&&e.action){cancelEnemyCast(this,e);e.action=null;}if(e.action&&--e.action.left<=0){const action=e.action,u=getActor(this.s,action.target);e.action=null;if(u&&u.hp>0||(action.targets||[]).some(id=>getActor(this.s,id)?.hp>0)){const special=action.special;if(special?.prefab==='DeathEye'){this.startEnemyDeathEye(e,u);}else{releaseEnemyAttack(this,e,action);if(special?.polluted){this.emit('enemy-skill',{uid:e.uid,x:u.x,y:u.y,skill:'PollutedRangedAtk',targetUid:u.uid});}}if(special){if(special.index!=null&&special.prefab!=='DeathEye'&&!e.enemyCast?.multiAttack)endEnemySkill(this,e);if(e.specialSkill?.spCost>0)e.skillAttackCount=0;e.nextSkillAt=this.s.time+(Number(e.specialSkill?.cooldown)>0?Number(e.specialSkill.cooldown):Infinity);e.firstAttackUsed=true;}e.lastAttackAt=this.s.time;if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE&&e.burstShots>0){e.burstFired=(e.burstFired||0)+1;if(e.burstFired>=e.burstShots){e.burstFired=0;e.burstUntil=this.s.time+(e.burstCooldown||0);}}}else if(action.special?.index!=null)cancelEnemyCast(this,e,{lostTarget:true});enemyTraitAfterAttack(this,e);}
    tickEnemyAttackContinuity(this,e,target);const special=control.skill&&!control.silenced?this.enemySpecialReady(e,target):null,specialOnly=Boolean(e.specialSkill?.prefab==='CrossAttack'&&e.range<=0),meleeScale=e.block===target?.uid&&e.meleeAttackScale>0?e.meleeAttackScale:1,preparedSpecial=special&&!special.polluted&&meleeScale!==1?{...special,scale:special.scale*meleeScale}:special;if(e.hp>0&&target&&e.canAttack&&control.attack&&!e.enemyCast&&!e.action&&!e.attackCooldown&&!Number(e.burstUntil)&&(!specialOnly||special)){if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE&&e.burstTarget!==target.uid){e.burstTarget=target.uid;e.burstFired=0;}enemyTraitBeforeAttack(this,e);const t=this.enemyAttackTiming(e);e.attackCooldown=t.frames;if(special?.index!=null)beginEnemySkill(this,e,e.enemySkills[special.index]);e.action={startedAt:this.s.time,left:t.windupFrames,target:target.uid,targetDeployGen:target.deployGen,ranged:e.ranged&&e.block!==target.uid,targets:attackTargets.slice(0,preparedSpecial?.targets??enemyAttackTargetCount(e)).map(t=>t.uid),special:preparedSpecial,scale:meleeScale,attackId:newAttackId(this)};}
-   const hold=e.formHold||!!(e.enemyCast?.holdsPosition||e.enemyCast?.victims||e.enemyCast?.spawn||e.enemyCast?.channel||e.enemyCast?.charge)||enemyShouldHoldPosition(e,{target:specialOnly&&!special?null:target,now:this.s.time}),beforeX=e.x,beforeY=e.y,beforeCmd=e.cmd,beforeHidden=e.hidden;const fearMove=advanceEnemyFear(this,e,dt);let escaped=fearMove??advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),hold);paintDominion(this,e);enemyFacingAfterMove(this,e,beforeX);const progressed=e.cmd!==beforeCmd||Math.hypot(e.x-beforeX,e.y-beforeY)>1e-7||e.hidden!==beforeHidden;if(progressed){e.lastProgressAt=this.s.time;e.stallTime=0;}else if(!hold&&!e.block&&e.speed>0&&permissions(e).move&&e.route?.[e.cmd]?.kind==='move'){e.stallTime=(e.stallTime||0)+dt;if(e.stallTime>=(e.stallTimeout||2)){e.action=null;e.stanceUntil=0;e.burstUntil=0;e.stallTime=0;this.emit('enemy-recover',{uid:e.uid,x:e.x,y:e.y,reason:'movement-stall'});escaped=advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),false);}}
+   const hold=e.formHold||!!(e.enemyCast?.holdsPosition||e.enemyCast?.victims||e.enemyCast?.spawn||e.enemyCast?.channel||e.enemyCast?.charge)||enemyShouldHoldPosition(e,{target:specialOnly&&!special?null:target,now:this.s.time}),beforeX=e.x,beforeY=e.y,beforeCmd=e.cmd,beforeHidden=e.hidden;const shiftMove=advanceEnemyShift(this,e,dt),fearMove=shiftMove??advanceEnemyFear(this,e,dt);let escaped=fearMove??advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),hold);paintDominion(this,e);enemyFacingAfterMove(this,e,beforeX);const progressed=e.cmd!==beforeCmd||Math.hypot(e.x-beforeX,e.y-beforeY)>1e-7||e.hidden!==beforeHidden;if(progressed){e.lastProgressAt=this.s.time;e.stallTime=0;}else if(!hold&&!e.block&&e.speed>0&&permissions(e).move&&e.route?.[e.cmd]?.kind==='move'){e.stallTime=(e.stallTime||0)+dt;if(e.stallTime>=(e.stallTimeout||2)){e.action=null;e.stanceUntil=0;e.burstUntil=0;e.stallTime=0;this.emit('enemy-recover',{uid:e.uid,x:e.x,y:e.y,reason:'movement-stall'});escaped=advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),false);}}
    if(escaped){this.s.leaks+=e.leak;e.escaped=true;commitExit(this,{target:e,reason:'leak'});this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak});this.s.banner={text:'漏怪 −'+e.leak,life:1.4};}
   }
   syncPassengerPositions(this);
@@ -11151,6 +11160,79 @@ function frame(now){
 root.setAttribute('data-view','native');root.addEventListener('pointerdown',()=>unlockAudio(),{once:true});syncPlayChrome();render();document.getElementById('boot-screen')?.remove();clearTimeout(window.__garrisonBootTimer);window.__garrisonReady=true;requestAnimationFrame(frame);
 
 return {};
+},
+"native-shift.js": function(load) {
+const {advanceEnemy} = load("native-combat.js");
+// PRTS推与拉、失衡位移机制：质量1，g=9.81，默认动摩擦系数0.5。
+const SPEEDS=[0,1,2,4,4.5,5.3,5.8];
+function startEnemyPush(battle,target,source,{forceLevel,directional=false,fixedDirection=false,projectile=false}={}){
+ if(!battle.s.enemies.includes(target)||target.hp<=0||target.hidden||target.shiftImmune||target.levitated||!Number.isFinite(forceLevel))return false;
+ let dx=target.x-source.x,dy=target.y-source.y,length=Math.hypot(dx,dy),level=forceLevel-(target.weight||0);
+ const forward=[[1,0],[0,-1],[-1,0],[0,1]][source.dir??0];
+ if(directional){if(!fixedDirection&&(length<.25||(dx*forward[0]+dy*forward[1])/length<Math.SQRT1_2))level-=2;else{dx=forward[0];dy=forward[1];length=1;}}
+ if(length<1e-9){dx=forward[0];dy=forward[1];length=1;}
+ const speed=SPEEDS[Math.max(0,Math.min(6,Math.floor(level)+3))];if(!(speed>0))return false;
+ const previous=target.shift;
+ target.shift={vx:(previous?.vx||0)+dx/length*speed,vy:(previous?.vy||0)+dy/length*speed,hardUntil:previous?.hardUntil??battle.s.time+.1,startedAt:previous?.startedAt??battle.s.time,sourceUid:source.uid??null,projectile:!previous&&projectile,fresh:!previous,nextDamageAt:previous?.nextDamageAt??battle.s.time+Number(target.enemyTalent?.['unbalanced_bleed.interval']||1)};
+ target.block=null;target.action=null;battle.onActorShiftStart?.(target);battle.emit('shift-start',{uid:target.uid,x:target.x,y:target.y,forceLevel});return true;
+}
+
+function solidAt(battle,target,x,y){
+ if(x<-.5||y<-.5||x>battle.map.cols-.5||y>battle.map.rows-.5)return {heightType:'BOUNDARY'};
+ const radius=target.hitRadius??.25;
+ for(let cy=Math.floor(y+.5-radius);cy<=Math.floor(y+.5+radius);cy++)for(let cx=Math.floor(x+.5-radius);cx<=Math.floor(x+.5+radius);cx++){
+  const tile=battle.map.grid[cy]?.[cx];
+  if(tile&&tile.tileKey==='tile_hole')continue;
+  if(tile&&tile.passableMask!=='NONE'&&(target.flying||tile.passableMask!=='FLY_ONLY')&&!tile.obstacle)continue;
+  const closestX=Math.max(cx-.5,Math.min(cx+.5,x)),closestY=Math.max(cy-.5,Math.min(cy+.5,y));
+  if((closestX-x)**2+(closestY-y)**2<radius*radius-1e-9)return tile||{heightType:'BOUNDARY'};
+ }
+ return null;
+}
+
+function rejoin(battle,target){
+ let end=target.cmd;
+ if(target.route?.[end]?.kind!=='move'){target.shiftRejoin=false;return true;}
+ while(end+1<target.route.length&&target.route[end].checkpointIndex==null&&target.route[end+1].kind==='move')end++;
+ const goal=target.route[end],o=battle.map.origin,toMap=(x,y)=>({col:o.col+x,row:o.row-y});let path;
+ try{path=battle.path({startPosition:toMap(Math.round(target.x),Math.round(target.y)),endPosition:toMap(goal.x,goal.y),checkpoints:[],allowDiagonalMove:target.routeDiagonal},target.flying&&!target.groundNavigation).slice(1);}
+ catch(error){if(!String(error.message).startsWith('原始路线不可达：'))throw error;return false;}
+ if(path.length)Object.assign(path.at(-1),goal);else path=[{...goal}];
+ target.route=[...target.route.slice(0,target.cmd),...path,...target.route.slice(end+1)];target.shiftRejoin=false;return true;
+}
+
+function finish(battle,target){
+ target.shift=null;target.shiftRejoin=true;rejoin(battle,target);battle.onActorShiftEnd?.(target);battle.emit('shift-end',{uid:target.uid,x:target.x,y:target.y});
+}
+
+// null：没有失衡，由常规路线处理；false：本帧由物理运动处理。
+function advanceEnemyShift(battle,target,dt){
+ const state=target.shift;
+ if(!state)return target.shiftRejoin&&!rejoin(battle,target)?false:null;
+ if(target.hp<=0){target.shift=null;return false;}
+ if(target.hidden||target.shiftImmune||target.levitated){finish(battle,target);return false;}
+ battle.onActorShiftTick?.(target,state);if(target.hp<=0){target.shift=null;return false;}
+ let speed=Math.hypot(state.vx,state.vy);
+ if(!(state.fresh&&state.projectile)){
+  const next=Math.max(0,speed-4.905*dt)/(1+Math.max(0,target.shiftDrag||0)*dt),scale=speed>0?next/speed:0;state.vx*=scale;state.vy*=scale;speed=next;
+ }
+ state.fresh=false;
+ if(speed<=.1&&battle.s.time+1e-9>=state.hardUntil){finish(battle,target);return false;}
+ const steps=Math.max(1,Math.min(128,Math.ceil(speed*dt/.1)));
+ for(let i=0;i<steps&&target.hp>0;i++)for(const axis of ['x','y']){
+  const delta=state[axis==='x'?'vx':'vy']*dt/steps;if(!delta)continue;
+  const from=target[axis],to=from+delta,x=axis==='x'?to:target.x,y=axis==='y'?to:target.y,wall=solidAt(battle,target,x,y);
+  if(wall){let lo=0,hi=1;for(let n=0;n<14;n++){const mid=(lo+hi)/2,p=from+delta*mid;if(solidAt(battle,target,axis==='x'?p:target.x,axis==='y'?p:target.y))hi=mid;else lo=mid;}target[axis]=from+delta*lo;state[axis==='x'?'vx':'vy']=0;battle.onActorShiftCollision?.(target,wall);}
+  else target[axis]=to;
+  if(!target.flying&&battle.map.grid[Math.round(target.y)]?.[Math.round(target.x)]?.tileKey==='tile_hole'){target.shift=null;battle.onActorShiftFall?.(target);return false;}
+ }
+ battle.onActorMoved?.(target);
+ advanceEnemy(target,dt,kind=>battle.emit(kind,{uid:target.uid,x:target.x,y:target.y}),true);
+ if(Math.hypot(state.vx,state.vy)<=.1&&battle.s.time+1e-9>=state.hardUntil)finish(battle,target);
+ return false;
+}
+
+return {startEnemyPush,advanceEnemyShift};
 }
 };
 const cache = Object.create(null);

@@ -236,7 +236,7 @@ test('野鬃待部署近卫减费只作用于尚未入场的近卫，每名最�
 });
 
 test('野鬃 S2 命中后按攻击方向推动目标',()=>{
- const {b}=openBattle({chessId:'chess_char_1_19_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);const before=e.x;b.hit(u,e,10,'physical');assert.ok(e.x>before);
+ const {b}=openBattle({chessId:'chess_char_1_19_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);const before=e.x;b.hit(u,e,10,'physical');assert.equal(e.x,before);assert.ok(e.shift);b.step();assert.ok(e.x>before);
 });
 
 test('缪尔赛思的莱茵生命减费对开局入场单位只结算一次',()=>{
