@@ -1,14 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
-import {defaultWaveTable,loadWaveTable,emptyWaveTable,TRAINING_TYPES,WAVE_STORE_KEY} from '../dist/native-wave-fill.js';
+import {defaultWaveTable,loadWaveTable,emptyWaveTable,TRAINING_TYPES,WAVE_STORE_KEY,enemyActivity} from '../dist/native-wave-fill.js';
 import {fillBudgetWave,waveRng} from '../dist/native-wave-random.js';
 import {applyEditorAction,editorState} from '../dist/native-wave-editor.js';
 
 test('every default template draws valid affordable period enemies without placeholders',()=>{
  const table=defaultWaveTable();let count=0;
  for(const t of TRAINING_TYPES)for(const tier of [1,2,3])for(const slot of table.types[t.id][tier].templates){
-  count++;assert.ok(slot.pool.length>=2);
+  count++;assert.ok(slot.pool.length>=1,'单一活动允许只有一种本期敌人');
+  assert.deepEqual([...new Set(slot.pool.map(enemyActivity))],[slot.activity]);
+  assert.ok(slot.pool.every(id=>NATIVE_DATA.enemies[id].enemyBehavior.randomPoolEligible===true));
   for(const id of slot.pool){assert.ok(NATIVE_DATA.enemies[id]);assert.ok(NATIVE_DATA.season.enemyInfoDict[t.id].includes(id));assert.ok(table.costs[id]<=slot.budget);if(tier===1){assert.equal(slot.maxCost,4);assert.ok(table.costs[id]<=slot.maxCost);}if(t.id==='FLY')assert.equal(NATIVE_DATA.enemies[id].motion,'FLY');}
   const copy=defaultWaveTable();copy.types[t.id][tier].templates=[slot];const wave=fillBudgetWave(waveRng(42),copy,t.id,tier);
   assert.equal(wave.unfilled,false);const [min,max]=[[6,8],[15,20],[35,40]][tier-1];assert.ok(wave.ids.length>=min&&wave.ids.length<=max);assert.ok(wave.spent<=slot.budget);

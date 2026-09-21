@@ -126,31 +126,79 @@
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨推进",
+            "name": "初始",
             "budget": 40,
             "maxCost": 4,
             "pool": [
-              "enemy_1000_gopro_2",
-              "enemy_1043_zomsbr",
-              "enemy_1071_dftman",
-              "enemy_1116_liprr",
-              "enemy_1251_lysyta",
-              "enemy_1325_cbgpro",
-              "enemy_1381_winman"
-            ]
+              "enemy_1000_gopro_2"
+            ],
+            "activity": "初始"
           },
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨增援",
+            "name": "主线第五章",
             "budget": 40,
             "maxCost": 4,
             "pool": [
-              "enemy_1116_liprr",
-              "enemy_1251_lysyta",
-              "enemy_1325_cbgpro",
+              "enemy_1043_zomsbr"
+            ],
+            "activity": "主线第五章"
+          },
+          {
+            "minCount": 6,
+            "maxCount": 8,
+            "name": "生于黑夜",
+            "budget": 40,
+            "maxCost": 4,
+            "pool": [
+              "enemy_1071_dftman"
+            ],
+            "activity": "生于黑夜"
+          },
+          {
+            "minCount": 6,
+            "maxCount": 8,
+            "name": "孤岛风云",
+            "budget": 40,
+            "maxCost": 4,
+            "pool": [
+              "enemy_1116_liprr"
+            ],
+            "activity": "孤岛风云"
+          },
+          {
+            "minCount": 6,
+            "maxCount": 8,
+            "name": "绿野幻梦",
+            "budget": 40,
+            "maxCost": 4,
+            "pool": [
+              "enemy_1251_lysyta"
+            ],
+            "activity": "绿野幻梦"
+          },
+          {
+            "minCount": 6,
+            "maxCount": 8,
+            "name": "孤星",
+            "budget": 40,
+            "maxCost": 4,
+            "pool": [
+              "enemy_1325_cbgpro"
+            ],
+            "activity": "孤星"
+          },
+          {
+            "minCount": 6,
+            "maxCount": 8,
+            "name": "银心湖列车",
+            "budget": 40,
+            "maxCost": 4,
+            "pool": [
               "enemy_1381_winman"
-            ]
+            ],
+            "activity": "银心湖列车"
           }
         ]
       },
@@ -159,52 +207,113 @@
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "混合进攻",
+            "name": "初始",
             "budget": 160,
             "maxCost": null,
             "pool": [
               "enemy_1000_gopro_2",
-              "enemy_1043_zomsbr",
-              "enemy_1046_agent",
-              "enemy_1071_dftman",
-              "enemy_1116_liprr",
-              "enemy_1251_lysyta",
-              "enemy_1251_lysyta_2",
-              "enemy_1325_cbgpro",
-              "enemy_1325_cbgpro_2",
-              "enemy_1381_winman",
-              "enemy_1072_dlancer",
-              "enemy_1116_liprr_2",
-              "enemy_1249_lysdb_2",
-              "enemy_1381_winman_2",
-              "enemy_1010_demon",
-              "enemy_1118_lidbox_2",
-              "enemy_1252_lysytb_2",
-              "enemy_1061_zomshd",
-              "enemy_1119_vofsd",
-              "enemy_1045_hammer",
-              "enemy_1328_cbjedi"
-            ]
+              "enemy_1010_demon"
+            ],
+            "activity": "初始"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "精锐增援",
+            "name": "主线第五章",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
+              "enemy_1043_zomsbr",
+              "enemy_1045_hammer"
+            ],
+            "activity": "主线第五章"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "火蓝之心",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
+              "enemy_1046_agent"
+            ],
+            "activity": "火蓝之心"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "生于黑夜",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
+              "enemy_1071_dftman",
+              "enemy_1072_dlancer"
+            ],
+            "activity": "生于黑夜"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "孤岛风云",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
+              "enemy_1116_liprr",
+              "enemy_1116_liprr_2",
+              "enemy_1118_lidbox_2",
+              "enemy_1119_vofsd"
+            ],
+            "activity": "孤岛风云"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "绿野幻梦",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
+              "enemy_1251_lysyta",
+              "enemy_1251_lysyta_2",
+              "enemy_1249_lysdb_2",
+              "enemy_1252_lysytb_2"
+            ],
+            "activity": "绿野幻梦"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "孤星",
             "budget": 160,
             "maxCost": null,
             "pool": [
               "enemy_1325_cbgpro",
               "enemy_1325_cbgpro_2",
-              "enemy_1381_winman",
-              "enemy_1072_dlancer",
-              "enemy_1116_liprr_2",
-              "enemy_1249_lysdb_2",
-              "enemy_1381_winman_2",
-              "enemy_1010_demon",
-              "enemy_1118_lidbox_2",
-              "enemy_1252_lysytb_2",
               "enemy_1328_cbjedi"
-            ]
+            ],
+            "activity": "孤星"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "银心湖列车",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
+              "enemy_1381_winman",
+              "enemy_1381_winman_2"
+            ],
+            "activity": "银心湖列车"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "主线第六章",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
+              "enemy_1061_zomshd"
+            ],
+            "activity": "主线第六章"
           }
         ]
       },
@@ -213,79 +322,176 @@
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "高压攻势",
+            "name": "初始",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1000_gopro_2",
-              "enemy_1043_zomsbr",
-              "enemy_1046_agent",
-              "enemy_1071_dftman",
-              "enemy_1116_liprr",
-              "enemy_1251_lysyta",
-              "enemy_1251_lysyta_2",
-              "enemy_1325_cbgpro",
-              "enemy_1325_cbgpro_2",
-              "enemy_1381_winman",
-              "enemy_1422_lrsldr_2",
-              "enemy_1072_dlancer",
-              "enemy_1116_liprr_2",
-              "enemy_1249_lysdb_2",
-              "enemy_1381_winman_2",
               "enemy_1010_demon",
-              "enemy_1118_lidbox_2",
-              "enemy_1252_lysytb_2",
-              "enemy_1061_zomshd",
-              "enemy_1119_vofsd",
-              "enemy_1045_hammer",
-              "enemy_1254_lypa_2",
-              "enemy_1328_cbjedi",
-              "enemy_1387_winshd",
-              "enemy_1010_demon_2",
-              "enemy_1402_tgshd_2",
-              "enemy_1121_lifbos",
-              "enemy_1329_cbshld",
-              "enemy_1329_cbshld_2",
-              "enemy_1006_shield_3",
-              "enemy_10124_uashld_2",
-              "enemy_1045_hammer_2",
-              "enemy_1121_lifbos_2",
-              "enemy_1320_wdrrl_2",
-              "enemy_1425_lrcmra_2"
-            ]
+              "enemy_1010_demon_2"
+            ],
+            "activity": "初始"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "集中突破",
+            "name": "主线第五章",
             "budget": 560,
             "maxCost": null,
             "pool": [
-              "enemy_1072_dlancer",
-              "enemy_1116_liprr_2",
-              "enemy_1249_lysdb_2",
-              "enemy_1381_winman_2",
-              "enemy_1010_demon",
-              "enemy_1118_lidbox_2",
-              "enemy_1252_lysytb_2",
-              "enemy_1061_zomshd",
-              "enemy_1119_vofsd",
+              "enemy_1043_zomsbr",
               "enemy_1045_hammer",
-              "enemy_1254_lypa_2",
-              "enemy_1328_cbjedi",
-              "enemy_1387_winshd",
-              "enemy_1010_demon_2",
-              "enemy_1402_tgshd_2",
+              "enemy_1045_hammer_2"
+            ],
+            "activity": "主线第五章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "火蓝之心",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1046_agent"
+            ],
+            "activity": "火蓝之心"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "生于黑夜",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1071_dftman",
+              "enemy_1072_dlancer"
+            ],
+            "activity": "生于黑夜"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "孤岛风云",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1116_liprr",
+              "enemy_1116_liprr_2",
+              "enemy_1118_lidbox_2",
+              "enemy_1119_vofsd",
               "enemy_1121_lifbos",
+              "enemy_1121_lifbos_2"
+            ],
+            "activity": "孤岛风云"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "绿野幻梦",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1251_lysyta",
+              "enemy_1251_lysyta_2",
+              "enemy_1249_lysdb_2",
+              "enemy_1252_lysytb_2",
+              "enemy_1254_lypa_2"
+            ],
+            "activity": "绿野幻梦"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "孤星",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1325_cbgpro",
+              "enemy_1325_cbgpro_2",
+              "enemy_1328_cbjedi",
               "enemy_1329_cbshld",
-              "enemy_1329_cbshld_2",
-              "enemy_1006_shield_3",
-              "enemy_10124_uashld_2",
-              "enemy_1045_hammer_2",
-              "enemy_1121_lifbos_2",
-              "enemy_1320_wdrrl_2",
-              "enemy_1425_lrcmra_2"
-            ]
+              "enemy_1329_cbshld_2"
+            ],
+            "activity": "孤星"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "银心湖列车",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1381_winman",
+              "enemy_1381_winman_2",
+              "enemy_1387_winshd"
+            ],
+            "activity": "银心湖列车"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "主线第十四章",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1422_lrsldr_2"
+            ],
+            "activity": "主线第十四章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "主线第六章",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1061_zomshd"
+            ],
+            "activity": "主线第六章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "水晶箭行动",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1402_tgshd_2"
+            ],
+            "activity": "水晶箭行动"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "骑兵与猎人",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1006_shield_3"
+            ],
+            "activity": "骑兵与猎人"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "主线第十六章",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_10124_uashld_2"
+            ],
+            "activity": "主线第十六章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "主线第十二章",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1320_wdrrl_2"
+            ],
+            "activity": "主线第十二章"
           }
         ]
       }
@@ -296,25 +502,25 @@
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨推进",
+            "name": "初始",
             "budget": 24,
             "maxCost": 4,
             "pool": [
               "enemy_1005_yokai",
-              "enemy_10083_hlbird",
               "enemy_1005_yokai_2"
-            ]
+            ],
+            "activity": "初始"
           },
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨增援",
+            "name": "众生行记",
             "budget": 24,
             "maxCost": 4,
             "pool": [
-              "enemy_10083_hlbird",
-              "enemy_1005_yokai_2"
-            ]
+              "enemy_10083_hlbird"
+            ],
+            "activity": "众生行记"
           }
         ]
       },
@@ -323,19 +529,50 @@
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "混合进攻",
+            "name": "初始",
             "budget": 100,
             "maxCost": null,
             "pool": [
               "enemy_1005_yokai",
-              "enemy_10083_hlbird",
               "enemy_1005_yokai_2",
-              "enemy_1017_defdrn",
+              "enemy_1017_defdrn"
+            ],
+            "activity": "初始"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "众生行记",
+            "budget": 100,
+            "maxCost": null,
+            "pool": [
+              "enemy_10083_hlbird"
+            ],
+            "activity": "众生行记"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "主线第五章",
+            "budget": 100,
+            "maxCost": null,
+            "pool": [
               "enemy_1041_lazerd",
-              "enemy_1355_mrfly",
               "enemy_1041_lazerd_2",
               "enemy_1042_frostd"
-            ]
+            ],
+            "activity": "主线第五章"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "不义之财",
+            "budget": 100,
+            "maxCost": null,
+            "pool": [
+              "enemy_1355_mrfly"
+            ],
+            "activity": "不义之财"
           }
         ]
       },
@@ -344,44 +581,86 @@
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "高压攻势",
+            "name": "初始",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1005_yokai",
-              "enemy_10083_hlbird",
               "enemy_1005_yokai_2",
               "enemy_1017_defdrn",
-              "enemy_1041_lazerd",
-              "enemy_1407_hummbd",
-              "enemy_1355_mrfly",
-              "enemy_1041_lazerd_2",
-              "enemy_1042_frostd",
-              "enemy_1355_mrfly_2",
-              "enemy_10084_hlegle",
-              "enemy_1112_emppnt",
-              "enemy_9009_acfort",
               "enemy_1005_yokai_3"
-            ]
+            ],
+            "activity": "初始"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "集中突破",
+            "name": "众生行记",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_10083_hlbird",
+              "enemy_10084_hlegle"
+            ],
+            "activity": "众生行记"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "主线第五章",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1041_lazerd",
-              "enemy_1407_hummbd",
-              "enemy_1355_mrfly",
               "enemy_1041_lazerd_2",
-              "enemy_1042_frostd",
-              "enemy_1355_mrfly_2",
-              "enemy_10084_hlegle",
-              "enemy_1112_emppnt",
-              "enemy_9009_acfort",
-              "enemy_1005_yokai_3"
-            ]
+              "enemy_1042_frostd"
+            ],
+            "activity": "主线第五章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "水晶箭行动",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1407_hummbd"
+            ],
+            "activity": "水晶箭行动"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "不义之财",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1355_mrfly",
+              "enemy_1355_mrfly_2"
+            ],
+            "activity": "不义之财"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "主线第八章",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1112_emppnt"
+            ],
+            "activity": "主线第八章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "卫戍协议：盟约",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_9009_acfort"
+            ],
+            "activity": "卫戍协议：盟约"
           }
         ]
       }
@@ -392,25 +671,15 @@
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨推进",
+            "name": "将进酒",
             "budget": 24,
             "maxCost": 4,
             "pool": [
               "enemy_1195_sfyin",
               "enemy_1197_sfshu",
               "enemy_1195_sfyin_2"
-            ]
-          },
-          {
-            "minCount": 6,
-            "maxCount": 8,
-            "name": "前哨增援",
-            "budget": 24,
-            "maxCost": 4,
-            "pool": [
-              "enemy_1197_sfshu",
-              "enemy_1195_sfyin_2"
-            ]
+            ],
+            "activity": "将进酒"
           }
         ]
       },
@@ -419,29 +688,28 @@
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "混合进攻",
+            "name": "将进酒",
             "budget": 120,
             "maxCost": null,
             "pool": [
               "enemy_1195_sfyin",
               "enemy_1197_sfshu",
               "enemy_1195_sfyin_2",
-              "enemy_1197_sfshu_2",
-              "enemy_1288_duskls"
-            ]
+              "enemy_1197_sfshu_2"
+            ],
+            "activity": "将进酒"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "精锐增援",
+            "name": "照我以火",
             "budget": 120,
             "maxCost": null,
             "pool": [
-              "enemy_1195_sfyin_2",
-              "enemy_1197_sfshu_2",
               "enemy_1288_duskls",
               "enemy_1288_duskls_2"
-            ]
+            ],
+            "activity": "照我以火"
           }
         ]
       },
@@ -450,7 +718,7 @@
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "高压攻势",
+            "name": "将进酒",
             "budget": 360,
             "maxCost": null,
             "pool": [
@@ -458,29 +726,34 @@
               "enemy_1197_sfshu",
               "enemy_1195_sfyin_2",
               "enemy_1197_sfshu_2",
-              "enemy_1288_duskls",
-              "enemy_1288_duskls_2",
               "enemy_1199_sfjin",
-              "enemy_1292_duskld",
-              "enemy_1207_sfji",
-              "enemy_9010_acpupp"
-            ]
+              "enemy_1207_sfji"
+            ],
+            "activity": "将进酒"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "集中突破",
+            "name": "照我以火",
             "budget": 360,
             "maxCost": null,
             "pool": [
-              "enemy_1197_sfshu_2",
               "enemy_1288_duskls",
               "enemy_1288_duskls_2",
-              "enemy_1199_sfjin",
-              "enemy_1292_duskld",
-              "enemy_1207_sfji",
+              "enemy_1292_duskld"
+            ],
+            "activity": "照我以火"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "卫戍协议：盟约",
+            "budget": 360,
+            "maxCost": null,
+            "pool": [
               "enemy_9010_acpupp"
-            ]
+            ],
+            "activity": "卫戍协议：盟约"
           }
         ]
       }
@@ -491,28 +764,46 @@
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨推进",
+            "name": "挽歌燃烧殆尽",
             "budget": 24,
             "maxCost": 4,
             "pool": [
-              "enemy_10065_ftzlc",
-              "enemy_1148_dssbr",
-              "enemy_1158_divman",
-              "enemy_2021_syfish"
-            ]
+              "enemy_10065_ftzlc"
+            ],
+            "activity": "挽歌燃烧殆尽"
           },
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨增援",
+            "name": "覆潮之下",
             "budget": 24,
             "maxCost": 4,
             "pool": [
-              "enemy_10065_ftzlc",
-              "enemy_1148_dssbr",
-              "enemy_1158_divman",
+              "enemy_1148_dssbr"
+            ],
+            "activity": "覆潮之下"
+          },
+          {
+            "minCount": 6,
+            "maxCount": 8,
+            "name": "多索雷斯假日",
+            "budget": 24,
+            "maxCost": 4,
+            "pool": [
+              "enemy_1158_divman"
+            ],
+            "activity": "多索雷斯假日"
+          },
+          {
+            "minCount": 6,
+            "maxCount": 8,
+            "name": "水月与深蓝之树",
+            "budget": 24,
+            "maxCost": 4,
+            "pool": [
               "enemy_2021_syfish"
-            ]
+            ],
+            "activity": "水月与深蓝之树"
           }
         ]
       },
@@ -521,38 +812,73 @@
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "混合进攻",
+            "name": "落叶逐火",
             "budget": 160,
             "maxCost": null,
             "pool": [
               "enemy_1305_mhslim",
-              "enemy_1305_mhslim_2",
-              "enemy_10065_ftzlc",
-              "enemy_1148_dssbr",
-              "enemy_1148_dssbr_2",
-              "enemy_1158_divman",
-              "enemy_2021_syfish",
-              "enemy_1161_tidmag",
-              "enemy_1229_darmy",
-              "enemy_1161_tidmag_2",
-              "enemy_1229_darmy_2"
-            ]
+              "enemy_1305_mhslim_2"
+            ],
+            "activity": "落叶逐火"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "精锐增援",
+            "name": "挽歌燃烧殆尽",
             "budget": 160,
             "maxCost": null,
             "pool": [
-              "enemy_1148_dssbr_2",
+              "enemy_10065_ftzlc"
+            ],
+            "activity": "挽歌燃烧殆尽"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "覆潮之下",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
+              "enemy_1148_dssbr",
+              "enemy_1148_dssbr_2"
+            ],
+            "activity": "覆潮之下"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "多索雷斯假日",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
               "enemy_1158_divman",
-              "enemy_2021_syfish",
               "enemy_1161_tidmag",
+              "enemy_1161_tidmag_2"
+            ],
+            "activity": "多索雷斯假日"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "水月与深蓝之树",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
+              "enemy_2021_syfish"
+            ],
+            "activity": "水月与深蓝之树"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "主线第十章",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
               "enemy_1229_darmy",
-              "enemy_1161_tidmag_2",
               "enemy_1229_darmy_2"
-            ]
+            ],
+            "activity": "主线第十章"
           }
         ]
       },
@@ -561,50 +887,99 @@
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "高压攻势",
+            "name": "落叶逐火",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1305_mhslim",
-              "enemy_1305_mhslim_2",
-              "enemy_10065_ftzlc",
-              "enemy_1148_dssbr",
-              "enemy_1148_dssbr_2",
-              "enemy_1158_divman",
-              "enemy_2021_syfish",
-              "enemy_1161_tidmag",
-              "enemy_1229_darmy",
-              "enemy_1161_tidmag_2",
-              "enemy_1229_darmy_2",
-              "enemy_10067_ftsjc",
-              "enemy_1160_hvyslr",
-              "enemy_1275_dwlock_2",
-              "enemy_1160_hvyslr_2",
-              "enemy_2025_syufo",
-              "enemy_1439_dslntf",
-              "enemy_9007_acelem"
-            ]
+              "enemy_1305_mhslim_2"
+            ],
+            "activity": "落叶逐火"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "集中突破",
+            "name": "挽歌燃烧殆尽",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_10065_ftzlc",
+              "enemy_10067_ftsjc"
+            ],
+            "activity": "挽歌燃烧殆尽"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "覆潮之下",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1148_dssbr",
+              "enemy_1148_dssbr_2"
+            ],
+            "activity": "覆潮之下"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "多索雷斯假日",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1158_divman",
+              "enemy_1161_tidmag",
+              "enemy_1161_tidmag_2",
+              "enemy_1160_hvyslr",
+              "enemy_1160_hvyslr_2"
+            ],
+            "activity": "多索雷斯假日"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "水月与深蓝之树",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_2021_syfish",
-              "enemy_1161_tidmag",
+              "enemy_2025_syufo"
+            ],
+            "activity": "水月与深蓝之树"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "主线第十章",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
               "enemy_1229_darmy",
-              "enemy_1161_tidmag_2",
-              "enemy_1229_darmy_2",
-              "enemy_10067_ftsjc",
-              "enemy_1160_hvyslr",
-              "enemy_1275_dwlock_2",
-              "enemy_1160_hvyslr_2",
-              "enemy_2025_syufo",
-              "enemy_1439_dslntf",
+              "enemy_1229_darmy_2"
+            ],
+            "activity": "主线第十章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "主线第十一章",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1275_dwlock_2"
+            ],
+            "activity": "主线第十一章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "卫戍协议：盟约",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
               "enemy_9007_acelem"
-            ]
+            ],
+            "activity": "卫戍协议：盟约"
           }
         ]
       }
@@ -615,26 +990,26 @@
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨推进",
+            "name": "生路",
             "budget": 48,
             "maxCost": 4,
             "pool": [
               "enemy_1433_dsbasi",
-              "enemy_1267_nhpbr",
               "enemy_1433_dsbasi_2"
-            ]
+            ],
+            "activity": "生路"
           },
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨增援",
+            "name": "主线第十一章",
             "budget": 48,
             "maxCost": 4,
             "pool": [
               "enemy_1267_nhpbr",
-              "enemy_1267_nhpbr_2",
-              "enemy_1433_dsbasi_2"
-            ]
+              "enemy_1267_nhpbr_2"
+            ],
+            "activity": "主线第十一章"
           }
         ]
       },
@@ -643,29 +1018,38 @@
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "混合进攻",
+            "name": "生路",
             "budget": 160,
             "maxCost": null,
             "pool": [
               "enemy_1433_dsbasi",
-              "enemy_1267_nhpbr",
-              "enemy_1267_nhpbr_2",
-              "enemy_1433_dsbasi_2",
-              "enemy_1270_nhstlk"
-            ]
+              "enemy_1433_dsbasi_2"
+            ],
+            "activity": "生路"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "精锐增援",
+            "name": "主线第十一章",
             "budget": 160,
             "maxCost": null,
             "pool": [
+              "enemy_1267_nhpbr",
               "enemy_1267_nhpbr_2",
-              "enemy_1433_dsbasi_2",
-              "enemy_1234_dsubrl",
               "enemy_1270_nhstlk"
-            ]
+            ],
+            "activity": "主线第十一章"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "愚人号",
+            "budget": 160,
+            "maxCost": null,
+            "pool": [
+              "enemy_1234_dsubrl"
+            ],
+            "activity": "愚人号"
           }
         ]
       },
@@ -674,40 +1058,64 @@
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "高压攻势",
+            "name": "生路",
             "budget": 400,
             "maxCost": null,
             "pool": [
               "enemy_1433_dsbasi",
-              "enemy_1267_nhpbr",
-              "enemy_1267_nhpbr_2",
-              "enemy_1433_dsbasi_2",
-              "enemy_10122_uacann_2",
-              "enemy_1234_dsubrl",
-              "enemy_1270_nhstlk",
-              "enemy_1234_dsubrl_2",
-              "enemy_1272_nhtank",
-              "enemy_9006_actoxi",
-              "enemy_1270_nhstlk_2",
-              "enemy_1272_nhtank_2"
-            ]
+              "enemy_1433_dsbasi_2"
+            ],
+            "activity": "生路"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "集中突破",
+            "name": "主线第十一章",
             "budget": 400,
             "maxCost": null,
             "pool": [
-              "enemy_10122_uacann_2",
-              "enemy_1234_dsubrl",
+              "enemy_1267_nhpbr",
+              "enemy_1267_nhpbr_2",
               "enemy_1270_nhstlk",
-              "enemy_1234_dsubrl_2",
               "enemy_1272_nhtank",
-              "enemy_9006_actoxi",
               "enemy_1270_nhstlk_2",
               "enemy_1272_nhtank_2"
-            ]
+            ],
+            "activity": "主线第十一章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "主线第十六章",
+            "budget": 400,
+            "maxCost": null,
+            "pool": [
+              "enemy_10122_uacann_2"
+            ],
+            "activity": "主线第十六章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "愚人号",
+            "budget": 400,
+            "maxCost": null,
+            "pool": [
+              "enemy_1234_dsubrl",
+              "enemy_1234_dsubrl_2"
+            ],
+            "activity": "愚人号"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "卫戍协议：盟约",
+            "budget": 400,
+            "maxCost": null,
+            "pool": [
+              "enemy_9006_actoxi"
+            ],
+            "activity": "卫戍协议：盟约"
           }
         ]
       }
@@ -718,24 +1126,25 @@
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨推进",
+            "name": "初始",
             "budget": 32,
             "maxCost": 4,
             "pool": [
               "enemy_1009_lurker",
               "enemy_1019_jshoot"
-            ]
+            ],
+            "activity": "初始"
           },
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨增援",
+            "name": "主线第五章",
             "budget": 32,
             "maxCost": 4,
             "pool": [
-              "enemy_1043_zomsbr",
-              "enemy_10043_sailor"
-            ]
+              "enemy_1043_zomsbr"
+            ],
+            "activity": "主线第五章"
           }
         ]
       },
@@ -744,18 +1153,37 @@
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "混合进攻",
+            "name": "初始",
             "budget": 120,
             "maxCost": null,
             "pool": [
               "enemy_1009_lurker",
               "enemy_1019_jshoot",
-              "enemy_10031_cnvsld",
-              "enemy_1019_jshoot_2",
-              "enemy_1043_zomsbr",
-              "enemy_10043_sailor",
+              "enemy_1019_jshoot_2"
+            ],
+            "activity": "初始"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "主线第五章",
+            "budget": 120,
+            "maxCost": null,
+            "pool": [
+              "enemy_1043_zomsbr"
+            ],
+            "activity": "主线第五章"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "银心湖列车",
+            "budget": 120,
+            "maxCost": null,
+            "pool": [
               "enemy_1381_winman"
-            ]
+            ],
+            "activity": "银心湖列车"
           }
         ]
       },
@@ -764,49 +1192,95 @@
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "高压攻势",
+            "name": "初始",
             "budget": 360,
             "maxCost": null,
             "pool": [
               "enemy_1009_lurker",
               "enemy_1019_jshoot",
-              "enemy_10031_cnvsld",
-              "enemy_1019_jshoot_2",
-              "enemy_1043_zomsbr",
-              "enemy_10043_sailor",
-              "enemy_1381_winman",
-              "enemy_1422_lrsldr_2",
-              "enemy_10042_prtrop",
-              "enemy_1404_msnip",
-              "enemy_10042_prtrop_2",
-              "enemy_1299_ymkilr",
-              "enemy_1389_winbab_2",
-              "enemy_10034_cnvsax",
-              "enemy_9008_acbunn",
-              "enemy_1299_ymkilr_2",
-              "enemy_1283_sgkill"
-            ]
+              "enemy_1019_jshoot_2"
+            ],
+            "activity": "初始"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "集中突破",
+            "name": "主线第五章",
             "budget": 360,
             "maxCost": null,
             "pool": [
-              "enemy_10043_sailor",
+              "enemy_1043_zomsbr"
+            ],
+            "activity": "主线第五章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "银心湖列车",
+            "budget": 360,
+            "maxCost": null,
+            "pool": [
               "enemy_1381_winman",
-              "enemy_1422_lrsldr_2",
+              "enemy_1389_winbab_2"
+            ],
+            "activity": "银心湖列车"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "主线第十四章",
+            "budget": 360,
+            "maxCost": null,
+            "pool": [
+              "enemy_1422_lrsldr_2"
+            ],
+            "activity": "主线第十四章"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "出苍白海",
+            "budget": 360,
+            "maxCost": null,
+            "pool": [
               "enemy_10042_prtrop",
-              "enemy_1404_msnip",
-              "enemy_10042_prtrop_2",
+              "enemy_10042_prtrop_2"
+            ],
+            "activity": "出苍白海"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "登临意",
+            "budget": 360,
+            "maxCost": null,
+            "pool": [
               "enemy_1299_ymkilr",
-              "enemy_1389_winbab_2",
-              "enemy_10034_cnvsax",
-              "enemy_9008_acbunn",
-              "enemy_1299_ymkilr_2",
+              "enemy_1299_ymkilr_2"
+            ],
+            "activity": "登临意"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "卫戍协议：盟约",
+            "budget": 360,
+            "maxCost": null,
+            "pool": [
+              "enemy_9008_acbunn"
+            ],
+            "activity": "卫戍协议：盟约"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "叙拉古人",
+            "budget": 360,
+            "maxCost": null,
+            "pool": [
               "enemy_1283_sgkill"
-            ]
+            ],
+            "activity": "叙拉古人"
           }
         ]
       }
@@ -817,25 +1291,16 @@
           {
             "minCount": 6,
             "maxCount": 8,
-            "name": "前哨推进",
+            "name": "主线第九章",
             "budget": 24,
             "maxCost": 4,
             "pool": [
               "enemy_1165_duhond",
               "enemy_1166_dusbr",
-              "enemy_1168_dumage"
-            ]
-          },
-          {
-            "minCount": 6,
-            "maxCount": 8,
-            "name": "前哨增援",
-            "budget": 24,
-            "maxCost": 4,
-            "pool": [
-              "enemy_1166_dusbr",
+              "enemy_1168_dumage",
               "enemy_1169_duphlx"
-            ]
+            ],
+            "activity": "主线第九章"
           }
         ]
       },
@@ -844,26 +1309,18 @@
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "混合进攻",
+            "name": "主线第九章",
             "budget": 160,
             "maxCost": null,
             "pool": [
               "enemy_1165_duhond",
               "enemy_1166_dusbr",
               "enemy_1168_dumage",
-              "enemy_1169_duphlx"
-            ]
-          },
-          {
-            "minCount": 15,
-            "maxCount": 20,
-            "name": "精锐增援",
-            "budget": 160,
-            "maxCost": null,
-            "pool": [
+              "enemy_1169_duphlx",
               "enemy_1169_duphlx_2",
               "enemy_1170_dushld"
-            ]
+            ],
+            "activity": "主线第九章"
           }
         ]
       },
@@ -872,7 +1329,7 @@
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "高压攻势",
+            "name": "主线第九章",
             "budget": 520,
             "maxCost": null,
             "pool": [
@@ -883,31 +1340,23 @@
               "enemy_1169_duphlx",
               "enemy_1169_duphlx_2",
               "enemy_1170_dushld",
-              "enemy_1172_dugago",
               "enemy_1170_dushld_2",
               "enemy_1175_dushdo_2",
               "enemy_1174_duholy",
-              "enemy_9011_acrefr",
               "enemy_1174_duholy_2"
-            ]
+            ],
+            "activity": "主线第九章"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "集中突破",
+            "name": "卫戍协议：盟约",
             "budget": 520,
             "maxCost": null,
             "pool": [
-              "enemy_1169_duphlx",
-              "enemy_1169_duphlx_2",
-              "enemy_1170_dushld",
-              "enemy_1172_dugago",
-              "enemy_1170_dushld_2",
-              "enemy_1175_dushdo_2",
-              "enemy_1174_duholy",
-              "enemy_9011_acrefr",
-              "enemy_1174_duholy_2"
-            ]
+              "enemy_9011_acrefr"
+            ],
+            "activity": "卫戍协议：盟约"
           }
         ]
       }

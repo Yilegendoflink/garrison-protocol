@@ -67,7 +67,7 @@ export function renderWaveEditor(data,table,ui){
  return `<main class="wave-ed">
   <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>编制台 / WAVE LEDGER</small><h1>敌人波次</h1></div><span>本期 ${rows.length} 条可出怪档案</span></header>
   <p class="wave-ed-lead">同一词条、同一难度可编多套模板。开战时先随机抽一套，再按那一套的预算从它的池里抽怪，直到买不起为止。</p>
-  <p class="wave-ed-lead">内置默认配置覆盖全部 7 种词条、3 个压力档，每档 2 套模板；前期 6–8 只、中期 15–20 只、后期 35–40 只。默认预算足够完成数量目标；手动降低预算可能减少出怪数。预算与敌人难度用于测试，不代表原作波次；部分敌人特殊能力仍待完善。恢复默认会覆盖当前整张表。</p>
+  <p class="wave-ed-lead">内置默认配置覆盖全部 7 种词条、3 个压力档，每档按登场活动分组；前期 6–8 只、中期 15–20 只、后期 35–40 只。默认预算足够完成数量目标；手动降低预算可能减少出怪数。预算与敌人难度用于测试，不代表原作波次；部分敌人特殊能力仍待完善。恢复默认会覆盖当前整张表。</p>
   <nav class="wave-ed-types">${TRAINING_TYPES.map(t=>`<button data-act="ed-type" data-id="${t.id}" class="${t.id===type.id?'chosen':''}">${esc(t.name)}<small>${esc(t.id)}</small></button>`).join('')}</nav>
   <div class="wave-ed-toolbar">
    <div class="wave-ed-tiers">${[1,2,3].map(n=>`<button data-act="ed-tier" data-tier="${n}" class="${ui.tier===n?'chosen':''}">${'I'.repeat(n)}</button>`).join('')}</div>
