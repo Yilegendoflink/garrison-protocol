@@ -293,7 +293,7 @@ test('死亡之眼终结凋亡仅覆盖目标和相邻四格，不波及对角',
 test('拷打者周围敌人因持续流失退场时治疗并叠攻，同一次退场不重复触发',()=>{
  const {b}=arena(),e=spawn(b,'enemy_1364_spnaxe_2'),victim=spawn(b,'enemy_1007_slime',3,4);
  const base=e.atk;e.hp=e.maxHp*.5;applyLoss(b,{target:victim,amount:victim.hp});
- assert.equal(e.deathGrowthStacks,1);assert.equal(e.atk,base*1.1);assert.equal(e.hp,e.maxHp*.65);
+ assert.equal(e.deathGrowthStacks,1);assert.equal(e.atk,base*1.1);assert.ok(Math.abs(e.hp-e.maxHp*.65)<1e-8);
  commitExit(b,{target:victim});assert.equal(e.deathGrowthStacks,1);
  const far=spawn(b,'enemy_1007_slime',5,5);commitExit(b,{target:far});assert.equal(e.deathGrowthStacks,1);
  for(let i=0;i<18;i++)commitExit(b,{target:spawn(b,'enemy_1007_slime',3,4)});

@@ -4739,6 +4739,25 @@ function visibleRoutes(level,fly){
  return (level.routes||[]).map((route,index)=>({route,index})).filter(({route})=>route&&route.startPosition.col<=10&&route.startPosition.row>=6&&route.startPosition.row<=12&&(fly?route.motionMode==='FLY':route.motionMode!=='FLY'));
 }
 
+// 各种敌人按自身数量的分位交错，再把整波平铺到开场 2–40 秒。
+// 按出生点分桶，避免同一入口路线较多时分走更多敌人。
+function scheduleWaveQueue(queue,level,round){
+ const groups=new Map();
+ for(const q of queue){if(!groups.has(q.id))groups.set(q.id,[]);groups.get(q.id).push(q);}
+ const lanes=[0,0],entries=[];
+ for(const [id,items] of [...groups].sort(([a],[b])=>a.localeCompare(b))){
+  const first=lanes[0]<=lanes[1]?0:1;
+  items.forEach((q,i)=>{const lane=round<=3?0:(first+i)%2;lanes[lane]++;entries.push({q,lane,rank:(i+.5)/items.length,id,ordinal:i});});
+ }
+ entries.sort((a,b)=>a.rank-b.rank||a.id.localeCompare(b.id)||a.ordinal-b.ordinal);
+ return entries.map(({q,lane},i)=>{
+  const fly=level.routes[q.route]?.motionMode==='FLY',matching=visibleRoutes(level,fly),routes=matching.length?matching:visibleRoutes(level,!fly);
+  const points=[...new Set(routes.map(r=>r.route.startPosition.row))].sort((a,b)=>a-b);
+  const row=lane===0?points[0]:points.at(-1),pool=routes.filter(r=>r.route.startPosition.row===row);
+  return {...q,at:entries.length<=1?2:2+38*i/(entries.length-1),route:pool.length?pool[i%pool.length].index:q.route};
+ });
+}
+
 function buildWavePlan(data,turn,roster=null,table=null){
  if(!turn)return null;
  if(turn.isBossTurn)return {round:turn.round,benchmark:true,total:0,targets:1,queue:[],level:null,levelId:null,assignment:null};
@@ -4747,18 +4766,18 @@ function buildWavePlan(data,turn,roster=null,table=null){
  if(!assignment||assignment.boss)return {round:turn.round,benchmark:false,total:0,targets:0,queue:[],level,levelId,assignment:assignment||null};
  const ground=visibleRoutes(level,false),air=visibleRoutes(level,true),queue=[],mode=data.season.modeDataDict[roster.modeId];
  const scale=mode?enemyCombatScale(mode,turn.round,{hidden:!!turn.isConditional}):{atk:1,hp:1,moveSpeed:1};
+ if(turn.round===1)scale.hp*=.8;
  const sourceTable=table||loadWaveTable(),waveTable=filterRandomPoolTable(sourceTable,data),pack=fillBudgetWave(waveRng(assignment.waveSeed||turn.round),waveTable,assignment.type,assignment.tier);
- const interval=pack.ids.length<=1?0:Math.max(1.2,Math.min(4,24/pack.ids.length));
  pack.ids.forEach((id,i)=>{
   const fly=(data.enemies?.[id]||level.enemyProfiles?.[id])?.motion==='FLY';
   const routes=fly?(air.length?air:ground):(ground.length?ground:air);if(!routes.length)return;
   const pick=routes[i%routes.length];
-  queue.push({id,at:2+i*interval,route:pick.index,cost:enemyCost(waveTable,id),placeholder:pack.unfilled,unfilled:pack.unfilled});
+  queue.push({id,route:pick.index,cost:enemyCost(waveTable,id),placeholder:pack.unfilled,unfilled:pack.unfilled});
  });
- return {round:turn.round,benchmark:false,total:queue.length,targets:queue.length,queue,level,levelId,assignment,scale,pack,filled:pack.unfilled?0:queue.length,placeholders:pack.unfilled?queue.length:0};
+ return {round:turn.round,benchmark:false,total:queue.length,targets:queue.length,queue:scheduleWaveQueue(queue,level,turn.round),level,levelId,assignment,scale,pack,filled:pack.unfilled?0:queue.length,placeholders:pack.unfilled?queue.length:0};
 }
 
-return {trainingType,difficultyColumn,scaleSide,enemyCombatScale,pressureTier,pickDistinct,createWaveRoster,waveRng,fillBudgetWave,filterRandomPoolTable,buildWavePlan};
+return {trainingType,difficultyColumn,scaleSide,enemyCombatScale,pressureTier,pickDistinct,createWaveRoster,waveRng,fillBudgetWave,filterRandomPoolTable,scheduleWaveQueue,buildWavePlan};
 },
 "native-waves.js": function(load) {
 const {buildWavePlan} = load("native-wave-random.js");
@@ -9337,6 +9356,7 @@ const {checkWEnrage,checkZaroCageHealth,initEnemySkills,enemySpEvent,selectEnemy
 const {branchBehavior,branchTrait,skillAntiAir} = load("native-branches.js");
 const {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} = load("native-equipment.js");
 const {nativeWavePlan} = load("native-waves.js");
+const {scheduleWaveQueue} = load("native-wave-random.js");
 const {damage,applyDamage,recoverHP,attackTiming,FPS} = load("combat.js");
 const {applyStatus,tickStatuses,permissions,statusAttributeChanges,isIsolated,yinYangAttackScale} = load("status.js");
 const {blackboard,skillPolicy,shouldAutoSkill,ROUND_LEAK_CAP} = load("protocol.js");
@@ -9714,7 +9734,7 @@ class NativeBattle {
   const prefer=predicate=>{const hit=targets.filter(predicate);if(hit.length)targets=hit;};
   if(cfg.targetRule==='blocked')prefer(e=>e.block!=null);else if(cfg.targetRule==='unblocked')prefer(e=>e.block==null);else if(cfg.targetRule==='ranged')prefer(e=>e.ranged||e.canAttack&&e.range>0);else if(cfg.targetRule==='air')prefer(e=>e.flying);else if(cfg.targetRule==='lowHp')prefer(e=>e.maxHp>0&&e.hp/e.maxHp<=.8);else if(talentTargetRule==='rooted')prefer(e=>permissions(e).rooted||e.statuses?.some(s=>s.kind==='root'));
   targets.sort((a,b)=>{if(p.charId==='char_423_blemsh'&&(p.activeTalents||[]).some(t=>/优先攻击.*沉睡/.test(t.description||''))){const sleeping=Number(permissions(b).sleeping)-Number(permissions(a).sleeping);if(sleeping)return sleeping;}if(cfg.targetRule==='maxHp')return b.maxHp-a.maxHp||b.hp-a.hp;if(cfg.targetRule==='minHp')return a.hp/a.maxHp-b.hp/b.maxHp;if(cfg.targetRule==='random')return (a.uid*1103515245%2147483647)-(b.uid*1103515245%2147483647);return compareOperatorTargets(a,b,u.uid,behavior.priority,p.position);});return targets;}
- prepareWaves(turn){const plan=nativeWavePlan(this.data,turn,this.economy.s.waveRoster);this.level=plan.level;this.s.queue=plan.queue;this.s.total=plan.total;this.combatScale=plan.scale||{atk:1,hp:1,moveSpeed:1};if(this.economy.s.bandId==='band_ducklord'&&turn.round>=5&&this.s.queue.length){const targets=['enemy_2002_bearmi_2','enemy_2034_sythef_2','enemy_2085_skzjxd_2','enemy_2001_duckmi_2'],ground=this.s.queue.filter(q=>this.level.routes[q.route]?.motionMode!=='FLY'),count=Math.min(2,Math.floor(this.economy.random()*3));for(let i=0;i<count&&ground.length;i++){if(this.economy.random()<.6)continue;const q=ground.splice(Math.floor(this.economy.random()*ground.length),1)[0];q.id=targets[Math.floor(this.economy.random()*targets.length)];q.ducklord=true;}}const bounty=this.economy.s.pendingBounty;if(bounty){const route=(this.level.routes||[]).findIndex(r=>r.motionMode!=='FLY'),baseAt=this.s.queue.reduce((n,q)=>Math.max(n,q.at||0),0);for(let i=0;i<bounty.count;i++)this.s.queue.push({id:bounty.enemyId,at:baseAt+1.5+i*1.2,route:route<0?0:route,cost:0,bountyReward:bounty.coin});this.s.total=this.s.queue.length;this.economy.s.pendingBounty=null;}this.s.total=this.s.queue.filter(q=>!(this.enemyRaw(q.id)?.enemyBehavior?.notCountInTotal??this.enemyRaw(q.id)?.notCountInTotal)).length;}
+ prepareWaves(turn){const plan=nativeWavePlan(this.data,turn,this.economy.s.waveRoster);this.level=plan.level;this.s.queue=plan.queue;this.s.total=plan.total;this.combatScale=plan.scale||{atk:1,hp:1,moveSpeed:1};if(this.economy.s.bandId==='band_ducklord'&&turn.round>=5&&this.s.queue.length){const targets=['enemy_2002_bearmi_2','enemy_2034_sythef_2','enemy_2085_skzjxd_2','enemy_2001_duckmi_2'],ground=this.s.queue.filter(q=>this.level.routes[q.route]?.motionMode!=='FLY'),count=Math.min(2,Math.floor(this.economy.random()*3));for(let i=0;i<count&&ground.length;i++){if(this.economy.random()<.6)continue;const q=ground.splice(Math.floor(this.economy.random()*ground.length),1)[0];q.id=targets[Math.floor(this.economy.random()*targets.length)];q.ducklord=true;}}const bounty=this.economy.s.pendingBounty;if(bounty){const route=(this.level.routes||[]).findIndex(r=>r.motionMode!=='FLY'),baseAt=this.s.queue.reduce((n,q)=>Math.max(n,q.at||0),0);for(let i=0;i<bounty.count;i++)this.s.queue.push({id:bounty.enemyId,at:baseAt+1.5+i*1.2,route:route<0?0:route,cost:0,bountyReward:bounty.coin});this.s.total=this.s.queue.length;this.economy.s.pendingBounty=null;}this.s.queue=scheduleWaveQueue(this.s.queue,this.level,turn.round);this.s.total=this.s.queue.filter(q=>!(this.enemyRaw(q.id)?.enemyBehavior?.notCountInTotal??this.enemyRaw(q.id)?.notCountInTotal)).length;}
  enemyRaw(id){return this.level?.enemyProfiles?.[id]||this.data.enemies[id]||this.data.enemyDependencies?.[id];}
  isPrimaryEnemy(id){return this.enemyRaw(id)?.enemyBehavior?.nonPrimary!==true;}
  tileWalkable(x,y){if(this.s?.summons?.some(s=>s.type==='mine-camp'&&s.deployed&&s.hp>0&&s.x===x&&s.y===y))return false;return x>=0&&y>=0&&x<this.map.cols&&y<this.map.rows&&Boolean(this.map.grid[y]?.[x])&&this.map.grid[y][x].passableMask!=='FLY_ONLY'&&this.map.grid[y][x].passableMask!=='NONE';}
