@@ -49,6 +49,28 @@ test('重弩蓄力被沉默中断后不射击，恢复隐匿且只开始一次8�
 });
 
 const iceBugRaw=Object.values(NATIVE_DATA.levels).map(l=>l.enemyProfiles?.enemy_1067_snslime).find(Boolean);
+
+test('Dor三型仅给四种未激活R装置击杀者回50SP，读原表上限且重复退场不重发',()=>{
+ for(const id of ['enemy_1251_lysyta','enemy_1251_lysyta_2','enemy_1252_lysytb_2'])for(const armorId of Object.keys(NATIVE_DATA.powerArmorSkills)){
+  const {b}=arena(),e=spawn(b,id),armor={uid:900001,id:armorId,kind:'device',allied:false,deployed:true,x:3,y:3,hp:100,maxHp:100,sp:60,statuses:[],canAttack:false};b.s.summons.push(armor);b.step();
+  const skill=NATIVE_DATA.powerArmorSkills[armorId];assert.equal(skill.spData.increment,0);assert.equal(skill.spData.spCost,100);dealDamage(b,{source:armor,target:e,value:e.hp+1,type:'true'});assert.equal(armor.sp,100);armor.sp=0;commitExit(b,{target:e,killer:armor});assert.equal(armor.sp,0);
+ }
+});
+
+test('Dor被普通干员、测试用动力装甲或无来源伤害击倒不发放R装置技力',()=>{
+ for(const killerId of ['char_103_angel','enemy_1254_lypa_2',null]){
+  const {b}=arena(),e=spawn(b,'enemy_1251_lysyta'),killer=killerId?{uid:900001,id:killerId,hp:100,deployed:true,sp:7}:null;
+  commitExit(b,{target:e,killer});if(killer)assert.equal(killer.sp,7);assert.equal(b.s.events.some(e=>e.ability==='driver-sp'),false);
+ }
+});
+
+test('Dor回点受装置阻回约束，来源已退场不回点，沉默Dor不禁用该天赋',()=>{
+ const {b}=arena(),armor={uid:900001,id:'trap_075_bgarmn',kind:'device',allied:false,deployed:true,x:3,y:3,hp:100,maxHp:100,sp:0,statuses:[]};b.s.summons.push(armor);
+ applyStatus(armor,'spBlock',10,{resistible:false});const blocked=spawn(b,'enemy_1251_lysyta');commitExit(b,{target:blocked,killer:armor});assert.equal(armor.sp,0);
+ armor.statuses=[];const e=spawn(b,'enemy_1251_lysyta');applyStatus(e,'silence',10);dealDamage(b,{source:armor,target:e,value:e.hp+1,type:'true',cause:'dot'});assert.equal(armor.sp,50);
+ armor.deployed=false;const last=spawn(b,'enemy_1251_lysyta');commitExit(b,{target:last,killer:armor});assert.equal(armor.sp,50);
+});
+
 const chaliceRaw=Object.values(NATIVE_DATA.levels).map(l=>l.enemyProfiles?.enemy_1430_lrrook).find(Boolean);
 
 test('魂灵圣杯按伤害结算后保留5%，余量由圣杯承担真实伤害，重叠圣杯不重复保护',()=>{

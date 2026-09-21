@@ -1,4 +1,5 @@
 import {enemyMovementSpeed,permissions,applyStatus,statusAttributeChanges,isIsolated} from './status.js';
+import {gainSp} from './native-sp.js';
 import {grantGuard,grantShield,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} from './native-effects.js';
 
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
@@ -332,6 +333,8 @@ export function enemyTraitAfterAttack(battle,e){
 
 export function enemyTraitOnDeath(battle,e,info){
  const bb=e.enemyTalent||{};
+ const driver=Number(bb['Driver.sp']),killer=info.killer,armorSkill=killer&&battle.data.powerArmorSkills?.[killer.id];
+ if(driver>0&&armorSkill&&killer.hp>0&&killer.deployed!==false){const gained=gainSp(killer,armorSkill,driver);if(gained>0)battle.emit('enemy-ability',{uid:e.uid,x:e.x,y:e.y,ability:'driver-sp',targetUid:killer.uid,amount:gained});}
  if(bb['Boom.heal_scale']>0&&bb['Boom.projectile_range']>0&&!permissions(e).silenced&&info.reason!=='leak'){
   const amount=e.atk*(1+Math.min(0,statusAttributeChanges(e).attack||0))*Number(bb['Boom.heal_scale']);
   for(const target of battle.s.enemies)if(target!==e&&target.hp>0&&!target.hidden&&near(e,target,Number(bb['Boom.projectile_range'])))

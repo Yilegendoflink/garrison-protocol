@@ -22,6 +22,8 @@ for(let i=0;i<pending.length;i++)for(const spec of [pending[i].enemyBehavior?.sp
 }
 // 全局控制器可能位于裁切范围外，不能用可见 devices 的筛选结果代替。
 const skillTable=JSON.parse(await fs.readFile('data/gamedata/allianceLower/skill_table.json','utf8'));
+// Dor回技力只认未激活的四种装置；不能把测试用/已激活敌方装甲混入。
+data.powerArmorSkills=Object.fromEntries(['trap_075_bgarmn','trap_076_bgarms','trap_077_rmtarmn','trap_078_rmtarms'].map(id=>{const skillId=characterTable[id].skills[0].skillId;return [id,{skillId,...skillTable[skillId].levels[0]}];}));
 for(const map of data.maps){
  const raw=JSON.parse(await fs.readFile('data/modes/alliance-lower/levels/'+map.source.file,'utf8'));
  for(const controller of raw.predefines?.tokenInsts||[]){
