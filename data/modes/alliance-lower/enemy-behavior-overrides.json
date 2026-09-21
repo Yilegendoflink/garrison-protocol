@@ -413,7 +413,10 @@
     },
     "enemy_10040_cnvbln": {
       "staticRigid": true,
-      "staticRigidSource": "https://prts.wiki/index.php?oldid=414794"
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414794",
+      "nonPrimary": true,
+      "notCountInTotal": true,
+      "isolated": true
     },
     "enemy_9016_acstmr": {
       "staticRigid": true,
@@ -453,7 +456,10 @@
     },
     "enemy_10040_cnvbln_2": {
       "staticRigid": true,
-      "staticRigidSource": "https://prts.wiki/index.php?oldid=414795"
+      "staticRigidSource": "https://prts.wiki/index.php?oldid=414795",
+      "nonPrimary": true,
+      "notCountInTotal": true,
+      "isolated": true
     },
     "enemy_1269_nhfly": {
       "staticRigid": true,

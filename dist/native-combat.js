@@ -296,7 +296,7 @@ export function enemyBehaviorProfile(raw={}){
   lowHpUnblockTime:Number.isFinite(lowHpUnblockTime)&&lowHpUnblockTime>0?lowHpUnblockTime:0,
   initialInvisible:Boolean(initialInvisible),
   initialUnblockable:Boolean(initialUnblockable),
-  staticRigid:behavior.staticRigid===true,
+  staticRigid:behavior.staticRigid===true,nonPrimary:behavior.nonPrimary===true,notCountInTotal:behavior.notCountInTotal??raw.notCountInTotal??false,isolated:behavior.isolated===true,
   initialShield:Number.isFinite(initialShield)&&initialShield>0?initialShield:0,
   hitCountHp:Boolean(hitCount?.hitCountHp),
   hitCountTypes:Array.isArray(hitCount?.hitCountTypes)&&hitCount.hitCountTypes.length?hitCount.hitCountTypes:null,

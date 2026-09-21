@@ -4,7 +4,7 @@ import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {applyStatus} from '../dist/status.js';
-import {dealDamage,applyLoss,commitExit,enemyWineBuffs} from '../dist/native-effects.js';
+import {dealDamage,applyHeal,applyLoss,commitExit,enemyWineBuffs} from '../dist/native-effects.js';
 import {changeEnemySp} from '../dist/native-enemy-skills.js';
 
 function arena(){
@@ -46,6 +46,36 @@ test('重弩直击方向跨JSON保留，原目标移走时命中后来进入该�
 test('重弩蓄力被沉默中断后不射击，恢复隐匿且只开始一次8秒冷却',()=>{
  const {b,ally}=arena(),e=spawn(b,'enemy_1404_msnip',2,3);addAlly(b,ally,6,3);advance(b,2.5);applyStatus(e,'silence',20);b.step();const end=e.enemySkills[0].nextAt;assert.equal(e.enemyCast,null);assert.equal(e.formInvisible,true);
  const hits=[];b.hurt=u=>hits.push(u.uid);advance(b,3);assert.equal(hits.length,0);assert.equal(e.enemySkills[0].nextAt,end);
+});
+
+const balloonIds=['enemy_10040_cnvbln','enemy_10040_cnvbln_2'];
+const balloonRaw=id=>NATIVE_DATA.enemies[id]||Object.values(NATIVE_DATA.levels).map(l=>l.enemyProfiles?.[id]).find(Boolean);
+test('两种气球不阻止清场，仍有主目标或待生成主目标时不能提前结束',()=>{
+ for(const id of balloonIds){
+  const {b}=arena(),balloon=spawn(b,id,3,3,balloonRaw(id));assert.equal(balloon.nonPrimary,true);assert.equal(balloon.notCountInTotal,true);
+  b.s.queue=[{id:'enemy_1251_lysyta',at:100,route:0}];b.step();assert.equal(b.s.finished,false);
+  b.s.queue=[];b.queueEnemySpawn({id:'enemy_1251_lysyta'},{x:2,y:3},100);b.step();assert.equal(b.s.finished,false);
+  b.s.pendingEnemySpawns=[];const main=spawn(b,'enemy_1251_lysyta');b.step();assert.equal(b.s.finished,false);
+  commitExit(b,{target:main});b.step();assert.equal(b.s.finished,true);assert.ok(balloon.hp>0);assert.equal(b.s.result.kills,1);
+ }
+});
+test('只有尚未出现的非首要气球不会卡清场，木桩仍遵循独立限时',()=>{
+ const {b}=arena();b.s.queue=[{id:balloonIds[0],at:100,route:0}];b.queueEnemySpawn({id:balloonIds[0]},{x:3,y:3},100);b.step();assert.equal(b.s.finished,true);
+ const {b:dummy}=arena();dummy.s.benchmark=true;spawn(dummy,balloonIds[0]);dummy.step();assert.equal(dummy.s.finished,false);
+});
+test('气球死亡保留死亡事件但不增加歼灭数，孤立拒绝友方治疗且不妨碍敌对攻击',()=>{
+ for(const id of balloonIds){
+  const {b,ally}=arena(),balloon=spawn(b,id,3,3,balloonRaw(id)),healer=spawn(b,'enemy_1251_lysyta');addAlly(b,ally,3,3);b.behavior=()=>({antiAir:true});b.inside=()=>true;
+  b.step();assert.equal(balloon.isolated,true);assert.ok(b.targets(ally).includes(balloon));balloon.hp=balloon.maxHp/2;const hp=balloon.hp;
+  applyHeal(b,{source:healer,target:balloon,amount:100});assert.equal(balloon.hp,hp);
+  dealDamage(b,{source:ally,target:balloon,value:balloon.hp+1,type:'true'});b.step();assert.equal(b.s.kills,0);assert.equal(b.s.finished,false);assert.ok(b.s.logicLog.some(e=>e.type==='death'&&e.uid===balloon.uid));
+ }
+});
+test('气球标记在读档时补齐，波次总数排除不计数目标',()=>{
+ const {b,g}=arena(),balloon=spawn(b,balloonIds[0]);delete balloon.nonPrimary;delete balloon.notCountInTotal;delete balloon.isolated;
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);restored.step();assert.equal(restored.s.finished,true);assert.equal(restored.s.enemies[0].isolated,true);
+ // prepareWaves 最终完成替换和悬赏插入之后统一计算计数目标。
+ g.s.pendingBounty={enemyId:balloonIds[0],count:2,coin:0};b.prepareWaves(b.turn);assert.ok(b.s.queue.some(q=>q.id===balloonIds[0]));assert.equal(b.s.total,b.s.queue.filter(q=>!b.enemyRaw(q.id).enemyBehavior.notCountInTotal).length);assert.ok(b.s.total<b.s.queue.length);
 });
 
 const iceBugRaw=Object.values(NATIVE_DATA.levels).map(l=>l.enemyProfiles?.enemy_1067_snslime).find(Boolean);

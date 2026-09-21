@@ -171,7 +171,7 @@ export function commitExit(battle,{target,reason='knockdown',killer=null,event=n
   if(target.hp>0)target.hp=0;
   battle.onActorExit?.(target,{reason,killer,event});
   if(reason==='leak'){log(battle,'leak-exit',{uid:target.uid,eventId:event?.eventId});return true;}
-  battle.s.kills++;
+  if(!target.notCountInTotal)battle.s.kills++;
   const credit=killer?.kind==='summon'?getActor(battle.s,killer.ownerUid):killer;
   if(credit&&battle.s.units.includes(credit))battle.event?.(credit,'kill');
   log(battle,'death',{uid:target.uid,reason,killerUid:killer?.uid,x:target.x,y:target.y,eventId:event?.eventId});
