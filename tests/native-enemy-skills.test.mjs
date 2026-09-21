@@ -63,6 +63,18 @@ test('圣杯分摊在次数护盾/屏障之后，真实伤害可分摊，生命�
  const thp=target.hp;applyLoss(b,{target,amount:10});dealDamage(b,{target,value:10,type:'true',execution:true});assert.equal(thp-target.hp,20);assert.equal(cup.hp,before);
 });
 
+test('次数生命只改变最终扣血，圣杯仍承担实际伤害的95%，不被压成一次生命值',()=>{
+ const {b}=arena(),cup=spawn(b,'enemy_1430_lrrook',3,3,chaliceRaw),tea=spawn(b,'enemy_1204_msfhu',4,3);b.step();assert.equal(tea.hitCountHp,true);const hp=tea.hp,chp=cup.hp;
+ const arts=dealDamage(b,{target:tea,value:1000,type:'arts'});assert.equal(hp-tea.hp,1);assert.equal(chp-cup.hp,950);assert.equal(arts.potentialHpDamage,50);
+ const before=tea.hp,receiver=cup.hp;const physical=dealDamage(b,{target:tea,value:1000,type:'physical'});assert.equal(tea.hp,before,'物理伤害不改变茶器生命值');assert.equal(receiver-cup.hp,950,'特殊生命类型过滤不把已经结算的伤害本身清零');assert.equal(physical.potentialHpDamage,50);
+});
+
+test('次数生命与圣杯同时存在时，屏障先吸收，再分摊，最后按次数扣血',()=>{
+ const {b}=arena(),cup=spawn(b,'enemy_1430_lrrook',3,3,chaliceRaw),tea=spawn(b,'enemy_1204_msfhu',4,3);b.step();tea.shield=40;let hp=tea.hp,chp=cup.hp;
+ const result=dealDamage(b,{target:tea,value:1000,type:'arts'});assert.equal(result.shield,40);assert.equal(hp-tea.hp,1);assert.equal(chp-cup.hp,912);assert.equal(result.potentialHpDamage,48);
+ tea.shield=1000;hp=tea.hp;chp=cup.hp;dealDamage(b,{target:tea,value:1000,type:'arts'});assert.equal(tea.hp,hp);assert.equal(cup.hp,chp);
+});
+
 test('圣杯消失/死亡或离开圆形范围立即失效，飞行与孤立目标不被保护，存档维持单一来源',()=>{
  const {b,g}=arena(),cup=spawn(b,'enemy_1430_lrrook',3,3,chaliceRaw),target=spawn(b,'enemy_1007_slime',4,3);cup.canAttack=target.canAttack=false;b.step();dealDamage(b,{target,value:100,type:'true'});assert.equal(target.chaliceUid,cup.uid);
  const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const c=restored.s.enemies.find(e=>e.uid===cup.uid),t=restored.s.enemies.find(e=>e.uid===target.uid);let hp=c.hp;dealDamage(restored,{target:t,value:100,type:'true'});assert.equal(hp-c.hp,95);
