@@ -18,6 +18,32 @@ function arena(positions=[]){
 function advance(b,t){for(let i=0;i<Math.round(t*30);i++)b.step();}
 function fatal(b,e){dealDamage(b,{target:e,value:e.maxHp*10,type:'true'});}
 
+function shieldArena(second=false){
+ const scene=arena([[5,3],[5,4],[6,5]]),{b,e}=scene;e.atk=e.baseAtk=10;
+ if(second){fatal(b,e);advance(b,15.1);e.atk=10;}
+ e.action=null;e.attackCooldown=0;b.s.strikes=[];const skill=e.enemySkills.find(s=>s.prefab===(second?'ShieldBurstReborn':'ShieldBurst'));skill.nextAt=b.s.time;b.step();assert.ok(e.enemyCast?.xiBurst);return {...scene,skill};
+}
+
+test('自在两阶段蓄盾取本期2500/3000，14.33秒后600%/800%爆发且不对空',()=>{
+ for(const second of [false,true]){
+  const {b,e,units,skill}=shieldArena(second);assert.equal(e.shield,second?3000:2500);assert.equal(e.shiftImmune,true);units[1].flying=true;const hits=[];b.hurt=(u,source,opts)=>hits.push([u.uid,source.atk,opts.cause]);
+  advance(b,14.3);assert.equal(hits.length,0);advance(b,1/30);assert.deepEqual(hits,[[units[0].uid,second?80:60,'splash']]);assert.ok(e.enemyCast);
+  advance(b,.7);assert.equal(e.enemyCast,null);assert.equal(e.shield,0);assert.equal(e.shiftImmune,false);assert.ok(Math.abs(skill.nextAt-(b.s.time+70))<.05);
+ }
+});
+
+test('物理/法术击破自在蓄力屏障会打断，真实伤害穿过屏障且不以破盾取消技能',()=>{
+ for(const type of ['physical','arts','true']){
+  const {b,e}=shieldArena(),hp=e.hp;dealDamage(b,{target:e,value:2500,type});b.step();
+  if(type==='true'){assert.equal(e.shield,2500);assert.equal(e.hp,hp-2500);assert.ok(e.enemyCast?.xiBurst);}else{assert.equal(e.hp,hp);assert.equal(e.enemyCast,null);assert.equal(e.shiftImmune,false);const hits=[];b.hurt=u=>hits.push(u.uid);e.canAttack=false;advance(b,15);assert.deepEqual(hits,[]);}
+ }
+});
+
+test('自在蓄力存档保留护盾/剩余时间，重生取消旧技能而不取消重生失衡免疫',()=>{
+ const {b,g,e}=shieldArena();advance(b,10);const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const hits=[];restored.hurt=u=>hits.push(u.uid);advance(restored,4.4);assert.equal(hits.length,2);advance(restored,1);assert.equal(restored.s.enemies[0].enemyCast,null);
+ fatal(b,e);assert.equal(e.enemyForm,'rebirth');assert.equal(e.enemyCast,null);assert.equal(e.shiftImmune,true);assert.equal(e.shield,0);advance(b,5);assert.equal(e.enemyForm,'second');assert.equal(e.shiftImmune,false);
+});
+
 test('自在首次致命伤5秒重生，二阶段仅加攻5%及10秒无敌，跨JSON不重复加攻',()=>{
  const {b,g,e}=arena(),atk=e.baseAtk;fatal(b,e);assert.equal(e.enemyForm,'rebirth');assert.equal(b.s.kills,0);advance(b,2);
  const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const xi=restored.s.enemies[0];advance(restored,3);assert.equal(xi.enemyForm,'second');assert.equal(xi.atk,atk*1.05);assert.equal(xi.hp,xi.maxHp);assert.equal(xi.invulnerable,true);advance(restored,10.1);assert.equal(xi.invulnerable,false);assert.equal(xi.atk,atk*1.05);fatal(restored,xi);assert.equal(restored.s.kills,1);
