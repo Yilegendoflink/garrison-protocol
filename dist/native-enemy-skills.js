@@ -1,4 +1,4 @@
-import {permissions,applyStatus,removeStatus} from './status.js';
+import {permissions,applyStatus,removeStatus,isIsolated} from './status.js';
 import {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId,addEffect} from './native-effects.js';
 import {FPS} from './combat.js';
 import {windupSeconds} from './native-combat.js';
@@ -10,6 +10,7 @@ const VISUAL_SKILLS=new Set(['BornAnim','StartRun','EndAnim','BeginAnim']);
 export function initEnemySkills(enemy,raw,now){
  enemy.enemyTags=raw.enemyTags||[];
  enemy.enemyPeriodicSpawn??=raw.enemyBehavior?.periodicSpawn||null;
+ if(enemy.id==='enemy_10034_cnvsax'){enemy.jazzCounterMode??=false;enemy.jazzModeChanged??=false;}
  if(raw.skills?.some(s=>s.prefabKey==='boomb'))enemy.canAttack=enemy.baseCanAttack=false;
  if(enemy.id==='enemy_10001_trslim')enemy.lowHpRatio=0; // 逃跑由一次性技能负责，不走通用永久低血强化。
  if(enemy.enemySkills)return;
@@ -23,6 +24,7 @@ export function initEnemySkills(enemy,raw,now){
  enemy.enemyRank=raw.levelType||'NORMAL';
  enemy.enemyTalent=Object.fromEntries((raw.talentBlackboard||[]).map(r=>[r.key,r.valueStr??r.value]));
  if(enemy.id==='enemy_10087_hlchgr')enemy.nextEnhanceAt=now+Number(enemy.enemyTalent['SkillTrigger.interval']);
+ if(enemy.id==='enemy_10034_cnvsax'){enemy.jazzCounterMode=false;enemy.jazzModeChanged=false;}
  if(enemy.id==='enemy_10044_wintun'){enemy.wineCarrying=true;enemy.canAttack=false;enemy.speed=enemy.baseSpeed*Number(enemy.enemyTalent['1.move_speed']);}
 }
 
@@ -94,6 +96,15 @@ export function tickEnemySkills(battle,enemy,dt){
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
+ if(enemy.id==='enemy_10034_cnvsax'){
+  const counter=!(enemy.invisible&&!enemy.revealed&&enemy.block==null&&!enemy.immunities?.invisible);
+  if(counter!==enemy.jazzCounterMode){enemy.jazzCounterMode=counter;enemy.jazzModeChanged=true;}
+  if(!counter&&enemy.jazzModeChanged){
+   enemy.action=null;
+   if(cast){cancelEnemyCast(battle,enemy);return;}
+   if(dt>0)for(const skill of enemy.enemySkills)if(skill.nextAt!=null)skill.nextAt+=dt;
+  }
+ }
  if(cast?.multiAttack&&(!control.attack||!control.skill||control.silenced||enemy.hidden)){cancelEnemyCast(battle,enemy);return;}
  if(enemy.enemySp?.type==='INCREASE_WITH_TIME')changeEnemySp(enemy,enemy.enemySp.increment*dt);
  if(cast?.bomb){
@@ -232,7 +243,7 @@ export function tickEnemySkills(battle,enemy,dt){
  for(const skill of enemy.enemySkills){
   if(!enemySkillReady(enemy,skill,battle.s.time))continue;
   if(skill.prefab==='KillOthers'){
-   const victims=battle.s.enemies.filter(e=>e!==enemy&&e.hp>0&&!e.hidden&&e.flying&&!e.swallowedBy&&e.enemyRank==='NORMAL'&&Math.hypot(e.x-enemy.x,e.y-enemy.y)<=enemy.range*Number(skill.bb.range_radius));
+   const victims=battle.s.enemies.filter(e=>e!==enemy&&e.hp>0&&!e.hidden&&!isIsolated(e)&&e.flying&&!e.swallowedBy&&e.enemyRank==='NORMAL'&&Math.hypot(e.x-enemy.x,e.y-enemy.y)<=enemy.range*Number(skill.bb.range_radius));
    if(victims.length)choices.push({skill,victims:victims.slice(0,3)});
   }else if(skill.prefab==='FireWeapon'){
    const targets=attackableAllies(battle.s).filter(a=>!a.invisible&&!a.untargetable);

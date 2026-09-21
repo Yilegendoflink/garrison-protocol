@@ -3,7 +3,7 @@ import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {applyStatus} from '../dist/status.js';
-import {commitExit} from '../dist/native-effects.js';
+import {commitExit,revealEnemy} from '../dist/native-effects.js';
 import {drawEnemyProjectiles} from '../dist/native-fx.js';
 
 function arena(id,{x=3,y=3,positions=[[3,3]]}={}){
@@ -84,6 +84,13 @@ test('爵士乐手隐匿时不普攻不施法，被反隐后引导灼燃，沉�
  enemy.revealed=true;enemy.revealUntil=b.s.time+20;advance(b,.1);assert.equal(enemy.enemyCast?.channel,'jazz');
  const hp=allies[0].hp;advance(b,.5);assert.ok(allies[0].hp<hp);assert.ok(allies[0].elemental.burn>0);
  applyStatus(enemy,'silence',3);b.step();assert.equal(enemy.enemyCast,null);const stopped=allies[0].hp;advance(b,1);assert.equal(allies[0].hp,stopped);
+});
+
+test('爵士首次切模式前CD照常走，恢复隐匿取消引导并暂停后续CD，读档后继续剩余冷却',()=>{
+ const {b,g,enemy}=arena('enemy_10034_cnvsax',{x:3,y:4,positions:[[3,3]]});advance(b,6);assert.equal(enemy.enemySkills[0].nextAt,3);
+ revealEnemy(b,enemy,1);advance(b,.1);assert.equal(enemy.enemyCast?.channel,'jazz');advance(b,1.1);assert.equal(enemy.enemyCast,null);assert.equal(enemy.jazzCounterMode,false);
+ const remaining=enemy.enemySkills[0].nextAt-b.s.time;advance(b,5);assert.ok(Math.abs(enemy.enemySkills[0].nextAt-b.s.time-remaining)<.04);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const e=restored.s.enemies[0];revealEnemy(restored,e,20);advance(restored,remaining-.2);assert.equal(e.enemyCast,null);advance(restored,.4);assert.equal(e.enemyCast?.channel,'jazz');
 });
 
 test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{

@@ -10,7 +10,7 @@ import {branchBehavior,branchTrait,skillAntiAir} from './native-branches.js';
 import {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} from './native-equipment.js';
 import {nativeWavePlan} from './native-waves.js';
 import {damage,applyDamage,recoverHP,attackTiming,FPS} from './combat.js';
-import {applyStatus,tickStatuses,permissions,statusAttributeChanges} from './status.js';
+import {applyStatus,tickStatuses,permissions,statusAttributeChanges,isIsolated} from './status.js';
 import {blackboard,skillPolicy,shouldAutoSkill,ROUND_LEAK_CAP} from './protocol.js';
 import {createTrainingDummy,dummySummary} from './benchmark.js';
 import {usesSp,spTypeOf,skillKind,ammoCount,initSpOf,gainSp,tickTimeSp} from './native-sp.js';
@@ -377,7 +377,7 @@ export class NativeBattle {
    for(const u of attackableAllies(this.s))u.enemyAttackSpeedMod=0;
    const live=this.s.enemies.filter(e=>e.hp>0);
    for(const e of live){e.def=e.baseDef??e.def;e.res=e.baseRes??e.res;e.damageResistance=0;e.attackSpeedMod=0;e.attackIntervalMod=0;e.enemyDefAura=0;refreshEnemyTraitStats(e);enemyFormStats(e);}
-   for(const source of live.filter(e=>!e.hidden&&e.aura&&!permissions(e).silenced))for(const target of live)if(target!==source&&!target.hidden&&Math.hypot(source.x-target.x,source.y-target.y)<=source.aura.radius){target.enemyDefAura=Math.max(target.enemyDefAura,source.aura.def||0);target.damageResistance=Math.max(target.damageResistance,source.aura.damageResistance||0);}
+   for(const source of live.filter(e=>!e.hidden&&e.aura&&!permissions(e).silenced))for(const target of live)if(target!==source&&!target.hidden&&!isIsolated(target)&&Math.hypot(source.x-target.x,source.y-target.y)<=source.aura.radius){target.enemyDefAura=Math.max(target.enemyDefAura,source.aura.def||0);target.damageResistance=Math.max(target.damageResistance,source.aura.damageResistance||0);}
    for(const e of live)e.def+=e.enemyDefAura;
    const guards=live.filter(e=>!e.hidden&&/伙友卫队/.test(e.name||'')),blades=live.filter(e=>!e.hidden&&/伙友影刃/.test(e.name||''));
    for(const guard of guards)if(blades.some(blade=>Math.hypot(guard.x-blade.x,guard.y-blade.y)<=1.4))for(const u of attackableAllies(this.s))if(Math.hypot(guard.x-u.x,guard.y-u.y)<=1.1)u.enemyAttackSpeedMod=Math.min(u.enemyAttackSpeedMod||0,-30);

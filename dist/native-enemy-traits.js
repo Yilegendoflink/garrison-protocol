@@ -1,4 +1,4 @@
-import {permissions,applyStatus,statusAttributeChanges} from './status.js';
+import {permissions,applyStatus,statusAttributeChanges,isIsolated} from './status.js';
 import {grantGuard,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor} from './native-effects.js';
 
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
@@ -8,6 +8,7 @@ const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(['enemy_10031_cnvsld','enemy_10034_cnvsax'].includes(e.id))e.isolateWhileConcealed=true;
  if(NEURO_SPAWNERS.has(e.id)){e.neuroCombat??=false;if(!e.neuroCombat)e.canAttack=false;}
  if(YUANZAI.has(e.id)){
   e.unblockable=e.baseUnblockable=true;e.canAttack=e.baseCanAttack=false;
@@ -243,9 +244,9 @@ export function applyEnemyTraitAuras(battle){
  const live=battle.s.enemies.filter(e=>e.hp>0&&!e.hidden),allies=attackableAllies(battle.s);
  for(const source of live){const bb=source.enemyTalent||{};
   if(bb['magdef_add.magic_resistance']>0&&!permissions(source).silenced){
-   for(const target of live)if(target!==source&&near(source,target,2.5))target.enemyResAura=Math.max(target.enemyResAura||0,Number(bb['magdef_add.magic_resistance']));
+   for(const target of live)if(target!==source&&!isIsolated(target)&&near(source,target,2.5))target.enemyResAura=Math.max(target.enemyResAura||0,Number(bb['magdef_add.magic_resistance']));
   }
-  if(bb['auraDefup.def']>0){for(const target of live)if(target!==source&&target.enemyTalent?.['auraDefup.def']>0&&near(source,target,1.5))target.def+=Number(bb['auraDefup.def']);}
+  if(bb['auraDefup.def']>0){for(const target of live)if(target!==source&&!isIsolated(target)&&target.enemyTalent?.['auraDefup.def']>0&&near(source,target,1.5))target.def+=Number(bb['auraDefup.def']);}
   if(bb['atkSpeedDown.attack_speed']<0&&!permissions(source).silenced){
    for(const target of allies)if(near(source,target,Number(bb['defup.range_radius'])))target.enemyAttackSpeedMod=Math.min(target.enemyAttackSpeedMod||0,100*Number(bb['atkSpeedDown.attack_speed']));
   }

@@ -1,7 +1,7 @@
 import {applyDamage,recoverHP,damage} from './combat.js';
 import {equipmentEvent,equipmentFatal,equipmentTick} from './native-equipment.js';
 import {allowsHighlandPlacement} from './native-branches.js';
-import {applyStatus,permissions,statusAttributeChanges} from './status.js';
+import {applyStatus,permissions,statusAttributeChanges,isIsolated} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes} from './protocol.js';
 import {gainSp} from './native-sp.js';
 import {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor,talentValues,grantCoins,coinCapFor,coinGainAtSkillStart,tokenCostFor} from './native-operator-effects.js';
@@ -328,7 +328,7 @@ export function applyHeal(battle,opts){
  const target=opts.target||getActor(battle.s,opts.targetUid);
  const origin=opts.origin||source;
  if(!source||!target)return 0;
- const enemyTarget=target&&battle.s.enemies.includes(target),healable=enemyTarget?battle.s.enemies.includes(source)&&target.hp>0&&!target.unhealable&&!target.statuses?.some(s=>s.kind==='healingBlocked'):battle.canHeal(target,source);
+ const enemyTarget=target&&battle.s.enemies.includes(target),healable=enemyTarget?battle.s.enemies.includes(source)&&target.hp>0&&(target===source||!isIsolated(target))&&!target.unhealable&&!target.statuses?.some(s=>s.kind==='healingBlocked'):battle.canHeal(target,source);
  if(!source||(!opts.persistAfterSourceGone&&((!source.deployed&&!battle.s.enemies.includes(source))||source.hp<=0))||!healable||!Number.isFinite(opts.amount)||opts.amount<=0)return 0;
  if(target.healable===false&&!opts.ignoreHealable)return 0;
  const event=nextEvent(battle,{cause:'heal',parentEventId:opts.parentEventId??null,effectId:opts.effectId??null,type:'heal'});

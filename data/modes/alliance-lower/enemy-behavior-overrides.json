@@ -296,6 +296,10 @@
     "enemy_1439_dslntf_2": {
       "randomPoolEligible": false,
       "reason": "待命/受伤临战、五倍移速和同名不叠加神经毒素已接入；赘生甲壳实体与碰撞自伤/摧毁尚未验收，按复杂敌人门禁暂不入池"
+    },
+    "enemy_10031_cnvsld": {
+      "randomPoolEligible": false,
+      "reason": "隐匿期间孤立及常规治疗/光环筛选已接入；狂欢时刻的场地事件尚未验收，暂不进随机池"
     }
   }
 }

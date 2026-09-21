@@ -2,8 +2,8 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
-import {dealDamage,applyLoss,commitExit,addDamageRedirect,grantGuard,applyHeal} from '../dist/native-effects.js';
-import {applyStatus} from '../dist/status.js';
+import {dealDamage,applyLoss,commitExit,addDamageRedirect,grantGuard,applyHeal,revealEnemy,enemyWineBuffs} from '../dist/native-effects.js';
+import {applyStatus,isIsolated} from '../dist/status.js';
 
 function arena(){
  const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.funds=100;assert.ok(g.perform('buy',0));const unit=g.s.units[0];let placed=false;
@@ -104,6 +104,26 @@ test('临战与目标毒素计时跨JSON继续，控制不额外关闭天赋，�
  const {b,ally}=arena(),e=spawn(b,'enemy_1439_dslntf');e.atk=100;addAlly(b,ally,4,3);dealDamage(b,{target:e,value:1,type:'true'});applyStatus(e,'stun',60);advance(b,.6);
  const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const source=restored.s.enemies[0],target=restored.s.units[0];assert.equal(source.neuroCombat,true);assert.equal(source.speed,source.baseSpeed*5);
  advance(restored,.5);assert.equal(target.elemental.neural,5);target.x=9;restored.step();assert.equal(target.neurotoxinNextAt,null);advance(restored,1);assert.equal(target.elemental.neural,5);
+});
+
+test('竞演者与爵士的隐匿孤立阻止同阵营治疗，阻挡和反隐立即解除，恢复隐匿后再生效',()=>{
+ for(const id of ['enemy_10031_cnvsld','enemy_10034_cnvsax']){
+  const {b,ally}=arena(),e=spawn(b,id),healer=spawn(b,'enemy_1007_slime',7,3);e.hp-=1000;assert.equal(isIsolated(e),true);assert.equal(applyHeal(b,{source:healer,target:e,amount:10}),0);
+  b.map=structuredClone(b.map);b.map.grid[3][3].heightType='LOWLAND';addAlly(b,ally,3,3);advance(b,.1);assert.equal(e.block,ally.uid);assert.equal(isIsolated(e),false);assert.equal(applyHeal(b,{source:healer,target:e,amount:10}),10);
+  ally.x=8;advance(b,.1);assert.equal(isIsolated(e),true);revealEnemy(b,e,1);advance(b,.1);assert.equal(isIsolated(e),false);assert.equal(applyHeal(b,{source:healer,target:e,amount:10}),10);advance(b,1.1);assert.equal(isIsolated(e),true);
+ }
+});
+
+test('孤立排除普通友方光环，但不变成对立阵营伤害免疫，不影响明确忽略孤立的品尝区域',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_10031_cnvsld');spawn(b,'enemy_1017_defdrn',4,3);addAlly(b,ally,6,3);b.step();assert.equal(e.def,e.baseDef);assert.equal(isIsolated(e),true);
+ assert.equal(dealDamage(b,{source:ally,target:e,value:10,type:'arts',cause:'dot'}).total,10);
+ b.s.logicEffects.push({id:b.s.settle.nextEffectId++,kind:'zone',sourceUid:null,x:3,y:3,radius:2,endsAt:b.s.time+10,values:{enemyWineBuff:true,attackSpeed:100,physicalDodge:.8},refKind:'owner'});
+ assert.deepEqual(enemyWineBuffs(b,e),{attackSpeed:100,physicalDodge:.8});revealEnemy(b,e,1);advance(b,.1);assert.equal(e.def,e.baseDef+300);
+});
+
+test('孤立竞演者不被同阵营载具装载，反隐解除孤立后恢复装载资格',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_10031_cnvsld'),carrier=spawn(b,'enemy_10159_mntrjn');b.step();assert.equal(e.carriedBy,undefined);assert.equal(carrier.transport.passengers.length,0);
+ revealEnemy(b,e,2);advance(b,.1);assert.equal(e.carriedBy,carrier.uid);assert.deepEqual(carrier.transport.passengers,[e.uid]);
 });
 
 test('折射被沉默取消法抗，解除沉默后恢复，连续帧不重复叠加',()=>{

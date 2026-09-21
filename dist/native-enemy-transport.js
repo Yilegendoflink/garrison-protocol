@@ -1,3 +1,4 @@
+import {isIsolated} from './status.js';
 import {cancelEnemyCast} from './native-enemy-skills.js';
 
 export function initEnemyTransport(e){
@@ -19,7 +20,7 @@ export function tickEnemyTransport(b){
   const prohibited=carrier.hidden||carrier.carriedBy!=null||carrier.unbalanced||(carrier.statuses||[]).some(s=>['stun','frozen','levitate','sleep'].includes(s.kind));
   if(!spec.disabled&&!prohibited)for(const e of b.s.enemies){
    if(spec.passengers.length>=spec.max)break;
-   if(e===carrier||e.hp<=0||e.hidden||e.carriedBy!=null||e.flying||e.transport||['BOSS','LEADER'].includes(e.enemyRank)||(e.enemyTags||[]).includes('machine'))continue;
+   if(e===carrier||e.hp<=0||e.hidden||isIsolated(e)||e.carriedBy!=null||e.flying||e.transport||['BOSS','LEADER'].includes(e.enemyRank)||(e.enemyTags||[]).includes('machine'))continue;
    if(Math.hypot(e.x-carrier.x,e.y-carrier.y)>spec.radius+1e-9)continue;
    cancelEnemyCast(b,e);e.action=null;e.block=null;e.hidden=true;e.carriedBy=carrier.uid;spec.passengers.push(e.uid);
    b.emit('enemy-ability',{uid:carrier.uid,x:carrier.x,y:carrier.y,ability:'board',targetUid:e.uid,count:spec.passengers.length});
