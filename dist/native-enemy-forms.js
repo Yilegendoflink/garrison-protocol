@@ -10,7 +10,9 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 export function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id==='enemy_1517_xi'){
+ if(e.id==='enemy_9023_acdums'){
+  e.enemyFormKind='echo';e.enemyForm='pipe';e.echoHits=0;e.damageType='arts';e.blockCost=2;
+ }else if(e.id==='enemy_1517_xi'){
   e.enemyFormKind='xi';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.damageType='arts';e.ranged=true;e.enemyAttack={groundOnly:true};e.specialSkill=null;
   // 本期默认明（PRTS415291）；不把无属性单位强制赋色。地块配置仍由环境层另行处理。
   if(Number(e.enemyTalent['yinyang.dynamic'])===1)e.yinYang={attribute:'light',sameScale:Number(e.enemyTalent['yinyang.buff_yinyang[same].atk_scale']),differentScale:Number(e.enemyTalent['yinyang.buff_yinyang[diff].atk_scale'])};
@@ -209,9 +211,18 @@ function tickParrotForm(b,e){
 
 export function enemyFormAfterDamage(b,e,result){
  enemyFormHealthChanged(b,e);
+ if(e.enemyFormKind==='echo'&&result.total>0){
+  b.enemyEchoBurst(e,1.6,Number(e.enemyTalent['3.atk_scale']),Number(e.enemyTalent['3.ep_damage_ratio']));
+  if(e.hp>0){e.echoHits=(e.echoHits||0)+1;const max=Number(e.enemyTalent[(e.enemyForm==='pipe'?'1':'2')+'.hit_times_to_switch']);if(max>0&&e.echoHits>=max)setEchoMode(b,e,e.enemyForm==='pipe'?'string':'pipe');}
+ }
  if(e.enemyFormKind!=='parrot'||e.hp<=0||result.total<=0||e.enemyForm==='grounded'||e.parrotDamageUsed)return;
  e.parrotDamageUsed=true;const prefix=e.enemyForm==='carrying'?'M1SpeedUp':'M0SpeedUp';
  e.parrotBoostUntil=b.s.time+Number(e.enemyTalent[prefix+'.duration']);e.speed=e.baseSpeed*Number(e.enemyTalent[prefix+'.move_speed']);
+}
+
+export function setEchoMode(b,e,mode){
+ if(e.enemyFormKind!=='echo'||!['pipe','string'].includes(mode))return;
+ e.enemyForm=mode;e.echoHits=0;e.speed=e.baseSpeed*(mode==='string'?1+Number(e.enemyTalent['2.move_speed']):1);announce(b,e,mode==='pipe'?'裂管之音':'断弦之音');
 }
 
 export function enemyFormHealthChanged(b,e){

@@ -437,6 +437,14 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.enemyFormKind==='echo'&&!control.silenced&&!enemy.action&&!(enemy.attackCooldown>0)){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='Skill');
+  if(skill&&beginEnemySkill(battle,enemy,skill)){
+   const echoes=battle.s.enemies.filter(e=>e.hp>0&&e.enemyFormKind==='echo');
+   for(const e of echoes)if(!e.hidden){const pipe=e.enemyForm==='pipe';battle.enemyEchoBurst(e,pipe ? .8 : 1.6,1,Number(e.enemyTalent[pipe?'4.ep_damage_ratio_passion':'4.ep_damage_ratio_depassion']));}
+   for(const e of echoes)changeEnemySp(e,-e.sp,{duringSkill:true});enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;endEnemySkill(battle,enemy);return;
+  }
+ }
  if(enemy.enemyFormKind==='xi'&&enemy.enemyForm!=='rebirth'&&!enemy.action&&!(enemy.attackCooldown>0)){
   const targets=xiTargets(battle,enemy),suffix=enemy.enemyForm==='second'?'Reborn':'',candidates=enemy.enemySkills.filter(s=>enemySkillReady(enemy,s,battle.s.time)&&targets.length&&(s.prefab==='CrossAttack'||s.prefab==='ShieldBurst'+suffix&&targets.some(t=>Math.hypot(t.x-enemy.x,t.y-enemy.y)<=Number(s.bb.range_radius)+1e-9)||s.prefab==='CrossAttackMark'+suffix&&!s.used));
   const priority=Math.min(...candidates.map(s=>s.priority)),top=candidates.filter(s=>s.priority===priority),skill=top.length>1?top[Math.floor(battle.economy.random()*top.length)]:top[0];

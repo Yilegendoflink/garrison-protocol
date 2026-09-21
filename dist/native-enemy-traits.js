@@ -72,6 +72,7 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
 
 export function enemyConditionalAttackSpeed(e){
  const bb=e.enemyTalent||{};
+ if(e.enemyFormKind==='echo'&&e.enemyForm==='pipe')return Number(bb['1.attack_speed']);
  if(e.knightRage)return Number(bb['triggerrage.attack_speed'])||0;
  if(e.id==='enemy_1511_mdrock')return mudrockShieldActive(e)?e.mudrockShieldAspd||0:0;
  if(e.id==='enemy_2005_axetro')return (e.axetroStacks||0)*(Number(bb['atkup.attack_speed'])||0);
@@ -79,12 +80,22 @@ export function enemyConditionalAttackSpeed(e){
 }
 
 export function enemyConditionalAttackMultiplier(e,target=null){
+ if(e.enemyFormKind==='echo'&&e.enemyForm==='string')return 1+Number(e.enemyTalent['2.atk']);
  if(/^enemy_1069_icebrk(?:_2)?$/.test(e.id||'')&&target?.statuses?.some(s=>s.kind==='frozen'))return Number(e.enemyTalent?.['atkup.atk_scale'])||1;
  if(e.id==='enemy_1500_skulsr')return e.hp<e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['atkup.atk']):1;
  if(e.id==='enemy_1539_reid')return e.hp<=e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['AtkUp.atk']):1;
  if(e.knightRage)return 1+(Number(e.enemyTalent['triggerrage.atk'])||0);
  if(e.id==='enemy_1511_mdrock')return 1+(e.mudrockStacks||0)*Number(e.enemyTalent['charge.attack@enemy_mdrock_s_1[charge].atk']);
  return e.id==='enemy_2005_axetro'?1+(e.axetroStacks||0)*Number(e.enemyTalent['atkup.atk']):1;
+}
+
+export function enemyEchoBurst(battle,enemy,radius,damageScale,elementScale){
+ const atk=battle.enemyAttackDamage(enemy),attackId=newAttackId(battle);
+ for(const target of attackableAllies(battle.s))if(near(enemy,target,radius)){
+  dealDamage(battle,{source:enemy,target,amount:atk*damageScale,type:'arts',cause:'extra',attackId});
+  applyElementDamage(battle,{source:enemy,target,amount:atk*elementScale,type:'necrosis',cause:'extra'});
+ }
+ battle.emit('impact',{uid:enemy.uid,x:enemy.x,y:enemy.y,radius,type:'arts',enemy:true});
 }
 
 export function enemyKnightExit(battle,target){

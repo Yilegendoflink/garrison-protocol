@@ -343,6 +343,15 @@
     "enemy_1517_xi": {
       "randomPoolEligible": false,
       "reason": "已接双形态和重复普攻；专属十字法术、屏障蓄力与明晦交互尚未齐全，禁用随机入池"
+    },
+    "enemy_9023_acdums": {
+      "hitCount": {
+        "hitCountHp": true,
+        "hitCountTypes": null
+      },
+      "spriteScale": 1,
+      "randomPoolEligible": false,
+      "reason": "接入次数生命、受伤反击、复调切形态与合奏；管弦联动和精确施法时序仍待补"
     }
   }
 }

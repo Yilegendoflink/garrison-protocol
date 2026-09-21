@@ -301,7 +301,7 @@ export function enemyBehaviorProfile(raw={}){
   hitCountTypes:Array.isArray(hitCount?.hitCountTypes)&&hitCount.hitCountTypes.length?hitCount.hitCountTypes:null,
   // 解压缩出来的碎片（器皿、镜、茶器、矛头一类）体型远小于本体，画面上按比例缩小，
   // 免得一堆锅碗瓢盆和精英怪一样大。只在生成时生效，形态切换不会改这个值。
-  spriteScale:hitCount?.hitCountHp?0.6:1,
+  spriteScale:Number(behavior.spriteScale)>0?Number(behavior.spriteScale):(hitCount?.hitCountHp?0.6:1),
   deadSpawn:deadSpawn||null,
   daggers:daggers||null,
   revive:revive||null,
