@@ -6,3 +6,5 @@
 *.png binary
 *.jpg binary
 *.sqlite binary
+# 动画资料含原始文件与 SHA256 收据，检出时不得转换换行符。
+data/operator-animations/** -text
