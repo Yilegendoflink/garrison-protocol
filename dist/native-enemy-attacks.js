@@ -68,7 +68,8 @@ export function tickEnemyProjectiles(battle){
   if(battle.s.time+1e-9<shot.impactAt){keep.push(shot);continue;}
   // 已发射弹道不再依赖发射者和原目标；无来源伤害使用发射时缓存的攻击力。
   for(const target of attackableAllies(battle.s))if((!shot.groundOnly||!target.flying)&&Math.hypot(target.x-shot.targetX,target.y-shot.targetY)<=shot.radius+1e-9){
-   battle.hurt(target,{atk:shot.amount,damageType:shot.type},{attackId:shot.attackId,sourceLess:true});
+   battle.hurt(target,{atk:shot.amount,damageType:shot.type},{attackId:shot.attackId,sourceLess:true,...(shot.cold?{cause:'extra'}:{})});
+   if(shot.cold>0&&!target.invulnerable&&!permissions(target).sleeping)applyStatus(target,'cold',shot.cold,{frostSide:'enemy'});
   }
   battle.emit('impact',{x:shot.targetX,y:shot.targetY,radius:shot.radius,type:shot.type,enemy:true});
  }

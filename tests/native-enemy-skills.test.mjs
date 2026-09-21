@@ -48,6 +48,28 @@ test('重弩蓄力被沉默中断后不射击，恢复隐匿且只开始一次8�
  const hits=[];b.hurt=u=>hits.push(u.uid);advance(b,3);assert.equal(hits.length,0);assert.equal(e.enemySkills[0].nextAt,end);
 });
 
+const iceBugRaw=Object.values(NATIVE_DATA.levels).map(l=>l.enemyProfiles?.enemy_1067_snslime).find(Boolean);
+test('关卡冰爆虫死亡1秒后半径1.65爆炸，命中迷彩地面单位但不对空，并施加敌方寒冷',()=>{
+ const {b,ally}=arena();addAlly(b,ally,4.5,3);applyStatus(ally,'camouflage',60);ally.statusResistance=.5;
+ const air=structuredClone(ally);air.uid+=100;air.x=3;air.flying=true;b.s.units.push(air);b.s.queue.push({id:'enemy_1007_slime',route:0,at:100});
+ const e=spawn(b,'enemy_1067_snslime',3,3,iceBugRaw);e.atk=1;const hits=[];b.hurt=(u,source,opts)=>hits.push({uid:u.uid,atk:source.atk,...opts});commitExit(b,{target:e});advance(b,.9);assert.equal(hits.length,0);advance(b,.1);
+ assert.equal(hits.length,1);assert.equal(hits[0].uid,ally.uid);assert.equal(hits[0].atk,2);assert.equal(hits[0].sourceLess,true);assert.equal(hits[0].cause,'extra');assert.equal(ally.statuses.find(s=>s.kind==='cold').frostSide,'enemy');assert.equal(ally.statuses.find(s=>s.kind==='cold').remaining,5);
+});
+
+test('冰爆虫两次死亡寒冷转冻结，延迟爆炸可跨JSON，死亡点外的单位不受控制',()=>{
+ const {b,g,ally}=arena();addAlly(b,ally,4,3);const far=structuredClone(ally);far.uid+=100;far.x=5;far.y=5;b.s.units.push(far);b.s.queue.push({id:'enemy_1007_slime',route:0,at:100});
+ for(let i=0;i<2;i++){const e=spawn(b,'enemy_1067_snslime',3,3,iceBugRaw);e.atk=1;commitExit(b,{target:e});}advance(b,.5);
+ const saved=JSON.parse(JSON.stringify(b.s)),restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,saved);assert.ok(restored);advance(restored,.5);assert.ok(restored.s.units[0].statuses.some(s=>s.kind==='frozen'&&s.frostSide==='enemy'));assert.ok(!restored.s.units[1].statuses.some(s=>s.kind==='cold'||s.kind==='frozen'));
+ saved.enemyProjectiles[0].cold=-1;assert.equal(NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,saved),null);
+});
+
+test('冰爆虫沉默或漏怪不爆炸，坠落死亡仍触发且不重复排队',()=>{
+ for(const reason of ['silence','leak','fall']){
+  const {b}=arena(),e=spawn(b,'enemy_1067_snslime',3,3,iceBugRaw);if(reason==='silence')applyStatus(e,'silence',10);
+  commitExit(b,{target:e,reason:reason==='silence'?'death':reason});commitExit(b,{target:e});assert.equal(b.s.enemyProjectiles.length,reason==='fall'?1:0);
+ }
+});
+
 function deathEyeArena(){
  const scene=arena(),{b,ally}=scene,e=spawn(b,'enemy_1275_dwlock_2',3,3);addAlly(b,ally,4,3);e.atk=e.baseAtk=1;
  for(let i=0;i<600&&!e.deathEye;i++)b.step();assert.ok(e.deathEye);return {...scene,e};

@@ -56,7 +56,7 @@ export function validateBattle(s,battle){
    for(const uid of t.passengers)if(!s.enemies.some(p=>p.uid===uid&&p.carriedBy===e.uid&&p.hp>0))return 'missing passenger';}
   if(e.carriedBy!=null&&!s.enemies.some(c=>c.uid===e.carriedBy&&c.hp>0&&c.transport?.passengers.includes(e.uid)))return 'missing passenger carrier';
  }
- for(const shot of s.enemyProjectiles||[])if(!['startedAt','impactAt','startX','startY','targetX','targetY','radius','amount'].every(k=>Number.isFinite(shot[k]))||shot.impactAt<shot.startedAt||shot.radius<0||shot.amount<0)return 'invalid enemy projectile';
+ for(const shot of s.enemyProjectiles||[])if(!['startedAt','impactAt','startX','startY','targetX','targetY','radius','amount'].every(k=>Number.isFinite(shot[k]))||shot.impactAt<shot.startedAt||shot.radius<0||shot.amount<0||(shot.cold!=null&&(!Number.isFinite(shot.cold)||shot.cold<0)))return 'invalid enemy projectile';
  for(const fx of s.logicEffects||[]){
   if(!EFFECT_KINDS.has(fx.kind))return 'unknown effect kind '+fx.kind;
   if(fx.endsAt!=null&&!Number.isFinite(fx.endsAt))return 'invalid effect time';

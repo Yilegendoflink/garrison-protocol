@@ -211,7 +211,9 @@ export function enemyBehaviorProfile(raw={}){
  const elementKey=/侵蚀损伤/.test(text)?'corrosion':/凋亡损伤/.test(text)?'necrosis':/灼燃损伤/.test(text)?'burn':/神经损伤/.test(text)?'neural':null;
  const elementScale=Number(talentBb['epdamage.attack@ep_damage_ratio']??talentBb['EpDamage.attack@ep_damage_ratio']??talentBb['empty.attack@ep_damage_ratio']??talentBb['combat.attack@ep_damage_ratio']??talentBb['ep_damage_ratio']);
  const inferredExplosion= /死亡[^。；;]*(?:产生|造成|爆炸)/.test(text)?{type:/法术/.test(text)?'arts':'physical',scale:Number(bb['boom.atk_scale'])||1,radius:Number(behavior.deathExplosionRadius??raw.deathExplosionRadius)||1,requiresFire:/点燃状态/.test(text)}:null;
- const explosion=Object.hasOwn(behavior,'deathExplosion')?(behavior.deathExplosion||null):inferredExplosion;
+ let explosion=Object.hasOwn(behavior,'deathExplosion')?(behavior.deathExplosion||null):inferredExplosion;
+ // 冰爆虫：倍率/寒冷读本期黑板；半径与延迟依据PRTS修订414012。
+ if(/^enemy_1067_snslime(?:_2)?$/.test(raw.prefabKey||''))explosion=Number(bb['boom.atk_scale'])>0&&Number(bb['boom.freeze'])>0?{type:'physical',scale:Number(bb['boom.atk_scale']),cold:Number(bb['boom.freeze']),radius:1.65,delay:1,groundOnly:true,silenceable:true}:null;
  const auraDef=Number(bb['defup.def']);
  const auraRadius=Number(bb['defup.range_radius']);
  const magicResistanceBonus=Number(bb['refracting.magic_resistance']);
