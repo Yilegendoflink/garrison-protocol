@@ -20,19 +20,19 @@ test('all period enemies have traceable PRTS activity, independent of logic elig
  }
 });
 
-test('mixed legacy/imported pools split without losing enemies, costs or count limits',()=>{
- const raw={costs:{[a]:2,[b]:3},types:{SPECIAL:{1:{templates:[{name:'旧混合',budget:30,minCount:6,maxCount:8,maxCost:4,pool:[a,b]}]}}}};
+test('mixed legacy/imported pools remain intact with diversity, costs and count limits',()=>{
+ const raw={costs:{[a]:2,[b]:3},types:{SPECIAL:{1:{templates:[{name:'旧混合',budget:30,minCount:6,maxCount:8,minKinds:2,maxCost:4,pool:[a,b]}]}}}};
  const table=normalizeWaveTable(raw),slots=table.types.SPECIAL[1].templates;
- assert.equal(slots.length,2);assert.deepEqual(slots.flatMap(s=>s.pool),[a,b]);
+ assert.equal(slots.length,1);assert.equal(slots[0].minKinds,2);assert.deepEqual(slots.flatMap(s=>s.pool),[a,b]);
  for(const s of slots){assert.equal(s.budget,30);assert.equal(s.minCount,6);assert.equal(s.maxCount,8);assert.equal(s.maxCost,4);}
  assert.deepEqual(saveWaveTable(table),table);assert.equal(raw.types.SPECIAL[1].templates.length,1);
  for(let seed=1;seed<=100;seed++){
   const wave=fillBudgetWave(waveRng(seed),raw,'SPECIAL',1);
-  assert.equal(new Set(wave.ids.map(enemyActivity)).size,1);assert.equal(enemyActivity(wave.ids[0]),wave.activity);
+  assert.equal(new Set(wave.ids.map(enemyActivity)).size,2);
  }
 });
 
-test('editor activity/readiness/search filters combine and reject incompatible additions',()=>{
+test('editor allows cross-activity additions while rejecting unimplemented enemies',()=>{
  const table=emptyWaveTable(),ui=editorState(),rows=enemyRows(data);
  assert.equal(filterRows(rows,ui,data,table).length,ready.length);
  applyEditorField('ed-activity',null,enemyActivity(a),table,ui);
@@ -40,11 +40,12 @@ test('editor activity/readiness/search filters combine and reject incompatible a
  ui.activity='all';ui.readiness='pending';assert.ok(filterRows(rows,ui,data,table).every(e=>!enemyPoolEligible(e.id,data)));
  ui.readiness='ready';ui.query=enemyActivity(a);assert.ok(filterRows(rows,ui,data,table).some(e=>e.id===a));
  assert.equal(applyEditorAction('ed-add',{id:a},table,ui,data),'render');
- assert.equal(applyEditorAction('ed-add',{id:b},table,ui,data),'incompatible');
+ assert.equal(applyEditorAction('ed-add',{id:b},table,ui,data),'render');
  assert.equal(applyEditorAction('ed-add',{id:pending},table,ui,data),'incompatible');
- assert.deepEqual(currentTemplate(table,'SPECIAL',1).pool,[a]);
+ assert.deepEqual(currentTemplate(table,'SPECIAL',1).pool,[a,b]);
  applyEditorAction('ed-copy-temp',{},table,ui,data);assert.equal(currentTemplate(table,'SPECIAL',1,1).activity,enemyActivity(a));
  assert.match(renderWaveEditor(data,table,ui),/筛选登场活动/);
+ const before=currentTemplate(table,'SPECIAL',1,ui.template).pool.slice();assert.equal(applyEditorField('ed-template-activity',null,enemyActivity(b),table,ui),true);assert.deepEqual(currentTemplate(table,'SPECIAL',1,ui.template).pool,before);
 });
 
 test('bulk fill is activity/eligibility/cost constrained and preview excludes pending-only templates',()=>{
@@ -55,11 +56,12 @@ test('bulk fill is activity/eligibility/cost constrained and preview excludes pe
  assert.equal(applyEditorAction('ed-fill-type',{},table,ui,data),'filled');
  const slot=currentTemplate(table,'SPECIAL',1);
  assert.ok(slot.pool.length);assert.ok(slot.pool.every(id=>enemyActivity(id)===slot.activity&&enemyPoolEligible(id,data)));
- table.types.SPECIAL[1].templates=[{pool:[pending],budget:8},{pool:[a,b],budget:8}];
+ const other=ready.find(e=>enemyActivity(e.id)!==slot.activity).id;applyEditorAction('ed-add',{id:other},table,ui,data);applyEditorAction('ed-fill-type',{},table,ui,data);assert.ok(slot.pool.includes(other),'补入不得移除混编成员');
+ table.types.SPECIAL[1].templates=[{pool:[pending],budget:8},{pool:[a,b],budget:8,minKinds:2}];
  const filtered=filterRandomPoolTable(table,data);
  for(let seed=1;seed<=50;seed++){
   const wave=fillBudgetWave(waveRng(seed),filtered,'SPECIAL',1);
-  assert.equal(wave.unfilled,false);assert.ok(!wave.ids.includes(pending));assert.equal(new Set(wave.ids.map(enemyActivity)).size,1);
+  assert.equal(wave.unfilled,false);assert.ok(!wave.ids.includes(pending));assert.equal(new Set(wave.ids.map(enemyActivity)).size,2);
  }
 });
 

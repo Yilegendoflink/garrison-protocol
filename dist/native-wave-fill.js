@@ -4,15 +4,6 @@ export function enemyActivity(id){return ENEMY_ACTIVITY_GROUPS[id]?.activity||'�
 export function enemyActivitySource(id){return ENEMY_ACTIVITY_GROUPS[id]?.url||'';}
 export function enemyPoolEligible(id,data){return (data?.enemies?.[id]?.enemyBehavior?.randomPoolEligible??ENEMY_ACTIVITY_GROUPS[id]?.eligible)!==false;}
 
-// 旧存档和导入的混合池按活动拆分，保留各自预算与数量目标。
-export function groupTemplates(templates){
- return templates.flatMap(slot=>{
-  const groups=new Map();
-  for(const id of slot.pool||[]){const activity=enemyActivity(id);if(!groups.has(activity))groups.set(activity,[]);groups.get(activity).push(id);}
-  if(!groups.size)return [{...slot,activity:slot.activity||'',pool:[]}];
-  return [...groups].map(([activity,pool])=>({...slot,activity,pool,name:groups.size>1?`${slot.name||'模板'} · ${activity}`.slice(0,60):slot.name}));
- });
-}
 export const WAVE_STORE_KEY='garrison-wave-table-v2';
 export const TRAINING_TYPES=[
  {id:'SPECIAL',name:'特异',desc:'输出和承伤突出'},
@@ -38,7 +29,9 @@ export function normalizeTemplate(row,tier=1){
  return {
   ...count,
   name:typeof row?.name==='string'?row.name.slice(0,60):'',
-  activity:typeof row?.activity==='string'?row.activity:'',
+  activity:typeof row?.activity==='string'?row.activity:(row?.pool?.[0]?enemyActivity(row.pool[0]):''),
+  ...(typeof row?.theme==='string'?{theme:row.theme}:{}),
+  ...(Number.isInteger(row?.minKinds)&&row.minKinds>0?{minKinds:Math.min(80,row.minKinds)}:{}),
   budget:Number.isFinite(budget)&&budget>=0?budget:DEFAULT_BUDGETS[tier]||10,
   maxCost:Number.isFinite(maxCost)&&maxCost>0?maxCost:null,
   pool:cleanPool(row?.pool)
@@ -46,8 +39,8 @@ export function normalizeTemplate(row,tier=1){
 }
 
 export function templatesOf(slot,tier=1){
- if(Array.isArray(slot?.templates)&&slot.templates.length)return groupTemplates(slot.templates.map(row=>normalizeTemplate(row,tier)));
- if(slot&&(Array.isArray(slot.pool)||slot.budget!=null))return groupTemplates([normalizeTemplate(slot,tier)]);
+ if(Array.isArray(slot?.templates)&&slot.templates.length)return slot.templates.map(row=>normalizeTemplate(row,tier));
+ if(slot&&(Array.isArray(slot.pool)||slot.budget!=null))return [normalizeTemplate(slot,tier)];
  return [emptyTemplate(tier)];
 }
 

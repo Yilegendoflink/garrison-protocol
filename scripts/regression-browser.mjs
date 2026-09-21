@@ -41,9 +41,13 @@ suite('wave-activities',async(browser)=>{
  await page.locator('[data-act=ed-template-activity]').selectOption('将进酒');
  await page.locator('.wave-ed-table [data-act=ed-add]:enabled').first().click();
  assert.match(await page.locator('.wave-ed-pool').innerText(),/将进酒/);
- assert.equal(await page.locator('[data-act=ed-template-activity]').isDisabled(),true);
+ assert.equal(await page.locator('[data-act=ed-template-activity]').isDisabled(),false);
  await page.locator('[data-act=ed-activity]').selectOption('初始');
- assert.equal(await page.locator('.wave-ed-table [data-act=ed-add]:enabled').count(),0);
+ assert.ok(await page.locator('.wave-ed-table [data-act=ed-add]:enabled').count()>0);
+ const added=await page.locator('.wave-ed-table [data-act=ed-add]:enabled').first().getAttribute('data-id');
+ await page.locator('.wave-ed-table [data-act=ed-add]:enabled').first().click();
+ assert.equal(await page.locator('.wave-ed-cards article').count(),2);
+ await page.locator('.wave-ed-cards [data-act=ed-remove][data-id="'+added+'"]').click();
  await page.locator('[data-act=ed-readiness]').selectOption('pending');
  for(const row of await rows.all())assert.match(await row.innerText(),/待补齐/);
  assert.equal(await page.locator('#wave-ed-test').count(),0);
@@ -70,6 +74,11 @@ suite('wave-activities',async(browser)=>{
  assert.equal(await page.locator('#ed-motion').isVisible(),true);
  await page.locator('#ed-search').fill('');
  await page.locator('[data-act=ed-filters]').click();
+ await page.locator('[data-act=ed-tier][data-tier="2"]').click();
+ assert.ok(await page.locator('.wave-ed-cards article').count()>=4);
+ await page.locator('.wave-ed-current [data-act=ed-roll]').click();
+ assert.ok(await page.locator('#wave-ed-test .wave-ed-test-results li').count()>=4);
+ await page.locator('[data-act=ed-close-test]').click();
  await page.screenshot({path:'artifacts/wave-activities/editor.png',fullPage:true});
  for(const width of [320,375,414,768]){
   await page.setViewportSize({width,height:900});

@@ -3290,7 +3290,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1000_gopro_2"
             ],
-            "activity": "初始"
+            "activity": "初始",
+            "theme": "sarkaz-line"
           },
           {
             "minCount": 6,
@@ -3301,7 +3302,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1043_zomsbr"
             ],
-            "activity": "主线第五章"
+            "activity": "主线第五章",
+            "theme": "sarkaz-line"
           },
           {
             "minCount": 6,
@@ -3312,7 +3314,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1071_dftman"
             ],
-            "activity": "生于黑夜"
+            "activity": "生于黑夜",
+            "theme": "sarkaz-line"
           },
           {
             "minCount": 6,
@@ -3323,7 +3326,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1116_liprr"
             ],
-            "activity": "孤岛风云"
+            "activity": "孤岛风云",
+            "theme": "prison-break"
           },
           {
             "minCount": 6,
@@ -3334,7 +3338,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1251_lysyta"
             ],
-            "activity": "绿野幻梦"
+            "activity": "绿野幻梦",
+            "theme": "rhine-security"
           },
           {
             "minCount": 6,
@@ -3345,7 +3350,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1325_cbgpro"
             ],
-            "activity": "孤星"
+            "activity": "孤星",
+            "theme": "rhine-security"
           },
           {
             "minCount": 6,
@@ -3356,7 +3362,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1381_winman"
             ],
-            "activity": "银心湖列车"
+            "activity": "银心湖列车",
+            "theme": "armed-guard"
           }
         ]
       },
@@ -3365,49 +3372,66 @@ const DEFAULT_WAVE_TABLE = {
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "初始",
-            "budget": 160,
+            "name": "初始 · 萨卡兹与感染者军阵",
+            "budget": 180,
             "maxCost": null,
             "pool": [
               "enemy_1000_gopro_2",
-              "enemy_1010_demon"
+              "enemy_1010_demon",
+              "enemy_1010_demon_2",
+              "enemy_1043_zomsbr"
             ],
-            "activity": "初始"
+            "activity": "初始",
+            "minKinds": 4,
+            "theme": "sarkaz-line"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "主线第五章",
-            "budget": 160,
+            "name": "主线第五章 · 萨卡兹与感染者军阵",
+            "budget": 280,
             "maxCost": null,
             "pool": [
               "enemy_1043_zomsbr",
-              "enemy_1045_hammer"
+              "enemy_1045_hammer",
+              "enemy_1045_hammer_2",
+              "enemy_1000_gopro_2"
             ],
-            "activity": "主线第五章"
+            "activity": "主线第五章",
+            "minKinds": 4,
+            "theme": "sarkaz-line"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "火蓝之心",
+            "name": "火蓝之心 · 武装驻军",
             "budget": 160,
             "maxCost": null,
             "pool": [
-              "enemy_1046_agent"
+              "enemy_1046_agent",
+              "enemy_1381_winman",
+              "enemy_1381_winman_2",
+              "enemy_1387_winshd"
             ],
-            "activity": "火蓝之心"
+            "activity": "火蓝之心",
+            "minKinds": 4,
+            "theme": "armed-guard"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "生于黑夜",
+            "name": "生于黑夜 · 萨卡兹与感染者军阵",
             "budget": 160,
             "maxCost": null,
             "pool": [
               "enemy_1071_dftman",
-              "enemy_1072_dlancer"
+              "enemy_1072_dlancer",
+              "enemy_1000_gopro_2",
+              "enemy_1043_zomsbr"
             ],
-            "activity": "生于黑夜"
+            "activity": "生于黑夜",
+            "minKinds": 4,
+            "theme": "sarkaz-line"
           },
           {
             "minCount": 15,
@@ -3421,7 +3445,9 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1118_lidbox_2",
               "enemy_1119_vofsd"
             ],
-            "activity": "孤岛风云"
+            "activity": "孤岛风云",
+            "minKinds": 4,
+            "theme": "prison-break"
           },
           {
             "minCount": 15,
@@ -3435,43 +3461,57 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1249_lysdb_2",
               "enemy_1252_lysytb_2"
             ],
-            "activity": "绿野幻梦"
+            "activity": "绿野幻梦",
+            "minKinds": 4,
+            "theme": "rhine-security"
           },
           {
             "minCount": 15,
             "maxCount": 20,
             "name": "孤星",
-            "budget": 160,
+            "budget": 220,
             "maxCost": null,
             "pool": [
               "enemy_1325_cbgpro",
               "enemy_1325_cbgpro_2",
-              "enemy_1328_cbjedi"
+              "enemy_1328_cbjedi",
+              "enemy_1329_cbshld"
             ],
-            "activity": "孤星"
+            "activity": "孤星",
+            "minKinds": 4,
+            "theme": "rhine-security"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "银心湖列车",
+            "name": "银心湖列车 · 武装驻军",
             "budget": 160,
             "maxCost": null,
             "pool": [
               "enemy_1381_winman",
-              "enemy_1381_winman_2"
+              "enemy_1381_winman_2",
+              "enemy_1387_winshd",
+              "enemy_1046_agent"
             ],
-            "activity": "银心湖列车"
+            "activity": "银心湖列车",
+            "minKinds": 4,
+            "theme": "armed-guard"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "主线第六章",
+            "name": "主线第六章 · 萨卡兹与感染者军阵",
             "budget": 160,
             "maxCost": null,
             "pool": [
-              "enemy_1061_zomshd"
+              "enemy_1061_zomshd",
+              "enemy_1000_gopro_2",
+              "enemy_1043_zomsbr",
+              "enemy_1071_dftman"
             ],
-            "activity": "主线第六章"
+            "activity": "主线第六章",
+            "minKinds": 4,
+            "theme": "sarkaz-line"
           }
         ]
       },
@@ -3480,51 +3520,66 @@ const DEFAULT_WAVE_TABLE = {
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "初始",
+            "name": "初始 · 萨卡兹与感染者军阵",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1000_gopro_2",
               "enemy_1010_demon",
-              "enemy_1010_demon_2"
+              "enemy_1010_demon_2",
+              "enemy_1043_zomsbr"
             ],
-            "activity": "初始"
+            "activity": "初始",
+            "minKinds": 4,
+            "theme": "sarkaz-line"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "主线第五章",
+            "name": "主线第五章 · 萨卡兹与感染者军阵",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1043_zomsbr",
               "enemy_1045_hammer",
-              "enemy_1045_hammer_2"
+              "enemy_1045_hammer_2",
+              "enemy_1000_gopro_2"
             ],
-            "activity": "主线第五章"
+            "activity": "主线第五章",
+            "minKinds": 4,
+            "theme": "sarkaz-line"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "火蓝之心",
+            "name": "火蓝之心 · 武装驻军",
             "budget": 560,
             "maxCost": null,
             "pool": [
-              "enemy_1046_agent"
+              "enemy_1046_agent",
+              "enemy_1381_winman",
+              "enemy_1381_winman_2",
+              "enemy_1387_winshd"
             ],
-            "activity": "火蓝之心"
+            "activity": "火蓝之心",
+            "minKinds": 4,
+            "theme": "armed-guard"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "生于黑夜",
+            "name": "生于黑夜 · 萨卡兹与感染者军阵",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1071_dftman",
-              "enemy_1072_dlancer"
+              "enemy_1072_dlancer",
+              "enemy_1000_gopro_2",
+              "enemy_1043_zomsbr"
             ],
-            "activity": "生于黑夜"
+            "activity": "生于黑夜",
+            "minKinds": 4,
+            "theme": "sarkaz-line"
           },
           {
             "minCount": 35,
@@ -3540,7 +3595,9 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1121_lifbos",
               "enemy_1121_lifbos_2"
             ],
-            "activity": "孤岛风云"
+            "activity": "孤岛风云",
+            "minKinds": 4,
+            "theme": "prison-break"
           },
           {
             "minCount": 35,
@@ -3555,7 +3612,9 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1252_lysytb_2",
               "enemy_1254_lypa_2"
             ],
-            "activity": "绿野幻梦"
+            "activity": "绿野幻梦",
+            "minKinds": 4,
+            "theme": "rhine-security"
           },
           {
             "minCount": 35,
@@ -3570,86 +3629,121 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1329_cbshld",
               "enemy_1329_cbshld_2"
             ],
-            "activity": "孤星"
+            "activity": "孤星",
+            "minKinds": 4,
+            "theme": "rhine-security"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "银心湖列车",
+            "name": "银心湖列车 · 武装驻军",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1381_winman",
               "enemy_1381_winman_2",
-              "enemy_1387_winshd"
+              "enemy_1387_winshd",
+              "enemy_1046_agent"
             ],
-            "activity": "银心湖列车"
+            "activity": "银心湖列车",
+            "minKinds": 4,
+            "theme": "armed-guard"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "主线第十四章",
+            "name": "主线第十四章 · 萨卡兹与感染者军阵",
             "budget": 560,
             "maxCost": null,
             "pool": [
-              "enemy_1422_lrsldr_2"
+              "enemy_1422_lrsldr_2",
+              "enemy_1000_gopro_2",
+              "enemy_1043_zomsbr",
+              "enemy_1071_dftman"
             ],
-            "activity": "主线第十四章"
+            "activity": "主线第十四章",
+            "minKinds": 4,
+            "theme": "sarkaz-line"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "主线第六章",
+            "name": "主线第六章 · 萨卡兹与感染者军阵",
             "budget": 560,
             "maxCost": null,
             "pool": [
-              "enemy_1061_zomshd"
+              "enemy_1061_zomshd",
+              "enemy_1000_gopro_2",
+              "enemy_1043_zomsbr",
+              "enemy_1071_dftman"
             ],
-            "activity": "主线第六章"
+            "activity": "主线第六章",
+            "minKinds": 4,
+            "theme": "sarkaz-line"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "水晶箭行动",
+            "name": "水晶箭行动 · 武装驻军",
             "budget": 560,
             "maxCost": null,
             "pool": [
-              "enemy_1402_tgshd_2"
+              "enemy_1402_tgshd_2",
+              "enemy_1046_agent",
+              "enemy_1381_winman",
+              "enemy_1381_winman_2"
             ],
-            "activity": "水晶箭行动"
+            "activity": "水晶箭行动",
+            "minKinds": 4,
+            "theme": "armed-guard"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "骑兵与猎人",
+            "name": "骑兵与猎人 · 武装驻军",
             "budget": 560,
             "maxCost": null,
             "pool": [
-              "enemy_1006_shield_3"
+              "enemy_1006_shield_3",
+              "enemy_1046_agent",
+              "enemy_1381_winman",
+              "enemy_1381_winman_2"
             ],
-            "activity": "骑兵与猎人"
+            "activity": "骑兵与猎人",
+            "minKinds": 4,
+            "theme": "armed-guard"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "主线第十六章",
+            "name": "主线第十六章 · 武装驻军",
             "budget": 560,
             "maxCost": null,
             "pool": [
-              "enemy_10124_uashld_2"
+              "enemy_10124_uashld_2",
+              "enemy_1046_agent",
+              "enemy_1381_winman",
+              "enemy_1381_winman_2"
             ],
-            "activity": "主线第十六章"
+            "activity": "主线第十六章",
+            "minKinds": 4,
+            "theme": "armed-guard"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "主线第十二章",
+            "name": "主线第十二章 · 萨卡兹与感染者军阵",
             "budget": 560,
             "maxCost": null,
             "pool": [
-              "enemy_1320_wdrrl_2"
+              "enemy_1320_wdrrl_2",
+              "enemy_1000_gopro_2",
+              "enemy_1043_zomsbr",
+              "enemy_1071_dftman"
             ],
-            "activity": "主线第十二章"
+            "activity": "主线第十二章",
+            "minKinds": 4,
+            "theme": "sarkaz-line"
           }
         ]
       }
@@ -3667,7 +3761,8 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1005_yokai",
               "enemy_1005_yokai_2"
             ],
-            "activity": "初始"
+            "activity": "初始",
+            "theme": "air-fire"
           },
           {
             "minCount": 6,
@@ -3678,7 +3773,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_10083_hlbird"
             ],
-            "activity": "众生行记"
+            "activity": "众生行记",
+            "theme": "air-fire"
           }
         ]
       },
@@ -3688,49 +3784,65 @@ const DEFAULT_WAVE_TABLE = {
             "minCount": 15,
             "maxCount": 20,
             "name": "初始",
-            "budget": 100,
+            "budget": 280,
             "maxCost": null,
             "pool": [
               "enemy_1005_yokai",
               "enemy_1005_yokai_2",
-              "enemy_1017_defdrn"
+              "enemy_1017_defdrn",
+              "enemy_1005_yokai_3"
             ],
-            "activity": "初始"
+            "activity": "初始",
+            "minKinds": 4,
+            "theme": "air-fire"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "众生行记",
-            "budget": 100,
+            "name": "众生行记 · 空中火力编队",
+            "budget": 120,
             "maxCost": null,
             "pool": [
-              "enemy_10083_hlbird"
+              "enemy_10083_hlbird",
+              "enemy_10084_hlegle",
+              "enemy_1005_yokai",
+              "enemy_1005_yokai_2"
             ],
-            "activity": "众生行记"
+            "activity": "众生行记",
+            "minKinds": 4,
+            "theme": "air-fire"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "主线第五章",
+            "name": "主线第五章 · 空中火力编队",
             "budget": 100,
             "maxCost": null,
             "pool": [
               "enemy_1041_lazerd",
               "enemy_1041_lazerd_2",
-              "enemy_1042_frostd"
+              "enemy_1042_frostd",
+              "enemy_1005_yokai"
             ],
-            "activity": "主线第五章"
+            "activity": "主线第五章",
+            "minKinds": 4,
+            "theme": "air-fire"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "不义之财",
+            "name": "不义之财 · 空中火力编队",
             "budget": 100,
             "maxCost": null,
             "pool": [
-              "enemy_1355_mrfly"
+              "enemy_1355_mrfly",
+              "enemy_1355_mrfly_2",
+              "enemy_1005_yokai",
+              "enemy_10083_hlbird"
             ],
-            "activity": "不义之财"
+            "activity": "不义之财",
+            "minKinds": 4,
+            "theme": "air-fire"
           }
         ]
       },
@@ -3748,77 +3860,105 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1017_defdrn",
               "enemy_1005_yokai_3"
             ],
-            "activity": "初始"
+            "activity": "初始",
+            "minKinds": 4,
+            "theme": "air-fire"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "众生行记",
+            "name": "众生行记 · 空中火力编队",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_10083_hlbird",
-              "enemy_10084_hlegle"
+              "enemy_10084_hlegle",
+              "enemy_1005_yokai",
+              "enemy_1005_yokai_2"
             ],
-            "activity": "众生行记"
+            "activity": "众生行记",
+            "minKinds": 4,
+            "theme": "air-fire"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "主线第五章",
+            "name": "主线第五章 · 空中火力编队",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1041_lazerd",
               "enemy_1041_lazerd_2",
-              "enemy_1042_frostd"
+              "enemy_1042_frostd",
+              "enemy_1005_yokai"
             ],
-            "activity": "主线第五章"
+            "activity": "主线第五章",
+            "minKinds": 4,
+            "theme": "air-fire"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "水晶箭行动",
+            "name": "水晶箭行动 · 空中火力编队",
             "budget": 560,
             "maxCost": null,
             "pool": [
-              "enemy_1407_hummbd"
+              "enemy_1407_hummbd",
+              "enemy_1005_yokai",
+              "enemy_10083_hlbird",
+              "enemy_1005_yokai_2"
             ],
-            "activity": "水晶箭行动"
+            "activity": "水晶箭行动",
+            "minKinds": 4,
+            "theme": "air-fire"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "不义之财",
+            "name": "不义之财 · 空中火力编队",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1355_mrfly",
-              "enemy_1355_mrfly_2"
+              "enemy_1355_mrfly_2",
+              "enemy_1005_yokai",
+              "enemy_10083_hlbird"
             ],
-            "activity": "不义之财"
+            "activity": "不义之财",
+            "minKinds": 4,
+            "theme": "air-fire"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "主线第八章",
+            "name": "主线第八章 · 空中火力编队",
             "budget": 560,
             "maxCost": null,
             "pool": [
-              "enemy_1112_emppnt"
+              "enemy_1112_emppnt",
+              "enemy_1005_yokai",
+              "enemy_10083_hlbird",
+              "enemy_1005_yokai_2"
             ],
-            "activity": "主线第八章"
+            "activity": "主线第八章",
+            "minKinds": 4,
+            "theme": "air-fire"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "卫戍协议：盟约",
+            "name": "卫戍协议：盟约 · 空中火力编队",
             "budget": 560,
             "maxCost": null,
             "pool": [
-              "enemy_9009_acfort"
+              "enemy_9009_acfort",
+              "enemy_1005_yokai",
+              "enemy_10083_hlbird",
+              "enemy_1005_yokai_2"
             ],
-            "activity": "卫戍协议：盟约"
+            "activity": "卫戍协议：盟约",
+            "minKinds": 4,
+            "theme": "air-fire"
           }
         ]
       }
@@ -3837,7 +3977,8 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1197_sfshu",
               "enemy_1195_sfyin_2"
             ],
-            "activity": "将进酒"
+            "activity": "将进酒",
+            "theme": "animated-vessels"
           }
         ]
       },
@@ -3855,19 +3996,25 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1195_sfyin_2",
               "enemy_1197_sfshu_2"
             ],
-            "activity": "将进酒"
+            "activity": "将进酒",
+            "minKinds": 4,
+            "theme": "animated-vessels"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "照我以火",
-            "budget": 120,
+            "name": "照我以火 · 余烬再生",
+            "budget": 180,
             "maxCost": null,
             "pool": [
               "enemy_1288_duskls",
-              "enemy_1288_duskls_2"
+              "enemy_1288_duskls_2",
+              "enemy_1292_duskld",
+              "enemy_9010_acpupp"
             ],
-            "activity": "照我以火"
+            "activity": "照我以火",
+            "minKinds": 4,
+            "theme": "reviving-flame"
           }
         ]
       },
@@ -3887,31 +4034,41 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1199_sfjin",
               "enemy_1207_sfji"
             ],
-            "activity": "将进酒"
+            "activity": "将进酒",
+            "minKinds": 4,
+            "theme": "animated-vessels"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "照我以火",
+            "name": "照我以火 · 余烬再生",
             "budget": 360,
             "maxCost": null,
             "pool": [
               "enemy_1288_duskls",
               "enemy_1288_duskls_2",
-              "enemy_1292_duskld"
+              "enemy_1292_duskld",
+              "enemy_9010_acpupp"
             ],
-            "activity": "照我以火"
+            "activity": "照我以火",
+            "minKinds": 4,
+            "theme": "reviving-flame"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "卫戍协议：盟约",
+            "name": "卫戍协议：盟约 · 余烬再生",
             "budget": 360,
             "maxCost": null,
             "pool": [
-              "enemy_9010_acpupp"
+              "enemy_9010_acpupp",
+              "enemy_1288_duskls",
+              "enemy_1288_duskls_2",
+              "enemy_1292_duskld"
             ],
-            "activity": "卫戍协议：盟约"
+            "activity": "卫戍协议：盟约",
+            "minKinds": 4,
+            "theme": "reviving-flame"
           }
         ]
       }
@@ -3928,7 +4085,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_10065_ftzlc"
             ],
-            "activity": "挽歌燃烧殆尽"
+            "activity": "挽歌燃烧殆尽",
+            "theme": "burning-life"
           },
           {
             "minCount": 6,
@@ -3939,7 +4097,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1148_dssbr"
             ],
-            "activity": "覆潮之下"
+            "activity": "覆潮之下",
+            "theme": "tidal-erosion"
           },
           {
             "minCount": 6,
@@ -3950,7 +4109,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1158_divman"
             ],
-            "activity": "多索雷斯假日"
+            "activity": "多索雷斯假日",
+            "theme": "tidal-erosion"
           },
           {
             "minCount": 6,
@@ -3961,7 +4121,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_2021_syfish"
             ],
-            "activity": "水月与深蓝之树"
+            "activity": "水月与深蓝之树",
+            "theme": "tidal-erosion"
           }
         ]
       },
@@ -3970,37 +4131,50 @@ const DEFAULT_WAVE_TABLE = {
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "落叶逐火",
+            "name": "落叶逐火 · 灼燃生物",
             "budget": 160,
             "maxCost": null,
             "pool": [
               "enemy_1305_mhslim",
-              "enemy_1305_mhslim_2"
+              "enemy_1305_mhslim_2",
+              "enemy_10065_ftzlc",
+              "enemy_10067_ftsjc"
             ],
-            "activity": "落叶逐火"
+            "activity": "落叶逐火",
+            "minKinds": 4,
+            "theme": "burning-life"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "挽歌燃烧殆尽",
+            "name": "挽歌燃烧殆尽 · 灼燃生物",
             "budget": 160,
             "maxCost": null,
             "pool": [
-              "enemy_10065_ftzlc"
+              "enemy_10065_ftzlc",
+              "enemy_10067_ftsjc",
+              "enemy_1305_mhslim",
+              "enemy_1305_mhslim_2"
             ],
-            "activity": "挽歌燃烧殆尽"
+            "activity": "挽歌燃烧殆尽",
+            "minKinds": 4,
+            "theme": "burning-life"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "覆潮之下",
+            "name": "覆潮之下 · 潮汐侵蚀",
             "budget": 160,
             "maxCost": null,
             "pool": [
               "enemy_1148_dssbr",
-              "enemy_1148_dssbr_2"
+              "enemy_1148_dssbr_2",
+              "enemy_1158_divman",
+              "enemy_2021_syfish"
             ],
-            "activity": "覆潮之下"
+            "activity": "覆潮之下",
+            "minKinds": 4,
+            "theme": "tidal-erosion"
           },
           {
             "minCount": 15,
@@ -4011,32 +4185,44 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1158_divman",
               "enemy_1161_tidmag",
-              "enemy_1161_tidmag_2"
+              "enemy_1161_tidmag_2",
+              "enemy_1160_hvyslr"
             ],
-            "activity": "多索雷斯假日"
+            "activity": "多索雷斯假日",
+            "minKinds": 4,
+            "theme": "tidal-erosion"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "水月与深蓝之树",
-            "budget": 160,
+            "name": "水月与深蓝之树 · 潮汐侵蚀",
+            "budget": 220,
             "maxCost": null,
             "pool": [
-              "enemy_2021_syfish"
+              "enemy_2021_syfish",
+              "enemy_2025_syufo",
+              "enemy_1148_dssbr",
+              "enemy_1148_dssbr_2"
             ],
-            "activity": "水月与深蓝之树"
+            "activity": "水月与深蓝之树",
+            "minKinds": 4,
+            "theme": "tidal-erosion"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "主线第十章",
-            "budget": 160,
+            "name": "主线第十章 · 王庭元素侵蚀",
+            "budget": 280,
             "maxCost": null,
             "pool": [
               "enemy_1229_darmy",
-              "enemy_1229_darmy_2"
+              "enemy_1229_darmy_2",
+              "enemy_1275_dwlock_2",
+              "enemy_9007_acelem"
             ],
-            "activity": "主线第十章"
+            "activity": "主线第十章",
+            "minKinds": 4,
+            "theme": "royal-erosion"
           }
         ]
       },
@@ -4045,38 +4231,50 @@ const DEFAULT_WAVE_TABLE = {
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "落叶逐火",
+            "name": "落叶逐火 · 灼燃生物",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1305_mhslim",
-              "enemy_1305_mhslim_2"
+              "enemy_1305_mhslim_2",
+              "enemy_10065_ftzlc",
+              "enemy_10067_ftsjc"
             ],
-            "activity": "落叶逐火"
+            "activity": "落叶逐火",
+            "minKinds": 4,
+            "theme": "burning-life"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "挽歌燃烧殆尽",
+            "name": "挽歌燃烧殆尽 · 灼燃生物",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_10065_ftzlc",
-              "enemy_10067_ftsjc"
+              "enemy_10067_ftsjc",
+              "enemy_1305_mhslim",
+              "enemy_1305_mhslim_2"
             ],
-            "activity": "挽歌燃烧殆尽"
+            "activity": "挽歌燃烧殆尽",
+            "minKinds": 4,
+            "theme": "burning-life"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "覆潮之下",
+            "name": "覆潮之下 · 潮汐侵蚀",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1148_dssbr",
-              "enemy_1148_dssbr_2"
+              "enemy_1148_dssbr_2",
+              "enemy_1158_divman",
+              "enemy_2021_syfish"
             ],
-            "activity": "覆潮之下"
+            "activity": "覆潮之下",
+            "minKinds": 4,
+            "theme": "tidal-erosion"
           },
           {
             "minCount": 35,
@@ -4091,53 +4289,73 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1160_hvyslr",
               "enemy_1160_hvyslr_2"
             ],
-            "activity": "多索雷斯假日"
+            "activity": "多索雷斯假日",
+            "minKinds": 4,
+            "theme": "tidal-erosion"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "水月与深蓝之树",
+            "name": "水月与深蓝之树 · 潮汐侵蚀",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_2021_syfish",
-              "enemy_2025_syufo"
+              "enemy_2025_syufo",
+              "enemy_1148_dssbr",
+              "enemy_1148_dssbr_2"
             ],
-            "activity": "水月与深蓝之树"
+            "activity": "水月与深蓝之树",
+            "minKinds": 4,
+            "theme": "tidal-erosion"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "主线第十章",
+            "name": "主线第十章 · 王庭元素侵蚀",
             "budget": 560,
             "maxCost": null,
             "pool": [
               "enemy_1229_darmy",
-              "enemy_1229_darmy_2"
-            ],
-            "activity": "主线第十章"
-          },
-          {
-            "minCount": 35,
-            "maxCount": 40,
-            "name": "主线第十一章",
-            "budget": 560,
-            "maxCost": null,
-            "pool": [
-              "enemy_1275_dwlock_2"
-            ],
-            "activity": "主线第十一章"
-          },
-          {
-            "minCount": 35,
-            "maxCount": 40,
-            "name": "卫戍协议：盟约",
-            "budget": 560,
-            "maxCost": null,
-            "pool": [
+              "enemy_1229_darmy_2",
+              "enemy_1275_dwlock_2",
               "enemy_9007_acelem"
             ],
-            "activity": "卫戍协议：盟约"
+            "activity": "主线第十章",
+            "minKinds": 4,
+            "theme": "royal-erosion"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "主线第十一章 · 王庭元素侵蚀",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_1275_dwlock_2",
+              "enemy_1229_darmy",
+              "enemy_1229_darmy_2",
+              "enemy_9007_acelem"
+            ],
+            "activity": "主线第十一章",
+            "minKinds": 4,
+            "theme": "royal-erosion"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "卫戍协议：盟约 · 王庭元素侵蚀",
+            "budget": 560,
+            "maxCost": null,
+            "pool": [
+              "enemy_9007_acelem",
+              "enemy_1229_darmy",
+              "enemy_1229_darmy_2",
+              "enemy_1275_dwlock_2"
+            ],
+            "activity": "卫戍协议：盟约",
+            "minKinds": 4,
+            "theme": "royal-erosion"
           }
         ]
       }
@@ -4155,7 +4373,8 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1433_dsbasi",
               "enemy_1433_dsbasi_2"
             ],
-            "activity": "生路"
+            "activity": "生路",
+            "theme": "sea-predators"
           },
           {
             "minCount": 6,
@@ -4167,7 +4386,8 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1267_nhpbr",
               "enemy_1267_nhpbr_2"
             ],
-            "activity": "主线第十一章"
+            "activity": "主线第十一章",
+            "theme": "decay-artillery"
           }
         ]
       },
@@ -4176,14 +4396,18 @@ const DEFAULT_WAVE_TABLE = {
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "生路",
+            "name": "生路 · 深海捕食群",
             "budget": 160,
             "maxCost": null,
             "pool": [
               "enemy_1433_dsbasi",
-              "enemy_1433_dsbasi_2"
+              "enemy_1433_dsbasi_2",
+              "enemy_1234_dsubrl",
+              "enemy_1234_dsubrl_2"
             ],
-            "activity": "生路"
+            "activity": "生路",
+            "minKinds": 4,
+            "theme": "sea-predators"
           },
           {
             "minCount": 15,
@@ -4194,20 +4418,28 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1267_nhpbr",
               "enemy_1267_nhpbr_2",
-              "enemy_1270_nhstlk"
+              "enemy_1270_nhstlk",
+              "enemy_1272_nhtank"
             ],
-            "activity": "主线第十一章"
+            "activity": "主线第十一章",
+            "minKinds": 4,
+            "theme": "decay-artillery"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "愚人号",
+            "name": "愚人号 · 深海捕食群",
             "budget": 160,
             "maxCost": null,
             "pool": [
-              "enemy_1234_dsubrl"
+              "enemy_1234_dsubrl",
+              "enemy_1234_dsubrl_2",
+              "enemy_1433_dsbasi",
+              "enemy_1433_dsbasi_2"
             ],
-            "activity": "愚人号"
+            "activity": "愚人号",
+            "minKinds": 4,
+            "theme": "sea-predators"
           }
         ]
       },
@@ -4216,14 +4448,18 @@ const DEFAULT_WAVE_TABLE = {
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "生路",
+            "name": "生路 · 深海捕食群",
             "budget": 400,
             "maxCost": null,
             "pool": [
               "enemy_1433_dsbasi",
-              "enemy_1433_dsbasi_2"
+              "enemy_1433_dsbasi_2",
+              "enemy_1234_dsubrl",
+              "enemy_1234_dsubrl_2"
             ],
-            "activity": "生路"
+            "activity": "生路",
+            "minKinds": 4,
+            "theme": "sea-predators"
           },
           {
             "minCount": 35,
@@ -4239,41 +4475,57 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1270_nhstlk_2",
               "enemy_1272_nhtank_2"
             ],
-            "activity": "主线第十一章"
+            "activity": "主线第十一章",
+            "minKinds": 4,
+            "theme": "decay-artillery"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "主线第十六章",
+            "name": "主线第十六章 · 枯朽与炮火",
             "budget": 400,
             "maxCost": null,
             "pool": [
-              "enemy_10122_uacann_2"
+              "enemy_10122_uacann_2",
+              "enemy_1267_nhpbr",
+              "enemy_1267_nhpbr_2",
+              "enemy_1270_nhstlk"
             ],
-            "activity": "主线第十六章"
+            "activity": "主线第十六章",
+            "minKinds": 4,
+            "theme": "decay-artillery"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "愚人号",
+            "name": "愚人号 · 深海捕食群",
             "budget": 400,
             "maxCost": null,
             "pool": [
               "enemy_1234_dsubrl",
-              "enemy_1234_dsubrl_2"
+              "enemy_1234_dsubrl_2",
+              "enemy_1433_dsbasi",
+              "enemy_1433_dsbasi_2"
             ],
-            "activity": "愚人号"
+            "activity": "愚人号",
+            "minKinds": 4,
+            "theme": "sea-predators"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "卫戍协议：盟约",
+            "name": "卫戍协议：盟约 · 枯朽与炮火",
             "budget": 400,
             "maxCost": null,
             "pool": [
-              "enemy_9006_actoxi"
+              "enemy_9006_actoxi",
+              "enemy_1267_nhpbr",
+              "enemy_1267_nhpbr_2",
+              "enemy_10122_uacann_2"
             ],
-            "activity": "卫戍协议：盟约"
+            "activity": "卫戍协议：盟约",
+            "minKinds": 4,
+            "theme": "decay-artillery"
           }
         ]
       }
@@ -4291,7 +4543,8 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1009_lurker",
               "enemy_1019_jshoot"
             ],
-            "activity": "初始"
+            "activity": "初始",
+            "theme": "covert-infiltration"
           },
           {
             "minCount": 6,
@@ -4302,7 +4555,8 @@ const DEFAULT_WAVE_TABLE = {
             "pool": [
               "enemy_1043_zomsbr"
             ],
-            "activity": "主线第五章"
+            "activity": "主线第五章",
+            "theme": "covert-infiltration"
           }
         ]
       },
@@ -4311,37 +4565,50 @@ const DEFAULT_WAVE_TABLE = {
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "初始",
+            "name": "初始 · 潜伏渗透",
             "budget": 120,
             "maxCost": null,
             "pool": [
               "enemy_1009_lurker",
               "enemy_1019_jshoot",
-              "enemy_1019_jshoot_2"
-            ],
-            "activity": "初始"
-          },
-          {
-            "minCount": 15,
-            "maxCount": 20,
-            "name": "主线第五章",
-            "budget": 120,
-            "maxCost": null,
-            "pool": [
+              "enemy_1019_jshoot_2",
               "enemy_1043_zomsbr"
             ],
-            "activity": "主线第五章"
+            "activity": "初始",
+            "minKinds": 4,
+            "theme": "covert-infiltration"
           },
           {
             "minCount": 15,
             "maxCount": 20,
-            "name": "银心湖列车",
+            "name": "主线第五章 · 潜伏渗透",
             "budget": 120,
             "maxCost": null,
             "pool": [
-              "enemy_1381_winman"
+              "enemy_1043_zomsbr",
+              "enemy_1009_lurker",
+              "enemy_1019_jshoot",
+              "enemy_1019_jshoot_2"
             ],
-            "activity": "银心湖列车"
+            "activity": "主线第五章",
+            "minKinds": 4,
+            "theme": "covert-infiltration"
+          },
+          {
+            "minCount": 15,
+            "maxCount": 20,
+            "name": "银心湖列车 · 潜伏渗透",
+            "budget": 120,
+            "maxCost": null,
+            "pool": [
+              "enemy_1381_winman",
+              "enemy_1389_winbab_2",
+              "enemy_1009_lurker",
+              "enemy_1019_jshoot"
+            ],
+            "activity": "银心湖列车",
+            "minKinds": 4,
+            "theme": "covert-infiltration"
           }
         ]
       },
@@ -4350,95 +4617,130 @@ const DEFAULT_WAVE_TABLE = {
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "初始",
+            "name": "初始 · 潜伏渗透",
             "budget": 360,
             "maxCost": null,
             "pool": [
               "enemy_1009_lurker",
               "enemy_1019_jshoot",
-              "enemy_1019_jshoot_2"
+              "enemy_1019_jshoot_2",
+              "enemy_1043_zomsbr"
             ],
-            "activity": "初始"
+            "activity": "初始",
+            "minKinds": 4,
+            "theme": "covert-infiltration"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "主线第五章",
+            "name": "主线第五章 · 潜伏渗透",
             "budget": 360,
             "maxCost": null,
             "pool": [
-              "enemy_1043_zomsbr"
+              "enemy_1043_zomsbr",
+              "enemy_1009_lurker",
+              "enemy_1019_jshoot",
+              "enemy_1019_jshoot_2"
             ],
-            "activity": "主线第五章"
+            "activity": "主线第五章",
+            "minKinds": 4,
+            "theme": "covert-infiltration"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "银心湖列车",
+            "name": "银心湖列车 · 潜伏渗透",
             "budget": 360,
             "maxCost": null,
             "pool": [
               "enemy_1381_winman",
-              "enemy_1389_winbab_2"
+              "enemy_1389_winbab_2",
+              "enemy_1009_lurker",
+              "enemy_1019_jshoot"
             ],
-            "activity": "银心湖列车"
+            "activity": "银心湖列车",
+            "minKinds": 4,
+            "theme": "covert-infiltration"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "主线第十四章",
+            "name": "主线第十四章 · 潜伏渗透",
             "budget": 360,
             "maxCost": null,
             "pool": [
-              "enemy_1422_lrsldr_2"
+              "enemy_1422_lrsldr_2",
+              "enemy_1009_lurker",
+              "enemy_1019_jshoot",
+              "enemy_1019_jshoot_2"
             ],
-            "activity": "主线第十四章"
+            "activity": "主线第十四章",
+            "minKinds": 4,
+            "theme": "covert-infiltration"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "出苍白海",
+            "name": "出苍白海 · 潜伏渗透",
             "budget": 360,
             "maxCost": null,
             "pool": [
               "enemy_10042_prtrop",
-              "enemy_10042_prtrop_2"
+              "enemy_10042_prtrop_2",
+              "enemy_1009_lurker",
+              "enemy_1019_jshoot"
             ],
-            "activity": "出苍白海"
+            "activity": "出苍白海",
+            "minKinds": 4,
+            "theme": "covert-infiltration"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "登临意",
+            "name": "登临意 · 隐匿刺杀",
             "budget": 360,
             "maxCost": null,
             "pool": [
               "enemy_1299_ymkilr",
-              "enemy_1299_ymkilr_2"
-            ],
-            "activity": "登临意"
-          },
-          {
-            "minCount": 35,
-            "maxCount": 40,
-            "name": "卫戍协议：盟约",
-            "budget": 360,
-            "maxCost": null,
-            "pool": [
-              "enemy_9008_acbunn"
-            ],
-            "activity": "卫戍协议：盟约"
-          },
-          {
-            "minCount": 35,
-            "maxCount": 40,
-            "name": "叙拉古人",
-            "budget": 360,
-            "maxCost": null,
-            "pool": [
+              "enemy_1299_ymkilr_2",
+              "enemy_9008_acbunn",
               "enemy_1283_sgkill"
             ],
-            "activity": "叙拉古人"
+            "activity": "登临意",
+            "minKinds": 4,
+            "theme": "covert-assassins"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "卫戍协议：盟约 · 隐匿刺杀",
+            "budget": 360,
+            "maxCost": null,
+            "pool": [
+              "enemy_9008_acbunn",
+              "enemy_1299_ymkilr",
+              "enemy_1299_ymkilr_2",
+              "enemy_1283_sgkill"
+            ],
+            "activity": "卫戍协议：盟约",
+            "minKinds": 4,
+            "theme": "covert-assassins"
+          },
+          {
+            "minCount": 35,
+            "maxCount": 40,
+            "name": "叙拉古人 · 隐匿刺杀",
+            "budget": 360,
+            "maxCost": null,
+            "pool": [
+              "enemy_1283_sgkill",
+              "enemy_1299_ymkilr",
+              "enemy_9008_acbunn",
+              "enemy_1299_ymkilr_2"
+            ],
+            "activity": "叙拉古人",
+            "minKinds": 4,
+            "theme": "covert-assassins"
           }
         ]
       }
@@ -4458,7 +4760,8 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1168_dumage",
               "enemy_1169_duphlx"
             ],
-            "activity": "主线第九章"
+            "activity": "主线第九章",
+            "theme": "dublinn-refraction"
           }
         ]
       },
@@ -4478,7 +4781,9 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1169_duphlx_2",
               "enemy_1170_dushld"
             ],
-            "activity": "主线第九章"
+            "activity": "主线第九章",
+            "minKinds": 4,
+            "theme": "dublinn-refraction"
           }
         ]
       },
@@ -4503,18 +4808,25 @@ const DEFAULT_WAVE_TABLE = {
               "enemy_1174_duholy",
               "enemy_1174_duholy_2"
             ],
-            "activity": "主线第九章"
+            "activity": "主线第九章",
+            "minKinds": 4,
+            "theme": "dublinn-refraction"
           },
           {
             "minCount": 35,
             "maxCount": 40,
-            "name": "卫戍协议：盟约",
+            "name": "卫戍协议：盟约 · 深池折射阵线",
             "budget": 520,
             "maxCost": null,
             "pool": [
-              "enemy_9011_acrefr"
+              "enemy_9011_acrefr",
+              "enemy_1165_duhond",
+              "enemy_1166_dusbr",
+              "enemy_1166_dusbr_2"
             ],
-            "activity": "卫戍协议：盟约"
+            "activity": "卫戍协议：盟约",
+            "minKinds": 4,
+            "theme": "dublinn-refraction"
           }
         ]
       }
@@ -4531,15 +4843,6 @@ function enemyActivity(id){return ENEMY_ACTIVITY_GROUPS[id]?.activity||'未归�
 function enemyActivitySource(id){return ENEMY_ACTIVITY_GROUPS[id]?.url||'';}
 function enemyPoolEligible(id,data){return (data?.enemies?.[id]?.enemyBehavior?.randomPoolEligible??ENEMY_ACTIVITY_GROUPS[id]?.eligible)!==false;}
 
-// 旧存档和导入的混合池按活动拆分，保留各自预算与数量目标。
-function groupTemplates(templates){
- return templates.flatMap(slot=>{
-  const groups=new Map();
-  for(const id of slot.pool||[]){const activity=enemyActivity(id);if(!groups.has(activity))groups.set(activity,[]);groups.get(activity).push(id);}
-  if(!groups.size)return [{...slot,activity:slot.activity||'',pool:[]}];
-  return [...groups].map(([activity,pool])=>({...slot,activity,pool,name:groups.size>1?`${slot.name||'模板'} · ${activity}`.slice(0,60):slot.name}));
- });
-}
 const WAVE_STORE_KEY='garrison-wave-table-v2';
 const TRAINING_TYPES=[
  {id:'SPECIAL',name:'特异',desc:'输出和承伤突出'},
@@ -4565,7 +4868,9 @@ function normalizeTemplate(row,tier=1){
  return {
   ...count,
   name:typeof row?.name==='string'?row.name.slice(0,60):'',
-  activity:typeof row?.activity==='string'?row.activity:'',
+  activity:typeof row?.activity==='string'?row.activity:(row?.pool?.[0]?enemyActivity(row.pool[0]):''),
+  ...(typeof row?.theme==='string'?{theme:row.theme}:{}),
+  ...(Number.isInteger(row?.minKinds)&&row.minKinds>0?{minKinds:Math.min(80,row.minKinds)}:{}),
   budget:Number.isFinite(budget)&&budget>=0?budget:DEFAULT_BUDGETS[tier]||10,
   maxCost:Number.isFinite(maxCost)&&maxCost>0?maxCost:null,
   pool:cleanPool(row?.pool)
@@ -4573,8 +4878,8 @@ function normalizeTemplate(row,tier=1){
 }
 
 function templatesOf(slot,tier=1){
- if(Array.isArray(slot?.templates)&&slot.templates.length)return groupTemplates(slot.templates.map(row=>normalizeTemplate(row,tier)));
- if(slot&&(Array.isArray(slot.pool)||slot.budget!=null))return groupTemplates([normalizeTemplate(slot,tier)]);
+ if(Array.isArray(slot?.templates)&&slot.templates.length)return slot.templates.map(row=>normalizeTemplate(row,tier));
+ if(slot&&(Array.isArray(slot.pool)||slot.budget!=null))return [normalizeTemplate(slot,tier)];
  return [emptyTemplate(tier)];
 }
 
@@ -4628,11 +4933,11 @@ function templateLabel(slot,index){return (slot?.name||'').trim()||`模板 ${ind
 
 function tierSlot(table,type,tier){return currentTemplate(table,type,tier,0);}
 
-return {enemyActivity,enemyActivitySource,enemyPoolEligible,groupTemplates,WAVE_STORE_KEY,TRAINING_TYPES,PLACEHOLDER_ENEMY,DEFAULT_BUDGETS,emptyTemplate,normalizeTemplate,templatesOf,emptyWaveTable,defaultWaveTable,normalizeWaveTable,loadWaveTable,saveWaveTable,enemyCost,tierPack,currentTemplate,templateLabel,tierSlot};
+return {enemyActivity,enemyActivitySource,enemyPoolEligible,WAVE_STORE_KEY,TRAINING_TYPES,PLACEHOLDER_ENEMY,DEFAULT_BUDGETS,emptyTemplate,normalizeTemplate,templatesOf,emptyWaveTable,defaultWaveTable,normalizeWaveTable,loadWaveTable,saveWaveTable,enemyCost,tierPack,currentTemplate,templateLabel,tierSlot};
 },
 "native-wave-random.js": function(load) {
 const {buildPhasePlan} = load("protocol.js");
-const {TRAINING_TYPES,PLACEHOLDER_ENEMY,loadWaveTable,enemyCost,tierPack,templateLabel,groupTemplates,enemyPoolEligible} = load("native-wave-fill.js");
+const {TRAINING_TYPES,PLACEHOLDER_ENEMY,loadWaveTable,enemyCost,tierPack,templateLabel,enemyPoolEligible} = load("native-wave-fill.js");
 const A=(n,extra=1)=>extra*(1.1**n);
 const H=(n,extra=1)=>extra*(1.2**n);
 
@@ -4709,8 +5014,8 @@ function createWaveRoster({random,data,modeId}){
 function waveRng(seed){let x=(seed||1)>>>0;const next=()=>{x^=x<<13;x^=x>>>17;x^=x<<5;x>>>=0;return x/4294967296;};next();return next;}
 
 function fillBudgetWave(random,table,type,tier){
- const grouped=groupTemplates(tierPack(table,type,tier).templates).map(slot=>({...slot,pool:slot.pool.filter(id=>enemyPoolEligible(id))}));
- const available=grouped.filter(slot=>slot.pool.length),list=available.length?available:grouped;
+ const eligible=tierPack(table,type,tier).templates.map(slot=>({...slot,pool:slot.pool.filter(id=>enemyPoolEligible(id))}));
+ const available=eligible.filter(slot=>slot.pool.length),list=available.length?available:eligible;
  const templateIndex=list.length<=1?0:Math.floor(random()*list.length);
  const slot=list[templateIndex]||list[0],budget=Math.max(0,Number(slot.budget)||0),maxCost=Number(slot.maxCost),pool=(slot.pool||[]).filter(Boolean).filter(id=>!(Number.isFinite(maxCost)&&maxCost>0)||enemyCost(table,id)<=maxCost);
  const meta={templateIndex,templateName:templateLabel(slot,templateIndex),activity:slot.activity,budget};
@@ -4718,7 +5023,8 @@ function fillBudgetWave(random,table,type,tier){
  const targetCount=slot.minCount?slot.minCount+Math.floor(random()*(slot.maxCount-slot.minCount+1)):80;
  const ids=[];let spent=0;
  for(let n=0;n<targetCount;n++){
-  const fit=pool.filter(id=>enemyCost(table,id)<=budget-spent);if(!fit.length)break;
+  let fit=pool.filter(id=>enemyCost(table,id)<=budget-spent);if(!fit.length)break;
+  if(new Set(ids).size<(slot.minKinds||0)){const fresh=fit.filter(id=>!ids.includes(id));if(fresh.length)fit=fresh;}
   const id=fit[Math.floor(random()*fit.length)];ids.push(id);spent+=enemyCost(table,id);
  }
  return {ids,spent,leftover:budget-spent,unfilled:false,...meta};
@@ -4860,7 +5166,7 @@ function renderWaveEditor(data,table,ui){
  const options=(values,current)=>values.map(([id,name])=>`<option value="${esc(id)}" ${current===id?'selected':''}>${esc(name)}</option>`).join('');
  return `<main class="wave-ed">
   <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>WAVE EDITOR</small><h1>敌人编制台</h1></div><span class="wave-ed-autosave">编辑自动保存</span><button data-act="ed-tools" aria-expanded="${!!ui.tools}">配置管理</button></header>
-  ${ui.tools?`<section class="wave-ed-management" aria-label="配置管理"><p>每套模板只包含同活动敌人。实战随机选模板；抽取测试仅使用当前模板。恢复默认或清空会覆盖整张表。</p><div><button data-act="ed-export">导出 JSON</button><button data-act="ed-import">导入 JSON</button><button data-act="ed-defaults">恢复默认配置</button><button data-act="ed-reset">清空本表</button><label>缺省难度 <input data-act="ed-default" type="number" min="1" value="${table.defaultCost}"></label></div></section>`:''}
+  ${ui.tools?`<section class="wave-ed-management" aria-label="配置管理"><p>活动仅作为初始主题，可自由混编已准入敌人。默认中高压模板至少包含4种敌人。实战随机选模板；抽取测试仅使用当前模板。恢复默认或清空会覆盖整张表。</p><div><button data-act="ed-export">导出 JSON</button><button data-act="ed-import">导入 JSON</button><button data-act="ed-defaults">恢复默认配置</button><button data-act="ed-reset">清空本表</button><label>缺省难度 <input data-act="ed-default" type="number" min="1" value="${table.defaultCost}"></label></div></section>`:''}
   <div class="wave-ed-layout">
    <aside class="wave-ed-sidebar">
     <label class="wave-ed-field">特训词条<select data-act="ed-type-select" aria-label="选择特训词条">${options(TRAINING_TYPES.map(t=>[t.id,t.name]),type.id)}</select></label>
@@ -4873,20 +5179,20 @@ function renderWaveEditor(data,table,ui){
     <header class="wave-ed-current"><div><small>${esc(type.name)} / ${['低压','中压','高压'][ui.tier-1]}</small><h2>${esc(templateLabel(slot,ui.template))}</h2></div><button class="wave-ed-primary" data-act="ed-roll">测试当前模板</button></header>
     <div class="wave-ed-settings">
      <label class="wave-ed-field">模板名称<input id="ed-temp-name" data-act="ed-temp-name" value="${esc(slot.name)}" placeholder="模板 ${ui.template+1}" maxlength="60"></label>
-     <label class="wave-ed-field">登场活动<select data-act="ed-template-activity" aria-label="模板活动" ${slot.pool.length?'disabled title="移出池中敌人后可更换活动"':''}><option value="">由首名敌人确定</option>${options(activities.map(a=>[a,a]),slot.activity)}</select></label>
+     <label class="wave-ed-field">基础活动<select data-act="ed-template-activity" aria-label="模板活动"><option value="">由首名敌人确定</option>${options(activities.map(a=>[a,a]),slot.activity)}</select></label>
      <label class="wave-ed-field">预算<input id="ed-budget" data-act="ed-budget" type="number" min="0" step="1" value="${slot.budget}"></label>
     </div>
-    <div class="wave-ed-template-meta"><span>${slot.minCount?`目标 ${slot.minCount}–${slot.maxCount} 只`:'按预算抽取'}${slot.maxCost?` · 单体难度 ≤ ${slot.maxCost}`:''}</span><div><button data-act="ed-copy-temp">复制</button><button data-act="ed-del-temp" ${pack.templates.length<=1?'disabled':''}>删除</button></div></div>
+    <div class="wave-ed-template-meta"><span>${slot.minCount?`目标 ${slot.minCount}–${slot.maxCount} 只`:'按预算抽取'}${slot.maxCost?` · 单体难度 ≤ ${slot.maxCost}`:''}${slot.minKinds?` · 优先抽取 ${slot.minKinds} 种`:''}</span><div><button data-act="ed-copy-temp">复制</button><button data-act="ed-del-temp" ${pack.templates.length<=1?'disabled':''}>删除</button></div></div>
     <div class="wave-ed-body">
      <section class="wave-ed-pool">
       <h2>模板敌人 <small>${pool.length} 种</small></h2>
-      <p class="wave-ed-hint">${esc(slot.activity||'加入首名敌人后锁定活动')}</p>
+      <p class="wave-ed-hint">${esc(slot.activity||'可选择基础活动，允许跨活动混编')}${new Set(pool.map(e=>enemyActivity(e.id))).size>1?' · 跨活动混编':''}</p>
       <div class="wave-ed-cards">${pool.map(e=>`<article class="${ui.selected===e.id?'chosen':''}">
        <button data-act="ed-select" data-id="${esc(e.id)}" class="wave-ed-card">${portrait(data,e.id)}<span><b>${esc(e.name)}</b><small>${enemyPoolEligible(e.id,data)?'已准入':'待补齐'}</small></span></button>
        <label>难度<input data-act="ed-cost" data-id="${esc(e.id)}" aria-label="${esc(e.name)}难度" type="number" min="1" value="${enemyCost(table,e.id)}"></label>
        <button data-act="ed-remove" data-id="${esc(e.id)}" class="wave-ed-x" aria-label="移出${esc(e.name)}">×</button>
       </article>`).join('')||'<p class="wave-ed-empty">模板还是空的<br>从敌人档案中选择并加入。</p>'}</div>
-      <button class="wave-ed-fill" data-act="ed-fill-type">填入同活动词条敌人</button>
+      <button class="wave-ed-fill" data-act="ed-fill-type">补入基础活动敌人</button>
      </section>
      <section class="wave-ed-db">
       <h2>敌人档案 <small>${filtered.length} / ${rows.length}</small></h2>
@@ -4904,7 +5210,7 @@ function renderWaveEditor(data,table,ui){
       <div id="ed-catalog" class="wave-ed-table-wrap"><table class="wave-ed-table"><thead><tr><th>敌人</th><th>难度</th><th><span class="wave-ed-sr-only">操作</span></th></tr></thead><tbody>
        ${filtered.map(e=>`<tr class="${ui.selected===e.id?'chosen':''}${slot.pool.includes(e.id)?' in-pool':''}">
         <td><button class="wave-ed-enemy" data-act="ed-select" data-id="${esc(e.id)}">${portrait(data,e.id)}<span><b>${esc(e.name)}</b><small>${esc(enemyActivity(e.id))} · ${e.motion==='FLY'?'飞行':'地面'}${!enemyPoolEligible(e.id,data)?' · 待补齐':''}</small></span></button></td>
-        <td>${enemyCost(table,e.id)}</td><td>${slot.pool.includes(e.id)?`<button data-act="ed-remove" data-id="${esc(e.id)}">移出</button>`:`<button data-act="ed-add" data-id="${esc(e.id)}" ${!enemyPoolEligible(e.id,data)||slot.activity&&slot.activity!==enemyActivity(e.id)?'disabled':''}>${!enemyPoolEligible(e.id,data)?'待补齐':slot.activity&&slot.activity!==enemyActivity(e.id)?'不同活动':'加入'}</button>`}</td>
+        <td>${enemyCost(table,e.id)}</td><td>${slot.pool.includes(e.id)?`<button data-act="ed-remove" data-id="${esc(e.id)}">移出</button>`:`<button data-act="ed-add" data-id="${esc(e.id)}" ${!enemyPoolEligible(e.id,data)?'disabled':''}>${!enemyPoolEligible(e.id,data)?'待补齐':'加入'}</button>`}</td>
        </tr>`).join('')||'<tr><td colspan="3" class="wave-ed-empty">没有符合筛选的敌人。</td></tr>'}
       </tbody></table></div>
       ${detail(data,byId[ui.selected],table)}
@@ -4926,12 +5232,12 @@ function applyEditorAction(act,dataset,table,ui,data){
  if(act==='ed-tier'){ui.tier=Number(dataset.tier);ui.template=0;ui.sample=null;return 'render';}
  if(act==='ed-temp'){ui.template=Number(dataset.index)||0;ui.sample=null;return 'render';}
  if(act==='ed-add-temp'){const list=tierPack(table,ui.type,ui.tier).templates;list.push(emptyTemplate(ui.tier));ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
- if(act==='ed-copy-temp'){const list=tierPack(table,ui.type,ui.tier).templates,src=currentTemplate(table,ui.type,ui.tier,ui.template);list.push({activity:src.activity,name:(src.name||templateLabel(src,ui.template))+' 副本',budget:src.budget,maxCost:src.maxCost,pool:src.pool.slice(),...(src.minCount?{minCount:src.minCount,maxCount:src.maxCount}:{})});ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
+ if(act==='ed-copy-temp'){const list=tierPack(table,ui.type,ui.tier).templates,src=currentTemplate(table,ui.type,ui.tier,ui.template);list.push({...src,name:(src.name||templateLabel(src,ui.template))+' 副本',budget:src.budget,maxCost:src.maxCost,pool:src.pool.slice(),...(src.minCount?{minCount:src.minCount,maxCount:src.maxCount}:{})});ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-del-temp'){const list=tierPack(table,ui.type,ui.tier).templates;if(list.length<=1){list[0]=emptyTemplate(ui.tier);ui.template=0;}else{list.splice(ui.template,1);if(ui.template>=list.length)ui.template=list.length-1;}ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-select'){ui.selected=dataset.id;return 'render';}
- if(act==='ed-add'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),pool=slot.pool;if(!enemyPoolEligible(dataset.id,data)||!data.enemies?.[dataset.id]||slot.activity&&slot.activity!==enemyActivity(dataset.id))return 'incompatible';slot.activity=enemyActivity(dataset.id);if(!pool.includes(dataset.id))pool.push(dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}
+ if(act==='ed-add'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),pool=slot.pool;if(!enemyPoolEligible(dataset.id,data)||!data.enemies?.[dataset.id])return 'incompatible';slot.activity||=enemyActivity(dataset.id);if(!pool.includes(dataset.id))pool.push(dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-remove'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template);slot.pool=slot.pool.filter(id=>id!==dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}
- if(act==='ed-fill-type'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),activity=slot.activity||(ui.activity!=='all'?ui.activity:'');if(!activity)return 'choose-activity';slot.activity=activity;const ids=originalTypeIds(data,ui.type).filter(id=>data.enemies?.[id]&&enemyPoolEligible(id,data)&&enemyActivity(id)===activity&&(!slot.maxCost||enemyCost(table,id)<=slot.maxCost));slot.pool=[...new Set(ids)];ui.sample=null;saveWaveTable(table);return 'filled';}
+ if(act==='ed-fill-type'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),activity=slot.activity||(ui.activity!=='all'?ui.activity:'');if(!activity)return 'choose-activity';slot.activity=activity;const ids=originalTypeIds(data,ui.type).filter(id=>data.enemies?.[id]&&enemyPoolEligible(id,data)&&enemyActivity(id)===activity&&(!slot.maxCost||enemyCost(table,id)<=slot.maxCost));slot.pool=[...new Set([...slot.pool,...ids])];ui.sample=null;saveWaveTable(table);return 'filled';}
  if(act==='ed-roll'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),single={...table,types:{[ui.type]:{[ui.tier]:{templates:[{...slot,name:templateLabel(slot,ui.template)}]}}}};ui.sample=fillBudgetWave(waveRng((Date.now()&0xffffffff)>>>0),filterRandomPoolTable(single,data),ui.type,ui.tier);return 'render';}
  if(act==='ed-close-test'){ui.sample=null;return 'render';}
  if(act==='ed-tools'){ui.tools=!ui.tools;return 'render';}
@@ -4951,7 +5257,7 @@ function applyEditorField(act,id,value,table,ui){
  else if(act==='ed-type-select'){ui.type=value;ui.template=0;ui.sample=null;}
  else if(act==='ed-activity')ui.activity=value;
  else if(act==='ed-readiness')ui.readiness=value;
- else if(act==='ed-template-activity'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template);if(slot.pool.length)return false;slot.activity=value;ui.activity=value||'all';ui.sample=null;saveWaveTable(table);}
+ else if(act==='ed-template-activity'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template);slot.activity=value;ui.activity=value||'all';ui.sample=null;saveWaveTable(table);}
  else if(act==='ed-motion')ui.motion=value;
  else if(act==='ed-kind')ui.kind=value;
  else if(act==='ed-tag')ui.tag=value;
@@ -12561,9 +12867,9 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
   const result=applyEditorAction(a,button.dataset,state.waveTable,state.editor,data);
   if(result==='export'){const url=URL.createObjectURL(new Blob([JSON.stringify(state.waveTable,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-wave-table.json';link.click();URL.revokeObjectURL(url);return;}
   if(result==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{state.waveTable=saveWaveTable(normalizeWaveTable(JSON.parse(await input.files[0].text())));state.editor.sample=null;state.editor.template=0;notice('已导入波次表');render();}catch(e){notice(e.message||'无法读取波次表');}};input.click();return;}
-  if(result==='filled')notice('已写入同活动、已准入且符合难度限制的词条名单。');
+  if(result==='filled')notice('已补入基础活动中已准入、符合词条与难度限制的敌人，保留现有混编。');
   if(result==='choose-activity')notice('请先选择模板活动，或在档案中筛选一个活动。');
-  if(result==='incompatible')notice('只能加入逻辑已准入、且与本模板同活动的敌人。');
+  if(result==='incompatible')notice('只能加入逻辑已准入的敌人。');
   if(result==='defaults')notice('已恢复内置默认配置，下一次生成波次时生效。');
   if(result==='reset')notice('已清空全部词条池和自定义难度。');
   if(result)render();if(a==='ed-close-test')root.querySelector('.wave-ed-current [data-act=ed-roll]')?.focus();return;

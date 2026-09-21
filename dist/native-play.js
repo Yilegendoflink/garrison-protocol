@@ -204,9 +204,9 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
   const result=applyEditorAction(a,button.dataset,state.waveTable,state.editor,data);
   if(result==='export'){const url=URL.createObjectURL(new Blob([JSON.stringify(state.waveTable,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-wave-table.json';link.click();URL.revokeObjectURL(url);return;}
   if(result==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{state.waveTable=saveWaveTable(normalizeWaveTable(JSON.parse(await input.files[0].text())));state.editor.sample=null;state.editor.template=0;notice('已导入波次表');render();}catch(e){notice(e.message||'无法读取波次表');}};input.click();return;}
-  if(result==='filled')notice('已写入同活动、已准入且符合难度限制的词条名单。');
+  if(result==='filled')notice('已补入基础活动中已准入、符合词条与难度限制的敌人，保留现有混编。');
   if(result==='choose-activity')notice('请先选择模板活动，或在档案中筛选一个活动。');
-  if(result==='incompatible')notice('只能加入逻辑已准入、且与本模板同活动的敌人。');
+  if(result==='incompatible')notice('只能加入逻辑已准入的敌人。');
   if(result==='defaults')notice('已恢复内置默认配置，下一次生成波次时生效。');
   if(result==='reset')notice('已清空全部词条池和自定义难度。');
   if(result)render();if(a==='ed-close-test')root.querySelector('.wave-ed-current [data-act=ed-roll]')?.focus();return;

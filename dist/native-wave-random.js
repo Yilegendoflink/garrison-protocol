@@ -1,5 +1,5 @@
 import {buildPhasePlan} from './protocol.js';
-import {TRAINING_TYPES,PLACEHOLDER_ENEMY,loadWaveTable,enemyCost,tierPack,templateLabel,groupTemplates,enemyPoolEligible} from './native-wave-fill.js';
+import {TRAINING_TYPES,PLACEHOLDER_ENEMY,loadWaveTable,enemyCost,tierPack,templateLabel,enemyPoolEligible} from './native-wave-fill.js';
 
 const A=(n,extra=1)=>extra*(1.1**n);
 const H=(n,extra=1)=>extra*(1.2**n);
@@ -77,8 +77,8 @@ export function createWaveRoster({random,data,modeId}){
 export function waveRng(seed){let x=(seed||1)>>>0;const next=()=>{x^=x<<13;x^=x>>>17;x^=x<<5;x>>>=0;return x/4294967296;};next();return next;}
 
 export function fillBudgetWave(random,table,type,tier){
- const grouped=groupTemplates(tierPack(table,type,tier).templates).map(slot=>({...slot,pool:slot.pool.filter(id=>enemyPoolEligible(id))}));
- const available=grouped.filter(slot=>slot.pool.length),list=available.length?available:grouped;
+ const eligible=tierPack(table,type,tier).templates.map(slot=>({...slot,pool:slot.pool.filter(id=>enemyPoolEligible(id))}));
+ const available=eligible.filter(slot=>slot.pool.length),list=available.length?available:eligible;
  const templateIndex=list.length<=1?0:Math.floor(random()*list.length);
  const slot=list[templateIndex]||list[0],budget=Math.max(0,Number(slot.budget)||0),maxCost=Number(slot.maxCost),pool=(slot.pool||[]).filter(Boolean).filter(id=>!(Number.isFinite(maxCost)&&maxCost>0)||enemyCost(table,id)<=maxCost);
  const meta={templateIndex,templateName:templateLabel(slot,templateIndex),activity:slot.activity,budget};
@@ -86,7 +86,8 @@ export function fillBudgetWave(random,table,type,tier){
  const targetCount=slot.minCount?slot.minCount+Math.floor(random()*(slot.maxCount-slot.minCount+1)):80;
  const ids=[];let spent=0;
  for(let n=0;n<targetCount;n++){
-  const fit=pool.filter(id=>enemyCost(table,id)<=budget-spent);if(!fit.length)break;
+  let fit=pool.filter(id=>enemyCost(table,id)<=budget-spent);if(!fit.length)break;
+  if(new Set(ids).size<(slot.minKinds||0)){const fresh=fit.filter(id=>!ids.includes(id));if(fresh.length)fit=fresh;}
   const id=fit[Math.floor(random()*fit.length)];ids.push(id);spent+=enemyCost(table,id);
  }
  return {ids,spent,leftover:budget-spent,unfilled:false,...meta};

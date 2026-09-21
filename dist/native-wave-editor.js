@@ -73,7 +73,7 @@ export function renderWaveEditor(data,table,ui){
  const options=(values,current)=>values.map(([id,name])=>`<option value="${esc(id)}" ${current===id?'selected':''}>${esc(name)}</option>`).join('');
  return `<main class="wave-ed">
   <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>WAVE EDITOR</small><h1>敌人编制台</h1></div><span class="wave-ed-autosave">编辑自动保存</span><button data-act="ed-tools" aria-expanded="${!!ui.tools}">配置管理</button></header>
-  ${ui.tools?`<section class="wave-ed-management" aria-label="配置管理"><p>每套模板只包含同活动敌人。实战随机选模板；抽取测试仅使用当前模板。恢复默认或清空会覆盖整张表。</p><div><button data-act="ed-export">导出 JSON</button><button data-act="ed-import">导入 JSON</button><button data-act="ed-defaults">恢复默认配置</button><button data-act="ed-reset">清空本表</button><label>缺省难度 <input data-act="ed-default" type="number" min="1" value="${table.defaultCost}"></label></div></section>`:''}
+  ${ui.tools?`<section class="wave-ed-management" aria-label="配置管理"><p>活动仅作为初始主题，可自由混编已准入敌人。默认中高压模板至少包含4种敌人。实战随机选模板；抽取测试仅使用当前模板。恢复默认或清空会覆盖整张表。</p><div><button data-act="ed-export">导出 JSON</button><button data-act="ed-import">导入 JSON</button><button data-act="ed-defaults">恢复默认配置</button><button data-act="ed-reset">清空本表</button><label>缺省难度 <input data-act="ed-default" type="number" min="1" value="${table.defaultCost}"></label></div></section>`:''}
   <div class="wave-ed-layout">
    <aside class="wave-ed-sidebar">
     <label class="wave-ed-field">特训词条<select data-act="ed-type-select" aria-label="选择特训词条">${options(TRAINING_TYPES.map(t=>[t.id,t.name]),type.id)}</select></label>
@@ -86,20 +86,20 @@ export function renderWaveEditor(data,table,ui){
     <header class="wave-ed-current"><div><small>${esc(type.name)} / ${['低压','中压','高压'][ui.tier-1]}</small><h2>${esc(templateLabel(slot,ui.template))}</h2></div><button class="wave-ed-primary" data-act="ed-roll">测试当前模板</button></header>
     <div class="wave-ed-settings">
      <label class="wave-ed-field">模板名称<input id="ed-temp-name" data-act="ed-temp-name" value="${esc(slot.name)}" placeholder="模板 ${ui.template+1}" maxlength="60"></label>
-     <label class="wave-ed-field">登场活动<select data-act="ed-template-activity" aria-label="模板活动" ${slot.pool.length?'disabled title="移出池中敌人后可更换活动"':''}><option value="">由首名敌人确定</option>${options(activities.map(a=>[a,a]),slot.activity)}</select></label>
+     <label class="wave-ed-field">基础活动<select data-act="ed-template-activity" aria-label="模板活动"><option value="">由首名敌人确定</option>${options(activities.map(a=>[a,a]),slot.activity)}</select></label>
      <label class="wave-ed-field">预算<input id="ed-budget" data-act="ed-budget" type="number" min="0" step="1" value="${slot.budget}"></label>
     </div>
-    <div class="wave-ed-template-meta"><span>${slot.minCount?`目标 ${slot.minCount}–${slot.maxCount} 只`:'按预算抽取'}${slot.maxCost?` · 单体难度 ≤ ${slot.maxCost}`:''}</span><div><button data-act="ed-copy-temp">复制</button><button data-act="ed-del-temp" ${pack.templates.length<=1?'disabled':''}>删除</button></div></div>
+    <div class="wave-ed-template-meta"><span>${slot.minCount?`目标 ${slot.minCount}–${slot.maxCount} 只`:'按预算抽取'}${slot.maxCost?` · 单体难度 ≤ ${slot.maxCost}`:''}${slot.minKinds?` · 优先抽取 ${slot.minKinds} 种`:''}</span><div><button data-act="ed-copy-temp">复制</button><button data-act="ed-del-temp" ${pack.templates.length<=1?'disabled':''}>删除</button></div></div>
     <div class="wave-ed-body">
      <section class="wave-ed-pool">
       <h2>模板敌人 <small>${pool.length} 种</small></h2>
-      <p class="wave-ed-hint">${esc(slot.activity||'加入首名敌人后锁定活动')}</p>
+      <p class="wave-ed-hint">${esc(slot.activity||'可选择基础活动，允许跨活动混编')}${new Set(pool.map(e=>enemyActivity(e.id))).size>1?' · 跨活动混编':''}</p>
       <div class="wave-ed-cards">${pool.map(e=>`<article class="${ui.selected===e.id?'chosen':''}">
        <button data-act="ed-select" data-id="${esc(e.id)}" class="wave-ed-card">${portrait(data,e.id)}<span><b>${esc(e.name)}</b><small>${enemyPoolEligible(e.id,data)?'已准入':'待补齐'}</small></span></button>
        <label>难度<input data-act="ed-cost" data-id="${esc(e.id)}" aria-label="${esc(e.name)}难度" type="number" min="1" value="${enemyCost(table,e.id)}"></label>
        <button data-act="ed-remove" data-id="${esc(e.id)}" class="wave-ed-x" aria-label="移出${esc(e.name)}">×</button>
       </article>`).join('')||'<p class="wave-ed-empty">模板还是空的<br>从敌人档案中选择并加入。</p>'}</div>
-      <button class="wave-ed-fill" data-act="ed-fill-type">填入同活动词条敌人</button>
+      <button class="wave-ed-fill" data-act="ed-fill-type">补入基础活动敌人</button>
      </section>
      <section class="wave-ed-db">
       <h2>敌人档案 <small>${filtered.length} / ${rows.length}</small></h2>
@@ -117,7 +117,7 @@ export function renderWaveEditor(data,table,ui){
       <div id="ed-catalog" class="wave-ed-table-wrap"><table class="wave-ed-table"><thead><tr><th>敌人</th><th>难度</th><th><span class="wave-ed-sr-only">操作</span></th></tr></thead><tbody>
        ${filtered.map(e=>`<tr class="${ui.selected===e.id?'chosen':''}${slot.pool.includes(e.id)?' in-pool':''}">
         <td><button class="wave-ed-enemy" data-act="ed-select" data-id="${esc(e.id)}">${portrait(data,e.id)}<span><b>${esc(e.name)}</b><small>${esc(enemyActivity(e.id))} · ${e.motion==='FLY'?'飞行':'地面'}${!enemyPoolEligible(e.id,data)?' · 待补齐':''}</small></span></button></td>
-        <td>${enemyCost(table,e.id)}</td><td>${slot.pool.includes(e.id)?`<button data-act="ed-remove" data-id="${esc(e.id)}">移出</button>`:`<button data-act="ed-add" data-id="${esc(e.id)}" ${!enemyPoolEligible(e.id,data)||slot.activity&&slot.activity!==enemyActivity(e.id)?'disabled':''}>${!enemyPoolEligible(e.id,data)?'待补齐':slot.activity&&slot.activity!==enemyActivity(e.id)?'不同活动':'加入'}</button>`}</td>
+        <td>${enemyCost(table,e.id)}</td><td>${slot.pool.includes(e.id)?`<button data-act="ed-remove" data-id="${esc(e.id)}">移出</button>`:`<button data-act="ed-add" data-id="${esc(e.id)}" ${!enemyPoolEligible(e.id,data)?'disabled':''}>${!enemyPoolEligible(e.id,data)?'待补齐':'加入'}</button>`}</td>
        </tr>`).join('')||'<tr><td colspan="3" class="wave-ed-empty">没有符合筛选的敌人。</td></tr>'}
       </tbody></table></div>
       ${detail(data,byId[ui.selected],table)}
@@ -139,12 +139,12 @@ export function applyEditorAction(act,dataset,table,ui,data){
  if(act==='ed-tier'){ui.tier=Number(dataset.tier);ui.template=0;ui.sample=null;return 'render';}
  if(act==='ed-temp'){ui.template=Number(dataset.index)||0;ui.sample=null;return 'render';}
  if(act==='ed-add-temp'){const list=tierPack(table,ui.type,ui.tier).templates;list.push(emptyTemplate(ui.tier));ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
- if(act==='ed-copy-temp'){const list=tierPack(table,ui.type,ui.tier).templates,src=currentTemplate(table,ui.type,ui.tier,ui.template);list.push({activity:src.activity,name:(src.name||templateLabel(src,ui.template))+' 副本',budget:src.budget,maxCost:src.maxCost,pool:src.pool.slice(),...(src.minCount?{minCount:src.minCount,maxCount:src.maxCount}:{})});ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
+ if(act==='ed-copy-temp'){const list=tierPack(table,ui.type,ui.tier).templates,src=currentTemplate(table,ui.type,ui.tier,ui.template);list.push({...src,name:(src.name||templateLabel(src,ui.template))+' 副本',budget:src.budget,maxCost:src.maxCost,pool:src.pool.slice(),...(src.minCount?{minCount:src.minCount,maxCount:src.maxCount}:{})});ui.template=list.length-1;ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-del-temp'){const list=tierPack(table,ui.type,ui.tier).templates;if(list.length<=1){list[0]=emptyTemplate(ui.tier);ui.template=0;}else{list.splice(ui.template,1);if(ui.template>=list.length)ui.template=list.length-1;}ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-select'){ui.selected=dataset.id;return 'render';}
- if(act==='ed-add'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),pool=slot.pool;if(!enemyPoolEligible(dataset.id,data)||!data.enemies?.[dataset.id]||slot.activity&&slot.activity!==enemyActivity(dataset.id))return 'incompatible';slot.activity=enemyActivity(dataset.id);if(!pool.includes(dataset.id))pool.push(dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}
+ if(act==='ed-add'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),pool=slot.pool;if(!enemyPoolEligible(dataset.id,data)||!data.enemies?.[dataset.id])return 'incompatible';slot.activity||=enemyActivity(dataset.id);if(!pool.includes(dataset.id))pool.push(dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}
  if(act==='ed-remove'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template);slot.pool=slot.pool.filter(id=>id!==dataset.id);ui.sample=null;saveWaveTable(table);return 'render';}
- if(act==='ed-fill-type'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),activity=slot.activity||(ui.activity!=='all'?ui.activity:'');if(!activity)return 'choose-activity';slot.activity=activity;const ids=originalTypeIds(data,ui.type).filter(id=>data.enemies?.[id]&&enemyPoolEligible(id,data)&&enemyActivity(id)===activity&&(!slot.maxCost||enemyCost(table,id)<=slot.maxCost));slot.pool=[...new Set(ids)];ui.sample=null;saveWaveTable(table);return 'filled';}
+ if(act==='ed-fill-type'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),activity=slot.activity||(ui.activity!=='all'?ui.activity:'');if(!activity)return 'choose-activity';slot.activity=activity;const ids=originalTypeIds(data,ui.type).filter(id=>data.enemies?.[id]&&enemyPoolEligible(id,data)&&enemyActivity(id)===activity&&(!slot.maxCost||enemyCost(table,id)<=slot.maxCost));slot.pool=[...new Set([...slot.pool,...ids])];ui.sample=null;saveWaveTable(table);return 'filled';}
  if(act==='ed-roll'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template),single={...table,types:{[ui.type]:{[ui.tier]:{templates:[{...slot,name:templateLabel(slot,ui.template)}]}}}};ui.sample=fillBudgetWave(waveRng((Date.now()&0xffffffff)>>>0),filterRandomPoolTable(single,data),ui.type,ui.tier);return 'render';}
  if(act==='ed-close-test'){ui.sample=null;return 'render';}
  if(act==='ed-tools'){ui.tools=!ui.tools;return 'render';}
@@ -164,7 +164,7 @@ export function applyEditorField(act,id,value,table,ui){
  else if(act==='ed-type-select'){ui.type=value;ui.template=0;ui.sample=null;}
  else if(act==='ed-activity')ui.activity=value;
  else if(act==='ed-readiness')ui.readiness=value;
- else if(act==='ed-template-activity'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template);if(slot.pool.length)return false;slot.activity=value;ui.activity=value||'all';ui.sample=null;saveWaveTable(table);}
+ else if(act==='ed-template-activity'){const slot=currentTemplate(table,ui.type,ui.tier,ui.template);slot.activity=value;ui.activity=value||'all';ui.sample=null;saveWaveTable(table);}
  else if(act==='ed-motion')ui.motion=value;
  else if(act==='ed-kind')ui.kind=value;
  else if(act==='ed-tag')ui.tag=value;

@@ -1,0 +1,20 @@
+{
+  "note": "项目编排主题，不是PRTS官方阵营。仅从本期同词条、逻辑已准入敌人中补员；活动作为初始核心。",
+  "themes": [
+    {"id":"sarkaz-line","name":"萨卡兹与感染者军阵","type":"SPECIAL","activities":["初始","生于黑夜","主线第五章","主线第六章","主线第十二章","主线第十四章"],"reason":"大剑、穿刺、宿主与重装步兵构成近战推进军阵。"},
+    {"id":"prison-break","name":"囚犯突破","type":"SPECIAL","activities":["孤岛风云"],"reason":"普通、拳师、强壮囚犯与重犯共享监狱突围题材。"},
+    {"id":"rhine-security","name":"莱茵实验与安保","type":"SPECIAL","activities":["绿野幻梦","孤星"],"reason":"实验体、动力装甲、军用猎狗与弧光护卫共享莱茵科技题材。"},
+    {"id":"armed-guard","name":"武装驻军","type":"SPECIAL","activities":["火蓝之心","骑兵与猎人","水晶箭行动","银心湖列车","主线第十六章"],"reason":"步兵、盾卫、侦察兵与访问团组成常规武装队伍。"},
+    {"id":"air-fire","name":"空中火力编队","type":"FLY","activities":["初始","主线第五章","主线第八章","不义之财","水晶箭行动","众生行记","卫戍协议：盟约"],"reason":"无人机、空中侦察与火力支援；始终保留飞行单位属性。"},
+    {"id":"animated-vessels","name":"器伥成群","type":"TIMES","activities":["将进酒"],"reason":"器物活化与解压缩敌人，保持将进酒器伥主题。"},
+    {"id":"reviving-flame","name":"余烬再生","type":"TIMES","activities":["照我以火","卫戍协议：盟约"],"reason":"逐火战士、护卫与再生假想敌以再生和多次击倒形成消耗战。"},
+    {"id":"tidal-erosion","name":"潮汐侵蚀","type":"ELEMENT","activities":["多索雷斯假日","水月与深蓝之树","覆潮之下"],"reason":"潜水、控潮与海洋生物组成水域元素侵蚀队伍。"},
+    {"id":"burning-life","name":"灼燃生物","type":"ELEMENT","activities":["落叶逐火","挽歌燃烧殆尽"],"reason":"炽焰源石虫与灼藤、卷心籽共享灼燃与点燃主题。"},
+    {"id":"royal-erosion","name":"王庭元素侵蚀","type":"ELEMENT","activities":["主线第十章","主线第十一章","卫戍协议：盟约"],"reason":"王庭军战士、术师与元素假想敌组成元素损伤编队。"},
+    {"id":"sea-predators","name":"深海捕食群","type":"DOT","activities":["愚人号","生路"],"reason":"巢涌者与掠食者共享海洋生物和持续侵蚀题材。"},
+    {"id":"decay-artillery","name":"枯朽与炮火","type":"DOT","activities":["主线第十一章","主线第十六章","卫戍协议：盟约"],"reason":"枯朽战士、逐腐兽、战车与火炮以持续伤害压制阵地。"},
+    {"id":"covert-infiltration","name":"潜伏渗透","type":"INVISIBLE","activities":["初始","主线第五章","主线第十四章","出苍白海","银心湖列车"],"reason":"隐形射手、潜伏者与隐匿步兵承担潜入和正面推进。"},
+    {"id":"covert-assassins","name":"隐匿刺杀","type":"INVISIBLE","activities":["登临意","叙拉古人","卫戍协议：盟约"],"reason":"山海众、家族灭迹人与骨刺假想敌构成隐匿突击队。"},
+    {"id":"dublinn-refraction","name":"深池折射阵线","type":"REFLECTION","activities":["主线第九章","卫戍协议：盟约"],"reason":"以深池步兵、术师、盾卫为核心，镜膜假想敌补充折射主题。"}
+  ]
+}
