@@ -500,8 +500,8 @@ test('流星 S2 立即范围攻击并施加防御削弱，空射天赋提高对�
  const {b}=openBattle({chessId:'chess_char_3_17_b',skillIndex:1});deployNow(b);const u=b.s.units[0],ground=enemy(b,{x:u.x+1,y:u.y,hp:10000,def:1000,res:0}),air=enemy(b,{x:u.x+2,y:u.y,hp:10000,def:0,res:0,flying:true});u.sp=b.spCost(u);b.activate(u);assert.ok(ground.hp<10000);assert.ok(ground.statuses.some(s=>s.kind==='defDown'));assert.ok(air.hp<10000);
 });
 
-test('薄绿技能结束释放范围法术爆发并保留命中拖拽',()=>{
- const {b}=openBattle({chessId:'chess_char_3_08_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+2,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.ok(u.skillLeft>0);assert.equal(b.stats(u).tauntLevel,-1);const beforeX=e.x;b.hit(u,e,10,'arts');assert.ok(e.x<beforeX);u.skillLeft=0;dispatch(b,'skill-end',{target:u});assert.ok(e.hp<990);
+test('薄绿技能结束释放范围法术爆发，命中施加连续向内推动',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_08_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+2,y:u.y,hp:1000,def:0});u.sp=b.spCost(u);b.activate(u);assert.ok(u.skillLeft>0);assert.equal(b.stats(u).tauntLevel,-1);const beforeX=e.x;b.hit(u,e,10,'arts');assert.equal(e.x,beforeX);assert.ok(e.shift.vx<0);assert.equal(e.shift.pulls.length,0);b.step();assert.ok(e.x<beforeX);u.skillLeft=0;dispatch(b,'skill-end',{target:u});assert.ok(e.hp<990);
 });
 
 test('菲莱技能受击反击造成法伤并积累凋亡损伤',()=>{

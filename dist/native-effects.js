@@ -1,4 +1,4 @@
-import {startEnemyPush} from './native-shift.js';
+import {startEnemyPush,startEnemyPull} from './native-shift.js';
 import {applyDamage,recoverHP,damage} from './combat.js';
 import {equipmentEvent,equipmentFatal,equipmentTick} from './native-equipment.js';
 import {allowsHighlandPlacement} from './native-branches.js';
@@ -54,6 +54,7 @@ export function validateBattle(s,battle){
  }
  for(const e of s.enemies){
   if(e.shift&&!['vx','vy','startedAt','hardUntil','nextDamageAt'].every(k=>Number.isFinite(e.shift[k])))return 'invalid enemy shift';
+  for(const pull of e.shift?.pulls||[])if(!['x','y','dx','dy','anchorOffset','initialDistance','force','endsAt','stopRadius'].every(k=>Number.isFinite(pull[k]))||pull.initialDistance<=0||pull.force<=0||pull.stopRadius<0)return 'invalid enemy pull';
   if(e.transport){const t=e.transport;if(!Number.isInteger(t.max)||t.max<=0||!Array.isArray(t.passengers)||t.passengers.length>t.max||new Set(t.passengers).size!==t.passengers.length)return 'invalid enemy transport';
    for(const uid of t.passengers)if(!s.enemies.some(p=>p.uid===uid&&p.carriedBy===e.uid&&p.hp>0))return 'missing passenger';}
   if(e.carriedBy!=null&&!s.enemies.some(c=>c.uid===e.carriedBy&&c.hp>0&&c.transport?.passengers.includes(e.uid)))return 'missing passenger carrier';
@@ -871,6 +872,7 @@ export function moveActor(battle,target,source,description='',options={}){
  if(!target||target.hp<=0||target.hidden||target.levitated||target.shiftImmune)return false;
  const away=/推开|推动|击退/.test(description),toward=/拖拽|拉向|拉至/.test(description);if(!away&&!toward)return false;
  if(away&&Number.isFinite(options.forceLevel))return startEnemyPush(battle,target,source,options);
+ if(toward&&Number.isFinite(options.forceLevel))return options.radialImpulse?startEnemyPush(battle,target,source,{...options,directional:false,reverse:true}):startEnemyPull(battle,target,source,options);
  const dx=target.x-source.x,dy=target.y-source.y,len=Math.hypot(dx,dy)||1,step=away?1:-1,nx=Math.round(target.x+(dx/len)*step),ny=Math.round(target.y+(dy/len)*step);
  if(!validMoveTile(battle,target,nx,ny))return false;
  const moved=teleportActor(battle,target,{x:nx,y:ny,source,mode:away?'push':'pull'});

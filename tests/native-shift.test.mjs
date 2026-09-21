@@ -61,3 +61,28 @@ test('连续推动可跨JSON恢复，浮空终止失衡，非法速度存档拒�
 test('推动进地穴走坠落退场，不触发解压缩生成碎片',()=>{
  const {b,e}=openArena('enemy_1195_sfyin');b.map.grid[3][3].tileKey='tile_hole';moveActor(b,e,{x:1,y:3},'推动',{forceLevel:0});advance(b,1);assert.equal(e.hp,0);assert.equal(b.s.kills,1);assert.equal(b.s.pendingEnemySpawns.length,0);
 });
+
+test('持续拖拽按距离四次方衰减，低受力等级位移匹配PRTS表',()=>{
+ for(const [distance,force,expected]of [[2,-2,.0320],[3,-2,.0325],[2,-1,.5699],[3,-1,.9240]]){
+  const {b,e}=openArena();e.x=1+distance;const before=e.x;assert.equal(moveActor(b,e,{x:1,y:3,dir:0},'拖拽',{forceLevel:force}),true);assert.equal(e.x,before);advance(b,2);assert.equal(e.shift,null);assert.ok(Math.abs(before-e.x-expected)<.00006,`${distance}/${force}: ${before-e.x}`);
+ }
+});
+
+test('强拉在拉动者身前急停，但保持失衡直到1秒作用期结束',()=>{
+ const {b,e}=openArena();e.x=3;moveActor(b,e,{x:1,y:3,dir:0},'拖拽',{forceLevel:0});advance(b,.7);assert.ok(e.shift);assert.equal(e.shift.vx,0);assert.ok(e.x>1&&e.x-1<=.6708);const x=e.x;advance(b,.3);assert.equal(e.shift,null);assert.equal(e.x,x);
+});
+
+test('拉动者退场解除绑定，已获得速度继续滑行而非瞬停',()=>{
+ const {b,e,ally}=openArena();Object.assign(ally,{x:1,y:3,deployed:true,hp:1000,maxHp:1000,dir:0});b.s.units=[ally];e.x=5;applyStatus(ally,'disarm',60);moveActor(b,e,ally,'拖拽',{forceLevel:0});advance(b,.2);const x=e.x;assert.ok(e.shift.vx<0);ally.deployed=false;ally.deployAt=100;b.step();assert.ok(e.x<x);assert.equal(e.shift.pulls.length,0);advance(b,2);assert.equal(e.shift,null);
+});
+
+test('拖拽途中变更重量不改已锁定力，跨JSON恢复力和期限，非法拉力拒绝',()=>{
+ const {b,g,e}=openArena();e.x=4;moveActor(b,e,{x:1,y:3,dir:0},'拖拽',{forceLevel:-1});advance(b,.3);e.weight=10;const saved=JSON.parse(JSON.stringify(b.s)),restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,saved);assert.ok(restored);advance(b,2);advance(restored,2);assert.ok(Math.abs(e.x-restored.s.enemies[0].x)<1e-9);
+ saved.enemies[0].shift.pulls[0].force=-1;assert.equal(NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,saved),null);
+});
+
+test('百炼嘉维尔实际命中读取拉力黑板；薄绿式向内推动仍用瞬间动量',()=>{
+ const {b,e,ally}=openArena(),[chessId,p]=Object.entries(NATIVE_DATA.profiles).find(([,p])=>p.charId==='char_1026_gvial2'&&p.skillIndex===1);
+ Object.assign(ally,{uid:777,id:p.charId,chessId,source:{...ally.source,charId:p.charId,chessId,skillIndex:1},x:1,y:3,dir:0,deployed:true,hp:p.attributes.maxHp,maxHp:p.attributes.maxHp,skillLeft:10,statuses:[]});b.s.units=[ally];e.x=4;b.hit(ally,e,10,'physical',{skill:true});assert.equal(e.shift.pulls[0].sourceUid,777);b.step();assert.ok(e.x<4);
+ const inward=openArena();inward.e.x=4;moveActor(inward.b,inward.e,{x:1,y:3},'拖拽',{forceLevel:0,radialImpulse:true});assert.equal(inward.e.shift.pulls.length,0);advance(inward.b,2);assert.ok(Math.abs(4-inward.e.x-1.56247)<.00002);
+});

@@ -4451,7 +4451,7 @@ function onEvent(battle,type,payload,ctx){
    if(Number(config.bb.def)<0&&has(config.description,/防御力/))applyStatus(target,'defDown',Number(config.bb.duration)||5,{source:source.uid,value:Number(config.bb.def),resistible:false});
    if(Number(config.bb.magic_resistance)<0&&has(config.description,/法术抗性/))applyStatus(target,'resDown',Number(config.bb.duration)||5,{source:source.uid,value:Number(config.bb.magic_resistance),resistible:false});
    if(has(config.description,/隐匿失效|隐匿效果失效/))ctx.revealEnemy(battle,target);
-   if(has(config.description,/推开|推动|拖拽|拉向|拉至|击退/)&&ctx.moveActor)ctx.moveActor(battle,target,source,config.description,{forceLevel:Number(config.bb['attack@force']??config.bb.force),directional:battle.profile(source).branch==='pusher',fixedDirection:source.id==='char_4036_forcer'&&(source.source?.skillIndex??battle.profile(source).skillIndex)===1});
+   if(has(config.description,/推开|推动|拖拽|拉向|拉至|击退/)&&ctx.moveActor)ctx.moveActor(battle,target,source,config.description,{forceLevel:source.id==='char_474_glady'?undefined:Number(config.bb['attack@force']??config.bb.force),radialImpulse:source.id==='char_388_mint',directional:battle.profile(source).branch==='pusher',fixedDirection:source.id==='char_4036_forcer'&&(source.source?.skillIndex??battle.profile(source).skillIndex)===1});
    const elementScale=Number(config.bb.elementScale??(has(config.description,/灼燃|凋亡|元素损伤|元素伤害|神经损伤/)?config.atkScale:NaN));if(Number.isFinite(elementScale)&&has(config.description,/灼燃|凋亡|元素损伤|元素伤害|神经损伤/)&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*elementScale,type:has(config.description,/凋亡/)?'necrosis':has(config.description,/灼燃/)?'burn':has(config.description,/神经损伤/)?'neural':'elemental',cause:'skill',parentEventId:payload.event?.eventId});
   const bb=config.bb;if(Number.isFinite(bb.value)&&has(config.description,/恢复自身|回复自身/))ctx.applyHeal(battle,{source,target:source,amount:bb.value});
   // Defense penetration is applied before mitigation by NativeBattle.hit; do not mutate the target.
@@ -4564,7 +4564,7 @@ function periodicMods(battle,u,ctx){
 return {blackboardValues,talentValues,coinCapFor,grantCoins,spendCoins,coinGainAtSkillStart,zoneVisual,moduleCostData,tokenCostFor,targetFilter,operatorRegistry,skillConfig,costValue,textCostValue,costValueForText,statMods,attackModifier,attackPenetration,damageReductionFor,operatorSkillStart,onEvent,periodicMods};
 },
 "native-effects.js": function(load) {
-const {startEnemyPush} = load("native-shift.js");
+const {startEnemyPush,startEnemyPull} = load("native-shift.js");
 const {applyDamage,recoverHP,damage} = load("combat.js");
 const {equipmentEvent,equipmentFatal,equipmentTick} = load("native-equipment.js");
 const {allowsHighlandPlacement} = load("native-branches.js");
@@ -4619,6 +4619,7 @@ function validateBattle(s,battle){
  }
  for(const e of s.enemies){
   if(e.shift&&!['vx','vy','startedAt','hardUntil','nextDamageAt'].every(k=>Number.isFinite(e.shift[k])))return 'invalid enemy shift';
+  for(const pull of e.shift?.pulls||[])if(!['x','y','dx','dy','anchorOffset','initialDistance','force','endsAt','stopRadius'].every(k=>Number.isFinite(pull[k]))||pull.initialDistance<=0||pull.force<=0||pull.stopRadius<0)return 'invalid enemy pull';
   if(e.transport){const t=e.transport;if(!Number.isInteger(t.max)||t.max<=0||!Array.isArray(t.passengers)||t.passengers.length>t.max||new Set(t.passengers).size!==t.passengers.length)return 'invalid enemy transport';
    for(const uid of t.passengers)if(!s.enemies.some(p=>p.uid===uid&&p.carriedBy===e.uid&&p.hp>0))return 'missing passenger';}
   if(e.carriedBy!=null&&!s.enemies.some(c=>c.uid===e.carriedBy&&c.hp>0&&c.transport?.passengers.includes(e.uid)))return 'missing passenger carrier';
@@ -5436,6 +5437,7 @@ function moveActor(battle,target,source,description='',options={}){
  if(!target||target.hp<=0||target.hidden||target.levitated||target.shiftImmune)return false;
  const away=/推开|推动|击退/.test(description),toward=/拖拽|拉向|拉至/.test(description);if(!away&&!toward)return false;
  if(away&&Number.isFinite(options.forceLevel))return startEnemyPush(battle,target,source,options);
+ if(toward&&Number.isFinite(options.forceLevel))return options.radialImpulse?startEnemyPush(battle,target,source,{...options,directional:false,reverse:true}):startEnemyPull(battle,target,source,options);
  const dx=target.x-source.x,dy=target.y-source.y,len=Math.hypot(dx,dy)||1,step=away?1:-1,nx=Math.round(target.x+(dx/len)*step),ny=Math.round(target.y+(dy/len)*step);
  if(!validMoveTile(battle,target,nx,ny))return false;
  const moved=teleportActor(battle,target,{x:nx,y:ny,source,mode:away?'push':'pull'});
@@ -11165,16 +11167,39 @@ return {};
 const {advanceEnemy} = load("native-combat.js");
 // PRTS推与拉、失衡位移机制：质量1，g=9.81，默认动摩擦系数0.5。
 const SPEEDS=[0,1,2,4,4.5,5.3,5.8];
-function startEnemyPush(battle,target,source,{forceLevel,directional=false,fixedDirection=false,projectile=false}={}){
- if(!battle.s.enemies.includes(target)||target.hp<=0||target.hidden||target.shiftImmune||target.levitated||!Number.isFinite(forceLevel))return false;
+const PULL_FORCES=[0,2,10,40,42,44,46];
+const actor=(battle,uid)=>[...battle.s.units,...battle.s.enemies,...(battle.s.summons||[])].find(a=>a.uid===uid);
+function startEnemyPush(battle,target,source,{forceLevel,directional=false,fixedDirection=false,projectile=false,reverse=false}={}){
+ if(!battle.s.enemies.includes(target)||target.hp<=0||target.hidden||target.shiftImmune||target.levitated||target.statuses?.some(s=>s.kind==='levitate')||!Number.isFinite(forceLevel))return false;
  let dx=target.x-source.x,dy=target.y-source.y,length=Math.hypot(dx,dy),level=forceLevel-(target.weight||0);
  const forward=[[1,0],[0,-1],[-1,0],[0,1]][source.dir??0];
  if(directional){if(!fixedDirection&&(length<.25||(dx*forward[0]+dy*forward[1])/length<Math.SQRT1_2))level-=2;else{dx=forward[0];dy=forward[1];length=1;}}
  if(length<1e-9){dx=forward[0];dy=forward[1];length=1;}
+ if(reverse){dx=-dx;dy=-dy;}
  const speed=SPEEDS[Math.max(0,Math.min(6,Math.floor(level)+3))];if(!(speed>0))return false;
  const previous=target.shift;
- target.shift={vx:(previous?.vx||0)+dx/length*speed,vy:(previous?.vy||0)+dy/length*speed,hardUntil:previous?.hardUntil??battle.s.time+.1,startedAt:previous?.startedAt??battle.s.time,sourceUid:source.uid??null,projectile:!previous&&projectile,fresh:!previous,nextDamageAt:previous?.nextDamageAt??battle.s.time+Number(target.enemyTalent?.['unbalanced_bleed.interval']||1)};
+ target.shift={vx:(previous?.vx||0)+dx/length*speed,vy:(previous?.vy||0)+dy/length*speed,hardUntil:previous?.hardUntil??battle.s.time+.1,startedAt:previous?.startedAt??battle.s.time,sourceUid:source.uid??null,projectile:!previous&&projectile,fresh:!previous,pulls:previous?.pulls||[],nextDamageAt:previous?.nextDamageAt??battle.s.time+Number(target.enemyTalent?.['unbalanced_bleed.interval']||1)};
  target.block=null;target.action=null;battle.onActorShiftStart?.(target);battle.emit('shift-start',{uid:target.uid,x:target.x,y:target.y,forceLevel});return true;
+}
+
+function startEnemyPull(battle,target,source,{forceLevel,anchorOffset=.5,stopRadius=.6708,stopImmediately=false}={}){
+ if(!battle.s.enemies.includes(target)||target.hp<=0||target.hidden||target.shiftImmune||target.levitated||target.statuses?.some(s=>s.kind==='levitate')||!Number.isFinite(forceLevel))return false;
+ const owner=source.uid==null?null:actor(battle,source.uid);if(source.uid!=null&&(!owner||owner.hp<=0||owner.deployed===false))return false;
+ const level=forceLevel-(target.weight||0),force=PULL_FORCES[Math.max(0,Math.min(6,Math.floor(level)+3))];if(!(force>0))return false;
+ const [dx,dy]=[[1,0],[0,-1],[-1,0],[0,1]][source.dir??owner?.dir??0],x=source.x+dx*anchorOffset,y=source.y+dy*anchorOffset,initialDistance=Math.hypot(target.x-x,target.y-y);if(initialDistance<1e-9)return false;
+ const previous=target.shift;target.shift??={vx:0,vy:0,hardUntil:battle.s.time+.1,startedAt:battle.s.time,sourceUid:source.uid??null,projectile:false,fresh:false,nextDamageAt:battle.s.time+Number(target.enemyTalent?.['unbalanced_bleed.interval']||1)};
+ target.shift.pulls??=[];target.shift.pulls.push({sourceUid:source.uid??null,sourceDeployGen:owner?.deployGen??null,x:source.x,y:source.y,dx,dy,anchorOffset,initialDistance,force,endsAt:battle.s.time+(level < -1 ? .5 : 1),stopRadius,stopImmediately});
+ target.block=null;target.action=null;if(!previous)battle.onActorShiftStart?.(target);battle.emit('shift-start',{uid:target.uid,x:target.x,y:target.y,forceLevel,mode:'pull'});return true;
+}
+
+function pullOrigin(battle,pull){
+ if(pull.sourceUid==null)return {x:pull.x,y:pull.y};
+ const source=actor(battle,pull.sourceUid);return source?.hp>0&&source.deployed!==false&&!source.hidden&&(pull.sourceDeployGen==null||source.deployGen===pull.sourceDeployGen)?source:null;
+}
+function activePulls(battle,state){return (state.pulls||[]).filter(p=>battle.s.time<=p.endsAt+1e-9&&pullOrigin(battle,p));}
+function pullStop(battle,target,pulls){
+ if(pulls.length!==1)return false;const p=pulls[0],origin=pullOrigin(battle,p);if(!origin||Math.hypot(target.x-origin.x,target.y-origin.y)>p.stopRadius)return false;
+ target.shift.vx=target.shift.vy=0;if(p.stopImmediately){target.shift.pulls=[];p.endsAt=battle.s.time;}return true;
 }
 
 function solidAt(battle,target,x,y){
@@ -11217,22 +11242,27 @@ function advanceEnemyShift(battle,target,dt){
   const next=Math.max(0,speed-4.905*dt)/(1+Math.max(0,target.shiftDrag||0)*dt),scale=speed>0?next/speed:0;state.vx*=scale;state.vy*=scale;speed=next;
  }
  state.fresh=false;
- if(speed<=.1&&battle.s.time+1e-9>=state.hardUntil){finish(battle,target);return false;}
+ const pulls=activePulls(battle,state);state.pulls=pulls;
+ if(!pullStop(battle,target,pulls))for(const pull of pulls){const origin=pullOrigin(battle,pull),dx=origin.x+pull.dx*pull.anchorOffset-target.x,dy=origin.y+pull.dy*pull.anchorOffset-target.y,distance=Math.hypot(dx,dy);if(distance>1e-9){const force=pull.force*Math.pow(distance/pull.initialDistance,4);if(!Number.isFinite(force))continue;state.vx+=dx/distance*force*dt;state.vy+=dy/distance*force*dt;}}
+ speed=Math.hypot(state.vx,state.vy);
+ if(!state.pulls.length&&speed<=.1&&battle.s.time+1e-9>=state.hardUntil){finish(battle,target);return false;}
  const steps=Math.max(1,Math.min(128,Math.ceil(speed*dt/.1)));
  for(let i=0;i<steps&&target.hp>0;i++)for(const axis of ['x','y']){
   const delta=state[axis==='x'?'vx':'vy']*dt/steps;if(!delta)continue;
   const from=target[axis],to=from+delta,x=axis==='x'?to:target.x,y=axis==='y'?to:target.y,wall=solidAt(battle,target,x,y);
   if(wall){let lo=0,hi=1;for(let n=0;n<14;n++){const mid=(lo+hi)/2,p=from+delta*mid;if(solidAt(battle,target,axis==='x'?p:target.x,axis==='y'?p:target.y))hi=mid;else lo=mid;}target[axis]=from+delta*lo;state[axis==='x'?'vx':'vy']=0;battle.onActorShiftCollision?.(target,wall);}
   else target[axis]=to;
+  pullStop(battle,target,pulls);
   if(!target.flying&&battle.map.grid[Math.round(target.y)]?.[Math.round(target.x)]?.tileKey==='tile_hole'){target.shift=null;battle.onActorShiftFall?.(target);return false;}
  }
  battle.onActorMoved?.(target);
  advanceEnemy(target,dt,kind=>battle.emit(kind,{uid:target.uid,x:target.x,y:target.y}),true);
- if(Math.hypot(state.vx,state.vy)<=.1&&battle.s.time+1e-9>=state.hardUntil)finish(battle,target);
+ state.pulls=state.pulls.filter(p=>p.endsAt>battle.s.time+1e-9);
+ if(!state.pulls.length&&Math.hypot(state.vx,state.vy)<=.1&&battle.s.time+1e-9>=state.hardUntil)finish(battle,target);
  return false;
 }
 
-return {startEnemyPush,advanceEnemyShift};
+return {startEnemyPush,startEnemyPull,advanceEnemyShift};
 }
 };
 const cache = Object.create(null);
