@@ -6060,6 +6060,7 @@ function detonateC4(battle,enemy){
 function cancelEnemyCast(battle,enemy,{lostTarget=false}={}){
  const cast=enemy.enemyCast;if(!cast)return;
  if(cast.c4Targets){detonateC4(battle,enemy);return;}
+ if(cast.degenCircle){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.crossShot){enemy.formHold=false;enemy.formInvisible=enemy.baseInvisible;enemy.invisible=enemy.formInvisible&&!enemy.revealed;endEnemySkill(battle,enemy);return;}
  if(cast.knightCharge){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.bomb){enemy.formHold=false;endEnemySkill(battle,enemy,{refund:true});return;}
@@ -6176,6 +6177,18 @@ function tickEnemySkills(battle,enemy,dt){
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
+ if(cast?.degenCircle){
+  if(enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
+  if(battle.s.time+1e-9>=cast.fireAt){
+   const skill=enemy.enemySkills[cast.index],radius=Number(skill.bb.range_radius),targets=attackableAllies(battle.s).filter(t=>enemyTargetValid(t)&&!permissions(t).sleeping&&Math.hypot(t.x-enemy.x,t.y-enemy.y)<=radius+1e-9),attackId=newAttackId(battle);
+   for(let hit=0;hit<cast.hits&&enemy.enemyCast===cast;hit++)for(const target of targets){
+    if(enemy.enemyCast!==cast)break;if(target.hp>0)battle.resolveEnemyStrike(enemy,target,{scale:Number(skill.bb.atk_scale),type:'physical',attackId});
+   }
+   battle.emit('impact',{uid:enemy.uid,x:enemy.x,y:enemy.y,radius,type:'physical',enemy:true});
+   if(enemy.enemyCast===cast){enemy.formHold=false;endEnemySkill(battle,enemy);}
+  }
+  return;
+ }
  if(cast?.crossShot){
   if(enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
   const skill=enemy.enemySkills[cast.index];
@@ -6300,6 +6313,13 @@ function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.enemyFormKind==='degen'&&enemy.enemyForm!=='rebirth'&&!control.silenced&&!enemy.action&&!(enemy.attackCooldown>0)){
+  const skill=enemy.enemySkills.find(s=>s.prefab===(enemy.enemyForm==='second'?'CircleAttack2':'CircleAttack'));
+  if(skill&&attackableAllies(battle.s).some(t=>enemyTargetValid(t)&&!permissions(t).sleeping&&Math.hypot(t.x-enemy.x,t.y-enemy.y)<=Number(skill.bb.range_radius)+1e-9)){
+   const timing=battle.enemyAttackTiming(enemy);
+   if(beginEnemySkill(battle,enemy,skill,{degenCircle:true,hits:enemy.enemyForm==='second'?2:1,fireAt:battle.s.time+timing.windupFrames/FPS})){enemy.formHold=true;enemy.attackCooldown=timing.frames;return;}
+  }
+ }
  if(enemy.id==='enemy_1404_msnip'&&!control.silenced&&enemy.block==null&&!enemy.action&&!(enemy.attackCooldown>0)){
   const skill=enemy.enemySkills.find(s=>s.prefab==='CrossAttack'),directions=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
   const targets=attackableAllies(battle.s).filter(t=>enemyTargetValid(t)&&!t.invisible&&!permissions(t).sleeping&&directions.some(d=>Number.isFinite(enemyRayHitDistance(enemy,t,d))));

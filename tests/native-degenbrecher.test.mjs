@@ -19,6 +19,24 @@ function arena(positions=[]){
 function advance(b,t){for(let i=0;i<Math.round(t*30);i++)b.step();}
 function fatal(b,e){dealDamage(b,{target:e,value:e.maxHp*10,type:'true'});}
 
+test('锏第一形态15秒后肆虐风雪，圆形范围可命中飞行及迷彩，结束开始15秒CD',()=>{
+ const {b,e,units}=arena([[4,3],[4,4],[5,5]]);units[1].flying=true;applyStatus(units[1],'camouflage',60);e.atk=2000;const hits=[];b.hurt=(u,source)=>hits.push([u.uid,source.atk]);
+ advance(b,14.9);assert.equal(e.enemyCast,undefined);advance(b,.2);assert.equal(e.enemyCast?.degenCircle,true);assert.equal(e.enemyCast.index,0);assert.equal(hits.length,0);
+ for(let i=0;i<90&&e.enemyCast;i++)b.step();assert.deepEqual(hits,[[units[0].uid,2000],[units[1].uid,2000]]);assert.ok(Math.abs(e.enemySkills[0].nextAt-b.s.time-15)<1e-8);assert.equal(e.enemySkills[2].used,false);
+});
+
+test('锏第二形态肆虐风雪双段普通伤害，穿防只对阻挡者生效且不重复套用',()=>{
+ const {b,e,units:[blocker,other]}=arena([[3,3],[4,3]]);e.atk=1000;fatal(b,e);advance(b,5);e.attackCooldown=100000;
+ advance(b,15.1);e.attackCooldown=0;e.action=null;b.s.strikes=[];const hits=[],hurt=b.hurt.bind(b);b.hurt=(u,source,opts)=>{const hp=u.hp;hurt(u,source,opts);hits.push([u.uid,hp-u.hp]);};b.step();assert.equal(e.enemyCast?.index,2);
+ for(let i=0;i<90&&e.enemyCast;i++)b.step();assert.deepEqual(hits,[[blocker.uid,400],[other.uid,50],[blocker.uid,400],[other.uid,50]]);assert.equal(e.atk,1000);
+});
+
+test('肆虐风雪无目标时保持就绪，施法存档不重复伤害，缴械中断不命中',()=>{
+ const {b,g,e}=arena([[5,5]]);advance(b,16);assert.equal(e.enemySkills[0].used,false);b.s.units[0].x=4;b.s.units[0].y=3;b.step();assert.ok(e.enemyCast?.degenCircle);
+ const saved=JSON.parse(JSON.stringify(b.s)),restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,saved);assert.ok(restored);const hits=[];restored.hurt=u=>hits.push(u.uid);advance(restored,2);assert.equal(hits.length,1);advance(restored,1);assert.equal(hits.length,1);
+ const interrupted=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,saved);applyStatus(interrupted.s.enemies[0],'disarm',3);interrupted.step();assert.equal(interrupted.s.enemies[0].enemyCast,null);assert.equal(interrupted.s.enemies[0].formHold,false);
+});
+
 test('锏第二形态每25%血线压制，圆形范围内清技力并强制缴械/阻回10秒',()=>{
  const {b,e,units:[near,far]}=arena([[4,3],[5,5]]);e.atk=1;fatal(b,e);advance(b,15.1);near.sp=20;far.sp=20;near.statusResistance=.5;near.invulnerable=true;near.statuses=[];near.action={left:10};
  dealDamage(b,{target:e,value:e.maxHp*.25-1,type:'true'});assert.equal(near.sp,20);dealDamage(b,{target:e,value:1,type:'true'});
