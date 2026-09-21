@@ -70,7 +70,8 @@ export function enemyConditionalAttackSpeed(e){
  return e.id==='enemy_1050_lslime'&&e.hp<e.maxHp*Number(bb['selfbuff.hp_ratio'])?Number(bb['selfbuff.attack_speed'])||0:0;
 }
 
-export function enemyConditionalAttackMultiplier(e){
+export function enemyConditionalAttackMultiplier(e,target=null){
+ if(/^enemy_1069_icebrk(?:_2)?$/.test(e.id||'')&&target?.statuses?.some(s=>s.kind==='frozen'))return Number(e.enemyTalent?.['atkup.atk_scale'])||1;
  if(e.id==='enemy_1500_skulsr')return e.hp<e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['atkup.atk']):1;
  if(e.id==='enemy_1539_reid')return e.hp<=e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['AtkUp.atk']):1;
  if(e.knightRage)return 1+(Number(e.enemyTalent['triggerrage.atk'])||0);

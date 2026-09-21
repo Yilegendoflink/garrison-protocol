@@ -261,7 +261,7 @@ return {FPS,clamp,attribute,attackTiming,damage,applyDamage,recoverHP,spCapacity
 },
 "status.js": function(load) {
 // Common status semantics; durations are simulation seconds, never render time.
-const CONTROL={skillLock:['skill'],unableAct:['attack','move','block','skill'],stun:['attack','move','block','skill'],frozen:['attack','move','block','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:[],selfFear:[],terror:['attack','move','block','skill'],tremble:['attack','skill'],disarm:['attack'],root:['move'],silence:[]};
+const CONTROL={skillLock:['skill'],unableAct:['attack','move','block','skill'],stun:['attack','move','block','skill'],frozen:['attack','move','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:[],selfFear:[],terror:['attack','move','block','skill'],tremble:['attack','skill'],disarm:['attack'],root:['move'],silence:[]};
 function applyStatus(target,kind,duration,{source=null,value=1,resistible=true,frostSide='ally'}={}){
  if(!Number.isFinite(duration)||duration<=0||target.hp<=0)return false;if(target.immunities?.[kind])return false;if(['fear','selfFear'].includes(kind)&&target.chessId)return false;
  if(['sleep','levitate','fear','selfFear','terror'].includes(kind)&&Object.hasOwn(target,'block'))target.block=null;target.statuses??=[];
@@ -6521,7 +6521,8 @@ function enemyConditionalAttackSpeed(e){
  return e.id==='enemy_1050_lslime'&&e.hp<e.maxHp*Number(bb['selfbuff.hp_ratio'])?Number(bb['selfbuff.attack_speed'])||0:0;
 }
 
-function enemyConditionalAttackMultiplier(e){
+function enemyConditionalAttackMultiplier(e,target=null){
+ if(/^enemy_1069_icebrk(?:_2)?$/.test(e.id||'')&&target?.statuses?.some(s=>s.kind==='frozen'))return Number(e.enemyTalent?.['atkup.atk_scale'])||1;
  if(e.id==='enemy_1500_skulsr')return e.hp<e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['atkup.atk']):1;
  if(e.id==='enemy_1539_reid')return e.hp<=e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['AtkUp.atk']):1;
  if(e.knightRage)return 1+(Number(e.enemyTalent['triggerrage.atk'])||0);
@@ -7390,7 +7391,7 @@ class NativeBattle {
  dominionAttackSpeed(actor){return actor.deployed&&actor.hp>0&&!actor.hidden?dominionCell(this,actor)?.attackSpeed||0:0;}
  onActorMoved(actor){paintDominion(this,actor);}
  enemyAttackTiming(e){return attackTiming(Math.max(.1,e.interval+(e.attackIntervalMod||0)),Math.max(10,Math.min(600,(e.attackSpeed+enemyConditionalAttackSpeed(e)+(e.attackSpeedMod||0)+(e.operatorAttackSpeedMod||0)+enemyWineBuffs(this,e).attackSpeed+statusAttributeChanges(e).attackSpeed)*(e.waterAttackSpeedScale??1))),windupSeconds(Math.max(.1,e.interval+(e.attackIntervalMod||0))));}
- enemyAttackDamage(enemy,scale=1,target=null){return enemy.atk*scale*(enemy.id==='enemy_2048_smgrd'&&dominionCell(this,target)?Number(enemy.enemyTalent['DamageUp.atk_scale']):1)*enemyConditionalAttackMultiplier(enemy)*(enemy.waterAttackMultiplier??1)*(1+Math.min(0,statusAttributeChanges(enemy).attack||0));}
+ enemyAttackDamage(enemy,scale=1,target=null){return enemy.atk*scale*(enemy.id==='enemy_2048_smgrd'&&dominionCell(this,target)?Number(enemy.enemyTalent['DamageUp.atk_scale']):1)*enemyConditionalAttackMultiplier(enemy,target)*(enemy.waterAttackMultiplier??1)*(1+Math.min(0,statusAttributeChanges(enemy).attack||0));}
  enemyDamageDealt(enemy,opts,result){enemyTraitDamageDealt(this,enemy,result);}
  liberatePrisoners(){liberateEnemyPrisoners(this);}
  refreshMudrockShield(enemy,bb){refreshEnemyMudrockShield(this,enemy,bb);}

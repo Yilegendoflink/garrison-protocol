@@ -61,7 +61,7 @@ export class NativeBattle {
  dominionAttackSpeed(actor){return actor.deployed&&actor.hp>0&&!actor.hidden?dominionCell(this,actor)?.attackSpeed||0:0;}
  onActorMoved(actor){paintDominion(this,actor);}
  enemyAttackTiming(e){return attackTiming(Math.max(.1,e.interval+(e.attackIntervalMod||0)),Math.max(10,Math.min(600,(e.attackSpeed+enemyConditionalAttackSpeed(e)+(e.attackSpeedMod||0)+(e.operatorAttackSpeedMod||0)+enemyWineBuffs(this,e).attackSpeed+statusAttributeChanges(e).attackSpeed)*(e.waterAttackSpeedScale??1))),windupSeconds(Math.max(.1,e.interval+(e.attackIntervalMod||0))));}
- enemyAttackDamage(enemy,scale=1,target=null){return enemy.atk*scale*(enemy.id==='enemy_2048_smgrd'&&dominionCell(this,target)?Number(enemy.enemyTalent['DamageUp.atk_scale']):1)*enemyConditionalAttackMultiplier(enemy)*(enemy.waterAttackMultiplier??1)*(1+Math.min(0,statusAttributeChanges(enemy).attack||0));}
+ enemyAttackDamage(enemy,scale=1,target=null){return enemy.atk*scale*(enemy.id==='enemy_2048_smgrd'&&dominionCell(this,target)?Number(enemy.enemyTalent['DamageUp.atk_scale']):1)*enemyConditionalAttackMultiplier(enemy,target)*(enemy.waterAttackMultiplier??1)*(1+Math.min(0,statusAttributeChanges(enemy).attack||0));}
  enemyDamageDealt(enemy,opts,result){enemyTraitDamageDealt(this,enemy,result);}
  liberatePrisoners(){liberateEnemyPrisoners(this);}
  refreshMudrockShield(enemy,bb){refreshEnemyMudrockShield(this,enemy,bb);}

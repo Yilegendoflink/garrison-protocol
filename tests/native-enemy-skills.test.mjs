@@ -49,6 +49,28 @@ test('重弩蓄力被沉默中断后不射击，恢复隐匿且只开始一次8�
 });
 
 const iceBugRaw=Object.values(NATIVE_DATA.levels).map(l=>l.enemyProfiles?.enemy_1067_snslime).find(Boolean);
+const iceBreakerRaw=Object.values(NATIVE_DATA.levels).map(l=>l.enemyProfiles?.enemy_1069_icebrk_2).find(Boolean);
+
+test('破冰者在命中时对冻结目标按300%攻击扣防，冻结不解除阻挡且解冻后恢复',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_1069_icebrk_2',3,3,iceBreakerRaw);addAlly(b,ally,3,3);b.map=structuredClone(b.map);b.map.grid[3][3].heightType='LOWLAND';e.atk=e.baseAtk=200;
+ const stats=b.stats.bind(b);b.stats=u=>({...stats(u),def:100,maxHp:100000});ally.hp=ally.maxHp=100000;
+ const damage=[],hurt=b.hurt.bind(b);b.hurt=(u,source,opts)=>{const hp=u.hp;hurt(u,source,opts);damage.push(hp-u.hp);};b.step();assert.ok(e.action);applyStatus(ally,'frozen',2,{frostSide:'enemy'});applyStatus(e,'silence',30);advance(b,1);
+ assert.equal(e.block,ally.uid);assert.deepEqual(damage,[500]);assert.equal(e.atk,200);advance(b,3);assert.equal(damage[1],100);assert.equal(e.atk,200);
+});
+
+test('破冰者只对冻结增伤，寒冷无加成；倍率取黑板且不因多层冻结叠乘',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_1069_icebrk_2',3,3,iceBreakerRaw);addAlly(b,ally,3,3);e.atk=100;
+ applyStatus(ally,'cold',10,{frostSide:'enemy'});assert.equal(b.enemyAttackDamage(e,1,ally),100);
+ applyStatus(ally,'cold',10,{frostSide:'enemy'});applyStatus(ally,'frozen',10,{source:999});assert.equal(b.enemyAttackDamage(e,1,ally),300);
+ e.enemyTalent['atkup.atk_scale']=2.5;assert.equal(b.enemyAttackDamage(e,1,ally),250);ally.statuses=[];assert.equal(b.enemyAttackDamage(e,1,ally),100);
+});
+
+test('破冰者与冻结目标跨存档保留阻挡与条件倍率，眩晕仍会解除阻挡',()=>{
+ const {b,g,ally}=arena(),e=spawn(b,'enemy_1069_icebrk_2',3,3,iceBreakerRaw);addAlly(b,ally,3,3);b.map=structuredClone(b.map);b.map.grid[3][3].heightType='LOWLAND';e.atk=1;applyStatus(ally,'frozen',10,{frostSide:'enemy'});b.step();
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);restored.step();const enemy=restored.s.enemies[0],target=restored.s.units[0];assert.equal(enemy.block,target.uid);assert.equal(restored.enemyAttackDamage(enemy,1,target),3);
+ applyStatus(target,'stun',10);restored.step();assert.equal(enemy.block,null);
+});
+
 test('关卡冰爆虫死亡1秒后半径1.65爆炸，命中迷彩地面单位但不对空，并施加敌方寒冷',()=>{
  const {b,ally}=arena();addAlly(b,ally,4.5,3);applyStatus(ally,'camouflage',60);ally.statusResistance=.5;
  const air=structuredClone(ally);air.uid+=100;air.x=3;air.flying=true;b.s.units.push(air);b.s.queue.push({id:'enemy_1007_slime',route:0,at:100});
