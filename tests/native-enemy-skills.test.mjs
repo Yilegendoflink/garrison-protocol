@@ -25,6 +25,29 @@ function spawn(b,id,x=3,y=3,raw=NATIVE_DATA.enemies[id]){
 function advance(b,seconds){for(let i=0;i<Math.round(seconds*30);i++)b.step();}
 function addAlly(b,ally,x,y){ally.x=x;ally.y=y;ally.deployed=true;ally.hp=ally.maxHp;applyStatus(ally,'disarm',600);b.s.units.push(ally);}
 
+test('重弩蓄力1.4秒后只命中射线首个单位，迷彩可挡箭且眩晕可抵抗',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_1404_msnip',2,3);addAlly(b,ally,6,3);const near=structuredClone(ally);near.uid+=100;near.x=4;near.statusResistance=.5;applyStatus(near,'camouflage',60);b.s.units.push(near);e.atk=1;
+ const hits=[];b.hurt=(u,source)=>hits.push(u.uid);advance(b,2);assert.ok(e.enemyCast?.crossShot);assert.equal(e.invisible,false);advance(b,1.3);assert.equal(hits.length,0);advance(b,.1);
+ assert.deepEqual(hits,[near.uid]);assert.ok(Math.abs(near.statuses.find(s=>s.kind==='stun').remaining-(2.5-1/30))<1e-8);assert.equal(ally.statuses.some(s=>s.kind==='stun'),false);
+ advance(b,.6);assert.equal(e.enemyCast,null);assert.equal(e.formInvisible,true);assert.ok(Math.abs(e.enemySkills[0].nextAt-12)<.04);
+});
+
+test('重弩阻挡时不触发直击，斜线范围外无目标时不触发',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_1404_msnip');addAlly(b,ally,3,3);e.atk=1;advance(b,3);assert.equal(e.enemySkills[0].used,false);assert.ok(!e.enemyCast);
+ ally.x=5;ally.y=5;advance(b,3);assert.ok(!e.enemyCast);assert.equal(e.enemySkills[0].used,false);
+});
+
+test('重弩直击方向跨JSON保留，原目标移走时命中后来进入该射线的单位',()=>{
+ const {b,g,ally}=arena(),e=spawn(b,'enemy_1404_msnip',2,3);addAlly(b,ally,6,3);e.atk=1;advance(b,2.5);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const target=restored.s.units[0];target.y=5;const next=structuredClone(target);next.uid+=100;next.x=4;next.y=3.4;restored.s.units.push(next);
+ const hits=[];restored.hurt=u=>hits.push(u.uid);advance(restored,.9);assert.deepEqual(hits,[next.uid]);
+});
+
+test('重弩蓄力被沉默中断后不射击，恢复隐匿且只开始一次8秒冷却',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_1404_msnip',2,3);addAlly(b,ally,6,3);advance(b,2.5);applyStatus(e,'silence',20);b.step();const end=e.enemySkills[0].nextAt;assert.equal(e.enemyCast,null);assert.equal(e.formInvisible,true);
+ const hits=[];b.hurt=u=>hits.push(u.uid);advance(b,3);assert.equal(hits.length,0);assert.equal(e.enemySkills[0].nextAt,end);
+});
+
 function deathEyeArena(){
  const scene=arena(),{b,ally}=scene,e=spawn(b,'enemy_1275_dwlock_2',3,3);addAlly(b,ally,4,3);e.atk=e.baseAtk=1;
  for(let i=0;i<600&&!e.deathEye;i++)b.step();assert.ok(e.deathEye);return {...scene,e};

@@ -326,6 +326,11 @@ export function enemyBehaviorProfile(raw={}){
 export function enemyTargetValid(target){
  return !!target&&target.hp>0&&!target.hidden&&!target.untargetable&&!target.invulnerable;
 }
+export function enemyRayHitDistance(origin,target,direction,radius=.3){
+ const dx=target.x-origin.x,dy=target.y-origin.y,along=dx*direction.x+dy*direction.y,across=Math.abs(dx*direction.y-dy*direction.x),r=radius+(target.hitRadius??.25);
+ if(along<0||across>r)return Infinity;
+ return Math.max(0,along-Math.sqrt(Math.max(0,r*r-across*across)));
+}
 
 export function enemyTargetInRange(enemy,target){
  if(!enemyTargetValid(target))return false;

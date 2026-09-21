@@ -331,6 +331,9 @@
       "statusResistanceSource": "PRTS纠缠藤蔓天赋：抵抗，持续时间减半",
       "randomPoolEligible": false,
       "reason": "攻击回复眩晕、抵抗与环境伤害标记触发脆弱已接入；本期可伤害敌人的自然环境来源仍待接线，暂不入池"
+    },
+    "enemy_1404_msnip": {
+      "randomPoolEligible": false
     }
   }
 }

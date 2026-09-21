@@ -114949,7 +114949,7 @@
         "stanceDuration": 0,
         "stallTimeout": 2,
         "complexity": "common",
-        "randomPoolEligible": true,
+        "randomPoolEligible": false,
         "attackStunEvery": 0,
         "attackStunDuration": 5,
         "attackElement": null,

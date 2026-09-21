@@ -1,7 +1,7 @@
 import {permissions,applyStatus,removeStatus,isIsolated} from './status.js';
 import {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId,addEffect,grantShield,teleportActor} from './native-effects.js';
 import {FPS} from './combat.js';
-import {windupSeconds,enemyChainTargets} from './native-combat.js';
+import {windupSeconds,enemyChainTargets,enemyRayHitDistance,enemyTargetValid,compareEnemyTargets} from './native-combat.js';
 
 const ATTACK_SKILLS=new Set(['AOEAttack','CrossAttack','PowerAttack','StunAttack','stuncombat','DeathEye','PollutedRangedAtk','ironsandstorm','armorpiercing']);
 const VISUAL_SKILLS=new Set(['BornAnim','StartRun','EndAnim','BeginAnim']);
@@ -67,6 +67,7 @@ export function endEnemySkill(battle,enemy,{refund=false}={}){
 
 export function selectEnemyAttackSkill(battle,enemy,target){
  if(!target||enemy.enemyCast)return null;
+ if(enemy.id==='enemy_1404_msnip')return null; // 独立直击施法，不复用通用CrossAttack命中目标。
  const ready=enemy.enemySkills.filter(s=>ATTACK_SKILLS.has(s.prefab)&&enemySkillReady(enemy,s,battle.s.time)&&
   !(enemy.id==='enemy_2003_rockman'&&s.prefab==='StunAttack')&&
   !(s.prefab==='ironsandstorm'&&enemy.enemyForm!=='warden')&&
@@ -108,6 +109,7 @@ function detonateC4(battle,enemy){
 export function cancelEnemyCast(battle,enemy,{lostTarget=false}={}){
  const cast=enemy.enemyCast;if(!cast)return;
  if(cast.c4Targets){detonateC4(battle,enemy);return;}
+ if(cast.crossShot){enemy.formHold=false;enemy.formInvisible=enemy.baseInvisible;enemy.invisible=enemy.formInvisible&&!enemy.revealed;endEnemySkill(battle,enemy);return;}
  if(cast.knightCharge){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.bomb){enemy.formHold=false;endEnemySkill(battle,enemy,{refund:true});return;}
  if(cast.charge&&!cast.hitAttempted){
@@ -223,6 +225,18 @@ export function tickEnemySkills(battle,enemy,dt){
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
+ if(cast?.crossShot){
+  if(enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
+  const skill=enemy.enemySkills[cast.index];
+  if(!cast.fired&&battle.s.time+1e-9>=cast.fireAt){
+   cast.fired=true;
+   const target=attackableAllies(battle.s).filter(t=>enemyTargetValid(t)&&!permissions(t).sleeping&&(!t.invisible||t.statuses?.some(s=>s.kind==='camouflage'))).map(t=>({target:t,distance:enemyRayHitDistance(enemy,t,cast.direction)})).filter(r=>Number.isFinite(r.distance)).sort((a,b)=>a.distance-b.distance||a.target.uid-b.target.uid)[0]?.target;
+   if(target){battle.resolveEnemyStrike(enemy,target,{scale:Number(skill.bb.atk_scale),type:'arts',cause:'skill',attackId:cast.attackId});applyStatus(target,'stun',Number(skill.bb.stun),{source:enemy.uid});}
+   battle.emit('strike',{uid:enemy.uid,x:enemy.x,y:enemy.y,targetX:target?.x??enemy.x+cast.direction.x*10,targetY:target?.y??enemy.y+cast.direction.y*10,ranged:true,enemy:true,type:'arts',style:'cross-shot'});
+  }
+  if(battle.s.time+1e-9>=cast.endsAt)cancelEnemyCast(battle,enemy);
+  return;
+ }
  if(cast&&['PollutedRangedAtk','DeathEye'].includes(enemy.enemySkills[cast.index].prefab)&&enemy.action){
   const action=enemy.action,target=getActor(battle.s,action.target);
   if(!target?.deployed||target.hp<=0||(action.targetDeployGen!=null&&target.deployGen!==action.targetDeployGen)||!battle.enemySkillTargets(enemy).includes(target)){
@@ -335,6 +349,15 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_1404_msnip'&&!control.silenced&&enemy.block==null&&!enemy.action&&!(enemy.attackCooldown>0)){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='CrossAttack'),directions=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+  const targets=attackableAllies(battle.s).filter(t=>enemyTargetValid(t)&&!t.invisible&&!permissions(t).sleeping&&directions.some(d=>Number.isFinite(enemyRayHitDistance(enemy,t,d))));
+  targets.sort((a,b)=>compareEnemyTargets({...a,tauntLevel:battle.stats(a).tauntLevel},{...b,tauntLevel:battle.stats(b).tauntLevel}));
+  const target=targets[0],direction=target&&directions.find(d=>Number.isFinite(enemyRayHitDistance(enemy,target,d)));
+  if(skill&&target&&beginEnemySkill(battle,enemy,skill,{crossShot:true,direction,fireAt:battle.s.time+1.4,endsAt:battle.s.time+Number(skill.bb.duration),attackId:newAttackId(battle)})){
+   enemy.formHold=true;enemy.formInvisible=false;enemy.invisible=false;enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;return;
+  }
+ }
  if(enemy.id==='enemy_1502_crowns'&&!control.silenced&&tryCrownBlink(battle,enemy))return;
  if(enemy.id==='enemy_2050_smsha'&&!control.silenced&&!enemy.action){
   const skill=enemy.enemySkills.find(s=>s.prefab==='ChainBuff');
