@@ -6,6 +6,9 @@ const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.enemyTalent?.['rush.dlancer_t[trigger].interval']>0&&!e.lancerRush){
+  e.lancerRush={active:false,stacks:0,nextCheckAt:battle.s.time,nextStackAt:null};e.speed=e.baseSpeed;
+ }
  if(e.enemyTraitsInitialized)return;
  if(restore){e.baseRes-=Number(raw.enemyBehavior?.magicResistanceBonus)||0;e.res=e.baseRes;}
  e.enemyTraitsInitialized=true;e.attackSpeedMod??=0;
@@ -24,6 +27,30 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  if(e.specialSkill?.prefab==='InvisibleCombat'&&e.formInvisible)e.invisibleStrikeReady=true;
  if(e.id==='enemy_1367_dseed'){e.unblockable=e.baseUnblockable=true;e.formHold=true;e.nextBloodLossAt=battle.s.time+1;}
  refreshEnemyTraitStats(e);
+}
+
+function stopLancerRush(e){const r=e.lancerRush;r.active=false;r.stacks=0;r.nextStackAt=null;e.speed=e.baseSpeed;}
+
+export function tickEnemyLancer(battle,e){
+ const r=e.lancerRush;if(!r||e.hp<=0||e.hidden)return;
+ const now=battle.s.time,bb=e.enemyTalent,interval=Number(bb['rush.dlancer_t[trigger].interval']);
+ while(now+1e-9>=r.nextCheckAt){
+  const at=r.nextCheckAt;r.nextCheckAt+=.1;
+  if(e.statuses.some(s=>s.kind==='stun'||s.kind==='root'))stopLancerRush(e);
+  else if(e.block==null&&!r.active){r.active=true;r.nextStackAt=at+interval;}
+ }
+ while(r.active&&r.nextStackAt!=null&&now+1e-9>=r.nextStackAt){
+  r.nextStackAt+=interval;r.stacks=Math.min(Number(bb['rush.dlancer_t[trigger].trig_cnt']),r.stacks+1);
+  e.speed=e.baseSpeed*(1+r.stacks*Number(bb['rush.dlancer_t[trigger].move_speed']));
+ }
+}
+
+export function consumeEnemyLancerRush(e){
+ if(!e.lancerRush?.active)return 0;
+ // “当前移动速度”包含减速，但不是阻挡后的实际位移速度（后者为0）。
+ const slow=e.statuses.some(s=>s.kind==='sluggish')? .2:1;
+ const amount=e.speed*(e.moveSpeedMod??1)*slow*Number(e.enemyTalent['firstattack.atk_scale']);
+ stopLancerRush(e);return amount;
 }
 
 // refreshEnemyAuras 每帧先恢复基础防御/法抗，再调用此处，避免永久写回导致重复累加。
