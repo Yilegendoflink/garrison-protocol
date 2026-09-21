@@ -22,6 +22,33 @@ test('寻仇者半血及以下增攻，治疗跨线即时恢复，反复跨线�
  const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const r=restored.s.enemies[0];r.hp=r.maxHp;restored.step();assert.equal(r.atk,atk);
 });
 
+test('两种圆仔均不攻击/不可阻挡，按左右干员人数转向，忽略可选性且并列维持方向',()=>{
+ for(const id of ['enemy_2085_skzjxd','enemy_2085_skzjxd_2']){
+  const {b,ally}=arena(),e=spawn(b,id);addAlly(b,ally,4,3);b.step();assert.equal(e.facingX,1);assert.equal(e.unblockable,true);assert.equal(e.canAttack,false);
+  const left=structuredClone(ally),hidden=structuredClone(ally);left.uid+=100;left.x=2;hidden.uid+=101;hidden.x=1;hidden.untargetable=true;hidden.hidden=true;b.s.units.push(left,hidden);b.step();assert.equal(e.facingX,-1);
+  hidden.deployed=false;hidden.deployAt=Infinity;b.step();assert.equal(e.facingX,-1);left.deployed=false;left.deployAt=Infinity;b.step();assert.equal(e.facingX,1);
+  ally.x=e.x;ally.y=e.y;b.step();assert.equal(e.block,null);assert.equal(e.attackCount,0);
+ }
+});
+
+test('圆仔正面物理/法术与DOT减伤，背面、真实、元素及无来源伤害不误减',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_2085_skzjxd');addAlly(b,ally,4,3);b.step();
+ const hit=(source,type,cause='attack',amount=false)=>dealDamage(b,{source,target:e,...(amount?{amount:100}:{value:100}),type,cause}).total;
+ for(const type of ['physical','arts'])assert.ok(Math.abs(hit(ally,type)-20)<1e-8);
+ assert.ok(Math.abs(hit(ally,'arts','dot',true)-10)<1e-8,'先计算50法抗，再按正面乘0.2');
+ for(const type of ['true','elemental'])assert.equal(hit(ally,type),100);
+ assert.equal(hit(null,'physical'),100);ally.x=2;assert.equal(hit(ally,'physical'),100,'命中按来源当前所在侧判断');
+});
+
+test('圆仔朝向与倒走炫耀计时随JSON保留，演出不产生伤害或技能消耗',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_2085_skzjxd');addAlly(b,ally,4,3);e.route=[{kind:'move',x:3,y:3},{kind:'move',x:-100,y:3}];e.cmd=0;b.step();
+ assert.equal(e.facingX,1);assert.equal(e.walkingBackward,true);assert.ok(e.nextShowAt>29);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.enemies[0];assert.equal(copy.facingX,1);assert.equal(copy.nextShowAt,e.nextShowAt);
+ const shows=[],emit=restored.emit.bind(restored);restored.emit=(kind,row)=>{if(row.form==='炫耀')shows.push(row);emit(kind,row);};advance(restored,30.1);
+ assert.equal(shows.length,1);assert.equal(copy.attackCount,0);assert.equal(copy.enemySkills.find(s=>s.prefab==='Show').used,false);
+ restored.s.units[0].x=-200;restored.step();assert.equal(copy.facingX,-1);assert.equal(copy.walkingBackward,false);assert.equal(copy.nextShowAt,null);
+});
+
 test('折射被沉默取消法抗，解除沉默后恢复，连续帧不重复叠加',()=>{
  const {b}=arena(),e=spawn(b,'enemy_1166_dusbr');assert.equal(e.res,e.baseRes+70);
  advance(b,1);assert.equal(e.res,e.baseRes+70);applyStatus(e,'silence',1);b.step();assert.equal(e.res,e.baseRes);

@@ -2,10 +2,15 @@ import {permissions,applyStatus} from './status.js';
 import {grantGuard,dealDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor} from './native-effects.js';
 
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
+const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
 
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(YUANZAI.has(e.id)){
+  e.unblockable=e.baseUnblockable=true;e.canAttack=e.baseCanAttack=false;
+  e.facingX??=Math.sign((e.route?.find(p=>p.kind==='move'&&Math.abs(p.x-e.x)>1e-6)?.x??e.x+1)-e.x);
+ }
  if(e.enemyTalent?.['rush.dlancer_t[trigger].interval']>0&&!e.lancerRush){
   e.lancerRush={active:false,stacks:0,nextCheckAt:battle.s.time,nextStackAt:null};e.speed=e.baseSpeed;
  }
@@ -27,6 +32,31 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  if(e.specialSkill?.prefab==='InvisibleCombat'&&e.formInvisible)e.invisibleStrikeReady=true;
  if(e.id==='enemy_1367_dseed'){e.unblockable=e.baseUnblockable=true;e.formHold=true;e.nextBloodLossAt=battle.s.time+1;}
  refreshEnemyTraitStats(e);
+}
+
+function faceOperatorMajority(battle,e){
+ let left=0,right=0;
+ for(const u of battle.s.units)if(u.deployed&&u.hp>0){if(u.x<e.x)left++;else if(u.x>e.x)right++;}
+ if(left!==right)e.facingX=right>left?1:-1;
+ if(e.walkingBackward&&e.nextShowAt!=null&&battle.s.time+1e-9>=e.nextShowAt){
+  e.nextShowAt=battle.s.time+Number(e.enemyTalent['ShowTrigger.interval']);
+  battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form:'炫耀'});
+ }
+}
+
+export function enemyFacingAfterMove(battle,e,oldX){
+ if(!YUANZAI.has(e.id)||Math.abs(e.x-oldX)<1e-9)return;
+ const backward=Math.sign(e.x-oldX)!==e.facingX;
+ if(backward&&!e.walkingBackward)e.nextShowAt=battle.s.time+Number(e.enemyTalent['ShowTrigger.interval']);
+ if(!backward)e.nextShowAt=null;
+ e.walkingBackward=backward;
+}
+
+export function enemyFacingDamageMultiplier(e,source,type){
+ if(!YUANZAI.has(e.id)||!source||!['physical','arts'].includes(type)||!Number.isFinite(source.x))return 1;
+ // 水平朝向的前半平面；同一竖线按点积为0的边界处理。
+ if((source.x-e.x)*(e.facingX??1)<0)return 1;
+ return 1-Math.max(0,Math.min(1,Number(e.enemyTalent?.['Weakness.damage_resistance'])||0));
 }
 
 function stopLancerRush(e){const r=e.lancerRush;r.active=false;r.stacks=0;r.nextStackAt=null;e.speed=e.baseSpeed;}
@@ -66,6 +96,7 @@ export function refreshEnemyTraitStats(e){
 export function tickEnemyTraits(battle,e,dt){
  if(!e.enemyTraitsInitialized||e.hp<=0)return;
  const bb=e.enemyTalent||{};
+ if(YUANZAI.has(e.id))faceOperatorMajority(battle,e);
  if(e.id==='enemy_1025_reveng')e.atk=e.baseAtk*(1+(e.hp<=e.maxHp*.5?Number(bb['atkup.atk'])||0:0));
  if(bb['SelfFear.fear']>0&&!e.selfFearTriggered&&e.hp/e.maxHp<.5){e.selfFearTriggered=true;applyStatus(e,'fear',Number(bb['SelfFear.fear']),{source:e.uid});e.selfFearSpeedUntil=battle.s.time+Number(bb['SelfFear.speed_duration']);e.speed=e.baseSpeed*Number(bb['SelfFear.move_speed']);}
  if(e.selfFearSpeedUntil!=null&&battle.s.time>=e.selfFearSpeedUntil){e.selfFearSpeedUntil=null;e.speed=e.baseSpeed;}

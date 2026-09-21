@@ -4802,6 +4802,7 @@ function dealDamage(battle,opts){
  // 同名暴露取最高；递归分摊回同一对象时不能再次乘算。不同接收者仍计算自己的状态。
  const exposure=(target.statuses||[]).filter(s=>s.kind==='exposed').reduce((n,s)=>Math.max(n,Number(s.value)||1),1);
  if(opts.exposureHandledFor!==target.uid)value*=exposure;
+ if(opts.directionHandledFor!==target.uid)value*=battle.enemyFacingDamageMultiplier?.(target,source,type)??1;
  const protection=target.damageProtection;
  if(!opts.skipProtection&&protection&&protection.until!=null&&battle.s.time<protection.until){
   const immediateRatio=Math.max(0,Math.min(1,Number(protection.immediateRatio??1)));
@@ -4810,7 +4811,7 @@ function dealDamage(battle,opts){
   value*=immediateRatio;
  }
  if(!opts.skipBondStead&&value>0&&battle.on?.('steadShip')&&battle.rows?.steadShip?.count>=3&&battle.s.units.includes(target)&&!battle.owns(target,'steadShip')){
-  const guards=battle.s.units.filter(u=>u.deployed&&u.hp>0&&battle.owns(u,'steadShip'));if(guards.length){const shared=value*.4,own=value-shared,common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,exposureHandledFor:target.uid,skipBondStead:true,skipRedirect:true,skipProtection:true,skipHooks:true};const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;const parts=guards.map(receiver=>dealDamage(battle,{...common,target:receiver,value:shared/guards.length}));return {total:(ownResult?.total||0)+parts.reduce((n,r)=>n+(r?.total||0),0),hp:(ownResult?.hp||0)+parts.reduce((n,r)=>n+(r?.hp||0),0),shield:(ownResult?.shield||0)+parts.reduce((n,r)=>n+(r?.shield||0),0),blocked:!!(ownResult?.blocked&&parts.every(r=>r?.blocked)),potentialHpDamage:(ownResult?.potentialHpDamage||0)+parts.reduce((n,r)=>n+(r?.potentialHpDamage||0),0),redirected:true,bond:'stead',event};}
+  const guards=battle.s.units.filter(u=>u.deployed&&u.hp>0&&battle.owns(u,'steadShip'));if(guards.length){const shared=value*.4,own=value-shared,common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,exposureHandledFor:target.uid,directionHandledFor:target.uid,skipBondStead:true,skipRedirect:true,skipProtection:true,skipHooks:true};const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;const parts=guards.map(receiver=>dealDamage(battle,{...common,target:receiver,value:shared/guards.length}));return {total:(ownResult?.total||0)+parts.reduce((n,r)=>n+(r?.total||0),0),hp:(ownResult?.hp||0)+parts.reduce((n,r)=>n+(r?.hp||0),0),shield:(ownResult?.shield||0)+parts.reduce((n,r)=>n+(r?.shield||0),0),blocked:!!(ownResult?.blocked&&parts.every(r=>r?.blocked)),potentialHpDamage:(ownResult?.potentialHpDamage||0)+parts.reduce((n,r)=>n+(r?.potentialHpDamage||0),0),redirected:true,bond:'stead',event};}
  }
  const reduction=type==='elemental'?0:damageReductionFor(battle,target,type,source);if(reduction>0)value*=1-reduction;
  const redirect=!opts.skipRedirect&&value>0?activeRedirect(battle,target,type):null;
@@ -4818,7 +4819,7 @@ function dealDamage(battle,opts){
   const receiver=getActor(battle.s,redirect.targetUid),ratio=Math.max(0,Math.min(1,Number(redirect.ratio??1)));
   if(receiver&&receiver!==target&&receiver.hp>0){
    const shared=value*ratio,own=redirect.mode==='redirect'?0:value-shared;
-   const common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,exposureHandledFor:target.uid,parentEventId:event.eventId,skipRedirect:true,skipProtection:true,skipHooks:true};
+   const common={source,type,cause:opts.cause,skill:opts.skill,attackId:opts.attackId,exposureHandledFor:target.uid,directionHandledFor:target.uid,parentEventId:event.eventId,skipRedirect:true,skipProtection:true,skipHooks:true};
    const ownResult=own>0?dealDamage(battle,{...common,target,value:own}):null;
    const sharedResult=shared>0?dealDamage(battle,{...common,target:receiver,value:shared}):null;
    log(battle,'damage-redirect',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,redirectUid:receiver.uid,amount:value,shared,mode:redirect.mode||'share'});
@@ -6084,10 +6085,15 @@ return {initEnemySkills,changeEnemySp,enemySpEvent,enemySkillReady,beginEnemySki
 const {permissions,applyStatus} = load("status.js");
 const {grantGuard,dealDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor} = load("native-effects.js");
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
+const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
 
 function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(YUANZAI.has(e.id)){
+  e.unblockable=e.baseUnblockable=true;e.canAttack=e.baseCanAttack=false;
+  e.facingX??=Math.sign((e.route?.find(p=>p.kind==='move'&&Math.abs(p.x-e.x)>1e-6)?.x??e.x+1)-e.x);
+ }
  if(e.enemyTalent?.['rush.dlancer_t[trigger].interval']>0&&!e.lancerRush){
   e.lancerRush={active:false,stacks:0,nextCheckAt:battle.s.time,nextStackAt:null};e.speed=e.baseSpeed;
  }
@@ -6109,6 +6115,31 @@ function initEnemyTraits(battle,e,raw,{restore=false}={}){
  if(e.specialSkill?.prefab==='InvisibleCombat'&&e.formInvisible)e.invisibleStrikeReady=true;
  if(e.id==='enemy_1367_dseed'){e.unblockable=e.baseUnblockable=true;e.formHold=true;e.nextBloodLossAt=battle.s.time+1;}
  refreshEnemyTraitStats(e);
+}
+
+function faceOperatorMajority(battle,e){
+ let left=0,right=0;
+ for(const u of battle.s.units)if(u.deployed&&u.hp>0){if(u.x<e.x)left++;else if(u.x>e.x)right++;}
+ if(left!==right)e.facingX=right>left?1:-1;
+ if(e.walkingBackward&&e.nextShowAt!=null&&battle.s.time+1e-9>=e.nextShowAt){
+  e.nextShowAt=battle.s.time+Number(e.enemyTalent['ShowTrigger.interval']);
+  battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form:'炫耀'});
+ }
+}
+
+function enemyFacingAfterMove(battle,e,oldX){
+ if(!YUANZAI.has(e.id)||Math.abs(e.x-oldX)<1e-9)return;
+ const backward=Math.sign(e.x-oldX)!==e.facingX;
+ if(backward&&!e.walkingBackward)e.nextShowAt=battle.s.time+Number(e.enemyTalent['ShowTrigger.interval']);
+ if(!backward)e.nextShowAt=null;
+ e.walkingBackward=backward;
+}
+
+function enemyFacingDamageMultiplier(e,source,type){
+ if(!YUANZAI.has(e.id)||!source||!['physical','arts'].includes(type)||!Number.isFinite(source.x))return 1;
+ // 水平朝向的前半平面；同一竖线按点积为0的边界处理。
+ if((source.x-e.x)*(e.facingX??1)<0)return 1;
+ return 1-Math.max(0,Math.min(1,Number(e.enemyTalent?.['Weakness.damage_resistance'])||0));
 }
 
 function stopLancerRush(e){const r=e.lancerRush;r.active=false;r.stacks=0;r.nextStackAt=null;e.speed=e.baseSpeed;}
@@ -6148,6 +6179,7 @@ function refreshEnemyTraitStats(e){
 function tickEnemyTraits(battle,e,dt){
  if(!e.enemyTraitsInitialized||e.hp<=0)return;
  const bb=e.enemyTalent||{};
+ if(YUANZAI.has(e.id))faceOperatorMajority(battle,e);
  if(e.id==='enemy_1025_reveng')e.atk=e.baseAtk*(1+(e.hp<=e.maxHp*.5?Number(bb['atkup.atk'])||0:0));
  if(bb['SelfFear.fear']>0&&!e.selfFearTriggered&&e.hp/e.maxHp<.5){e.selfFearTriggered=true;applyStatus(e,'fear',Number(bb['SelfFear.fear']),{source:e.uid});e.selfFearSpeedUntil=battle.s.time+Number(bb['SelfFear.speed_duration']);e.speed=e.baseSpeed*Number(bb['SelfFear.move_speed']);}
  if(e.selfFearSpeedUntil!=null&&battle.s.time>=e.selfFearSpeedUntil){e.selfFearSpeedUntil=null;e.speed=e.baseSpeed;}
@@ -6270,7 +6302,7 @@ function applyEnemyTraitAuras(battle){
  for(const target of live){target.res+=target.enemyResAura||0;target.enemyResAura=0;}
 }
 
-return {initEnemyTraits,tickEnemyLancer,consumeEnemyLancerRush,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,syncEnemyConcealMarker,enemyStealAmmo,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,applyEnemyTraitAuras};
+return {initEnemyTraits,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,syncEnemyConcealMarker,enemyStealAmmo,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,applyEnemyTraitAuras};
 },
 "native-enemy-attacks.js": function(load) {
 const {permissions,statusAttributeChanges} = load("status.js");
@@ -6707,7 +6739,7 @@ const {advanceEnemyFear} = load("native-enemy-fear.js");
 const {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} = load("native-enemy-transport.js");
 const {initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,releaseParrotPassenger} = load("native-enemy-forms.js");
 const {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} = load("native-enemy-attacks.js");
-const {tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
+const {enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
 const {initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} = load("native-enemy-skills.js");
 const {branchBehavior,branchTrait,skillAntiAir} = load("native-branches.js");
 const {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} = load("native-equipment.js");
@@ -6757,6 +6789,7 @@ class NativeBattle {
   const migrated=migrateBattle(saved);if(validateBattle(migrated,b))return null;
   b.s=migrated;b.attachRuntime();return b;}catch{return null;}
  }
+ enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
  enemyBeforeDamage(target,opts){return enemyFormBeforeDamage(this,target,opts);}
  enemySkillTargets(enemy){return enemyAttackTargets(this,enemy);}
  enemyElementMultiplier(target){return parasiteElementMultiplier(this,target);}
@@ -7445,7 +7478,7 @@ class NativeBattle {
    if(e.palsyCharges>0&&e.action&&(e.action.left<=1||this.s.time-(e.action.startedAt??this.s.time)>=2)){e.palsyCharges--;cancelEnemyCast(this,e);e.action=null;applyStatus(e,'tremble',.5,{source:'element-neural',resistible:false});control=permissions(e);}
    if((!control.attack||e.hidden||(e.action?.special?.index!=null&&(!control.skill||control.silenced)))&&e.action){cancelEnemyCast(this,e);e.action=null;}if(e.action&&--e.action.left<=0){const action=e.action,u=getActor(this.s,action.target);e.action=null;if(u&&u.hp>0||(action.targets||[]).some(id=>getActor(this.s,id)?.hp>0)){const special=action.special;if(special?.prefab==='DeathEye'){this.startEnemyDeathEye(e,u);}else{releaseEnemyAttack(this,e,action);if(special?.polluted){this.emit('enemy-skill',{uid:e.uid,x:u.x,y:u.y,skill:'PollutedRangedAtk',targetUid:u.uid});}}if(special){if(special.index!=null&&special.prefab!=='DeathEye'&&!e.enemyCast?.multiAttack)endEnemySkill(this,e);if(e.specialSkill?.spCost>0)e.skillAttackCount=0;e.nextSkillAt=this.s.time+(Number(e.specialSkill?.cooldown)>0?Number(e.specialSkill.cooldown):Infinity);e.firstAttackUsed=true;}e.lastAttackAt=this.s.time;if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE&&e.burstShots>0){e.burstFired=(e.burstFired||0)+1;if(e.burstFired>=e.burstShots){e.burstFired=0;e.burstUntil=this.s.time+(e.burstCooldown||0);}}}else if(action.special?.index!=null)cancelEnemyCast(this,e);enemyTraitAfterAttack(this,e);}
    const special=control.skill&&!control.silenced?this.enemySpecialReady(e,target):null,specialOnly=Boolean(e.specialSkill?.prefab==='CrossAttack'&&e.range<=0),meleeScale=e.block===target?.uid&&e.meleeAttackScale>0?e.meleeAttackScale:1,preparedSpecial=special&&meleeScale!==1?{...special,scale:special.scale*meleeScale}:special;if(e.hp>0&&target&&e.canAttack&&control.attack&&!e.enemyCast&&!e.action&&!e.attackCooldown&&!Number(e.burstUntil)&&(!specialOnly||special)){if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE&&e.burstTarget!==target.uid){e.burstTarget=target.uid;e.burstFired=0;}enemyTraitBeforeAttack(this,e);const t=attackTiming(Math.max(.1,e.interval+(e.attackIntervalMod||0)),Math.max(10,Math.min(600,e.attackSpeed+(e.attackSpeedMod||0)+enemyWineBuffs(this,e).attackSpeed+statusAttributeChanges(e).attackSpeed)),windupSeconds(Math.max(.1,e.interval+(e.attackIntervalMod||0))));e.attackCooldown=t.frames;if(special?.index!=null)beginEnemySkill(this,e,e.enemySkills[special.index]);e.action={startedAt:this.s.time,left:t.windupFrames,target:target.uid,targets:attackTargets.slice(0,enemyAttackTargetCount(e)).map(t=>t.uid),special:preparedSpecial,scale:meleeScale,attackId:newAttackId(this)};}
-   const hold=e.formHold||!!(e.enemyCast?.victims||e.enemyCast?.spawn||e.enemyCast?.channel||e.enemyCast?.charge)||enemyShouldHoldPosition(e,{target:specialOnly&&!special?null:target,now:this.s.time}),beforeX=e.x,beforeY=e.y,beforeCmd=e.cmd,beforeHidden=e.hidden;const fearMove=advanceEnemyFear(this,e,dt);let escaped=fearMove??advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),hold);const progressed=e.cmd!==beforeCmd||Math.hypot(e.x-beforeX,e.y-beforeY)>1e-7||e.hidden!==beforeHidden;if(progressed){e.lastProgressAt=this.s.time;e.stallTime=0;}else if(!hold&&!e.block&&e.speed>0&&permissions(e).move&&e.route?.[e.cmd]?.kind==='move'){e.stallTime=(e.stallTime||0)+dt;if(e.stallTime>=(e.stallTimeout||2)){e.action=null;e.stanceUntil=0;e.burstUntil=0;e.stallTime=0;this.emit('enemy-recover',{uid:e.uid,x:e.x,y:e.y,reason:'movement-stall'});escaped=advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),false);}}
+   const hold=e.formHold||!!(e.enemyCast?.victims||e.enemyCast?.spawn||e.enemyCast?.channel||e.enemyCast?.charge)||enemyShouldHoldPosition(e,{target:specialOnly&&!special?null:target,now:this.s.time}),beforeX=e.x,beforeY=e.y,beforeCmd=e.cmd,beforeHidden=e.hidden;const fearMove=advanceEnemyFear(this,e,dt);let escaped=fearMove??advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),hold);enemyFacingAfterMove(this,e,beforeX);const progressed=e.cmd!==beforeCmd||Math.hypot(e.x-beforeX,e.y-beforeY)>1e-7||e.hidden!==beforeHidden;if(progressed){e.lastProgressAt=this.s.time;e.stallTime=0;}else if(!hold&&!e.block&&e.speed>0&&permissions(e).move&&e.route?.[e.cmd]?.kind==='move'){e.stallTime=(e.stallTime||0)+dt;if(e.stallTime>=(e.stallTimeout||2)){e.action=null;e.stanceUntil=0;e.burstUntil=0;e.stallTime=0;this.emit('enemy-recover',{uid:e.uid,x:e.x,y:e.y,reason:'movement-stall'});escaped=advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),false);}}
    if(escaped){this.s.leaks+=e.leak;e.escaped=true;commitExit(this,{target:e,reason:'leak'});this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak});this.s.banner={text:'漏怪 −'+e.leak,life:1.4};}
   }
   syncPassengerPositions(this);
@@ -8429,6 +8462,7 @@ function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}={}){
  if(!s?.events)return false;
  let drew=false;
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.parrotHasPassenger){const p=point(e.x,e.y);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#f4d38b';c.fillText(formatText?formatText('携带水手'):'携带水手',p.x,p.y-z.th*.95-15);c.restore();drew=true;}
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.facingX!=null){const p=point(e.x,e.y),text=e.facingX>0?'正面 →':'← 正面';c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#f4d38b';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;}
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&(e.parasiteTargetUid!=null||e.palsyCharges>0)){
   const p=point(e.x,e.y),text=e.parasiteTargetUid!=null?'寄生中':'麻痹 '+e.palsyCharges;
   c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#dfb1ed';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;

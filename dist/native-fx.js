@@ -697,6 +697,7 @@ export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}
  if(!s?.events)return false;
  let drew=false;
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.parrotHasPassenger){const p=point(e.x,e.y);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#f4d38b';c.fillText(formatText?formatText('携带水手'):'携带水手',p.x,p.y-z.th*.95-15);c.restore();drew=true;}
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.facingX!=null){const p=point(e.x,e.y),text=e.facingX>0?'正面 →':'← 正面';c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#f4d38b';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;}
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&(e.parasiteTargetUid!=null||e.palsyCharges>0)){
   const p=point(e.x,e.y),text=e.parasiteTargetUid!=null?'寄生中':'麻痹 '+e.palsyCharges;
   c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#dfb1ed';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
