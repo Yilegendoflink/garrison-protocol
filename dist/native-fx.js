@@ -697,6 +697,9 @@ export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}
  const s=battle?.s;
  if(!s?.events)return false;
  let drew=false;
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.id==='enemy_2010_csdcr'&&e.scarletHits>=Number(e.enemyTalent?.['AttackSpeedUp.warning_stack_cnt'])){
+  const p=point(e.x,e.y),text='受击 '+e.scarletHits+'/'+e.enemyTalent['AttackSpeedUp.stack_cnt'];c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#ff657b';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
+ }
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.xiMarkEnabled)for(const [uid,label,color]of [[e.xiNearestUid,'◆ 最近','#ff9d86'],[e.xiFarthestUid,'◇ 最远','#8acaff']]){
   const target=[...(s.units||[]),...(s.summons||[])].find(a=>a.uid===uid&&a.deployed&&a.hp>0);if(!target)continue;
   const p=point(target.x,target.y);c.save();c.font='bold 10px sans-serif';c.textAlign='center';c.fillStyle=color;c.fillText(formatText?formatText(label):label,p.x,p.y-z.th*.95-18);c.restore();drew=true;

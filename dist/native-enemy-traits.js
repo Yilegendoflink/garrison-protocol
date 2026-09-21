@@ -29,6 +29,7 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
   if(e.lowHpTriggered&&e.atk===e.baseAtk*(1+Number(e.enemyTalent['atkup.atk'])))e.atk=e.baseAtk;
  }
  if(e.id==='enemy_2050_smsha')e.damageType='arts';
+ if(e.id==='enemy_2010_csdcr'){e.damageType='arts';e.attackElement='neural';e.attackElementScale=Number(e.enemyTalent['attack.attack@ep_damage_ratio'])||0;e.scarletHits??=0;}
  if(e.id==='enemy_1509_mousek'){
   e.immunities.sleep=true;e.damageType='arts';e.enemyAttack={...e.enemyAttack,groundOnly:true};e.aura=null;e.lowHpRatio=0;
   if(e.lowHpTriggered&&e.atk===e.baseAtk*Number(e.enemyTalent['enrage.damage_scale']))e.atk=e.baseAtk;
@@ -261,6 +262,17 @@ export function tickEnemyTraits(battle,e,dt){
  if(e.prisonReleased&&bb['liberty.hp_recovery_per_sec']>0)applyRegen(battle,{source:e,target:e,amount:Number(bb['liberty.hp_recovery_per_sec'])*dt});
  // 当前地图没有唤血祭坛/沥血王座实体，血珀按无祭坛分支每秒流失10%生命。
  if(e.id==='enemy_1367_dseed')while(e.hp>0&&battle.s.time+1e-9>=e.nextBloodLossAt){e.nextBloodLossAt+=1;applyLoss(battle,{target:e,amount:e.maxHp*Number(bb['Passive.hp_ratio'])});}
+}
+
+// 与受击回复共用命中入口，DOT/生命流失、抵消和无敌不累计；无需自身有SP槽。
+export function enemyTraitOnDamageSp(battle,e){
+ if(e.id!=='enemy_2010_csdcr'||e.hp<=0)return;
+ const bb=e.enemyTalent,limit=Number(bb['AttackSpeedUp.stack_cnt']);if(!(limit>0))return;
+ e.scarletHits=(e.scarletHits||0)+1;
+ if(e.scarletHits<limit)return;e.scarletHits=0;
+ for(const target of battle.s.enemies)if(target.hp>0&&!target.hidden&&(target===e||!isIsolated(target)))
+  applyStatus(target,'attackSpeedUp',Number(bb['AttackSpeedUp.duration']),{source:'scarlet-singer',value:Number(bb['AttackSpeedUp.attack_speed']),resistible:false});
+ battle.emit('enemy-ability',{uid:e.uid,x:e.x,y:e.y,ability:'scarlet-attack-speed'});
 }
 
 export function enemyTraitAfterDamage(battle,e,opts,result){
