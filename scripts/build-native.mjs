@@ -20,4 +20,15 @@ for(let i=0;i<pending.length;i++)for(const spec of [pending[i].enemyBehavior?.sp
  const entry=base.enemies[id]?.levels.find(x=>x.level===0);if(!entry)throw Error('Missing summoned enemy '+id);
  const profile=buildEnemyProfile(id,entry.data,catalogById[id]);data.enemyDependencies[id]=profile;pending.push(profile);
 }
+// 全局控制器可能位于裁切范围外，不能用可见 devices 的筛选结果代替。
+const skillTable=JSON.parse(await fs.readFile('data/gamedata/allianceLower/skill_table.json','utf8'));
+for(const map of data.maps){
+ const raw=JSON.parse(await fs.readFile('data/modes/alliance-lower/levels/'+map.source.file,'utf8'));
+ const controller=(raw.predefines?.tokenInsts||[]).find(x=>x.inst.characterKey==='trap_042_tidectrl'&&x.skillIndex===2);
+ if(!controller)continue;
+ const skillId=characterTable[controller.inst.characterKey].skills[controller.skillIndex].skillId;
+ const skill=skillTable[skillId].levels[controller.mainSkillLvl-1];
+ const bb=Object.fromEntries([...skill.blackboard,...(controller.overrideSkillBlackboard||[])].map(x=>[x.key,x.value]));
+ map.environment={deepWater:{skillId,level:controller.mainSkillLvl,damage:bb['sea_drown[enemy].damage'],moveScale:bb['sea_drown[enemy].move_speed'],attackSpeedScale:1+bb['sea_drown[enemy].attack_speed'],source:map.source.file}};
+}
 await fs.writeFile('dist/runtime-data.js','// Generated historical mode runtime data.\nexport const NATIVE_DATA = '+JSON.stringify(data)+';\n');console.log('Native runtime: '+Object.keys(profiles).length+' cultivation states, '+Object.keys(levels).length+' levels');

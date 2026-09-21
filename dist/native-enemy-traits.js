@@ -18,6 +18,7 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  if(restore){e.baseRes-=Number(raw.enemyBehavior?.magicResistanceBonus)||0;e.res=e.baseRes;}
  e.enemyTraitsInitialized=true;e.attackSpeedMod??=0;
  const bb=e.enemyTalent||{};
+ if(e.id==='enemy_1158_divman')e.enemyAttack={...e.enemyAttack,groundOnly:true};
  if(e.id==='enemy_1025_reveng')e.lowHpRatio=0; // 每帧检测血线，不能被通用一次性分支锁住。
  e.refractionBonus=Number(bb['refracting.magic_resistance']??bb['Refracting.magic_resistance'])||0;
  e.refractionHp=Number(bb['Refracting.max_hp'])||0;
@@ -79,7 +80,7 @@ export function consumeEnemyLancerRush(e){
  if(!e.lancerRush?.active)return 0;
  // “当前移动速度”包含减速，但不是阻挡后的实际位移速度（后者为0）。
  const slow=e.statuses.some(s=>s.kind==='sluggish')? .2:1;
- const amount=e.speed*(e.moveSpeedMod??1)*slow*Number(e.enemyTalent['firstattack.atk_scale']);
+ const amount=e.speed*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*slow*Number(e.enemyTalent['firstattack.atk_scale']);
  stopLancerRush(e);return amount;
 }
 

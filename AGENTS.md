@@ -33,6 +33,7 @@
 - `native-economy.js` / `garrison.js` / `strategy.js`：整备资金、运营特质、策略
 - `native-battle.js` / `native-combat.js` / `native-effects.js` / `native-operator-effects.js`：战斗循环、结算入口、逐名适配
 - `native-sp.js`：技力（脱手清空、持续倒流、弹药格子）
+- `native-environment.js`：地图显式控制器的战斗效果；当前接入深水。全局控制器可能在裁切外，构建时按原始地图的技能索引/等级与历史黑板保留配置，不可只遍历可见 `map.devices`。
 - `native-waves.js` / `native-wave-random.js` / `native-wave-editor.js`：词条预算抽怪与编制台
 - `native-branches.js`：职业分支基础层
 - `native-fx.js`：**只画特效**。`s.events` 会裁剪过期，禁止当规则执行依据
