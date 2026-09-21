@@ -33,7 +33,7 @@ export function deliverEnemyAttack(battle,packet){
    const bb=enemy.enemyTalent,chain=enemyChainTargets(target,attackableAllies(battle.s).filter(t=>enemyTargetValid(t)&&!t.invisible&&!permissions(t).sleeping),Number(bb['Attack.attack@chain.max_target']),Number(bb['Attack.attack@projectile_range']));
    let from=enemy;
    for(let i=0;i<chain.length;i++){
-    const victim=chain[i];applyStatus(victim,'cold',Number(bb['Attack.attack@freeze']),{source:enemy.uid});
+    const victim=chain[i];applyStatus(victim,'cold',Number(bb['Attack.attack@freeze']),{source:enemy.uid,frostSide:'enemy'});
     battle.resolveEnemyStrike(enemy,victim,{...packet,scale:(Number(packet.scale)||1)*Math.pow(Number(bb['Attack.attack@chain.atk_scale']),i),type:'arts'});
     battle.emit('strike',{uid:enemy.uid,x:from.x,y:from.y,targetX:victim.x,targetY:victim.y,ranged:true,enemy:true,type:'arts',style:'chain',hit:i});from=victim;
    }

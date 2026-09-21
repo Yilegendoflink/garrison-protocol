@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
-import {applyStatus} from '../dist/status.js';
+import {applyStatus,statusAttributeChanges,permissions} from '../dist/status.js';
 import {commitExit,revealEnemy,grantGuard,dealDamage,applyLoss} from '../dist/native-effects.js';
 import {drawEnemyProjectiles} from '../dist/native-fx.js';
 
@@ -269,6 +269,23 @@ test('陷落雪祀普通攻击逐跳找1.6半径内不同目标，三跳衰减�
  const {b,enemy,allies}=arena('enemy_2050_smsha',{x:3,y:4,positions:[[5,4],[6,4],[7,4],[5,2]]});allies[2].flying=true;enemy.enemySp={type:'INCREASE_WHEN_ATTACK',max:10,increment:1};enemy.sp=0;
  applyStatus(enemy,'silence',60);const hits=[];b.hurt=(u,e)=>hits.push({uid:u.uid,atk:e.atk,type:e.damageType,cold:u.statuses.some(s=>s.kind==='cold')});advance(b,1.7);
  assert.deepEqual(hits.map(h=>h.uid),allies.slice(0,3).map(u=>u.uid));[1,.85,.85*.85].forEach((v,i)=>assert.ok(Math.abs(hits[i].atk-v)<1e-9));assert.ok(hits.every(h=>h.type==='arts'&&h.cold));assert.equal(enemy.attackCount,1);assert.equal(enemy.sp,1);
+});
+
+test('雪祀连续攻击施加敌方冻结并续冻，真实法术伤害不误吃减15法抗',()=>{
+ const {b,enemy,allies:[u]}=arena('enemy_2050_smsha');enemy.interval=1;const res=b.stats(u).magicResistance;
+ const durations=[],hurt=b.hurt.bind(b);b.hurt=(target,e,opts)=>{const frozen=target.statuses.find(s=>s.kind==='frozen');if(frozen)durations.push(frozen.remaining);hurt(target,e,opts);};
+ advance(b,3.2);assert.ok(durations.length>=2);assert.ok(durations.every(n=>n===4.5));assert.equal(b.stats(u).magicResistance,res);assert.equal(statusAttributeChanges(u).resistance,0);assert.equal(permissions(u).skill,false);
+ const hp=u.hp;dealDamage(b,{source:enemy,target:u,amount:100,type:'arts',cause:'skill'});assert.ok(Math.abs(hp-u.hp-100*(1-res/100))<1e-6);
+});
+
+test('两类寒冷在实战与JSON恢复中保持独立，来源退场后敌方冻结仍正常到期',()=>{
+ const {b,g,enemy,allies:[u]}=arena('enemy_2050_smsha');enemy.interval=1;applyStatus(u,'cold',10,{source:u.uid,resistible:false});advance(b,.5);
+ assert.equal(u.statuses.filter(s=>s.kind==='cold').length,2);assert.equal(u.statuses.some(s=>s.kind==='frozen'),false);advance(b,1);
+ assert.ok(u.statuses.some(s=>s.kind==='frozen'&&s.frostSide==='enemy'));assert.ok(u.statuses.some(s=>s.kind==='cold'&&s.frostSide==='ally'));
+ b.s.queue.push({id:'enemy_1007_slime',route:0,at:100});commitExit(b,{target:enemy});
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.units[0];
+ advance(restored,1);assert.equal(permissions(copy).skill,false);assert.equal(statusAttributeChanges(copy).resistance,0);
+ advance(restored,4);assert.equal(copy.statuses.some(s=>s.kind==='frozen'),false);assert.ok(copy.statuses.some(s=>s.kind==='cold'&&s.frostSide==='ally'));
 });
 
 test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{
