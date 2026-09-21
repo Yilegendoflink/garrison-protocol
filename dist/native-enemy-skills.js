@@ -210,6 +210,10 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_1511_mdrock'&&!control.silenced&&!enemy.action){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='RefreshShield');
+  if(skill&&beginEnemySkill(battle,enemy,skill)){battle.refreshMudrockShield(enemy,skill.bb);endEnemySkill(battle,enemy);return;}
+ }
  if(enemy.id==='enemy_1504_cqbw'&&!control.silenced&&!enemy.action){
   const skill=enemy.enemySkills.find(s=>s.prefab==='C4');
   const targets=skill?battle.enemySkillTargets(enemy,{groundOnly:!enemy.wEnraged,range:Number(skill.bb.range_radius)}).slice(0,enemy.wEnraged?3:1):[];

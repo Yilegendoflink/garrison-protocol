@@ -184,6 +184,17 @@ test('W施法期间跨半血保留清冷却效果，当前一枚结算后即可�
  dealDamage(b,{target:enemy,value:enemy.maxHp*.6,type:'true'});assert.equal(current.c4CooldownReset,true);advance(b,2.3);assert.ok(enemy.enemyCast);assert.notEqual(enemy.enemyCast,current);assert.equal(enemy.enemyCast.c4Targets.length,allies.length);
 });
 
+test('敌方泥岩有效出手即叠攻，当次受益，最多六层，同一攻击ID不重复加层',()=>{
+ const {b,enemy,allies}=arena('enemy_1511_mdrock'),u=allies[0],stats=b.stats.bind(b);b.stats=a=>({...stats(a),def:0,maxHp:100000});u.hp=100000;enemy.atk=enemy.baseAtk=100;b.economy.random=()=>.999;
+ for(let i=1;i<=7;i++){const hp=u.hp;b.resolveEnemyStrike(enemy,u,{attackId:i});assert.ok(Math.abs(hp-u.hp-100*(1+.6*Math.min(i,6)))<1e-6);}
+ assert.equal(enemy.mudrockStacks,6);b.resolveEnemyStrike(enemy,u,{attackId:7});assert.equal(enemy.mudrockStacks,6);
+});
+
+test('泥岩屏障在场时真实攻速增加50，破盾后周期恢复且控制时不刷新',()=>{
+ const {b,enemy}=arena('enemy_1511_mdrock'),times=[],record=b.recordEnemyAttack.bind(b);b.recordEnemyAttack=(e,s)=>{times.push(b.s.time);record(e,s);};b.hurt=()=>{};advance(b,8);assert.ok(times.length>=3);assert.ok(Math.abs(times[1]-times[0]-3)<.04);
+ dealDamage(b,{target:enemy,value:5500,type:'arts'});advance(b,8);assert.ok(Math.abs(times.at(-1)-times.at(-2)-4.5)<.04);applyStatus(enemy,'disarm',30);advance(b,2);assert.equal(enemy.shield,0);enemy.statuses=[];enemy.action=null;b.step();assert.equal(enemy.shield,5500);
+});
+
 test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{
  const {b,enemy,allies}=arena('enemy_10144_xdelk_2');b.step();const started=b.s.time;
  assert.equal(enemy.enemyCast?.charge,true);const hp=allies[0].hp;advance(b,6.5);assert.equal(allies[0].hp,hp);

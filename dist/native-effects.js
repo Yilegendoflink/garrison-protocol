@@ -958,6 +958,7 @@ export function grantShield(battle,target,spec){
  target.shieldLayers??=[];
  if(spec.id)target.shieldLayers=target.shieldLayers.filter(l=>{if(l.id!==spec.id)return true;log(battle,'replaced',{uid:target.uid,layerId:l.id});return false;});
  const layer={id:spec.id||('sh-'+battle.s.settle.nextEffectId++),remaining:spec.amount,max:spec.amount,endsAt:spec.endsAt,decayPerSec:spec.decayPerSec||0,sourceUid:spec.sourceUid};
+ if(spec.types)layer.types=spec.types.slice();
  target.shieldLayers.push(layer);
  target.shield=target.shieldLayers.reduce((n,l)=>n+l.remaining,0);
  log(battle,'barrier-add',{uid:target.uid,amount:spec.amount,id:layer.id});

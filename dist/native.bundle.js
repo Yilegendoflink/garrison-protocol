@@ -5491,6 +5491,7 @@ function grantShield(battle,target,spec){
  target.shieldLayers??=[];
  if(spec.id)target.shieldLayers=target.shieldLayers.filter(l=>{if(l.id!==spec.id)return true;log(battle,'replaced',{uid:target.uid,layerId:l.id});return false;});
  const layer={id:spec.id||('sh-'+battle.s.settle.nextEffectId++),remaining:spec.amount,max:spec.amount,endsAt:spec.endsAt,decayPerSec:spec.decayPerSec||0,sourceUid:spec.sourceUid};
+ if(spec.types)layer.types=spec.types.slice();
  target.shieldLayers.push(layer);
  target.shield=target.shieldLayers.reduce((n,l)=>n+l.remaining,0);
  log(battle,'barrier-add',{uid:target.uid,amount:spec.amount,id:layer.id});
@@ -6093,6 +6094,10 @@ function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_1511_mdrock'&&!control.silenced&&!enemy.action){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='RefreshShield');
+  if(skill&&beginEnemySkill(battle,enemy,skill)){battle.refreshMudrockShield(enemy,skill.bb);endEnemySkill(battle,enemy);return;}
+ }
  if(enemy.id==='enemy_1504_cqbw'&&!control.silenced&&!enemy.action){
   const skill=enemy.enemySkills.find(s=>s.prefab==='C4');
   const targets=skill?battle.enemySkillTargets(enemy,{groundOnly:!enemy.wEnraged,range:Number(skill.bb.range_radius)}).slice(0,enemy.wEnraged?3:1):[];
@@ -6187,7 +6192,7 @@ return {initEnemySkills,changeEnemySp,enemySpEvent,enemySkillReady,beginEnemySki
 },
 "native-enemy-traits.js": function(load) {
 const {permissions,applyStatus,statusAttributeChanges,isIsolated} = load("status.js");
-const {grantGuard,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} = load("native-effects.js");
+const {grantGuard,grantShield,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} = load("native-effects.js");
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
 const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
 const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
@@ -6195,6 +6200,12 @@ const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
 function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.id==='enemy_1511_mdrock'){
+  e.immunities.sleep=true;e.mudrockStacks??=0;
+  e.mudrockShieldHpBonus??=Number(e.enemyTalent['shield.max_hp'])||0;e.mudrockShieldAspd??=Number(e.enemyTalent['shield.attack_speed'])||0;
+  const initial=e.shieldLayers.find(l=>l.id==='enemy-initial-shield');if(initial){initial.id='mudrock-arts';initial.types=['arts'];}
+  syncMudrockShield(e);
+ }
  if(e.id==='enemy_2005_axetro'){e.enemyAttack={...e.enemyAttack,groundOnly:true};e.axetroStacks??=0;}
  if(e.id==='enemy_1050_lslime')e.damageType='arts';
  if(e.id==='enemy_1504_cqbw')e.enemyAttack={...e.enemyAttack,groundOnly:true};
@@ -6230,12 +6241,31 @@ function initEnemyTraits(battle,e,raw,{restore=false}={}){
 
 function enemyConditionalAttackSpeed(e){
  const bb=e.enemyTalent||{};
+ if(e.id==='enemy_1511_mdrock')return mudrockShieldActive(e)?e.mudrockShieldAspd||0:0;
  if(e.id==='enemy_2005_axetro')return (e.axetroStacks||0)*(Number(bb['atkup.attack_speed'])||0);
  return e.id==='enemy_1050_lslime'&&e.hp<e.maxHp*Number(bb['selfbuff.hp_ratio'])?Number(bb['selfbuff.attack_speed'])||0:0;
 }
 
 function enemyConditionalAttackMultiplier(e){
+ if(e.id==='enemy_1511_mdrock')return 1+(e.mudrockStacks||0)*Number(e.enemyTalent['charge.attack@enemy_mdrock_s_1[charge].atk']);
  return e.id==='enemy_2005_axetro'?1+(e.axetroStacks||0)*Number(e.enemyTalent['atkup.atk']):1;
+}
+
+function mudrockShieldActive(e){return e.shieldLayers?.some(l=>l.id==='mudrock-arts'&&l.remaining>0);}
+function syncMudrockShield(e){
+ const before=e.mudrockHpScale??1,after=mudrockShieldActive(e)?1+e.mudrockShieldHpBonus:1;
+ if(before!==after){e.maxHp=e.baseMaxHp*after;e.hp=Math.min(e.maxHp,e.hp/before*after);}
+ e.mudrockHpScale=after;
+}
+function refreshEnemyMudrockShield(battle,e,bb){
+ if(!(Number(bb.dynamic)>0))return;
+ e.mudrockShieldHpBonus=Number(bb.max_hp)||0;e.mudrockShieldAspd=Number(bb.attack_speed)||0;
+ grantShield(battle,e,{id:'mudrock-arts',amount:Number(bb.dynamic),types:['arts'],sourceUid:e.uid});syncMudrockShield(e);
+}
+function enemyTraitBeforeStrike(battle,e,target,action){
+ if(e.id!=='enemy_1511_mdrock'||target.hp<=0)return;
+ if(action.attackId!=null&&e.mudrockLastAttackId===action.attackId)return;
+ e.mudrockLastAttackId=action.attackId??null;e.mudrockStacks=Math.min(6,(e.mudrockStacks||0)+1); // PRTS：最多6层，当前有效攻击也受益。
 }
 
 function enemyTraitDamageDealt(battle,e,result){
@@ -6374,6 +6404,7 @@ function tickEnemyTraits(battle,e,dt){
 
 function enemyTraitAfterDamage(battle,e,opts,result){
  if(!e.enemyTraitsInitialized||result.total<=0)return;
+ if(e.id==='enemy_1511_mdrock')syncMudrockShield(e);
  const bb=e.enemyTalent||{},max=Number(bb['def_reduce.max_stack_cnt']);
  if(bb['Expose.weak[limit]']>0&&!bb['Expose.range_radius']&&!permissions(e).silenced){
   const source=opts.source||getActor(battle.s,opts.sourceUid);
@@ -6490,7 +6521,7 @@ function applyEnemyTraitAuras(battle){
  for(const target of live){target.res+=target.enemyResAura||0;target.enemyResAura=0;}
 }
 
-return {initEnemyTraits,enemyConditionalAttackSpeed,enemyConditionalAttackMultiplier,enemyTraitDamageDealt,tickEnemyAttackContinuity,tickPompeiiExplosion,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,syncEnemyConcealMarker,enemyStealAmmo,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,applyEnemyTraitAuras};
+return {initEnemyTraits,enemyConditionalAttackSpeed,enemyConditionalAttackMultiplier,refreshEnemyMudrockShield,enemyTraitBeforeStrike,enemyTraitDamageDealt,tickEnemyAttackContinuity,tickPompeiiExplosion,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,syncEnemyConcealMarker,enemyStealAmmo,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,applyEnemyTraitAuras};
 },
 "native-enemy-attacks.js": function(load) {
 const {permissions,statusAttributeChanges} = load("status.js");
@@ -6966,7 +6997,7 @@ const {advanceEnemyFear} = load("native-enemy-fear.js");
 const {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} = load("native-enemy-transport.js");
 const {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,releaseParrotPassenger} = load("native-enemy-forms.js");
 const {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} = load("native-enemy-attacks.js");
-const {enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
+const {enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
 const {checkWEnrage,initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} = load("native-enemy-skills.js");
 const {branchBehavior,branchTrait,skillAntiAir} = load("native-branches.js");
 const {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} = load("native-equipment.js");
@@ -7019,6 +7050,7 @@ class NativeBattle {
  enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
  onActorShiftEnd(target){enemyFormShiftEnded(this,target);}
  enemyDamageDealt(enemy,opts,result){enemyTraitDamageDealt(this,enemy,result);}
+ refreshMudrockShield(enemy,bb){refreshEnemyMudrockShield(this,enemy,bb);}
  enemyHealthChanged(enemy){checkWEnrage(this,enemy);}
  enemyBeforeDamage(target,opts){return enemyFormBeforeDamage(this,target,opts);}
  enemySkillTargets(enemy,options=null){return enemyAttackTargets(this,options?{...enemy,range:options.range??enemy.range,enemyAttack:{...enemy.enemyAttack,groundOnly:options.groundOnly??enemy.enemyAttack?.groundOnly}}:enemy);}
@@ -7349,7 +7381,7 @@ class NativeBattle {
    applyEnemyTraitAuras(this);
   }
   enemySpecialReady(enemy,target){if(enemy.enemySkills)return selectEnemyAttackSkill(this,enemy,target);const skill=enemy?.specialSkill;if(!skill||!target||skill.prefab==='stuncombat'||skill.prefab==='InvisibleCombat'||skill.prefab==='InvisibleShield'||skill.prefab==='Flame')return null;if(skill.prefab==='AOEAttack'&&enemy.firstAttackUsed)return null;if(skill.prefab==='CrossAttack'&&Math.abs(enemy.x-target.x)>1e-6&&Math.abs(enemy.y-target.y)>1e-6)return null;if(skill.prefab==='DeathEye'&&enemy.deathEye)return null;const first=enemy.firstAttackSplash&&!enemy.firstAttackUsed,countReady=skill.spCost>0&&(enemy.skillAttackCount||0)>=skill.spCost,cooldownReady=skill.spCost===0&&Number.isFinite(skill.cooldown)&&skill.cooldown>=0&&this.s.time>=(enemy.nextSkillAt??Infinity);if(!first&&!countReady&&!cooldownReady)return null;return {prefab:skill.prefab,scale:enemy.specialAtkScale||1,radius:Number(skill.bb?.range_radius)||1,splash:first||skill.prefab==='AOEAttack',stun:Number(skill.bb?.stun)||0,type:skill.prefab==='CrossAttack'?'arts':null,noDirectAttack:skill.prefab==='DeathEye',polluted:skill.prefab==='PollutedRangedAtk'};}
-  resolveEnemyStrike(enemy,target,action={}){if(enemyStealAmmo(this,enemy,target))return;const baseAtk=enemy.atk,baseType=enemy.damageType,hasDagger=Boolean(enemy.canAttack&&enemy.daggers>0),dagger=hasDagger?1+(Number(enemy.daggerAtkAdd)||0):1,rush=consumeEnemyLancerRush(enemy);let scale=Number(action.special?.scale??action.scale)||1;if(enemy.block!==target.uid&&Number(enemy.enemyTalent?.['Attack.attack@ranged_atk_scale'])>0)scale*=Number(enemy.enemyTalent['Attack.attack@ranged_atk_scale']);if(enemy.specialSkill?.prefab==='InvisibleCombat'){if((enemy.invisibleStrikeReady??enemy.invisible)&&enemy.block===target.uid&&!permissions(enemy).silenced){scale*=enemy.specialAtkScale||1;enemy.invisibleStrikeReady=false;}enemy.formInvisible=false;enemy.invisible=false;enemy.invisibleCombatWasActive=false;enemy.invisibleRecoverAt=this.s.time+6;}enemy.atk=baseAtk*scale*dagger;if(action.special?.type||action.type)enemy.damageType=action.special?.type||action.type;this.hurt(target,enemy,{attackId:action.attackId,parentEventId:action.parentEventId});if(rush){enemy.damageType='physical';this.hurt(target,enemy,{damageAmount:rush,cause:'extra',attackId:action.attackId,parentEventId:action.parentEventId});}enemy.atk=enemy.deathGrowthStacks!=null?enemy.baseAtk*(1+enemy.deathGrowthStacks*Number(enemy.enemyTalent['Attack.atk'])):baseAtk;enemy.damageType=baseType;if(hasDagger){const used=Math.max(1,Math.floor(Number(enemy.daggerPerAttack)||1));enemy.daggers=Math.max(0,enemy.daggers-used);enemy.daggersUsed=(enemy.daggersUsed||0)+used;if(enemy.daggers===0)enemy.attackCooldown=0;}if(!action.suppressAttackZone&&enemy.attackZone&&(!enemy.enemySkills?.some(s=>s.prefab==='PollutedRangedAtk')||action.special?.polluted))this.addEnemyGroundZone(enemy,enemy.attackZone,{x:target.x,y:target.y,follow:!!enemy.attackZone.follow,attackId:action.attackId??null});}
+  resolveEnemyStrike(enemy,target,action={}){if(enemyStealAmmo(this,enemy,target))return;enemyTraitBeforeStrike(this,enemy,target,action);const baseAtk=enemy.atk,baseType=enemy.damageType,hasDagger=Boolean(enemy.canAttack&&enemy.daggers>0),dagger=hasDagger?1+(Number(enemy.daggerAtkAdd)||0):1,rush=consumeEnemyLancerRush(enemy);let scale=Number(action.special?.scale??action.scale)||1;if(enemy.block!==target.uid&&Number(enemy.enemyTalent?.['Attack.attack@ranged_atk_scale'])>0)scale*=Number(enemy.enemyTalent['Attack.attack@ranged_atk_scale']);if(enemy.specialSkill?.prefab==='InvisibleCombat'){if((enemy.invisibleStrikeReady??enemy.invisible)&&enemy.block===target.uid&&!permissions(enemy).silenced){scale*=enemy.specialAtkScale||1;enemy.invisibleStrikeReady=false;}enemy.formInvisible=false;enemy.invisible=false;enemy.invisibleCombatWasActive=false;enemy.invisibleRecoverAt=this.s.time+6;}enemy.atk=baseAtk*scale*dagger;if(action.special?.type||action.type)enemy.damageType=action.special?.type||action.type;this.hurt(target,enemy,{attackId:action.attackId,parentEventId:action.parentEventId});if(rush){enemy.damageType='physical';this.hurt(target,enemy,{damageAmount:rush,cause:'extra',attackId:action.attackId,parentEventId:action.parentEventId});}enemy.atk=enemy.deathGrowthStacks!=null?enemy.baseAtk*(1+enemy.deathGrowthStacks*Number(enemy.enemyTalent['Attack.atk'])):baseAtk;enemy.damageType=baseType;if(hasDagger){const used=Math.max(1,Math.floor(Number(enemy.daggerPerAttack)||1));enemy.daggers=Math.max(0,enemy.daggers-used);enemy.daggersUsed=(enemy.daggersUsed||0)+used;if(enemy.daggers===0)enemy.attackCooldown=0;}if(!action.suppressAttackZone&&enemy.attackZone&&(!enemy.enemySkills?.some(s=>s.prefab==='PollutedRangedAtk')||action.special?.polluted))this.addEnemyGroundZone(enemy,enemy.attackZone,{x:target.x,y:target.y,follow:!!enemy.attackZone.follow,attackId:action.attackId??null});}
   startEnemyDeathEye(enemy,target){const skill=enemy.specialSkill;if(!skill||!target)return false;const duration=Number(skill.bb?.hit_duration)||8,interval=Math.max(0.5,Number(skill.bb?.hit_interval)||1);enemy.deathEye={targetUid:target.uid,endsAt:this.s.time+duration,nextAt:this.s.time,interval,damageScale:Number(skill.bb?.atk_scale)||.4,elementScale:Number(skill.bb?.ep_damage_ratio)||2,radius:Math.max(1,Number(enemy.range)||2.5)};enemy.stanceUntil=enemy.deathEye.endsAt;this.emit('enemy-skill-start',{uid:enemy.uid,x:enemy.x,y:enemy.y,skill:'DeathEye',targetUid:target.uid,endsAt:enemy.deathEye.endsAt});return true;}
   tickEnemyDeathEye(){for(const enemy of this.s.enemies){const channel=enemy.deathEye;if(!channel)continue;const target=getActor(this.s,channel.targetUid);if(enemy.hp<=0||!enemyTargetValid(target)||!permissions(enemy).skill||permissions(enemy).silenced){enemy.deathEye=null;enemy.stanceUntil=0;endEnemySkill(this,enemy);continue;}if(this.s.time<channel.endsAt){while(this.s.time+1e-9>=channel.nextAt){dealDamage(this,{source:enemy,target,amount:enemy.atk*channel.damageScale,type:'arts',cause:'skill'});channel.nextAt+=channel.interval;}continue;}for(const ally of attackableAllies(this.s))if(Math.abs(Math.round(ally.x)-Math.round(target.x))+Math.abs(Math.round(ally.y)-Math.round(target.y))<=1)applyElementDamage(this,{source:enemy,target:ally,amount:enemy.atk*channel.elementScale,type:'necrosis',cause:'skill'});this.emit('enemy-skill-end',{uid:enemy.uid,x:enemy.x,y:enemy.y,skill:'DeathEye',targetUid:target.uid});enemy.deathEye=null;enemy.stanceUntil=0;endEnemySkill(this,enemy);}}
   // 清明（enemy_1209_sfden）的 InvisibleShield：每 cooldown 秒给半径内的**其他**敌人上隐匿，自身不含。

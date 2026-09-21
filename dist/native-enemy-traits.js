@@ -1,5 +1,5 @@
 import {permissions,applyStatus,statusAttributeChanges,isIsolated} from './status.js';
-import {grantGuard,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} from './native-effects.js';
+import {grantGuard,grantShield,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} from './native-effects.js';
 
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
 const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
@@ -8,6 +8,12 @@ const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.id==='enemy_1511_mdrock'){
+  e.immunities.sleep=true;e.mudrockStacks??=0;
+  e.mudrockShieldHpBonus??=Number(e.enemyTalent['shield.max_hp'])||0;e.mudrockShieldAspd??=Number(e.enemyTalent['shield.attack_speed'])||0;
+  const initial=e.shieldLayers.find(l=>l.id==='enemy-initial-shield');if(initial){initial.id='mudrock-arts';initial.types=['arts'];}
+  syncMudrockShield(e);
+ }
  if(e.id==='enemy_2005_axetro'){e.enemyAttack={...e.enemyAttack,groundOnly:true};e.axetroStacks??=0;}
  if(e.id==='enemy_1050_lslime')e.damageType='arts';
  if(e.id==='enemy_1504_cqbw')e.enemyAttack={...e.enemyAttack,groundOnly:true};
@@ -43,12 +49,31 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
 
 export function enemyConditionalAttackSpeed(e){
  const bb=e.enemyTalent||{};
+ if(e.id==='enemy_1511_mdrock')return mudrockShieldActive(e)?e.mudrockShieldAspd||0:0;
  if(e.id==='enemy_2005_axetro')return (e.axetroStacks||0)*(Number(bb['atkup.attack_speed'])||0);
  return e.id==='enemy_1050_lslime'&&e.hp<e.maxHp*Number(bb['selfbuff.hp_ratio'])?Number(bb['selfbuff.attack_speed'])||0:0;
 }
 
 export function enemyConditionalAttackMultiplier(e){
+ if(e.id==='enemy_1511_mdrock')return 1+(e.mudrockStacks||0)*Number(e.enemyTalent['charge.attack@enemy_mdrock_s_1[charge].atk']);
  return e.id==='enemy_2005_axetro'?1+(e.axetroStacks||0)*Number(e.enemyTalent['atkup.atk']):1;
+}
+
+function mudrockShieldActive(e){return e.shieldLayers?.some(l=>l.id==='mudrock-arts'&&l.remaining>0);}
+function syncMudrockShield(e){
+ const before=e.mudrockHpScale??1,after=mudrockShieldActive(e)?1+e.mudrockShieldHpBonus:1;
+ if(before!==after){e.maxHp=e.baseMaxHp*after;e.hp=Math.min(e.maxHp,e.hp/before*after);}
+ e.mudrockHpScale=after;
+}
+export function refreshEnemyMudrockShield(battle,e,bb){
+ if(!(Number(bb.dynamic)>0))return;
+ e.mudrockShieldHpBonus=Number(bb.max_hp)||0;e.mudrockShieldAspd=Number(bb.attack_speed)||0;
+ grantShield(battle,e,{id:'mudrock-arts',amount:Number(bb.dynamic),types:['arts'],sourceUid:e.uid});syncMudrockShield(e);
+}
+export function enemyTraitBeforeStrike(battle,e,target,action){
+ if(e.id!=='enemy_1511_mdrock'||target.hp<=0)return;
+ if(action.attackId!=null&&e.mudrockLastAttackId===action.attackId)return;
+ e.mudrockLastAttackId=action.attackId??null;e.mudrockStacks=Math.min(6,(e.mudrockStacks||0)+1); // PRTS：最多6层，当前有效攻击也受益。
 }
 
 export function enemyTraitDamageDealt(battle,e,result){
@@ -187,6 +212,7 @@ export function tickEnemyTraits(battle,e,dt){
 
 export function enemyTraitAfterDamage(battle,e,opts,result){
  if(!e.enemyTraitsInitialized||result.total<=0)return;
+ if(e.id==='enemy_1511_mdrock')syncMudrockShield(e);
  const bb=e.enemyTalent||{},max=Number(bb['def_reduce.max_stack_cnt']);
  if(bb['Expose.weak[limit]']>0&&!bb['Expose.range_radius']&&!permissions(e).silenced){
   const source=opts.source||getActor(battle.s,opts.sourceUid);

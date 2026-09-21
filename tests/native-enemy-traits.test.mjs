@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
-import {dealDamage,applyLoss,commitExit,addDamageRedirect,grantGuard,applyHeal,revealEnemy,enemyWineBuffs} from '../dist/native-effects.js';
+import {dealDamage,applyLoss,commitExit,addDamageRedirect,grantGuard,grantShield,applyHeal,revealEnemy,enemyWineBuffs} from '../dist/native-effects.js';
 import {applyStatus,isIsolated} from '../dist/status.js';
 
 function arena(){
@@ -124,6 +124,23 @@ test('孤立排除普通友方光环，但不变成对立阵营伤害免疫，�
 test('孤立竞演者不被同阵营载具装载，反隐解除孤立后恢复装载资格',()=>{
  const {b}=arena(),e=spawn(b,'enemy_10031_cnvsld'),carrier=spawn(b,'enemy_10159_mntrjn');b.step();assert.equal(e.carriedBy,undefined);assert.equal(carrier.transport.passengers.length,0);
  revealEnemy(b,e,2);advance(b,.1);assert.equal(e.carriedBy,carrier.uid);assert.deepEqual(carrier.transport.passengers,[e.uid]);
+});
+
+test('敌方泥岩本期5500屏障只吸收法术，物理/真实/元素伤害不消耗，并有沉睡免疫',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_1511_mdrock');assert.equal(e.shield,5500);assert.deepEqual(e.shieldLayers[0].types,['arts']);assert.equal(e.maxHp,e.baseMaxHp*1.5);assert.equal(applyStatus(e,'sleep',5),false);
+ const hp=e.hp;for(const type of ['physical','true','elemental'])dealDamage(b,{target:e,value:100,type});assert.equal(e.shield,5500);assert.equal(e.hp,hp-300);
+ dealDamage(b,{target:e,value:100,type:'arts'});assert.equal(e.shield,5400);assert.equal(e.hp,hp-300);
+});
+
+test('泥岩破盾移除生命上限增益，17秒刷新恢复，重复刷新替换而不叠屏障或生命',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_1511_mdrock');e.hp=e.maxHp*.5;dealDamage(b,{target:e,value:5500,type:'arts'});assert.equal(e.shield,0);assert.equal(e.maxHp,e.baseMaxHp);assert.equal(e.hp,e.maxHp*.5);
+ advance(b,16.9);assert.equal(e.shield,0);advance(b,.1);assert.equal(e.shield,5500);assert.equal(e.maxHp,e.baseMaxHp*1.5);assert.equal(e.hp,e.maxHp*.5);
+ const max=e.maxHp,hp=e.hp;advance(b,17);assert.equal(e.shield,5500);assert.equal(e.shieldLayers.filter(l=>l.id==='mudrock-arts').length,1);assert.equal(e.maxHp,max);assert.equal(e.hp,hp);
+});
+
+test('泥岩增益只认自身法术屏障，其他屏障不延续增益，读档不再乘一次生命上限',()=>{
+ const {b}=arena(),e=spawn(b,'enemy_1511_mdrock');grantShield(b,e,{id:'other',amount:100});dealDamage(b,{target:e,value:5500,type:'arts'});assert.equal(e.shield,100);assert.equal(e.maxHp,e.baseMaxHp);
+ advance(b,17);dealDamage(b,{target:e,value:1000,type:'arts'});const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.enemies[0];assert.equal(copy.maxHp,e.maxHp);assert.equal(copy.hp,e.hp);assert.equal(copy.shield,e.shield);assert.deepEqual(copy.shieldLayers.find(l=>l.id==='mudrock-arts').types,['arts']);
 });
 
 test('折射被沉默取消法抗，解除沉默后恢复，连续帧不重复叠加',()=>{
