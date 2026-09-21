@@ -8,6 +8,7 @@ const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.id==='enemy_2005_axetro'){e.enemyAttack={...e.enemyAttack,groundOnly:true};e.axetroStacks??=0;}
  if(e.id==='enemy_1050_lslime')e.damageType='arts';
  if(['enemy_10031_cnvsld','enemy_10034_cnvsax'].includes(e.id))e.isolateWhileConcealed=true;
  if(NEURO_SPAWNERS.has(e.id)){e.neuroCombat??=false;if(!e.neuroCombat)e.canAttack=false;}
@@ -41,7 +42,28 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
 
 export function enemyConditionalAttackSpeed(e){
  const bb=e.enemyTalent||{};
+ if(e.id==='enemy_2005_axetro')return (e.axetroStacks||0)*(Number(bb['atkup.attack_speed'])||0);
  return e.id==='enemy_1050_lslime'&&e.hp<e.maxHp*Number(bb['selfbuff.hp_ratio'])?Number(bb['selfbuff.attack_speed'])||0:0;
+}
+
+export function enemyConditionalAttackMultiplier(e){
+ return e.id==='enemy_2005_axetro'?1+(e.axetroStacks||0)*Number(e.enemyTalent['atkup.atk']):1;
+}
+
+export function enemyTraitDamageDealt(battle,e,result){
+ if(e.id!=='enemy_2005_axetro'||e.hp<=0||!(result.total>0))return;
+ const max=Number(e.enemyTalent['atkup.max_stack_cnt']);
+ if(max>0){e.axetroStacks=Math.min(max,(e.axetroStacks||0)+1);e.axetroIdleSince=null;}
+}
+
+export function tickEnemyAttackContinuity(battle,e,target){
+ if(e.id!=='enemy_2005_axetro')return;
+ const attacking=e.canAttack&&!e.hidden&&permissions(e).attack&&(e.action||target?.hp>0);
+ if(attacking){e.axetroIdleSince=null;return;}
+ e.axetroIdleSince??=battle.s.time;
+ if(e.axetroStacks>0&&battle.s.time-e.axetroIdleSince+1e-9>=Number(e.enemyTalent['checker.delay'])){
+  e.axetroStacks=0;battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form:'增益清空'});
+ }
 }
 
 export function tickPompeiiExplosion(battle,e,dt){

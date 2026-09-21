@@ -317,6 +317,7 @@ export function dealDamage(battle,opts){
  if(result.blocked)battle.s.effects.push({x:target.x,y:target.y,text:'抵消',life:.5,type:'block'});
  log(battle,'damage',{eventId:event.eventId,parentEventId:event.parentEventId,attackId:event.attackId,cause:event.cause,sourceUid:source?.uid,targetUid:target.uid,hp:result.hp,shield:result.shield,blocked:!!result.blocked});
  if(battle.s.enemies.includes(target))battle.enemyDamageReceived?.(target,opts,result);
+ if(source&&battle.s.enemies.includes(source))battle.enemyDamageDealt?.(source,opts,result);
  if(target.hp<=0)commitExit(battle,{target,reason:opts.exitReason||'knockdown',killer:source,event});
  if(!opts.skipHooks)dispatch(battle,'after-damage',{source,target,result,type,event,cause:opts.cause||'attack',skill:!!opts.skill,effectId:opts.effectId});
  drainQueue(battle);

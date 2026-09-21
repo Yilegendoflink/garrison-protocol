@@ -3,7 +3,7 @@ import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {applyStatus} from '../dist/status.js';
-import {commitExit,revealEnemy} from '../dist/native-effects.js';
+import {commitExit,revealEnemy,grantGuard} from '../dist/native-effects.js';
 import {drawEnemyProjectiles} from '../dist/native-fx.js';
 
 function arena(id,{x=3,y=3,positions=[[3,3]]}={}){
@@ -127,6 +127,30 @@ test('庞贝低于半血才获得40攻速，真实攻击间隔缩短，回血后
 test('囚犯禁锢攻速修正不会被干员光环调度清空，前三次攻击保持原表间隔',()=>{
  const {b,enemy}=arena('enemy_1116_liprr'),times=[],record=b.recordEnemyAttack.bind(b);b.recordEnemyAttack=(e,s)=>{times.push(b.s.time);record(e,s);};b.hurt=()=>{};
  const expected=enemy.interval*100/(enemy.attackSpeed+Number(enemy.enemyTalent['confinement.attack_speed']));advance(b,expected*2+2);assert.ok(times.length>=3);assert.ok(Math.abs(times[1]-times[0]-expected)<.04);assert.ok(Math.abs(times[2]-times[1]-expected)<.04);
+});
+
+test('遗弃者造成伤害后才加层，当次不用新倍率，次数护盾抵消不加层，最高28层',()=>{
+ const {b,enemy,allies}=arena('enemy_2005_axetro'),u=allies[0];const stats=b.stats.bind(b);b.stats=a=>({...stats(a),def:0,maxHp:100000});u.hp=100000;enemy.atk=enemy.baseAtk=100;b.economy.random=()=>.999;
+ grantGuard(b,u,{charges:1,types:['physical'],id:'axetro-test'});b.hurt(u,enemy);assert.equal(enemy.axetroStacks,0);
+ let hp=u.hp;b.hurt(u,enemy);assert.equal(hp-u.hp,100);assert.equal(enemy.axetroStacks,1);hp=u.hp;b.hurt(u,enemy);assert.ok(Math.abs(hp-u.hp-107)<1e-6);assert.equal(enemy.axetroStacks,2);
+ for(let i=0;i<40;i++)b.hurt(u,enemy);assert.equal(enemy.axetroStacks,28);hp=u.hp;b.hurt(u,enemy);assert.ok(Math.abs(hp-u.hp-296)<1e-6);
+});
+
+test('遗弃者保持攻击状态时慢速间隔不误清层，控制满4秒才清空，随后能重新叠加',()=>{
+ const {b,enemy,allies}=arena('enemy_2005_axetro'),u=allies[0];const stats=b.stats.bind(b);b.stats=a=>({...stats(a),def:0,maxHp:100000});u.hp=100000;b.economy.random=()=>.999;
+ enemy.atk=100;b.hurt(u,enemy);enemy.interval=6;advance(b,5);assert.ok(enemy.axetroStacks>0);
+ applyStatus(enemy,'stun',6);b.step();advance(b,3.9);assert.ok(enemy.axetroStacks>0);advance(b,.2);assert.equal(enemy.axetroStacks,0);advance(b,2);enemy.attackCooldown=0;advance(b,2.5);assert.ok(enemy.axetroStacks>0);
+});
+
+test('遗弃者不对空，无目标时清层；叠层与脱战计时可跨JSON恢复',()=>{
+ const {b,g,enemy,allies}=arena('enemy_2005_axetro',{positions:[[3,1]]}),u=allies[0];u.flying=true;advance(b,5);assert.equal(enemy.attackCount,0);assert.equal(enemy.axetroStacks,0);
+ u.flying=false;b.hurt(u,enemy);assert.equal(enemy.axetroStacks,1);u.x=9;b.step();advance(b,2);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const e=restored.s.enemies[0];assert.equal(e.axetroStacks,1);advance(restored,1.8);assert.equal(e.axetroStacks,1);advance(restored,.3);assert.equal(e.axetroStacks,0);
+});
+
+test('遗弃者叠层攻速实际缩短攻击周期，沉默不禁用不可沉默天赋',()=>{
+ const {b,enemy,allies}=arena('enemy_2005_axetro'),u=allies[0],stats=b.stats.bind(b);b.stats=a=>({...stats(a),def:0,maxHp:100000});u.hp=100000;enemy.atk=1;b.economy.random=()=>.999;applyStatus(enemy,'silence',60);
+ for(let i=0;i<28;i++)b.hurt(u,enemy);assert.equal(enemy.axetroStacks,28);const times=[],record=b.recordEnemyAttack.bind(b);b.recordEnemyAttack=(e,s)=>{times.push(b.s.time);record(e,s);};advance(b,4);assert.ok(times.length>=3);assert.ok(Math.abs(times[1]-times[0]-3/2.4)<.04);
 });
 
 test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{
