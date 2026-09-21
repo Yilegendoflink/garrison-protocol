@@ -49,12 +49,13 @@ export function deliverEnemyAttack(battle,packet){
    return;
   }
   const victims=[target,...(splash?attackableAllies(battle.s).filter(u=>u!==target&&(!(spec.splashGroundOnly??spec.groundOnly)||!u.flying)&&inSplash(target,u,splash)):[])];
-  const scale=(Number(packet.scale)||1)*(ranged&&spec.rangedScaleKey?Number(enemy.enemyTalent[spec.rangedScaleKey])||1:1);
+  const scale=(Number(packet.scale)||1)*(ranged?(spec.rangedScaleKey?Number(enemy.enemyTalent[spec.rangedScaleKey])||1:spec.rangedScale??1):1);
   battle.emit('strike',{uid:enemy.uid,x:enemy.x,y:enemy.y,targetX:target.x,targetY:target.y,ranged,enemy:true,type:packet.special?.type||enemy.damageType,style:splash?'splash':packet.special?.prefab||'single',hit:packet.hitIndex??packet.hit});
   if(enemy.powStartedAt!=null&&!enemy.powSpent)enemy.powHit=true;
   for(const victim of victims){
    if(packet.special?.stunBeforeDamage&&permissions(enemy).skill&&!permissions(enemy).silenced)applyStatus(victim,'stun',packet.special.stun,{source:enemy.uid});
-   battle.resolveEnemyStrike(enemy,victim,{...packet,scale,suppressAttackZone:victim!==target});
+   battle.resolveEnemyStrike(enemy,victim,{...packet,scale,...(enemy.id==='enemy_1500_skulsr'&&victim!==target?{cause:'splash'}:{}),suppressAttackZone:victim!==target});
+   if(enemy.id==='enemy_1500_skulsr'&&ranged)applyStatus(victim,'defDown',5,{source:enemy.uid,value:Number(enemy.enemyTalent['defdown.def']),resistible:false});
    battle.resolveEnemyAttackEffects(enemy,victim,{count:false,extra:packet.special});
   }
  }

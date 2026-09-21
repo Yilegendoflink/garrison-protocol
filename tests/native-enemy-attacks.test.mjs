@@ -19,6 +19,26 @@ function arena(id,{x=3,y=3,positions=[[3,3]]}={}){
 }
 function advance(b,s){for(let i=0;i<Math.round(s*30);i++)b.step();}
 
+test('碎骨未阻挡发射26%九格榴弹，飞行单位只能被溅射，命中后减防5秒',()=>{
+ const {b,enemy,allies}=arena('enemy_1500_skulsr',{x:3,y:5,positions:[[3,3],[4,4],[5,3]]});allies[1].flying=true;allies[0].deployAt=100;allies[0].statusResistance=.5;
+ const hits=[];b.hurt=(u,e,opts)=>hits.push({uid:u.uid,atk:e.atk,cause:opts.cause,defense:b.stats(u).def});const before=b.stats(allies[0]).def;
+ advance(b,1.1);assert.deepEqual(hits.map(h=>h.uid),allies.slice(0,2).map(u=>u.uid));assert.ok(hits.every(h=>h.atk===.26));assert.equal(hits[1].cause,'splash');assert.equal(hits[0].defense,before);
+ assert.equal(allies[0].statuses.find(s=>s.kind==='defDown').value,-.5);assert.ok(allies[0].statuses.find(s=>s.kind==='defDown').remaining>4.8);assert.equal(allies[2].statuses.some(s=>s.kind==='defDown'),false);
+ enemy.canAttack=false;advance(b,5.1);assert.equal(b.stats(allies[0]).def,before);
+});
+
+test('碎骨被阻挡改为全倍率单体，不产生榴弹减防，只有飞行目标时不开火',()=>{
+ const {b,enemy,allies}=arena('enemy_1500_skulsr',{positions:[[3,3],[4,3]]}),hits=[];b.hurt=(u,e)=>hits.push([u.uid,e.atk]);advance(b,1.1);
+ assert.deepEqual(hits,[[allies[0].uid,1]]);assert.ok(allies.every(u=>!u.statuses.some(s=>s.kind==='defDown')));
+ const air=arena('enemy_1500_skulsr',{x:3,y:5,positions:[[3,3]]});air.allies[0].flying=true;advance(air.b,4);assert.equal(air.enemy.attackCount,0);
+});
+
+test('碎骨严格半血以下增攻且回血恢复，存档保留榴弹减防剩余时长',()=>{
+ const {b,g,enemy,allies:[u]}=arena('enemy_1500_skulsr',{x:3,y:5,positions:[[3,3]]});enemy.hp=enemy.maxHp*.5;assert.equal(b.enemyAttackDamage(enemy),1);
+ enemy.hp--;assert.equal(b.enemyAttackDamage(enemy),1.5);advance(b,1.1);const left=u.statuses.find(s=>s.kind==='defDown').remaining;enemy.hp=enemy.maxHp;assert.equal(b.enemyAttackDamage(enemy),1);enemy.canAttack=false;
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);assert.equal(restored.enemyAttackDamage(restored.s.enemies[0]),1);advance(restored,left+.1);assert.equal(restored.s.units[0].statuses.some(s=>s.kind==='defDown'),false);
+});
+
 test('澪普通与强化攻击均二连击，按一次攻击回复SP，技能直到末击才结束',()=>{
  const {b,enemy,strikes}=arena('enemy_10118_ymgprc');advance(b,1.1);
  assert.equal(strikes.length,2);assert.equal(enemy.attackCount,1);assert.equal(enemy.sp,1);

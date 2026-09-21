@@ -6364,6 +6364,11 @@ const KNIGHT_PARTNER={enemy_1513_dekght:'enemy_1513_dekght_2',enemy_1513_dekght_
 function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.id==='enemy_1500_skulsr'){
+  // PRTS修订415274：原表未提供的榴弹倍率26%、九格范围；减防量仍读取本期黑板。
+  e.enemyAttack={...e.enemyAttack,groundOnly:true,splashGroundOnly:false,splashOnlyRanged:true,splash:{shape:'square',radius:1},rangedScale:.26};e.lowHpRatio=0;
+  if(e.lowHpTriggered&&e.atk===e.baseAtk*(1+Number(e.enemyTalent['atkup.atk'])))e.atk=e.baseAtk;
+ }
  if(e.id==='enemy_2050_smsha')e.damageType='arts';
  if(e.id==='enemy_1509_mousek'){
   e.immunities.sleep=true;e.damageType='arts';e.enemyAttack={...e.enemyAttack,groundOnly:true};e.aura=null;e.lowHpRatio=0;
@@ -6420,6 +6425,7 @@ function enemyConditionalAttackSpeed(e){
 }
 
 function enemyConditionalAttackMultiplier(e){
+ if(e.id==='enemy_1500_skulsr')return e.hp<e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['atkup.atk']):1;
  if(e.id==='enemy_1539_reid')return e.hp<=e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['AtkUp.atk']):1;
  if(e.knightRage)return 1+(Number(e.enemyTalent['triggerrage.atk'])||0);
  if(e.id==='enemy_1511_mdrock')return 1+(e.mudrockStacks||0)*Number(e.enemyTalent['charge.attack@enemy_mdrock_s_1[charge].atk']);
@@ -6761,12 +6767,13 @@ function deliverEnemyAttack(battle,packet){
    return;
   }
   const victims=[target,...(splash?attackableAllies(battle.s).filter(u=>u!==target&&(!(spec.splashGroundOnly??spec.groundOnly)||!u.flying)&&inSplash(target,u,splash)):[])];
-  const scale=(Number(packet.scale)||1)*(ranged&&spec.rangedScaleKey?Number(enemy.enemyTalent[spec.rangedScaleKey])||1:1);
+  const scale=(Number(packet.scale)||1)*(ranged?(spec.rangedScaleKey?Number(enemy.enemyTalent[spec.rangedScaleKey])||1:spec.rangedScale??1):1);
   battle.emit('strike',{uid:enemy.uid,x:enemy.x,y:enemy.y,targetX:target.x,targetY:target.y,ranged,enemy:true,type:packet.special?.type||enemy.damageType,style:splash?'splash':packet.special?.prefab||'single',hit:packet.hitIndex??packet.hit});
   if(enemy.powStartedAt!=null&&!enemy.powSpent)enemy.powHit=true;
   for(const victim of victims){
    if(packet.special?.stunBeforeDamage&&permissions(enemy).skill&&!permissions(enemy).silenced)applyStatus(victim,'stun',packet.special.stun,{source:enemy.uid});
-   battle.resolveEnemyStrike(enemy,victim,{...packet,scale,suppressAttackZone:victim!==target});
+   battle.resolveEnemyStrike(enemy,victim,{...packet,scale,...(enemy.id==='enemy_1500_skulsr'&&victim!==target?{cause:'splash'}:{}),suppressAttackZone:victim!==target});
+   if(enemy.id==='enemy_1500_skulsr'&&ranged)applyStatus(victim,'defDown',5,{source:enemy.uid,value:Number(enemy.enemyTalent['defdown.def']),resistible:false});
    battle.resolveEnemyAttackEffects(enemy,victim,{count:false,extra:packet.special});
   }
  }
