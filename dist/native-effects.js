@@ -856,9 +856,9 @@ function validMoveTile(battle,target,x,y,{allowOccupied=false,allowFlyOnly=false
  if(alliedTarget)for(const a of battle.s.units)if(a!==target&&a.returnPosition&&a.deployed&&a.hp>0)occupied.add(Math.round(a.returnPosition.x)+','+Math.round(a.returnPosition.y));
  return !occupied.has(x+','+y);
 }
-export function teleportActor(battle,target,{x,y,source=null,mode='teleport',allowOccupied=false}={}){
+export function teleportActor(battle,target,{x,y,source=null,mode='teleport',allowOccupied=false,exactCoordinates=false,allowFlyOnly=true}={}){
  if(!target||target.hp<=0||target.hidden||x==null||y==null)return false;
- const nx=Math.round(x),ny=Math.round(y);if(!validMoveTile(battle,target,nx,ny,{allowOccupied,allowFlyOnly:true}))return false;
+ const nx=exactCoordinates?x:Math.round(x),ny=exactCoordinates?y:Math.round(y);if(!validMoveTile(battle,target,Math.round(nx),Math.round(ny),{allowOccupied,allowFlyOnly}))return false;
  const fx0=target.x,fy0=target.y;target.x=nx;target.y=ny;target.block=null;target.action=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode});battle.onActorMoved?.(target);battle.emit('move',{uid:target.uid,x:nx,y:ny,fromX:fx0,fromY:fy0,mode});return true;
 }
 export function moveActor(battle,target,source,description=''){

@@ -25,6 +25,33 @@ function spawn(b,id,x=3,y=3,raw=NATIVE_DATA.enemies[id]){
 function advance(b,seconds){for(let i=0;i<Math.round(seconds*30);i++)b.step();}
 function addAlly(b,ally,x,y){ally.x=x;ally.y=y;ally.deployed=true;ally.hp=ally.maxHp;applyStatus(ally,'disarm',600);b.s.units.push(ally);}
 
+function crownArena(){
+ const scene=arena(),{b,ally}=scene,e=spawn(b,'enemy_1502_crowns');e.atk=1;advance(b,15);
+ b.map=structuredClone(b.map);for(let x=2;x<=7;x++)Object.assign(b.map.grid[3][x],{heightType:'LOWLAND',passableMask:'ALL',obstacle:false});
+ e.route=[{kind:'move',x:3,y:3},{kind:'move',x:4,y:3},{kind:'move',x:5,y:3},{kind:'move',x:7,y:3,checkpointIndex:1},{kind:'wait',x:7,y:3,time:600}];e.cmd=1;e.cmdLeft=null;addAlly(b,ally,3,3);return {...scene,e};
+}
+
+test('弑君者阻挡后闪现：0.5秒前摇、精确1.5格、1秒保护与触发即开始15秒CD',()=>{
+ const {b,e}=crownArena();b.step();const start=b.s.time;assert.ok(e.crownBlink);assert.equal(e.block,null);assert.equal(e.invulnerable,true);assert.equal(e.shiftImmune,true);assert.equal(e.unblockable,true);assert.equal(e.enemySkills[0].nextAt,start+15);
+ const hp=e.hp;dealDamage(b,{target:e,amount:100,type:'true'});assert.equal(e.hp,hp);advance(b,14/30);assert.equal(e.x,3);advance(b,1/30);assert.equal(e.x,4.5);assert.equal(e.y,3);assert.equal(e.invulnerable,true);
+ advance(b,.5);assert.equal(e.crownBlink,null);assert.equal(e.invulnerable,false);assert.equal(e.shiftImmune,false);assert.equal(e.unblockable,false);assert.ok(e.x>=4.5,'不退回被跨过的寻路展开点');
+});
+
+test('弑君者闪现前摇存档恢复，落点占有者不阻止传送，保护结束仍可再次阻挡',()=>{
+ const {b,g,e,ally}=crownArena();b.step();advance(b,.3);const copy=structuredClone(ally);copy.uid+=100;copy.x=4.5;b.s.units.push(copy);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const crown=restored.s.enemies[0];advance(restored,.2);assert.equal(crown.x,4.5);assert.equal(crown.block,null);
+ advance(restored,.6);assert.equal(crown.block,copy.uid);assert.equal(crown.enemySkills[0].used,true);assert.equal(restored.s.events.filter(e=>e.type==='move'&&e.mode==='blink').length,1);
+});
+
+test('弑君者不可通行落点不传送且不获无敌，仍消费CD和给予1秒不可阻挡',()=>{
+ const {b,e}=crownArena();b.map.grid[3][5].passableMask='FLY_ONLY';applyStatus(e,'root',10);b.step();assert.equal(e.enemySkills[0].used,true);assert.equal(e.unblockable,true);assert.equal(!!e.invulnerable,false);advance(b,1.1);assert.equal(e.x,3);assert.equal(e.unblockable,false);
+});
+
+test('弑君者闪现受沉默限制，未阻挡不释放，未就绪也不释放',()=>{
+ const {b,e,ally}=crownArena();applyStatus(e,'silence',1);advance(b,.5);assert.equal(e.enemySkills[0].used,false);e.statuses=[];ally.x=0;applyStatus(e,'root',10);advance(b,.5);assert.equal(e.enemySkills[0].used,false);
+ ally.x=e.x;e.enemySkills[0].nextAt=b.s.time+2;e.attackCooldown=0;b.step();assert.equal(e.enemySkills[0].used,false);
+});
+
 test('暴鸰等待技能初始CD且只投弹一次，九格溅射包含迷彩，结束后移速翻倍而非普通攻击',()=>{
  const {b,ally}=arena(),e=spawn(b,'enemy_1040_bombd',3,3);e.atk=e.baseAtk=100;
  addAlly(b,ally,4,3);const splash=structuredClone(ally),outside=structuredClone(ally);splash.uid+=100;splash.x=5;splash.y=4;outside.uid+=101;outside.x=6;

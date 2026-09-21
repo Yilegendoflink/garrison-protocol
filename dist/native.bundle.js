@@ -5407,9 +5407,9 @@ function validMoveTile(battle,target,x,y,{allowOccupied=false,allowFlyOnly=false
  if(alliedTarget)for(const a of battle.s.units)if(a!==target&&a.returnPosition&&a.deployed&&a.hp>0)occupied.add(Math.round(a.returnPosition.x)+','+Math.round(a.returnPosition.y));
  return !occupied.has(x+','+y);
 }
-function teleportActor(battle,target,{x,y,source=null,mode='teleport',allowOccupied=false}={}){
+function teleportActor(battle,target,{x,y,source=null,mode='teleport',allowOccupied=false,exactCoordinates=false,allowFlyOnly=true}={}){
  if(!target||target.hp<=0||target.hidden||x==null||y==null)return false;
- const nx=Math.round(x),ny=Math.round(y);if(!validMoveTile(battle,target,nx,ny,{allowOccupied,allowFlyOnly:true}))return false;
+ const nx=exactCoordinates?x:Math.round(x),ny=exactCoordinates?y:Math.round(y);if(!validMoveTile(battle,target,Math.round(nx),Math.round(ny),{allowOccupied,allowFlyOnly}))return false;
  const fx0=target.x,fy0=target.y;target.x=nx;target.y=ny;target.block=null;target.action=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode});battle.onActorMoved?.(target);battle.emit('move',{uid:target.uid,x:nx,y:ny,fromX:fx0,fromY:fy0,mode});return true;
 }
 function moveActor(battle,target,source,description=''){
@@ -5943,7 +5943,7 @@ return {dominionCell,paintDominion,tickDeepWater,shelteredFromSand,tickSandStorm
 },
 "native-enemy-skills.js": function(load) {
 const {permissions,applyStatus,removeStatus,isIsolated} = load("status.js");
-const {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId,addEffect,grantShield} = load("native-effects.js");
+const {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId,addEffect,grantShield,teleportActor} = load("native-effects.js");
 const {FPS} = load("combat.js");
 const {windupSeconds,enemyChainTargets} = load("native-combat.js");
 const ATTACK_SKILLS=new Set(['AOEAttack','CrossAttack','PowerAttack','StunAttack','stuncombat','DeathEye','PollutedRangedAtk','ironsandstorm','armorpiercing']);
@@ -6100,10 +6100,43 @@ function tickMouseKingSkills(battle,enemy,control){
  endEnemySkill(battle,enemy);
 }
 
+function tickCrownBlink(battle,enemy){
+ const state=enemy.crownBlink;if(!state)return false;
+ if(!state.moved&&battle.s.time+1e-9>=state.moveAt){
+  state.moved=true;
+  if(teleportActor(battle,enemy,{x:state.x,y:state.y,source:enemy,mode:'blink',allowOccupied:true,exactCoordinates:true,allowFlyOnly:false})){
+   enemy.cmd=state.cmd;enemy.cmdLeft=null;enemy.lastCheckpoint=Math.max(enemy.lastCheckpoint||0,state.checkpoint||0);
+  }
+ }
+ if(battle.s.time+1e-9>=state.endsAt){Object.assign(enemy,state.restore);enemy.crownBlink=null;return false;}
+ return true;
+}
+
+function tryCrownBlink(battle,enemy){
+ if(enemy.block==null||enemy.action||enemy.attackCooldown>0)return false;
+ const skill=enemy.enemySkills.find(s=>s.prefab==='blink');if(!skill||!enemySkillReady(enemy,skill,battle.s.time))return false;
+ const route=enemy.route||[];let goal=null;
+ for(let i=enemy.cmd;i<route.length;i++){const p=route[i];if(p.kind!=='move')break;goal=p;if(p.checkpointIndex!=null)break;}
+ if(!goal)return false;
+ const dx=goal.x-enemy.x,dy=goal.y-enemy.y,length=Math.hypot(dx,dy),distance=Number(skill.bb.dist);if(length<1e-9||!(distance>0))return false;
+ const x=enemy.x+dx/length*distance,y=enemy.y+dy/length*distance,tile=battle.map.grid[Math.round(y)]?.[Math.round(x)];
+ const valid=tile&&tile.passableMask!=='NONE'&&tile.passableMask!=='FLY_ONLY'&&!tile.obstacle;
+ if(!beginEnemySkill(battle,enemy,skill))return false;
+ const restore={unblockable:!!enemy.unblockable,invulnerable:!!enemy.invulnerable,shiftImmune:!!enemy.shiftImmune,formHold:!!enemy.formHold,canAttack:enemy.canAttack};
+ let cmd=enemy.cmd,checkpoint=enemy.lastCheckpoint||0;
+ if(valid)while(cmd<route.length){const p=route[cmd];if(!['move','wait'].includes(p.kind))break;const px=p.x-enemy.x,py=p.y-enemy.y,along=(px*dx+py*dy)/length,lateral=Math.abs(px*dy-py*dx)/length;if(lateral>.01||along<-.01||along>distance+1e-9)break;checkpoint=Math.max(checkpoint,p.checkpointIndex||0);cmd++;}
+ enemy.crownBlink={moveAt:battle.s.time+.5,endsAt:battle.s.time+1,moved:!valid,x,y,cmd,checkpoint,restore};
+ enemy.unblockable=true;enemy.block=null;
+ if(valid){enemy.invulnerable=true;enemy.shiftImmune=true;enemy.formHold=true;enemy.canAttack=false;}
+ enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;endEnemySkill(battle,enemy);
+ battle.emit('enemy-phase',{uid:enemy.uid,x:enemy.x,y:enemy.y,phase:'blink',text:'闪现'});return true;
+}
+
 // 自施法/吞噬不依赖普通攻击目标；所有伤害和强制击杀仍进入 native-effects。
 function tickEnemySkills(battle,enemy,dt){
  if(!enemy.enemySkills)return;
  if(enemy.hp<=0){cancelEnemyCast(battle,enemy);return;}
+ if(tickCrownBlink(battle,enemy))return;
  if(enemy.reidRushUntil!=null&&battle.s.time+1e-9>=enemy.reidRushUntil){enemy.reidRushUntil=null;enemy.speed=enemy.baseSpeed;}
  checkWEnrage(battle,enemy);
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
@@ -6221,6 +6254,7 @@ function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_1502_crowns'&&!control.silenced&&tryCrownBlink(battle,enemy))return;
  if(enemy.id==='enemy_2050_smsha'&&!control.silenced&&!enemy.action){
   const skill=enemy.enemySkills.find(s=>s.prefab==='ChainBuff');
   const candidates=battle.s.enemies.filter(e=>e!==enemy&&e.hp>0&&!e.hidden&&!e.untargetable&&!e.invulnerable&&!permissions(e).sleeping&&!isIsolated(e));
