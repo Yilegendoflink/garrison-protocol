@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {enemyBehaviorProfile} from '../dist/native-combat.js';
 import {tickLogic,commitExit} from '../dist/native-effects.js';
+import {applyStatus} from '../dist/status.js';
 
 // 持续伤害范围第一批（DOT 词条）：集团军重型火炮、深溟巢涌者、萨卡兹枯朽（战士/战车）、
 // 逐腐兽、假想敌：蚀裂。数值全部来自原表 blackboard，测试只核对「原表写了的那些数」。
@@ -104,7 +105,7 @@ test('萨卡兹枯朽战士被击倒后留下污染区域，只结算原表半�
  const b=liveBattle(),u=b.s.units[0];
  const enemy=spawnEnemy(b,'enemy_1267_nhpbr',u.x+3,u.y);
  b.resolveEnemyDeath(enemy);
- assert.equal(zones(b).length,0,'半径 2 之外不留区域');
+ assert.equal(zones(b).length,1,'无人处死亡也留下污染，后来进入的我方仍可能受伤');
  b.s.logicEffects=[];
  const near=spawnEnemy(b,'enemy_1267_nhpbr',u.x,u.y+1);
  b.resolveEnemyDeath(near);
@@ -122,6 +123,24 @@ test('萨卡兹枯朽战士被击倒后留下污染区域，只结算原表半�
  const again=spawnEnemy(b,'enemy_1267_nhpbr',u.x,u.y+1);
  b.resolveEnemyDeath(again);
  assert.equal(zones(b).length,1,'同一地点重复死亡只保留一圈');
+});
+
+test('污染死亡圈无人时生成，后来进入的不可选迷彩飞行单位受伤，圆形角落不误命中',()=>{
+ const b=liveBattle(),u=b.s.units[0];u.x=0;u.y=0;applyStatus(u,'disarm',60);b.s.queue.push({id:'enemy_1007_slime',route:0,at:100});
+ const e=spawnEnemy(b,'enemy_1267_nhpbr',3,3);commitExit(b,{target:e});assert.equal(zones(b).length,1);
+ const advance=n=>{for(let i=0;i<Math.round(n*30);i++)b.step();};advance(1.1);
+ u.x=5;u.y=5;let hp=u.hp;advance(1);assert.equal(u.hp,hp,'方形角落在半径2的圆形外');
+ u.x=4;u.y=3;u.targetable=false;u.flying=true;applyStatus(u,'camouflage',30);b.map=structuredClone(b.map);b.map.grid[3][4].heightType='LOWLAND';hp=u.hp;advance(1);assert.equal(hp-u.hp,50);
+ b.map.grid[3][4].heightType='HIGHLAND';hp=u.hp;advance(1);assert.equal(hp-u.hp,25);
+ advance(5);hp=u.hp;advance(1);assert.equal(u.hp,hp,'区域到期后停止伤害');
+});
+
+test('枯朽战士两型沉默死亡不留污染，坠落仍留，漏怪不留',()=>{
+ for(const id of ['enemy_1267_nhpbr','enemy_1267_nhpbr_2']){
+  const b=liveBattle(),e=spawnEnemy(b,id,3,3);applyStatus(e,'silence',10);commitExit(b,{target:e});assert.equal(zones(b).length,0);
+  const fall=spawnEnemy(b,id,3,3);commitExit(b,{target:fall,reason:'fall'});assert.equal(zones(b).length,1);b.s.logicEffects=[];
+  const leak=spawnEnemy(b,id,3,3);commitExit(b,{target:leak,reason:'leak'});assert.equal(zones(b).length,0);
+ }
 });
 
 test('错相重叠的多个死亡圈对同一个干员只结算最高的一层（不因层叠翻倍）',()=>{

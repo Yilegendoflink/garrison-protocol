@@ -112155,7 +112155,11 @@
           "interval": 1,
           "damage": 50,
           "damageHigh": 25,
-          "damageType": "true"
+          "damageType": "true",
+          "shape": "circle",
+          "ignoreTargetability": true,
+          "alwaysGenerate": true,
+          "silenceable": true
         },
         "bleeding": null,
         "statusResistance": 0,
@@ -112302,7 +112306,11 @@
           "interval": 1,
           "damage": 50,
           "damageHigh": 25,
-          "damageType": "true"
+          "damageType": "true",
+          "shape": "circle",
+          "ignoreTargetability": true,
+          "alwaysGenerate": true,
+          "silenceable": true
         },
         "bleeding": null,
         "statusResistance": 0,

@@ -435,7 +435,7 @@ export class NativeBattle {
   // 我方受到治疗时解除「治疗可解除」的敌方持续伤害（目前只有逐腐兽的流血）。
   cureHealCurableEffects(target){for(const fx of this.s.logicEffects||[])if(fx.kind==='dot'&&fx.targetUid===target?.uid&&String(fx.talentOrSkillId||'').endsWith('-bleeding')){fx.endsAt=this.s.time;}}
   // 敌方持续伤害区域统一入口：射击落点、跟随自身的常驻光环、死亡后留下的毒雾都走这里。
-  addEnemyGroundZone(source,spec,{x,y,follow=false,cleanupWithSource=false,attackId=null,key=null}={}){if(!source||!spec||!(Number(spec.damage)>0||Number(spec.atkScale)>0||Number(spec.elementScale)>0))return null;const interval=Math.max(.1,Number(spec.interval)||1),duration=Number(spec.duration),radius=Number(spec.radius)||1;const row=addEffect(this,{kind:'field',sourceUid:source.uid,sourceDeployGen:source.deployGen,x,y,followUid:follow?source.uid:null,radius,interval,nextAt:this.s.time+interval,endsAt:Number.isFinite(duration)&&duration>0?this.s.time+duration:null,talentOrSkillId:key||enemySpecialTraitId(source),sharedStack:!!key,values:{damage:Number(spec.damage)||0,damageHigh:Number.isFinite(spec.damageHigh)?spec.damageHigh:null,atkScale:Number(spec.atkScale)||0,damageType:spec.damageType||'true',elementScale:Number(spec.elementScale)||0,elementType:spec.elementType||null},trackSide:'ally',trackArea:true,refKind:cleanupWithSource?'live':'owner',persistAfterSourceGone:!cleanupWithSource,attackId,
+  addEnemyGroundZone(source,spec,{x,y,follow=false,cleanupWithSource=false,attackId=null,key=null}={}){if(!source||!spec||!(Number(spec.damage)>0||Number(spec.atkScale)>0||Number(spec.elementScale)>0))return null;const interval=Math.max(.1,Number(spec.interval)||1),duration=Number(spec.duration),radius=Number(spec.radius)||1;const row=addEffect(this,{kind:'field',sourceUid:source.uid,sourceDeployGen:source.deployGen,x,y,followUid:follow?source.uid:null,radius,interval,nextAt:this.s.time+interval,endsAt:Number.isFinite(duration)&&duration>0?this.s.time+duration:null,talentOrSkillId:key||enemySpecialTraitId(source),sharedStack:!!key,values:{shape:spec.shape,ignoreTargetability:!!spec.ignoreTargetability,damage:Number(spec.damage)||0,damageHigh:Number.isFinite(spec.damageHigh)?spec.damageHigh:null,atkScale:Number(spec.atkScale)||0,damageType:spec.damageType||'true',elementScale:Number(spec.elementScale)||0,elementType:spec.elementType||null},trackSide:'ally',trackArea:true,refKind:cleanupWithSource?'live':'owner',persistAfterSourceGone:!cleanupWithSource,attackId,
    // 产生者的攻击力在创建时就留档：死亡圈的产生者会随死亡离场，之后仍要按它生前的攻击力结算。
    sourceAtk:Number.isFinite(Number(source.atk))?Number(source.atk):0});if(row)this.emit('enemy-skill',{uid:source.uid,x:row.x??x,y:row.y??y,skill:spec.trigger||'ground-zone',radius:row.radius,endsAt:row.endsAt});return row;}
   // 常驻范围（如深溟巢涌者）：敌人活着时它自己就是区域中心，每秒结算一次。
@@ -466,7 +466,7 @@ export class NativeBattle {
      // （毒雾 = 攻击力的 15%，敌人被击倒后原本会算成 0）。
      const liveAtk=source&&Number.isFinite(Number(source.atk))?Number(source.atk):null;
      const sourceAtk=liveAtk??(Number(fx.sourceAtk)||0);
-     for(const ally of attackableAllies(this.s)){if(chebyshev(fx,ally)>fx.radius)continue;
+     for(const ally of (values.ignoreTargetability?alliedActors(this.s).filter(a=>a.deployed&&a.hp>0):attackableAllies(this.s))){if((values.shape==='circle'?Math.hypot(fx.x-ally.x,fx.y-ally.y):chebyshev(fx,ally))>fx.radius+1e-9)continue;
       const fixed=values.damageHigh!=null&&this.map.grid[Math.round(ally.y)]?.[Math.round(ally.x)]?.heightType==='HIGHLAND'?values.damageHigh:values.damage;
       const base=values.atkScale>0?sourceAtk*values.atkScale:fixed;
       if(base>0)this.applyEnemyZoneDamage(ally,base,values.damageType,fx.nextAt,Math.max(.45,(Number(fx.interval)||1)*.9));
@@ -477,9 +477,9 @@ export class NativeBattle {
    }}
   resolveEnemyDeath(enemy,source=null){if(!enemy||enemy.enemyDeathHandled)return;enemy.enemyDeathHandled=true;const effect=enemy.deathExplosion;if(effect&&(!effect.requiresFire||enemy.onFire)){if(effect.delay>0){this.s.enemyProjectiles.push({owner:enemy.uid,startedAt:this.s.time,impactAt:this.s.time+effect.delay,startX:enemy.x,startY:enemy.y,targetX:enemy.x,targetY:enemy.y,radius:effect.radius,amount:enemy.atk*effect.scale,type:effect.type,groundOnly:!!effect.groundOnly,attackId:null});}else for(const target of attackableAllies(this.s).filter(u=>(!effect.groundOnly||!u.flying)&&Math.hypot(u.x-enemy.x,u.y-enemy.y)<=effect.radius))dealDamage(this,{source:enemy,target,amount:enemy.atk*effect.scale,type:effect.type,cause:'extra',skipHooks:true});this.emit('enemy-ability',{uid:enemy.uid,x:enemy.x,y:enemy.y,ability:'death-explosion',radius:effect.radius,type:effect.type});}
    // 死亡区域（污秽／毒雾）：以死亡位置为中心留一片持续伤害区；死亡爆炸与区域可以同时存在。
-   if(enemy.deathZone){const zone=enemy.deathZone,at=zone.trigger==='death-target'&&source&&source.hp>0?{x:source.x,y:source.y}:{x:enemy.x,y:enemy.y},radius=Number(zone.radius)||1;
-    // 原表的污染落点只盖住周围的我方；半径内没有我方时不留下空区域（否则远处被击倒也会撒一片）。
-    if(attackableAllies(this.s).some(a=>Math.max(Math.abs(a.x-at.x),Math.abs(a.y-at.y))<=radius)){this.addEnemyGroundZone(enemy,zone,{...at,follow:!!zone.follow,key:`zone-death-${at.x},${at.y}`});this.emit('enemy-ability',{uid:enemy.uid,x:at.x,y:at.y,ability:'death-zone',radius,damage:Number(zone.damage)||0,atkScale:Number(zone.atkScale)||0});}}}
+   if(enemy.deathZone&&(!enemy.deathZone.silenceable||!permissions(enemy).silenced)){const zone=enemy.deathZone,at=zone.trigger==='death-target'&&source&&source.hp>0?{x:source.x,y:source.y}:{x:enemy.x,y:enemy.y},radius=Number(zone.radius)||1;
+    // 污染秽蚀不需要选中目标即可生成；后来进入区域的单位仍会受到伤害。
+    if(zone.alwaysGenerate||attackableAllies(this.s).some(a=>Math.max(Math.abs(a.x-at.x),Math.abs(a.y-at.y))<=radius)){this.addEnemyGroundZone(enemy,zone,{...at,follow:!!zone.follow,key:`zone-death-${at.x},${at.y}`});this.emit('enemy-ability',{uid:enemy.uid,x:at.x,y:at.y,ability:'death-zone',radius,damage:Number(zone.damage)||0,atkScale:Number(zone.atkScale)||0});}}}
  onEnemyDeath(enemy,info={}){
   if(!enemy||enemy.enemyDeathHandled)return;
   cancelEnemyCast(this,enemy);

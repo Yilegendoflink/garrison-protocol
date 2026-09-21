@@ -89,7 +89,7 @@ export function inferDeathZone(raw={}){
  const damage=firstTemplateField(bb,'PollutedDie','polluted_damage_low');
  if(!Number.isFinite(damage)||damage<=0)return null;
  const radius=firstTemplateField(bb,'PollutedDie','projectile_range'),life=firstTemplateField(bb,'PollutedDie','projectile_life_time'),interval=firstTemplateField(bb,'PollutedDie','interval');
- return {trigger:'death',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:8,interval:Number.isFinite(interval)&&interval>0?interval:1,damage,damageHigh:firstTemplateField(bb,'PollutedDie','polluted_damage_high'),damageType:'true'};
+ return {trigger:'death',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:8,interval:Number.isFinite(interval)&&interval>0?interval:1,damage,damageHigh:firstTemplateField(bb,'PollutedDie','polluted_damage_high'),damageType:'true',shape:'circle',ignoreTargetability:true,alwaysGenerate:true,silenceable:true};
 }
 
 // 射击落点区域（ProjectileBoomRange 等）：普通攻击命中后在目标格留一片持续伤害区。
