@@ -305,7 +305,12 @@ function wakeOnHit(target){if(target.wakeOnDamage)target.statuses=(target.status
 
 function enemyMovementSpeed(target){const bonus=(target.statuses||[]).filter(s=>s.kind==='chainMoveSpeed').reduce((n,s)=>Math.max(n,Number(s.value)||0),0);return target.speed+(target.baseSpeed??target.speed)*bonus;}
 
-return {applyStatus,removeStatus,tickStatuses,permissions,statusAttributeChanges,abilityEnabled,isIsolated,wakeOnHit,enemyMovementSpeed};
+function yinYangAttackScale(source,target){
+ const a=source?.yinYang,b=target?.yinYang;if(!['light','dark'].includes(a?.attribute)||!['light','dark'].includes(b?.attribute))return 1;
+ const scale=a.attribute===b.attribute?a.sameScale:a.differentScale;return Number.isFinite(scale)&&scale>=0?scale:1;
+}
+
+return {applyStatus,removeStatus,tickStatuses,permissions,statusAttributeChanges,abilityEnabled,isIsolated,wakeOnHit,enemyMovementSpeed,yinYangAttackScale};
 },
 "targeting.js": function(load) {
 // Range geometry does not select targets or cause damage. Local +x is forward.
@@ -4561,7 +4566,7 @@ return {blackboardValues,talentValues,coinCapFor,grantCoins,spendCoins,coinGainA
 const {applyDamage,recoverHP,damage} = load("combat.js");
 const {equipmentEvent,equipmentFatal,equipmentTick} = load("native-equipment.js");
 const {allowsHighlandPlacement} = load("native-branches.js");
-const {applyStatus,permissions,statusAttributeChanges,isIsolated} = load("status.js");
+const {applyStatus,permissions,statusAttributeChanges,isIsolated,yinYangAttackScale} = load("status.js");
 const {blackboard,resolveActiveTalents,nativeAttributes} = load("protocol.js");
 const {gainSp} = load("native-sp.js");
 const {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor,talentValues,grantCoins,coinCapFor,coinGainAtSkillStart,tokenCostFor} = load("native-operator-effects.js");
@@ -4817,7 +4822,7 @@ function dealDamage(battle,opts){
  let value=opts.value;
  if(!Number.isFinite(value)){
   const stats=battle.s.units.includes(target)?battle.stats(target):target;
-  const amount=opts.amount??(source?.atk??0);
+  const amount=(opts.amount??(source?.atk??0))*yinYangAttackScale(source,target);
   const type=opts.type||'physical';
   const status=battle.s.enemies.includes(target)?statusAttributeChanges(target):{};
   value=damage({amount,type,resistance:(stats.res??stats.magicResistance??0)+(status.resistance||0)+(status.magicResistance||0),defense:stats.def||0,elementResistance:stats.elementResistance??stats.epDamageResistance??0});
@@ -7039,6 +7044,8 @@ function initEnemyForm(b,e){
  if(e.enemyFormKind)return;
  if(e.id==='enemy_1517_xi'){
   e.enemyFormKind='xi';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.damageType='arts';e.ranged=true;e.enemyAttack={groundOnly:true};e.specialSkill=null;
+  // 本期默认明（PRTS415291）；不把无属性单位强制赋色。地块配置仍由环境层另行处理。
+  if(Number(e.enemyTalent['yinyang.dynamic'])===1)e.yinYang={attribute:'light',sameScale:Number(e.enemyTalent['yinyang.buff_yinyang[same].atk_scale']),differentScale:Number(e.enemyTalent['yinyang.buff_yinyang[diff].atk_scale'])};
  }else if(e.id==='enemy_1512_mcmstr'){
   e.enemyFormKind='ugly';e.enemyForm='machine';e.formBaseShiftImmune=!!e.shiftImmune;e.unblockable=e.baseUnblockable=false;e.damageType='physical';e.ranged=true;e.range=2.5;e.priestMoveScale=b.combatScale?.moveSpeed??1;
   e.meleeAttackScale=Number(e.enemyTalent['combat.attack@mcmstr_rage_attack.atk_scale']);e.enemyAttack={groundOnly:true,splashGroundOnly:false,splashOnlyRanged:true,splash:{shape:'square',radius:1}};
@@ -7115,6 +7122,7 @@ function tickEnemyForm(b,e){
  if(e.enemyFormKind==='xi'){
   if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
    e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
+   if(e.yinYang)e.yinYang.attribute=e.yinYang.attribute==='light'?'dark':'light';
    e.atk=e.baseAtk*(1+Number(e.enemyTalent['reborn.atk']));e.enemyAttack={groundOnly:true,targets:2,repeatTargets:2};e.xiInvincibleUntil=b.s.time+Number(e.enemyTalent['reborn.invincible']);e.invulnerable=true;
    for(const skill of e.enemySkills||[]){skill.used=false;skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;}
    announce(b,e,'第二形态');
@@ -7559,7 +7567,7 @@ const {branchBehavior,branchTrait,skillAntiAir} = load("native-branches.js");
 const {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} = load("native-equipment.js");
 const {nativeWavePlan} = load("native-waves.js");
 const {damage,applyDamage,recoverHP,attackTiming,FPS} = load("combat.js");
-const {applyStatus,tickStatuses,permissions,statusAttributeChanges,isIsolated} = load("status.js");
+const {applyStatus,tickStatuses,permissions,statusAttributeChanges,isIsolated,yinYangAttackScale} = load("status.js");
 const {blackboard,skillPolicy,shouldAutoSkill,ROUND_LEAK_CAP} = load("protocol.js");
 const {createTrainingDummy,dummySummary} = load("benchmark.js");
 const {usesSp,spTypeOf,skillKind,ammoCount,initSpOf,gainSp,tickTimeSp} = load("native-sp.js");
@@ -7610,7 +7618,7 @@ class NativeBattle {
  dominionAttackSpeed(actor){return actor.deployed&&actor.hp>0&&!actor.hidden?dominionCell(this,actor)?.attackSpeed||0:0;}
  onActorMoved(actor){paintDominion(this,actor);}
  enemyAttackTiming(e){return attackTiming(Math.max(.1,e.interval+(e.attackIntervalMod||0)),Math.max(10,Math.min(600,(e.attackSpeed+enemyConditionalAttackSpeed(e)+(e.attackSpeedMod||0)+(e.operatorAttackSpeedMod||0)+enemyWineBuffs(this,e).attackSpeed+statusAttributeChanges(e).attackSpeed)*(e.waterAttackSpeedScale??1))),windupSeconds(Math.max(.1,e.interval+(e.attackIntervalMod||0))));}
- enemyAttackDamage(enemy,scale=1,target=null){return enemy.atk*scale*(enemy.id==='enemy_2048_smgrd'&&dominionCell(this,target)?Number(enemy.enemyTalent['DamageUp.atk_scale']):1)*enemyConditionalAttackMultiplier(enemy,target)*(enemy.waterAttackMultiplier??1)*(1+Math.min(0,statusAttributeChanges(enemy).attack||0));}
+ enemyAttackDamage(enemy,scale=1,target=null){return enemy.atk*scale*yinYangAttackScale(enemy,target)*(enemy.id==='enemy_2048_smgrd'&&dominionCell(this,target)?Number(enemy.enemyTalent['DamageUp.atk_scale']):1)*enemyConditionalAttackMultiplier(enemy,target)*(enemy.waterAttackMultiplier??1)*(1+Math.min(0,statusAttributeChanges(enemy).attack||0));}
  enemyDamageDealt(enemy,opts,result){enemyTraitDamageDealt(this,enemy,result);}
  liberatePrisoners(){liberateEnemyPrisoners(this);}
  refreshMudrockShield(enemy,bb){refreshEnemyMudrockShield(this,enemy,bb);}
@@ -8204,7 +8212,7 @@ class NativeBattle {
   costRecoveryMultiplier(){let multiplier=1;for(const u of this.s.units)if(u.deployed&&u.hp>0)for(const talent of this.profile(u).activeTalents||[]){const bb=blackboard(talent.blackboard),value=Number(bb.delta_cost_increase_time);if(Number.isFinite(value)&&value>0)multiplier*=value;}return multiplier;}
   tickCost(dt){const base=this.s.costRecoveryInterval;if(!Number.isFinite(base)||base<=0||this.s.cost>=this.s.costMax)return 0;const multiplier=this.costRecoveryMultiplier()*Math.max(0,Number(this.s.enemyCostRecoveryMultiplier??1));if(multiplier<=0)return 0;const interval=base/multiplier;this.s.costRecoveryClock+=Math.max(0,Number(dt)||0);let gained=0;while(this.s.costRecoveryClock+1e-9>=interval&&this.s.cost<this.s.costMax){this.s.costRecoveryClock-=interval;gained+=this.gainCost(this.s.cost<0?.5:1);}return gained;}
   baseDamageType(u){const p=this.profile(u),description=p.skill?.description||'',configured=operatorSkillConfig(this,u).damageType,active=this.skillActive(u)||u.enhanced||u.passiveArts;if(active&&configured)return configured;if(active&&description.includes('真实伤害'))return 'true';if(active&&/变为.*法术|造成法术/.test(description))return 'arts';return this.behavior(u).damageType;}
-  hit(u,e,amount,type,opts={}){if(e.hp<=0||e.hidden||e.invulnerable||permissions(e).sleeping)return;const skill=!!opts.skill||this.skillActive(u),p=this.profile(u),pen=attackPenetration(this,u,e),enemyStatus=statusAttributeChanges(e);let penetrationRatio=this.on('preciShip')&&this.rows.preciShip.count>=3&&(this.owns(u,'preciShip')||p.position==='RANGED')?.3:0;penetrationRatio=Math.max(penetrationRatio,pen.ratio,equipMagicPenetration(this,u));const physical=damage({amount,type:'physical',defense:Math.max(0,e.def+(enemyStatus.defense||0)-pen.fixed),penetrationRatio}),arts=damage({amount,type:'arts',resistance:Math.max(0,e.res+(enemyStatus.resistance||0)+(enemyStatus.magicResistance||0)-Number(pen.magicFixed||0)),penetrationRatio});if(p.charId==='char_1014_nearl2'&&(p.skillIndex??u.source?.skillIndex)===2&&type!=='true'&&(e.block===u.uid||this.s.summons.some(x=>x.type==='nearl2-sun'&&x.ownerUid===u.uid&&e.block===x.uid)))type='true';if(type!=='true'&&(this.s.band==='band_chen'||p.garrisons.some(g=>blackboard(g.blackboard).key==='act1autochess_gar_eff_chaos')||equipWeakness(this,u)))type=physical>=arts?'physical':'arts';let value=type==='physical'?physical:type==='arts'?arts:amount;
+  hit(u,e,amount,type,opts={}){if(e.hp<=0||e.hidden||e.invulnerable||permissions(e).sleeping)return;amount*=yinYangAttackScale(u,e);const skill=!!opts.skill||this.skillActive(u),p=this.profile(u),pen=attackPenetration(this,u,e),enemyStatus=statusAttributeChanges(e);let penetrationRatio=this.on('preciShip')&&this.rows.preciShip.count>=3&&(this.owns(u,'preciShip')||p.position==='RANGED')?.3:0;penetrationRatio=Math.max(penetrationRatio,pen.ratio,equipMagicPenetration(this,u));const physical=damage({amount,type:'physical',defense:Math.max(0,e.def+(enemyStatus.defense||0)-pen.fixed),penetrationRatio}),arts=damage({amount,type:'arts',resistance:Math.max(0,e.res+(enemyStatus.resistance||0)+(enemyStatus.magicResistance||0)-Number(pen.magicFixed||0)),penetrationRatio});if(p.charId==='char_1014_nearl2'&&(p.skillIndex??u.source?.skillIndex)===2&&type!=='true'&&(e.block===u.uid||this.s.summons.some(x=>x.type==='nearl2-sun'&&x.ownerUid===u.uid&&e.block===x.uid)))type='true';if(type!=='true'&&(this.s.band==='band_chen'||p.garrisons.some(g=>blackboard(g.blackboard).key==='act1autochess_gar_eff_chaos')||equipWeakness(this,u)))type=physical>=arts?'physical':'arts';let value=type==='physical'?physical:type==='arts'?arts:amount;
   if(this.on('victoriaShip')&&this.owns(u,'victoriaShip')&&u.source.equipment.length)value*=1.25+.008*(this.layers.victoriaShip||0);
   if(this.on('kjeragShip')&&this.owns(u,'kjeragShip'))value*=e.statuses.some(s=>s.kind==='cold'||s.kind==='frozen')?1.35+.01*(this.layers.kjeragShip||0):1.25;
   if(this.on('emptyShip')&&this.owns(u,'emptyShip'))value*=p.isGolden?1.4:1.2;

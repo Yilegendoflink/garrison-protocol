@@ -1,7 +1,7 @@
 import {applyDamage,recoverHP,damage} from './combat.js';
 import {equipmentEvent,equipmentFatal,equipmentTick} from './native-equipment.js';
 import {allowsHighlandPlacement} from './native-branches.js';
-import {applyStatus,permissions,statusAttributeChanges,isIsolated} from './status.js';
+import {applyStatus,permissions,statusAttributeChanges,isIsolated,yinYangAttackScale} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes} from './protocol.js';
 import {gainSp} from './native-sp.js';
 import {statMods,onEvent,operatorSkillStart,periodicMods,skillConfig,targetFilter,damageReductionFor,talentValues,grantCoins,coinCapFor,coinGainAtSkillStart,tokenCostFor} from './native-operator-effects.js';
@@ -258,7 +258,7 @@ export function dealDamage(battle,opts){
  let value=opts.value;
  if(!Number.isFinite(value)){
   const stats=battle.s.units.includes(target)?battle.stats(target):target;
-  const amount=opts.amount??(source?.atk??0);
+  const amount=(opts.amount??(source?.atk??0))*yinYangAttackScale(source,target);
   const type=opts.type||'physical';
   const status=battle.s.enemies.includes(target)?statusAttributeChanges(target):{};
   value=damage({amount,type,resistance:(stats.res??stats.magicResistance??0)+(status.resistance||0)+(status.magicResistance||0),defense:stats.def||0,elementResistance:stats.elementResistance??stats.epDamageResistance??0});

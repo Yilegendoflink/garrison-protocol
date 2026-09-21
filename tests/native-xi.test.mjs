@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
-import {dealDamage,moveActor,commitExit} from '../dist/native-effects.js';
+import {dealDamage,moveActor,commitExit,applyLoss} from '../dist/native-effects.js';
 import {applyStatus} from '../dist/status.js';
 import {drawEnemyPhase} from '../dist/native-fx.js';
 
@@ -18,6 +18,25 @@ function arena(positions=[]){
 }
 function advance(b,t){for(let i=0;i<Math.round(t*30);i++)b.step();}
 function fatal(b,e){dealDamage(b,{target:e,value:e.maxHp*10,type:'true'});}
+
+test('自在本期初始为明，重生后反转为晦，JSON恢复不重复反转',()=>{
+ const {b,g,e}=arena();assert.equal(e.yinYang.attribute,'light');assert.equal(e.yinYang.sameScale,.6);assert.equal(e.yinYang.differentScale,1.4);fatal(b,e);advance(b,5);assert.equal(e.yinYang.attribute,'dark');
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);advance(restored,1);assert.equal(restored.s.enemies[0].yinYang.attribute,'dark');
+});
+
+test('明晦按攻击倍率先乘再扣防，双方必须有属性，读取攻击方倍率且不重复应用',()=>{
+ const {b,e,units:[u]}=arena([[4,3]]);u.yinYang={attribute:'light',sameScale:.6,differentScale:1.4};e.def=750;
+ let hp=e.hp;dealDamage(b,{source:u,target:e,amount:1000,type:'physical'});assert.equal(hp-e.hp,30,'同属性600攻击被750防御压至5%保底');
+ u.yinYang.attribute='dark';hp=e.hp;dealDamage(b,{source:u,target:e,amount:1000,type:'physical'});assert.equal(hp-e.hp,650);
+ e.atk=1000;hp=u.hp;b.resolveEnemyStrike(e,u,{type:'arts'});assert.equal(hp-u.hp,1400,'敌方hurt预计算值不能再次乘1.4');
+ delete u.yinYang;hp=u.hp;b.resolveEnemyStrike(e,u,{type:'arts'});assert.equal(hp-u.hp,1000);
+});
+
+test('干员普通攻击入口按自身明晦倍率计算，真伤亦按倍率但生命流失不受影响',()=>{
+ const {b,e,units:[u]}=arena([[4,3]]);u.yinYang={attribute:'light',sameScale:.6,differentScale:1.4};e.def=750;const hp=e.hp;b.hit(u,e,1000,'physical');assert.equal(hp-e.hp,30);
+ const before=e.hp;dealDamage(b,{source:u,target:e,amount:100,type:'true'});assert.equal(before-e.hp,60);
+ const lossBefore=e.hp;applyLoss(b,{source:u,target:e,amount:100});assert.equal(lossBefore-e.hp,100);
+});
 
 test('纬地经天按全场最近/最远选不同地面中心，x-6十字溅射可对空且重叠分别命中',()=>{
  for(const second of [false,true]){

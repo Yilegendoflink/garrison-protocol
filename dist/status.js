@@ -42,3 +42,8 @@ export function isIsolated(target){
 export function wakeOnHit(target){if(target.wakeOnDamage)target.statuses=(target.statuses||[]).filter(s=>s.kind!=='sleep');}
 
 export function enemyMovementSpeed(target){const bonus=(target.statuses||[]).filter(s=>s.kind==='chainMoveSpeed').reduce((n,s)=>Math.max(n,Number(s.value)||0),0);return target.speed+(target.baseSpeed??target.speed)*bonus;}
+
+export function yinYangAttackScale(source,target){
+ const a=source?.yinYang,b=target?.yinYang;if(!['light','dark'].includes(a?.attribute)||!['light','dark'].includes(b?.attribute))return 1;
+ const scale=a.attribute===b.attribute?a.sameScale:a.differentScale;return Number.isFinite(scale)&&scale>=0?scale:1;
+}

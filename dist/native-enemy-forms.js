@@ -12,6 +12,8 @@ export function initEnemyForm(b,e){
  if(e.enemyFormKind)return;
  if(e.id==='enemy_1517_xi'){
   e.enemyFormKind='xi';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.damageType='arts';e.ranged=true;e.enemyAttack={groundOnly:true};e.specialSkill=null;
+  // 本期默认明（PRTS415291）；不把无属性单位强制赋色。地块配置仍由环境层另行处理。
+  if(Number(e.enemyTalent['yinyang.dynamic'])===1)e.yinYang={attribute:'light',sameScale:Number(e.enemyTalent['yinyang.buff_yinyang[same].atk_scale']),differentScale:Number(e.enemyTalent['yinyang.buff_yinyang[diff].atk_scale'])};
  }else if(e.id==='enemy_1512_mcmstr'){
   e.enemyFormKind='ugly';e.enemyForm='machine';e.formBaseShiftImmune=!!e.shiftImmune;e.unblockable=e.baseUnblockable=false;e.damageType='physical';e.ranged=true;e.range=2.5;e.priestMoveScale=b.combatScale?.moveSpeed??1;
   e.meleeAttackScale=Number(e.enemyTalent['combat.attack@mcmstr_rage_attack.atk_scale']);e.enemyAttack={groundOnly:true,splashGroundOnly:false,splashOnlyRanged:true,splash:{shape:'square',radius:1}};
@@ -88,6 +90,7 @@ export function tickEnemyForm(b,e){
  if(e.enemyFormKind==='xi'){
   if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
    e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
+   if(e.yinYang)e.yinYang.attribute=e.yinYang.attribute==='light'?'dark':'light';
    e.atk=e.baseAtk*(1+Number(e.enemyTalent['reborn.atk']));e.enemyAttack={groundOnly:true,targets:2,repeatTargets:2};e.xiInvincibleUntil=b.s.time+Number(e.enemyTalent['reborn.invincible']);e.invulnerable=true;
    for(const skill of e.enemySkills||[]){skill.used=false;skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;}
    announce(b,e,'第二形态');
