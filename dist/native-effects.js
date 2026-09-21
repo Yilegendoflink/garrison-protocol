@@ -269,7 +269,9 @@ export function dealDamage(battle,opts){
  let type=opts.type||'physical';
  if(!opts.sourceDamageHandled)value*=battle.enemyOutgoingDamageMultiplier?.(source)??1;
  const wineDodge=type==='physical'&&opts.cause!=='dot'&&battle.s.enemies.includes(target)?enemyWineBuffs(battle,target).physicalDodge:0;
- if(wineDodge>0&&battle.economy.random()<wineDodge){
+ const unblockedDodge=['physical','arts'].includes(type)&&opts.cause!=='dot'&&battle.s.enemies.includes(target)&&target.block==null?Math.max(0,Math.min(1,Number(target.enemyUnblockedDodge)||0)):0;
+ const dodge=1-(1-wineDodge)*(1-unblockedDodge);
+ if(dodge>0&&battle.economy.random()<dodge){
   log(battle,'evade',{eventId:event.eventId,targetUid:target.uid,sourceUid:source?.uid,type});
   battle.emit('hit',{uid:target.uid,x:target.x,y:target.y,type:'evade'});
   return {total:0,hp:0,shield:0,blocked:false,evaded:true,potentialHpDamage:0,event};

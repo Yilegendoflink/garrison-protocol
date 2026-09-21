@@ -29,6 +29,7 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
   if(e.lowHpTriggered&&e.atk===e.baseAtk*(1+Number(e.enemyTalent['atkup.atk'])))e.atk=e.baseAtk;
  }
  if(e.id==='enemy_2050_smsha')e.damageType='arts';
+ if(['enemy_2016_csphtm','enemy_2017_csphts'].includes(e.id)){e.enemyDefPenetration=Number(e.enemyTalent['penetrate.def_penetrate'])||0;e.enemyUnblockedDodge=Number(e.enemyTalent['evade.prob'])||0;}
  if(e.id==='enemy_2010_csdcr'){e.damageType='arts';e.attackElement='neural';e.attackElementScale=Number(e.enemyTalent['attack.attack@ep_damage_ratio'])||0;e.scarletHits??=0;}
  if(e.id==='enemy_1509_mousek'){
   e.immunities.sleep=true;e.damageType='arts';e.enemyAttack={...e.enemyAttack,groundOnly:true};e.aura=null;e.lowHpRatio=0;

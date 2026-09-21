@@ -112,7 +112,7 @@ export function cancelEnemyCast(battle,enemy,{lostTarget=false}={}){
  if(cast.c4Targets){detonateC4(battle,enemy);return;}
  if(cast.xiCross){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.xiBurst){enemy.formHold=false;enemy.shiftImmune=cast.previousShiftImmune;enemy.shieldLayers=(enemy.shieldLayers||[]).filter(l=>l.id!=='xi-burst');enemy.shield=enemy.shieldLayers.reduce((n,l)=>n+l.remaining,0);endEnemySkill(battle,enemy);return;}
- if(cast.degenCircle){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
+ if(cast.degenCircle||cast.phantomAoe){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.crossShot){enemy.formHold=false;enemy.formInvisible=enemy.baseInvisible;enemy.invisible=enemy.formInvisible&&!enemy.revealed;endEnemySkill(battle,enemy);return;}
  if(cast.knightCharge){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.bomb){enemy.formHold=false;endEnemySkill(battle,enemy,{refund:true});return;}
@@ -235,17 +235,18 @@ function tickCrownBlink(battle,enemy){
  if(!state.moved&&battle.s.time+1e-9>=state.moveAt){
   state.moved=true;
   if(teleportActor(battle,enemy,{x:state.x,y:state.y,source:enemy,mode:'blink',allowOccupied:true,exactCoordinates:true,allowFlyOnly:false})){
+   if(state.phantomSpawn)battle.queueEnemySpawn({id:'enemy_2017_csphts'},state.phantomSpawn);
    enemy.cmd=state.cmd;enemy.cmdLeft=null;enemy.lastCheckpoint=Math.max(enemy.lastCheckpoint||0,state.checkpoint||0);enemy.crownRejoin={formHold:state.restore.formHold};rejoinCrownRoute(battle,enemy);enemy.formHold=true;
   }
  }
- if(battle.s.time+1e-9>=state.endsAt){Object.assign(enemy,state.restore);if(enemy.crownRejoin)enemy.formHold=true;if(state.degen&&battle.s.time<state.unblockEndsAt){enemy.unblockable=true;enemy.unblockableUntil=state.unblockEndsAt;}enemy.crownBlink=null;return false;}
+ if(battle.s.time+1e-9>=state.endsAt){Object.assign(enemy,state.restore);if(enemy.crownRejoin)enemy.formHold=true;if((state.degen||state.phantomSpawn)&&battle.s.time<state.unblockEndsAt){enemy.unblockable=true;enemy.unblockableUntil=state.unblockEndsAt;}enemy.crownBlink=null;return false;}
  return true;
 }
 
 function tryCrownBlink(battle,enemy,skill=enemy.enemySkills.find(s=>s.prefab==='blink')){
  if(enemy.block==null||enemy.action||enemy.attackCooldown>0)return false;
  if(!skill||!enemySkillReady(enemy,skill,battle.s.time))return false;
- const degen=enemy.enemyFormKind==='degen',target=getActor(battle.s,enemy.block);
+ const degen=enemy.enemyFormKind==='degen',phantom=enemy.id==='enemy_2016_csphtm',target=getActor(battle.s,enemy.block);
  if(degen&&(!target?.deployed||target.hp<=0))return false;
  const route=enemy.route||[],index=crownRouteGoal(route,enemy.cmd),goal=route[index];
  const dx=goal?goal.x-enemy.x:enemy.moveDirection?.x??0,dy=goal?goal.y-enemy.y:enemy.moveDirection?.y??0,length=Math.hypot(dx,dy),distance=Number(skill.bb.dist);if((length<1e-9&&!degen)||!(distance>0))return false;
@@ -259,7 +260,7 @@ function tryCrownBlink(battle,enemy,skill=enemy.enemySkills.find(s=>s.prefab==='
   while(route[cmd]?.kind==='wait'&&route[cmd].x===goal.x&&route[cmd].y===goal.y){checkpoint=Math.max(checkpoint,route[cmd].checkpointIndex||0);cmd++;}
  }
  if(valid)while(cmd<route.length){const p=route[cmd];if(!['move','wait'].includes(p.kind))break;const px=p.x-enemy.x,py=p.y-enemy.y,along=(px*dx+py*dy)/length,lateral=Math.abs(px*dy-py*dx)/length;if(lateral>.01||along<-.01||along>distance+1e-9)break;checkpoint=Math.max(checkpoint,p.checkpointIndex||0);cmd++;}
- enemy.crownBlink={moveAt:battle.s.time+.5,endsAt:battle.s.time+(degen ? .5 : 1),moved:!valid,x,y,cmd,checkpoint,restore,protect:!!valid,...(degen?{degen:true,strikeAt:battle.s.time+.3,struck:false,unblockEndsAt:battle.s.time+1,targetUid:target.uid,targetDeployGen:target.deployGen,hits:enemy.enemyForm==='second'?2:1,scale:Number(skill.bb.atk_scale),attackId:newAttackId(battle)}:{})};
+ enemy.crownBlink={moveAt:battle.s.time+.5,endsAt:battle.s.time+(degen||phantom ? .5 : 1),moved:!valid,x,y,cmd,checkpoint,restore,protect:!!valid,...(phantom?{unblockEndsAt:battle.s.time+1,phantomSpawn:{x:enemy.x,y:enemy.y,route:structuredClone(enemy.route),cmd:enemy.cmd,routeDiagonal:enemy.routeDiagonal}}:{}),...(degen?{degen:true,strikeAt:battle.s.time+.3,struck:false,unblockEndsAt:battle.s.time+1,targetUid:target.uid,targetDeployGen:target.deployGen,hits:enemy.enemyForm==='second'?2:1,scale:Number(skill.bb.atk_scale),attackId:newAttackId(battle)}:{})};
  enemy.unblockable=true;enemy.block=null;
  if(valid){enemy.invulnerable=true;enemy.shiftImmune=true;enemy.formHold=true;enemy.canAttack=false;}
  enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;endEnemySkill(battle,enemy);
@@ -278,6 +279,19 @@ export function tickEnemySkills(battle,enemy,dt){
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
+ if(cast?.phantomAoe){
+  if(enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
+  if(battle.s.time+1e-9>=cast.fireAt){
+   const skill=enemy.enemySkills[cast.index],targets=attackableAllies(battle.s).filter(t=>Math.hypot(t.x-enemy.x,t.y-enemy.y)<=2+1e-9),attackId=newAttackId(battle);
+   for(const target of targets)if(enemy.hp>0&&enemy.enemyCast===cast){
+    battle.resolveEnemyStrike(enemy,target,{scale:Number(skill.bb.atk_scale),type:'physical',cause:target.uid===cast.targetUid&&target.deployGen===cast.targetDeployGen?'attack':'splash',attackId});
+    applyElementDamage(battle,{source:enemy,target,amount:battle.enemyAttackDamage(enemy)*Number(skill.bb.ep_damage_ratio),type:'neural',cause:'skill',attackId});
+   }
+   battle.emit('impact',{uid:enemy.uid,x:enemy.x,y:enemy.y,radius:2,type:'physical',enemy:true});
+   if(enemy.enemyCast===cast){enemy.formHold=false;endEnemySkill(battle,enemy);}
+  }
+  return;
+ }
  if(cast?.xiCross){
   if(enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
   if(battle.s.time+1e-9>=cast.fireAt){
@@ -481,6 +495,17 @@ export function tickEnemySkills(battle,enemy,dt){
   if(skill&&target&&beginEnemySkill(battle,enemy,skill,{crossShot:true,direction,fireAt:battle.s.time+1.4,endsAt:battle.s.time+Number(skill.bb.duration),attackId:newAttackId(battle)})){
    enemy.formHold=true;enemy.formInvisible=false;enemy.invisible=false;enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;return;
   }
+ }
+ if(['enemy_2016_csphtm','enemy_2017_csphts'].includes(enemy.id)&&!control.silenced&&!enemy.action&&!(enemy.attackCooldown>0)){
+  // AOE优先级0，闪现优先级1；目标查询绕过迷彩，仍排除不可选和沉睡。
+  const targets=attackableAllies(battle.s).filter(t=>enemyTargetValid(t)&&!permissions(t).sleeping&&Math.hypot(t.x-enemy.x,t.y-enemy.y)<=2+1e-9);
+  targets.sort((a,b)=>Number(b.uid===enemy.block)-Number(a.uid===enemy.block)||compareEnemyTargets({...a,tauntLevel:battle.stats(a).tauntLevel},{...b,tauntLevel:battle.stats(b).tauntLevel}));
+  const skill=enemy.enemySkills.find(s=>s.prefab==='aoe');
+  if(skill&&targets.length&&enemySkillReady(enemy,skill,battle.s.time)){
+   const timing=battle.enemyAttackTiming(enemy),target=targets[0];
+   if(beginEnemySkill(battle,enemy,skill,{phantomAoe:true,targetUid:target.uid,targetDeployGen:target.deployGen,fireAt:battle.s.time+timing.windupFrames/FPS})){enemy.formHold=true;enemy.attackCooldown=timing.frames;return;}
+  }
+  if(enemy.id==='enemy_2016_csphtm'&&tryCrownBlink(battle,enemy))return;
  }
  if(enemy.id==='enemy_1502_crowns'&&!control.silenced&&tryCrownBlink(battle,enemy))return;
  if(enemy.id==='enemy_2050_smsha'&&!control.silenced&&!enemy.action){

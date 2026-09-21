@@ -243,6 +243,10 @@
 - 第七十二批（绯红歌伶）：已确认本期 `act2autochess_h07_05` / `_s` 档案入口；按[PRTS修订415123](https://prts.wiki/index.php?oldid=415123)与历史黑板接入每20次受击回复类伤害触发当前全场敌人攻速+100、持续10秒，同名不叠加且刷新时长；来源死亡后已授予增益持续，新入场目标不补领，孤立/隐藏目标不受支援。DOT、生命流失、无敌和抵消不累计，屏障吸收的有效伤害沿既有受击回复入口累计。修正普攻为法术并补 `attack.attack@ep_damage_ratio=0.2` 神经损伤映射；10次受击显示只读警示计数，精确红烟美术尚未复刻。
 - 新增6个step/存档/伤害与展示场景，全套 **962/962通过**；数据/浏览器包重建、浏览器combat与补丁检查通过。本批补的是额外档案能力，主清单40个审计组数量不变。环境预置来源核查另记 `ENEMY_ENVIRONMENT_SOURCES.md`。
 
+- 第七十三批（卢西恩/不祥幻影）：本期黑板保留20%穿防、未阻挡20%物理/法术闪避、普攻12%神经损伤，不采用通用图鉴的40%/20%；依据[本期盟约记录](https://prts.wiki/w/卫戍协议：盟约_下半/PRTS盟约记录)、[卢西恩修订415376](https://prts.wiki/index.php?oldid=415376)、[幻影修订415126](https://prts.wiki/index.php?oldid=415126)。两型AOE按5秒初始/10秒循环CD，需要2格圆形范围内目标，无视迷彩，造成80%物理伤害和20%神经损伤；主目标普通伤害、其余溅射。原表优先级AOE=0、闪现=1。
+- 闪现复用既有接路流程，按10秒初始/15秒循环CD；成功瞬移1.5格后在起点排队生成幻影，继承瞬移前路线/指令，0.5秒保护与1秒不可阻挡分开结束。起始或前摇后落点无效不召唤，保存前摇不会重复召唤；幻影依赖显式保留本期攻击200档案。随机池门禁仍保留；精确AOE前摇、复杂检查点几何与原作视觉另核，不能当全敌人验收。
+- 新增7个step/存档/击杀生成场景，全套 **969/969通过**，数据/浏览器包重建、浏览器combat和补丁检查通过。
+
 ## 范围与证据
 
 - 主目录 `NATIVE_DATA.enemies`：215 个敌人 ID；关卡 `levels.*.enemyProfiles` 另含 33 个目录外 ID，合计 248 个。不同 ID 的同名敌人分别保留。
@@ -646,9 +650,9 @@
 | `enemy_1209_sfden_2` | [堂皇](https://prts.wiki/index.php?oldid=414297) | InvisibleShield | 清明家族已有入口；动态隐匿光环/不可沉默待核 |
 | `enemy_1521_dslily` | [盐风主教昆图斯](https://prts.wiki/index.php?oldid=415294) | Tidewater、Rockfall、SummonTentac、TidewaterG1、RockfallG1、SummonTentacG1、TidewaterG2、RockfallG2、SummonTentacG2、Doom | 多阶段、潮水/落石/触手/终结技能与子实体 |
 | `enemy_1438_dspred` | [复核洋流使者](https://prts.wiki/index.php?oldid=414718) | 0、1 | 吞噬赘生甲壳、攻击与生命成长 |
-| `enemy_2016_csphtm` | [卢西恩，“猩红血钻”](https://prts.wiki/index.php?oldid=415376) | blink、aoe | 闪现、留下幻影、神经损伤、范围技能 |
+| `enemy_2016_csphtm` | [卢西恩，“猩红血钻”](https://prts.wiki/index.php?oldid=415376) | blink、aoe | 第73批已接闪现生成、本期穿防/闪避/神经损伤、范围技能；精确前摇及复杂路线边界待核 |
 | `enemy_2010_csdcr` | [绯红歌伶](https://prts.wiki/index.php?oldid=415123) | 无 | 第72批已接20次受击全场攻速、法术普攻及20%神经损伤，step/读档通过；精确红烟美术另列 |
-| `enemy_2017_csphts` | [不祥幻影](https://prts.wiki/index.php?oldid=415126) | aoe | 幻影范围技能与生命周期 |
+| `enemy_2017_csphts` | [不祥幻影](https://prts.wiki/index.php?oldid=415126) | aoe | 第73批已接范围技能、本期天赋与召唤生命周期；精确前摇待核 |
 | `enemy_9032_aclionk` | [阿利斯泰尔，帝国余晖](https://prts.wiki/index.php?oldid=422995) | equip、store、storeA、equipA、Suicide | 自动SP、多技能、装备/储存状态及终结行为 |
 | `enemy_10085_hllevi_2` | [“萨科塔昂首”](https://prts.wiki/index.php?oldid=414878) | Roar | 半血恐惧与临时移速、祈祷邀约全场减攻速 |
 | `enemy_10028_vtswd` | [未装配刀片](https://prts.wiki/index.php?oldid=424034) | 无 | 可拾取武器实体、归属和增益生命周期 |
