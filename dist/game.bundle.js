@@ -5256,8 +5256,8 @@ function updateAreas(battle){
 function tickAuras(battle){
  for(const e of enemyActors(battle.s))e.fragile=e.bondFragileUntil>battle.s.time?1.4:null;
  for(const e of enemyActors(battle.s))e.yanElementDamageTakenBonus=0;
- for(const e of enemyActors(battle.s))e.attackSpeedMod=0;
- for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1039_thorn2')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='视界'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s))e.attackSpeedMod-=Number(bb.attack_speed_enemy)||5;}
+ for(const e of enemyActors(battle.s))e.operatorAttackSpeedMod=0;
+ for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1039_thorn2')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='视界'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s))e.operatorAttackSpeedMod-=Number(bb.attack_speed_enemy)||5;}
  for(const fx of battle.s.logicEffects||[])if(fx.kind==='zone'&&fx.values?.fragile&&(fx.endsAt==null||battle.s.time<fx.endsAt))for(const e of zoneActors(battle,fx,'enemy'))e.fragile=Math.max(e.fragile||1,Number(fx.values.fragile));
  for(const source of battle.s.summons.filter(s=>s.type==='yan-guardian'&&s.deployed&&s.hp>0))for(const e of enemyActors(battle.s))if(Math.hypot(source.x-e.x,source.y-e.y)<=1.5)e.yanElementDamageTakenBonus=Math.max(e.yanElementDamageTakenBonus||0,source.yanVulnerability||.2);
  for(const u of battle.s.units){
@@ -6151,7 +6151,7 @@ return {initEnemySkills,changeEnemySp,enemySpEvent,enemySkillReady,beginEnemySki
 },
 "native-enemy-traits.js": function(load) {
 const {permissions,applyStatus,statusAttributeChanges,isIsolated} = load("status.js");
-const {grantGuard,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor} = load("native-effects.js");
+const {grantGuard,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} = load("native-effects.js");
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
 const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
 const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
@@ -6159,6 +6159,7 @@ const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
 function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.id==='enemy_1050_lslime')e.damageType='arts';
  if(['enemy_10031_cnvsld','enemy_10034_cnvsax'].includes(e.id))e.isolateWhileConcealed=true;
  if(NEURO_SPAWNERS.has(e.id)){e.neuroCombat??=false;if(!e.neuroCombat)e.canAttack=false;}
  if(YUANZAI.has(e.id)){
@@ -6187,6 +6188,24 @@ function initEnemyTraits(battle,e,raw,{restore=false}={}){
  if(e.specialSkill?.prefab==='InvisibleCombat'&&e.formInvisible)e.invisibleStrikeReady=true;
  if(e.id==='enemy_1367_dseed'){e.unblockable=e.baseUnblockable=true;e.formHold=true;e.nextBloodLossAt=battle.s.time+1;}
  refreshEnemyTraitStats(e);
+}
+
+function enemyConditionalAttackSpeed(e){
+ const bb=e.enemyTalent||{};
+ return e.id==='enemy_1050_lslime'&&e.hp<e.maxHp*Number(bb['selfbuff.hp_ratio'])?Number(bb['selfbuff.attack_speed'])||0:0;
+}
+
+function tickPompeiiExplosion(battle,e,dt){
+ if(e.id!=='enemy_1050_lslime'||e.hp<=0||e.hidden)return;
+ if(e.statuses.some(s=>['stun','unableAct','sleep','frozen','levitate'].includes(s.kind)))return;
+ if(e.block==null){e.pompeiiBlockClock=0;return;}
+ const bb=e.enemyTalent,interval=Number(bb['rangedamage.interval']);if(!(interval>0))return;e.pompeiiBlockClock=(e.pompeiiBlockClock||0)+dt;
+ while(e.pompeiiBlockClock+1e-9>=interval){
+  e.pompeiiBlockClock-=interval;const attackId=newAttackId(battle);
+  // 本期黑板没有爆炸半径；PRTS庞贝页为半径1.4，且不可对空。
+  for(const target of attackableAllies(battle.s))if(!target.flying&&near(e,target,1.4))battle.hurt(target,e,{damageAmount:Number(bb['rangedamage.attack@damage']),cause:'extra',attackId});
+  battle.emit('impact',{uid:e.uid,x:e.x,y:e.y,radius:1.4,type:'arts',enemy:true});
+ }
 }
 
 function activateNeuroSpawner(battle,e){
@@ -6326,6 +6345,13 @@ function enemyTraitBeforeAttack(battle,e){
  if(/^enemy_1121_lifbos/.test(e.id))for(const other of battle.s.enemies)if(other.hp>0)releasePrisoner(battle,other);
 }
 function enemyTraitOnHit(battle,e,target){
+ if(e.id==='enemy_1050_lslime'&&e.hp>0&&target.hp>0){
+  const bb=e.enemyTalent,endsAt=battle.s.time+Number(bb['dot.duration']);
+  if(!(bb['dot.duration']>0&&bb['dot.interval']>0&&bb['dot.damage']>0))return;
+  const existing=battle.s.logicEffects.find(f=>f.talentOrSkillId==='pompeii-burn'&&f.targetUid===target.uid&&f.targetDeployGen===target.deployGen&&f.endsAt>battle.s.time);
+  if(existing)existing.endsAt=endsAt;
+  else addEffect(battle,{kind:'dot',sourceUid:null,targetUid:target.uid,targetDeployGen:target.deployGen,talentOrSkillId:'pompeii-burn',stackRule:'stack',interval:Number(bb['dot.interval']),nextAt:battle.s.time+Number(bb['dot.interval']),endsAt,values:{damage:Number(bb['dot.damage']),type:'arts'},snapshot:{damage:Number(bb['dot.damage'])},refKind:'owner',persistAfterSourceGone:true});
+ }
  const stun=Number(e.enemyTalent?.['Combat.attack@stun']);
  if(stun>0&&target.hp>0)applyStatus(target,'stun',stun,{source:e.uid});
 }
@@ -6405,7 +6431,7 @@ function applyEnemyTraitAuras(battle){
  for(const target of live){target.res+=target.enemyResAura||0;target.enemyResAura=0;}
 }
 
-return {initEnemyTraits,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,syncEnemyConcealMarker,enemyStealAmmo,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,applyEnemyTraitAuras};
+return {initEnemyTraits,enemyConditionalAttackSpeed,tickPompeiiExplosion,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,syncEnemyConcealMarker,enemyStealAmmo,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,applyEnemyTraitAuras};
 },
 "native-enemy-attacks.js": function(load) {
 const {permissions,statusAttributeChanges} = load("status.js");
@@ -6881,7 +6907,7 @@ const {advanceEnemyFear} = load("native-enemy-fear.js");
 const {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} = load("native-enemy-transport.js");
 const {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,releaseParrotPassenger} = load("native-enemy-forms.js");
 const {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} = load("native-enemy-attacks.js");
-const {tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
+const {tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
 const {initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} = load("native-enemy-skills.js");
 const {branchBehavior,branchTrait,skillAntiAir} = load("native-branches.js");
 const {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} = load("native-equipment.js");
@@ -7612,6 +7638,7 @@ class NativeBattle {
    return u.kind==='summon'?u.blockCnt||0:this.stats(u).blockCnt||0;
   });
   tickEnemyParasites(this);
+  for(const e of this.s.enemies)tickPompeiiExplosion(this,e,dt);
   for(const e of this.s.enemies)tickEnemyLancer(this,e);
   for(const e of this.s.enemies){if(e.hp<=0||e.trainingDummy||e.carriedBy!=null)continue;tickEnemyForm(this,e);this.ensureEnemySelfField(e);tickEnemySkills(this,e,0);let control=permissions(e);const alive=attackableAllies(this.s);
    if(Number(e.burstUntil)>0&&this.s.time>=e.burstUntil)e.burstUntil=0;if(e.invisibleRecoverAt!=null&&this.s.time>=e.invisibleRecoverAt&&!e.action){e.formInvisible=true;e.invisible=true;e.invisibleRecoverAt=null;}
@@ -7620,7 +7647,7 @@ class NativeBattle {
    const attackTargets=enemyAttackTargets(this,e,alive),target=attackTargets[0];e.attackCooldown=Math.max(0,e.attackCooldown-1);
    if(e.palsyCharges>0&&e.action&&(e.action.left<=1||this.s.time-(e.action.startedAt??this.s.time)>=2)){e.palsyCharges--;cancelEnemyCast(this,e);e.action=null;applyStatus(e,'tremble',.5,{source:'element-neural',resistible:false});control=permissions(e);}
    if((!control.attack||e.hidden||(e.action?.special?.index!=null&&(!control.skill||control.silenced)))&&e.action){cancelEnemyCast(this,e);e.action=null;}if(e.action&&--e.action.left<=0){const action=e.action,u=getActor(this.s,action.target);e.action=null;if(u&&u.hp>0||(action.targets||[]).some(id=>getActor(this.s,id)?.hp>0)){const special=action.special;if(special?.prefab==='DeathEye'){this.startEnemyDeathEye(e,u);}else{releaseEnemyAttack(this,e,action);if(special?.polluted){this.emit('enemy-skill',{uid:e.uid,x:u.x,y:u.y,skill:'PollutedRangedAtk',targetUid:u.uid});}}if(special){if(special.index!=null&&special.prefab!=='DeathEye'&&!e.enemyCast?.multiAttack)endEnemySkill(this,e);if(e.specialSkill?.spCost>0)e.skillAttackCount=0;e.nextSkillAt=this.s.time+(Number(e.specialSkill?.cooldown)>0?Number(e.specialSkill.cooldown):Infinity);e.firstAttackUsed=true;}e.lastAttackAt=this.s.time;if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE&&e.burstShots>0){e.burstFired=(e.burstFired||0)+1;if(e.burstFired>=e.burstShots){e.burstFired=0;e.burstUntil=this.s.time+(e.burstCooldown||0);}}}else if(action.special?.index!=null)cancelEnemyCast(this,e);enemyTraitAfterAttack(this,e);}
-   const special=control.skill&&!control.silenced?this.enemySpecialReady(e,target):null,specialOnly=Boolean(e.specialSkill?.prefab==='CrossAttack'&&e.range<=0),meleeScale=e.block===target?.uid&&e.meleeAttackScale>0?e.meleeAttackScale:1,preparedSpecial=special&&meleeScale!==1?{...special,scale:special.scale*meleeScale}:special;if(e.hp>0&&target&&e.canAttack&&control.attack&&!e.enemyCast&&!e.action&&!e.attackCooldown&&!Number(e.burstUntil)&&(!specialOnly||special)){if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE&&e.burstTarget!==target.uid){e.burstTarget=target.uid;e.burstFired=0;}enemyTraitBeforeAttack(this,e);const t=attackTiming(Math.max(.1,e.interval+(e.attackIntervalMod||0)),Math.max(10,Math.min(600,(e.attackSpeed+(e.attackSpeedMod||0)+enemyWineBuffs(this,e).attackSpeed+statusAttributeChanges(e).attackSpeed)*(e.waterAttackSpeedScale??1))),windupSeconds(Math.max(.1,e.interval+(e.attackIntervalMod||0))));e.attackCooldown=t.frames;if(special?.index!=null)beginEnemySkill(this,e,e.enemySkills[special.index]);e.action={startedAt:this.s.time,left:t.windupFrames,target:target.uid,targets:attackTargets.slice(0,enemyAttackTargetCount(e)).map(t=>t.uid),special:preparedSpecial,scale:meleeScale,attackId:newAttackId(this)};}
+   const special=control.skill&&!control.silenced?this.enemySpecialReady(e,target):null,specialOnly=Boolean(e.specialSkill?.prefab==='CrossAttack'&&e.range<=0),meleeScale=e.block===target?.uid&&e.meleeAttackScale>0?e.meleeAttackScale:1,preparedSpecial=special&&meleeScale!==1?{...special,scale:special.scale*meleeScale}:special;if(e.hp>0&&target&&e.canAttack&&control.attack&&!e.enemyCast&&!e.action&&!e.attackCooldown&&!Number(e.burstUntil)&&(!specialOnly||special)){if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE&&e.burstTarget!==target.uid){e.burstTarget=target.uid;e.burstFired=0;}enemyTraitBeforeAttack(this,e);const t=attackTiming(Math.max(.1,e.interval+(e.attackIntervalMod||0)),Math.max(10,Math.min(600,(e.attackSpeed+enemyConditionalAttackSpeed(e)+(e.attackSpeedMod||0)+(e.operatorAttackSpeedMod||0)+enemyWineBuffs(this,e).attackSpeed+statusAttributeChanges(e).attackSpeed)*(e.waterAttackSpeedScale??1))),windupSeconds(Math.max(.1,e.interval+(e.attackIntervalMod||0))));e.attackCooldown=t.frames;if(special?.index!=null)beginEnemySkill(this,e,e.enemySkills[special.index]);e.action={startedAt:this.s.time,left:t.windupFrames,target:target.uid,targets:attackTargets.slice(0,enemyAttackTargetCount(e)).map(t=>t.uid),special:preparedSpecial,scale:meleeScale,attackId:newAttackId(this)};}
    const hold=e.formHold||!!(e.enemyCast?.victims||e.enemyCast?.spawn||e.enemyCast?.channel||e.enemyCast?.charge)||enemyShouldHoldPosition(e,{target:specialOnly&&!special?null:target,now:this.s.time}),beforeX=e.x,beforeY=e.y,beforeCmd=e.cmd,beforeHidden=e.hidden;const fearMove=advanceEnemyFear(this,e,dt);let escaped=fearMove??advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),hold);enemyFacingAfterMove(this,e,beforeX);const progressed=e.cmd!==beforeCmd||Math.hypot(e.x-beforeX,e.y-beforeY)>1e-7||e.hidden!==beforeHidden;if(progressed){e.lastProgressAt=this.s.time;e.stallTime=0;}else if(!hold&&!e.block&&e.speed>0&&permissions(e).move&&e.route?.[e.cmd]?.kind==='move'){e.stallTime=(e.stallTime||0)+dt;if(e.stallTime>=(e.stallTimeout||2)){e.action=null;e.stanceUntil=0;e.burstUntil=0;e.stallTime=0;this.emit('enemy-recover',{uid:e.uid,x:e.x,y:e.y,reason:'movement-stall'});escaped=advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),false);}}
    if(escaped){this.s.leaks+=e.leak;e.escaped=true;commitExit(this,{target:e,reason:'leak'});this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak});this.s.banner={text:'漏怪 −'+e.leak,life:1.4};}
   }

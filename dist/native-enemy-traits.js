@@ -1,5 +1,5 @@
 import {permissions,applyStatus,statusAttributeChanges,isIsolated} from './status.js';
-import {grantGuard,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor} from './native-effects.js';
+import {grantGuard,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} from './native-effects.js';
 
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
 const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
@@ -8,6 +8,7 @@ const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.id==='enemy_1050_lslime')e.damageType='arts';
  if(['enemy_10031_cnvsld','enemy_10034_cnvsax'].includes(e.id))e.isolateWhileConcealed=true;
  if(NEURO_SPAWNERS.has(e.id)){e.neuroCombat??=false;if(!e.neuroCombat)e.canAttack=false;}
  if(YUANZAI.has(e.id)){
@@ -36,6 +37,24 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  if(e.specialSkill?.prefab==='InvisibleCombat'&&e.formInvisible)e.invisibleStrikeReady=true;
  if(e.id==='enemy_1367_dseed'){e.unblockable=e.baseUnblockable=true;e.formHold=true;e.nextBloodLossAt=battle.s.time+1;}
  refreshEnemyTraitStats(e);
+}
+
+export function enemyConditionalAttackSpeed(e){
+ const bb=e.enemyTalent||{};
+ return e.id==='enemy_1050_lslime'&&e.hp<e.maxHp*Number(bb['selfbuff.hp_ratio'])?Number(bb['selfbuff.attack_speed'])||0:0;
+}
+
+export function tickPompeiiExplosion(battle,e,dt){
+ if(e.id!=='enemy_1050_lslime'||e.hp<=0||e.hidden)return;
+ if(e.statuses.some(s=>['stun','unableAct','sleep','frozen','levitate'].includes(s.kind)))return;
+ if(e.block==null){e.pompeiiBlockClock=0;return;}
+ const bb=e.enemyTalent,interval=Number(bb['rangedamage.interval']);if(!(interval>0))return;e.pompeiiBlockClock=(e.pompeiiBlockClock||0)+dt;
+ while(e.pompeiiBlockClock+1e-9>=interval){
+  e.pompeiiBlockClock-=interval;const attackId=newAttackId(battle);
+  // 本期黑板没有爆炸半径；PRTS庞贝页为半径1.4，且不可对空。
+  for(const target of attackableAllies(battle.s))if(!target.flying&&near(e,target,1.4))battle.hurt(target,e,{damageAmount:Number(bb['rangedamage.attack@damage']),cause:'extra',attackId});
+  battle.emit('impact',{uid:e.uid,x:e.x,y:e.y,radius:1.4,type:'arts',enemy:true});
+ }
 }
 
 function activateNeuroSpawner(battle,e){
@@ -175,6 +194,13 @@ export function enemyTraitBeforeAttack(battle,e){
  if(/^enemy_1121_lifbos/.test(e.id))for(const other of battle.s.enemies)if(other.hp>0)releasePrisoner(battle,other);
 }
 export function enemyTraitOnHit(battle,e,target){
+ if(e.id==='enemy_1050_lslime'&&e.hp>0&&target.hp>0){
+  const bb=e.enemyTalent,endsAt=battle.s.time+Number(bb['dot.duration']);
+  if(!(bb['dot.duration']>0&&bb['dot.interval']>0&&bb['dot.damage']>0))return;
+  const existing=battle.s.logicEffects.find(f=>f.talentOrSkillId==='pompeii-burn'&&f.targetUid===target.uid&&f.targetDeployGen===target.deployGen&&f.endsAt>battle.s.time);
+  if(existing)existing.endsAt=endsAt;
+  else addEffect(battle,{kind:'dot',sourceUid:null,targetUid:target.uid,targetDeployGen:target.deployGen,talentOrSkillId:'pompeii-burn',stackRule:'stack',interval:Number(bb['dot.interval']),nextAt:battle.s.time+Number(bb['dot.interval']),endsAt,values:{damage:Number(bb['dot.damage']),type:'arts'},snapshot:{damage:Number(bb['dot.damage'])},refKind:'owner',persistAfterSourceGone:true});
+ }
  const stun=Number(e.enemyTalent?.['Combat.attack@stun']);
  if(stun>0&&target.hp>0)applyStatus(target,'stun',stun,{source:e.uid});
 }

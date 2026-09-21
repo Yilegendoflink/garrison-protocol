@@ -93,6 +93,42 @@ test('爵士首次切模式前CD照常走，恢复隐匿取消引导并暂停后
  const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const e=restored.s.enemies[0];revealEnemy(restored,e,20);advance(restored,remaining-.2);assert.equal(e.enemyCast,null);advance(restored,.4);assert.equal(e.enemyCast?.channel,'jazz');
 });
 
+test('庞贝四目标普攻为法术且不对空，每个目标获得一份灼烧',()=>{
+ const {b,enemy,allies,strikes}=arena('enemy_1050_lslime',{positions:[[3,3],[2,3],[4,3],[3,2],[3,4],[2,2]]});allies.at(-1).flying=true;
+ advance(b,1.6);assert.equal(enemy.damageType,'arts');assert.equal(strikes.length,4);assert.ok(strikes.every(s=>s.type==='arts'));const burns=b.s.logicEffects.filter(f=>f.talentOrSkillId==='pompeii-burn');assert.equal(burns.length,4);assert.equal(burns.some(f=>f.targetUid===allies.at(-1).uid),false);
+});
+
+test('庞贝灼烧重复命中只刷新时长，不重置0.33秒节奏或叠加，来源死亡后继续且不回受击SP',()=>{
+ const {b,enemy,allies}=arena('enemy_1050_lslime');enemy.canAttack=false;const u=allies[0],profile=b.profile.bind(b);
+ b.profile=v=>v===u?{...profile(v),skill:{...profile(v).skill,spData:{spType:'INCREASE_WHEN_TAKEN_DAMAGE',spCost:100,initSp:0,increment:1}}}:profile(v);u.sp=0;
+ b.resolveEnemyAttackEffects(enemy,u,{count:false});const burn=b.s.logicEffects.find(f=>f.talentOrSkillId==='pompeii-burn');assert.equal(burn.sourceUid,null);const hp=u.hp,res=b.stats(u).magicResistance;
+ advance(b,.2);b.resolveEnemyAttackEffects(enemy,u,{count:false});assert.equal(b.s.logicEffects.filter(f=>f.talentOrSkillId==='pompeii-burn').length,1);assert.equal(burn.nextAt,.33);assert.ok(Math.abs(burn.endsAt-10.2)<1e-8);
+ advance(b,.14);assert.ok(Math.abs(hp-u.hp-20*(1-res/100))<1e-6);assert.equal(u.sp,0);
+ b.spawn({id:'enemy_1007_slime',route:0});b.s.enemies.at(-1).canAttack=false;commitExit(b,{target:enemy});const before=u.hp;advance(b,.34);assert.ok(u.hp<before);assert.equal(u.sp,0);
+});
+
+test('庞贝阻挡爆炸在指定控制期间暂停、脱离阻挡清零，固定伤害不吃自身攻击倍率',()=>{
+ const {b,enemy,allies}=arena('enemy_1050_lslime',{positions:[[3,3],[4,3],[4,4]]});enemy.canAttack=false;allies[1].flying=true;const hits=[];b.hurt=(u,e,opts={})=>{if(opts.cause==='extra')hits.push({uid:u.uid,amount:opts.damageAmount});};
+ advance(b,9.8);assert.equal(hits.length,0);applyStatus(enemy,'stun',2);advance(b,1.9);assert.equal(hits.length,0);advance(b,.4);assert.deepEqual(hits,[{uid:allies[0].uid,amount:1000}]);
+ advance(b,3);allies[0].x=6;b.step();assert.equal(enemy.pompeiiBlockClock,0);allies[0].x=3;advance(b,9.9);assert.equal(hits.length,1);advance(b,.2);assert.equal(hits.length,2);
+});
+
+test('庞贝缴械不暂停独立爆炸，阻挡计时跨JSON恢复',()=>{
+ const {b,g,enemy}=arena('enemy_1050_lslime');enemy.canAttack=false;applyStatus(enemy,'disarm',60);advance(b,6);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);let blasts=0;restored.hurt=(u,e,opts={})=>{if(opts.cause==='extra')blasts++;};advance(restored,3.9);assert.equal(blasts,0);advance(restored,.2);assert.equal(blasts,1);
+});
+
+test('庞贝低于半血才获得40攻速，真实攻击间隔缩短，回血后可逆且不逐帧叠加',()=>{
+ const {b,enemy,allies}=arena('enemy_1050_lslime');const stats=b.stats.bind(b);b.stats=u=>({...stats(u),maxHp:50000});allies[0].hp=50000;
+ enemy.hp=enemy.maxHp*.49;const times=[],record=b.recordEnemyAttack.bind(b);b.recordEnemyAttack=(e,s)=>{times.push(b.s.time);record(e,s);};b.hurt=()=>{};advance(b,8);assert.ok(times.length>=3);assert.ok(Math.abs(times[1]-times[0]-2.5)<.04);
+ enemy.hp=enemy.maxHp*.5;advance(b,12);assert.ok(Math.abs(times.at(-1)-times.at(-2)-3.5)<.04);
+});
+
+test('囚犯禁锢攻速修正不会被干员光环调度清空，前三次攻击保持原表间隔',()=>{
+ const {b,enemy}=arena('enemy_1116_liprr'),times=[],record=b.recordEnemyAttack.bind(b);b.recordEnemyAttack=(e,s)=>{times.push(b.s.time);record(e,s);};b.hurt=()=>{};
+ const expected=enemy.interval*100/(enemy.attackSpeed+Number(enemy.enemyTalent['confinement.attack_speed']));advance(b,expected*2+2);assert.ok(times.length>=3);assert.ok(Math.abs(times[1]-times[0]-expected)<.04);assert.ok(Math.abs(times[2]-times[1]-expected)<.04);
+});
+
 test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{
  const {b,enemy,allies}=arena('enemy_10144_xdelk_2');b.step();const started=b.s.time;
  assert.equal(enemy.enemyCast?.charge,true);const hp=allies[0].hp;advance(b,6.5);assert.equal(allies[0].hp,hp);
