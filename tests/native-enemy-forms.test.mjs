@@ -14,6 +14,28 @@ function advance(b,t){for(let i=0;i<Math.round(t*30);i++)b.step();}
 function strike(b,e,type){return dealDamage(b,{target:e,value:1e6,type,cause:'attack'});}
 function addAlly(b,u,x=3,y=3){u.x=x;u.y=y;u.deployed=true;u.hp=u.maxHp;applyStatus(u,'disarm',600);b.s.units.push(u);}
 
+test('拥霜羽兽成功推拉结束后强制失去蛋，忽略沉默/缴械且最终移速翻倍',()=>{
+ const {b,e}=arena('enemy_10141_xdpeng_2');Object.assign(b.map.grid[3][4],{passableMask:'ALL',obstacle:false});applyStatus(e,'silence',30);applyStatus(e,'disarm',30);applyStatus(e,'tremble',30);assert.equal(moveActor(b,e,{x:2,y:3},'推动'),true);advance(b,.1);
+ assert.equal(e.enemyForm,'lost-egg');assert.equal(e.canAttack,false);assert.equal(e.unblockable,true);assert.equal(e.statuses.some(s=>s.kind==='tremble'),false);
+ e.route=[{kind:'move',x:4,y:3},{kind:'move',x:7,y:3}];e.cmd=1;e.cmdLeft=null;const x=e.x;b.step();assert.ok(Math.abs(e.x-x-e.baseSpeed*2/30)<1e-8);
+});
+
+test('羽兽冻结时保留0.1秒强制尝试，解冻后转形态，存档不再次翻倍',()=>{
+ const {b,g,e}=arena('enemy_10141_xdpeng_2');Object.assign(b.map.grid[3][4],{passableMask:'ALL',obstacle:false});moveActor(b,e,{x:2,y:3},'推动');applyStatus(e,'frozen',1);advance(b,.5);assert.equal(e.enemyForm,'carrying');
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const bird=restored.s.enemies[0];advance(restored,.7);assert.equal(bird.enemyForm,'lost-egg');assert.equal(bird.formMoveMultiplier,2);restored.onActorShiftEnd(bird);advance(restored,.2);assert.equal(bird.formMoveMultiplier,2);
+});
+
+test('冒失的小弟仅成功推拉结束才自晕，普通传送和失败移动不触发，抵抗可缩短',()=>{
+ const {b,e}=arena('enemy_10112_ymgds');Object.assign(b.map.grid[3][4],{passableMask:'ALL',obstacle:false});e.statusResistance=.5;assert.equal(teleportActor(b,e,{x:4,y:3}),true);assert.equal(e.statuses.some(s=>s.kind==='stun'),false);
+ assert.equal(moveActor(b,e,{x:5,y:3},'推动'),true);assert.equal(e.statuses.find(s=>s.kind==='stun').remaining,1.5);advance(b,1.6);assert.equal(e.statuses.some(s=>s.kind==='stun'),false);
+ b.map.grid[3][4].passableMask='NONE';assert.equal(moveActor(b,e,{x:2,y:3},'推动'),false);assert.equal(e.statuses.some(s=>s.kind==='stun'),false);
+});
+
+test('羽兽普通传送或失败推拉不失去蛋，初始普通攻击不对空',()=>{
+ const {b,e,ally}=arena('enemy_10141_xdpeng_2');Object.assign(b.map.grid[3][4],{passableMask:'ALL',obstacle:false});teleportActor(b,e,{x:4,y:3});advance(b,.2);assert.equal(e.enemyForm,'carrying');
+ b.map.grid[3][5].passableMask='NONE';assert.equal(moveActor(b,e,{x:3,y:3},'推动'),false);advance(b,.2);assert.equal(e.enemyForm,'carrying');addAlly(b,ally,4,4);ally.flying=true;advance(b,5);assert.equal(e.attackCount,0);
+});
+
 test('水遁忍者10秒后旋转，圆形范围物理伤害无视迷彩但不对空，旋转不重复普攻',()=>{
  const {b,e,ally}=arena('enemy_10116_ymgtop');e.atk=100;advance(b,9.9);assert.equal(e.enemyForm,'normal');advance(b,.1);assert.equal(e.enemyForm,'rotating');assert.equal(e.canAttack,false);
  addAlly(b,ally,4,3);applyStatus(ally,'camouflage',60);const air=structuredClone(ally),far=structuredClone(ally);air.uid+=100;air.x=3;air.y=4;air.flying=true;far.uid+=101;far.x=4;far.y=4;b.s.units.push(air,far);

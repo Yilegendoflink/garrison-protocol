@@ -1,5 +1,5 @@
 import {cancelEnemyCast,beginEnemySkill,endEnemySkill} from './native-enemy-skills.js';
-import {permissions,applyStatus} from './status.js';
+import {permissions,applyStatus,removeStatus} from './status.js';
 import {FPS} from './combat.js';
 import {attackableAllies,alliedActors,newAttackId,dealDamage} from './native-effects.js';
 
@@ -10,7 +10,9 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 export function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id==='enemy_9023_acdums'){
+ if(e.id==='enemy_10141_xdpeng_2'){
+  e.enemyFormKind='penguin';e.enemyForm='carrying';e.enemyAttack={...e.enemyAttack,groundOnly:true};e.unblockable=e.baseUnblockable=false;
+ }else if(e.id==='enemy_9023_acdums'){
   e.enemyFormKind='echo';e.enemyForm='pipe';e.echoHits=0;e.damageType='arts';e.blockCost=2;
  }else if(e.id==='enemy_1517_xi'){
   e.enemyFormKind='xi';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.damageType='arts';e.ranged=true;e.enemyAttack={groundOnly:true};e.specialSkill=null;
@@ -89,6 +91,16 @@ function finishTranslation(b,e){
 export function tickEnemyForm(b,e){
  if(e.enemyFormKind==='rotator'){tickRotatorForm(b,e);return;}
  if(!e.enemyFormKind||e.hp<=0)return;
+ if(e.enemyFormKind==='penguin'){
+  if(e.enemyForm==='carrying'&&e.eggDropNextAt!=null&&b.s.time+1e-9>=e.eggDropNextAt){
+   e.eggDropNextAt=b.s.time+.1;
+   if((e.statuses||[]).some(s=>['stun','frozen','levitate'].includes(s.kind)))return;
+   removeStatus(e,'tremble');cancelEnemyCast(b,e);e.action=null;const skill=e.enemySkills.find(s=>s.prefab==='switch');if(!skill)return;
+   skill.nextAt=b.s.time;if(!beginEnemySkill(b,e,skill))return;
+   e.enemyForm='lost-egg';e.eggDropNextAt=null;e.canAttack=e.baseCanAttack=false;e.unblockable=true;e.block=null;e.formMoveMultiplier=Number(e.enemyTalent['speed.move_speed']);endEnemySkill(b,e);announce(b,e,'失去蛋');
+  }
+  return;
+ }
  if(e.enemyFormKind==='xi'){
   if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
    e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
@@ -270,6 +282,9 @@ function stopRotation(b,e){
 
 // 当前位移求解器是即时推拉；由逻辑入口在成功移动结束时通知，不把普通传送当失衡。
 export function enemyFormShiftEnded(b,e){
+ if(e.hp<=0)return;
+ if(e.id==='enemy_10112_ymgds')applyStatus(e,'stun',Number(e.enemyTalent['StunAfterUnbalance.stun']),{source:e.uid});
+ if(e.enemyFormKind==='penguin'&&e.enemyForm==='carrying')e.eggDropNextAt??=b.s.time+.1;
  if(e.enemyFormKind==='rotator'&&e.enemyForm==='rotating'&&b.s.time+1e-9>=e.rotationProtectedUntil)stopRotation(b,e);
 }
 
