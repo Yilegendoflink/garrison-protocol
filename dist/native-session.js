@@ -164,6 +164,7 @@ export class NativeSession extends NativeEconomy {
    else if(type==='destroyEquip')result=this.destroyEquipment(args[0],args[1]);
   else if(type==='deploySummon')result=this.deploySummonCard(args[0],args[1],args[2],args[3]);
    else if(type==='start')result=this.startBattle();
+   else if(type==='mineCommand'){if(this.s.phase!=='battle')return false;result=this.battle?.toggleMineCamp(args[0])??false;}
    else if(type==='stop'){if(!this.battle?.s.benchmark)return false;this.battle.finish('manual');this.finishCurrentBattle();return true;}
    else if(type==='next')result=this.advanceRound();
    else if(type==='decision')result=this.chooseDecision(args[0]);

@@ -74,6 +74,22 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
   const report={passed:true,checks:['restore battle without deployment replay','select summon dossier','resume simulation','persist summon ownership'],errors};await fs.writeFile('artifacts/public-capabilities/browser.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 });
 
+suite('mine-camp',async(browser)=>{
+ const {NATIVE_DATA}=await import('../dist/runtime-data.js'),{NativeSession}=await import('../dist/native-session.js'),{applyStatus}=await import('../dist/status.js');
+ const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.funds=100;assert.ok(g.perform('buy',0));const unit=g.s.units[0];let placed=false;
+ for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(g.canDeploy(unit.uid,x,y))placed=g.deploy(unit.uid,x,y,0);
+ assert.ok(placed);assert.ok(g.perform('start'));const b=g.battle;b.s.queue=[];b.s.enemies=[];b.s.limit=1000;for(const u of b.s.units){applyStatus(u,'disarm',600);applyStatus(u,'skillLock',600);}
+ b.spawn({id:'enemy_1251_lysyta'},{x:8,y:5,route:[{kind:'wait',x:8,y:5,time:600}],cmd:0});b.s.enemies[0].canAttack=false;b.s.enemies[0].hp=b.s.enemies[0].maxHp=1e9;
+ const camp=b.spawnMineCamp({x:3,y:3,route:[{kind:'move',x:3,y:3},{kind:'move',x:7,y:3},{kind:'wait',x:7,y:3,time:600}]});for(let i=0;i<453;i++)b.step();assert.equal(camp.sp,15);
+ const snapshot=g.snapshot(),page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(pathToFileURL(path.resolve('dist/index.html')).href);await page.waitForFunction(()=>window.__garrisonReady);
+ await page.evaluate(s=>{localStorage.removeItem('garrison-native-safe-v1');localStorage.setItem('garrison-native-manual-v1',JSON.stringify(s));},snapshot);await page.reload();await page.waitForFunction(()=>window.__garrisonReady);await page.locator('[data-act=resume]').click();
+ const cv=page.locator('#native-canvas');await cv.scrollIntoViewIfNeeded();const r=await cv.boundingBox(),v=g.map.viewport,cols=v.right-v.left+1,rows=v.bottom-v.top+1,tw=Math.min((r.width-32)/cols,(r.height-44)/rows/.82),th=tw*.82,ox=(r.width-tw*cols)/2-v.left*tw,oy=(r.height-th*rows)/2-v.top*th;
+ await cv.click({position:{x:ox+(camp.x+.5)*tw,y:oy+(camp.y+.5)*th-10}});assert.match(await page.locator('.native-dossier').innerText(),/隐蔽矿道/);const command=page.locator('[data-act=mineCommand]');assert.equal(await command.isEnabled(),true);await command.click();assert.match(await page.locator('#native-mine-camp-controls').innerText(),/当前指令：出击/);assert.equal(await page.locator('[data-act=mineCommand]').isDisabled(),true);
+ const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('garrison-native-manual-v1')));assert.equal(after.battle.summons.find(s=>s.type==='mine-camp').mineMode,'dispatch');assert.ok(after.battle.summons.filter(s=>s.type==='neutral-miner').every(s=>!s.waiting));assert.deepEqual(errors,[]);
+ await fs.mkdir('artifacts/enemy-behavior',{recursive:true});await page.screenshot({path:'artifacts/enemy-behavior/mine-camp.png'});console.log(JSON.stringify({passed:true,checks:['restore camp and miner','open device dossier','dispatch command','sp spent','persist released miners'],errors}));
+});
+
 // ── layout｜原 scripts/landscape-browser.cjs ───────────────────────────────
 suite("layout",async(browser)=>{
 const page=await browser.newPage({viewport:{width:844,height:390},hasTouch:true,isMobile:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));await fs.mkdir('artifacts/landscape',{recursive:true});

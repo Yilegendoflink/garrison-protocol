@@ -1,4 +1,4 @@
-import {spawnMiner,tickMiners} from './native-miner.js';
+import {spawnMineCamp,toggleMineCamp,mineCampReady,spawnMiner,tickMiners} from './native-miner.js';
 import {advanceEnemyShift} from './native-shift.js';
 import {heatedByBrazier,atBrazierWindDoor,paintDominion,dominionCell,tickDeepWater,tickSandStorm} from './native-environment.js';
 import {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} from './native-enemy-parasite.js';
@@ -33,10 +33,14 @@ export class NativeBattle {
   this.s.units=sources.map((u,i)=>{const p=this.profile(u),a=p.attributes,skill=p.skill,costData=moduleCostData(p);return {uid:u.uid,id:u.charId,chessId:u.chessId,source:u,x:u.position.x,y:u.position.y,dir:u.dir,hp:a.maxHp,maxHp:a.maxHp,baseCost:a.cost||0,deploymentCost:0,lastDeploymentCost:0,redeployPenalty:0,waitingCost:false,runtimeCost:costData.runtimeCost,runtimeCostActive:costData.runtimeCostActive,runtimeCostUsed:false,refundRatio:costData.refundRatio,refundIgnoresCap:costData.refundIgnoresCap,chargerKillCost:costData.chargerKillCost,merchantCost:costData.merchantCost,merchantInterval:costData.merchantInterval,sp:initSpOf(skill),spCd:0,spLock:0,coins:0,deployed:false,deployAt:0,down:0,skillLeft:0,skillCount:0,ammo:0,ammoMax:0,attackCooldown:0,action:null,statuses:[],immunities:{stun:a.stunImmune,silence:a.silenceImmune,frozen:a.frozenImmune,sleep:a.sleepImmune,levitate:a.levitateImmune,fear:a.fearedImmune,terror:a.fearedImmune,tremble:a.palsyImmune,root:a.attractImmune},shield:0,barriers:[],shieldLayers:[],damage:0,healing:0,lastAttack:0,lastSkill:-999,counters:{},buffs:[],deployGen:0,exitLife:null};});
   ensureBattleShape(this.s);dispatch(this,'battle-start',{target:null});for(const u of this.s.units)this.deploy(u);this.spawnPreparedSummons();
   if(this.s.benchmark){this.s.enemies=[createTrainingDummy(this.s.nextId++,9,1)];this.s.total=1;}else this.prepareWaves(turn);
+  if(!this.s.benchmark)for(const config of map.mineCamps||[])this.spawnMineCamp({...config,route:this.path(config.route,false),routeDiagonal:!!config.route.allowDiagonalMove});
   // 入场的血量在同一次 deploy 里已经按 stats 设过；这里如果无脑刷回满值，
   // 会把「部署后立即流失生命」这类入场被动（如宴 S2）的结果覆盖掉，所以只补没走过入场的单位。
   for(const u of this.s.units){const stats=this.stats(u);u.maxHp=stats.maxHp;if(!u.deployed)u.hp=stats.maxHp;}
  }
+ spawnMineCamp(config){return spawnMineCamp(this,config);}
+ toggleMineCamp(uid){return toggleMineCamp(this,uid);}
+ mineCampReady(camp){return mineCampReady(this,camp);}
  spawnPreparedSummons(){
   for(const card of this.economy.s.summonCards||[]){if(!card.position)continue;const owner=this.s.units.find(u=>u.uid===card.ownerUid);if(!owner)continue;let token=null;
    if(card.type==='vigil-wolf')token=spawnSummon(this,owner,{type:'vigil-wolf',name:'狼群',x:card.position.x,y:card.position.y,targetable:true,canBlock:true,canAttack:true,blockCnt:2,lives:2,nextLifeAt:this.s.time+25,occupiesTile:true,preparedCard:true});
@@ -388,7 +392,7 @@ export class NativeBattle {
  prepareWaves(turn){const plan=nativeWavePlan(this.data,turn,this.economy.s.waveRoster);this.level=plan.level;this.s.queue=plan.queue;this.s.total=plan.total;this.combatScale=plan.scale||{atk:1,hp:1,moveSpeed:1};if(this.economy.s.bandId==='band_ducklord'&&turn.round>=5&&this.s.queue.length){const targets=['enemy_2002_bearmi_2','enemy_2034_sythef_2','enemy_2085_skzjxd_2','enemy_2001_duckmi_2'],ground=this.s.queue.filter(q=>this.level.routes[q.route]?.motionMode!=='FLY'),count=Math.min(2,Math.floor(this.economy.random()*3));for(let i=0;i<count&&ground.length;i++){if(this.economy.random()<.6)continue;const q=ground.splice(Math.floor(this.economy.random()*ground.length),1)[0];q.id=targets[Math.floor(this.economy.random()*targets.length)];q.ducklord=true;}}const bounty=this.economy.s.pendingBounty;if(bounty){const route=(this.level.routes||[]).findIndex(r=>r.motionMode!=='FLY'),baseAt=this.s.queue.reduce((n,q)=>Math.max(n,q.at||0),0);for(let i=0;i<bounty.count;i++)this.s.queue.push({id:bounty.enemyId,at:baseAt+1.5+i*1.2,route:route<0?0:route,cost:0,bountyReward:bounty.coin});this.s.total=this.s.queue.length;this.economy.s.pendingBounty=null;}this.s.total=this.s.queue.filter(q=>!(this.enemyRaw(q.id)?.enemyBehavior?.notCountInTotal??this.enemyRaw(q.id)?.notCountInTotal)).length;}
  enemyRaw(id){return this.level?.enemyProfiles?.[id]||this.data.enemies[id]||this.data.enemyDependencies?.[id];}
  isPrimaryEnemy(id){return this.enemyRaw(id)?.enemyBehavior?.nonPrimary!==true;}
- tileWalkable(x,y){return x>=0&&y>=0&&x<this.map.cols&&y<this.map.rows&&Boolean(this.map.grid[y]?.[x])&&this.map.grid[y][x].passableMask!=='FLY_ONLY'&&this.map.grid[y][x].passableMask!=='NONE';}
+ tileWalkable(x,y){if(this.s?.summons?.some(s=>s.type==='mine-camp'&&s.deployed&&s.hp>0&&s.x===x&&s.y===y))return false;return x>=0&&y>=0&&x<this.map.cols&&y<this.map.rows&&Boolean(this.map.grid[y]?.[x])&&this.map.grid[y][x].passableMask!=='FLY_ONLY'&&this.map.grid[y][x].passableMask!=='NONE';}
  path(route,flying){
   const to=p=>({x:p.col-this.map.origin.col,y:this.map.origin.row-p.row});
   const walk=p=>this.tileWalkable(p.x,p.y);

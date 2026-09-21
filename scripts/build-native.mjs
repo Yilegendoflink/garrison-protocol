@@ -27,12 +27,21 @@ for(let i=0;i<pending.length;i++)for(const spec of [pending[i].enemyBehavior?.sp
 }
 // 全局控制器可能位于裁切范围外，不能用可见 devices 的筛选结果代替。
 const skillTable=JSON.parse(await fs.readFile('data/gamedata/allianceLower/skill_table.json','utf8'));
+data.mineCamp={attributes:characterTable.trap_270_spawnp.phases[0].attributesKeyFrames[0].data,skill:skillTable.sktok_spawnp.levels[0]};
 // Dor回技力只认未激活的四种装置；不能把测试用/已激活敌方装甲混入。
 data.powerArmorSkills=Object.fromEntries(['trap_075_bgarmn','trap_076_bgarms','trap_077_rmtarmn','trap_078_rmtarms'].map(id=>{const skillId=characterTable[id].skills[0].skillId;return [id,{skillId,...skillTable[skillId].levels[0]}];}));
 for(const map of data.maps){
  const raw=JSON.parse(await fs.readFile('data/modes/alliance-lower/levels/'+map.source.file,'utf8'));
  for(const controller of raw.predefines?.tokenInsts||[]){
   const id=controller.inst.characterKey;
+  if(id==='trap_270_spawnp'&&!controller.hidden){
+   const skill=structuredClone(skillTable.sktok_spawnp.levels[(controller.mainSkillLvl||1)-1]),bb=Object.fromEntries([...skill.blackboard,...(controller.overrideSkillBlackboard||[])].map(r=>[r.key,r.valueStr??r.value]));
+   const action=raw.branches?.[bb['talent@branch_id']]?.phases?.[0]?.actions?.[Number(bb['talent@action_index'])],route=raw.routes?.[action?.routeIndex];
+   if(action?.actionType!=='SPAWN'||action.key!=='enemy_3010_mcreep'||!route)throw Error('矿道缺少明确的矿工生成路线 '+map.source.file);
+   skill.blackboard=Object.entries(bb).map(([key,value])=>typeof value==='string'?{key,valueStr:value,value:0}:{key,value,valueStr:null});
+   (map.mineCamps??=[]).push({x:controller.position.col-map.origin.col,y:map.origin.row-controller.position.row,route,skill});
+   continue;
+  }
   if(controller.hidden||!(id==='trap_042_tidectrl'&&controller.skillIndex===2||id==='trap_036_storm'))continue;
   const skillId=characterTable[id].skills[controller.skillIndex].skillId;
   const skill=skillTable[skillId].levels[controller.mainSkillLvl-1];
