@@ -64,7 +64,7 @@ export class NativeBattle {
  refreshMudrockShield(enemy,bb){refreshEnemyMudrockShield(this,enemy,bb);}
  enemyHealthChanged(enemy){checkWEnrage(this,enemy);}
  enemyBeforeDamage(target,opts){return enemyFormBeforeDamage(this,target,opts);}
- enemySkillTargets(enemy,options=null){return enemyAttackTargets(this,options?{...enemy,range:options.range??enemy.range,enemyAttack:{...enemy.enemyAttack,groundOnly:options.groundOnly??enemy.enemyAttack?.groundOnly,ignoreBlock:options.ignoreBlock??enemy.enemyAttack?.ignoreBlock}}:enemy);}
+ enemySkillTargets(enemy,options=null){return enemyAttackTargets(this,options?{...enemy,ranged:options.ranged??enemy.ranged,range:options.range??enemy.range,enemyAttack:{...enemy.enemyAttack,groundOnly:options.groundOnly??enemy.enemyAttack?.groundOnly,ignoreBlock:options.ignoreBlock??enemy.enemyAttack?.ignoreBlock}}:enemy);}
  enemyElementMultiplier(target){return parasiteElementMultiplier(this,target);}
  onElementBurst(payload){spreadParasiteElement(this,payload);}
  onActorExit(target,info){enemyKnightExit(this,target);detachEnemyParasites(this,target);if(target.enemyFormKind==='parrot')releaseParrotPassenger(this,target);unloadEnemyTransport(this,target);enemyNearbyExit(this,target,info);}

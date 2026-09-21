@@ -14,9 +14,9 @@ export function initEnemySkills(enemy,raw,now){
  if(raw.skills?.some(s=>s.prefabKey==='boomb'))enemy.canAttack=enemy.baseCanAttack=false;
  if(enemy.id==='enemy_10001_trslim')enemy.lowHpRatio=0; // 逃跑由一次性技能负责，不走通用永久低血强化。
  if(enemy.id==='enemy_1504_cqbw')enemy.lowHpRatio=0;
- if(enemy.enemySkills)return;
+ if(enemy.enemySkills){for(const s of enemy.enemySkills)s.initCooldown??=Number(raw.skills?.find(row=>row.prefabKey===s.prefab)?.initCooldown??0);return;}
  enemy.enemySkills=(raw.skills||[]).filter(s=>s.prefabKey&&(!VISUAL_SKILLS.has(s.prefabKey)||s.prefabKey==='StartRun'&&enemy.id==='enemy_10001_trslim')&&!(raw.enemyBehavior?.ignoredSkillPrefabs||[]).includes(s.prefabKey)).map((s,index)=>({
-  index,prefab:s.prefabKey,priority:Number(s.priority)||0,cooldown:Number(s.cooldown),spCost:Number(s.spCost)||0,
+  index,prefab:s.prefabKey,priority:Number(s.priority)||0,cooldown:Number(s.cooldown),initCooldown:Number(s.initCooldown),spCost:Number(s.spCost)||0,
   nextAt:Number(s.initCooldown)>=0?now+Number(s.initCooldown):null,used:false,
   bb:Object.fromEntries((s.blackboard||[]).map(r=>[r.key,r.valueStr??r.value]))
  }));
@@ -120,6 +120,22 @@ function mouseKingTargets(battle,enemy){
  for(const target of targets){const hp=battle.stats(target).maxHp;if(!low||hp<low.hp)low={target,hp};if(!high||hp>high.hp)high={target,hp};}
  return {low:low?.target,high:high?.target};
 }
+
+function tryReidRush(battle,enemy){
+ if(enemy.enemyForm==='rebirth'||enemy.block!=null||enemy.action)return;
+ const skill=enemy.enemySkills.find(s=>s.prefab==='Rush');if(!skill||!enemySkillReady(enemy,skill,battle.s.time))return;
+ const routeCells=[{x:Math.round(enemy.x),y:Math.round(enemy.y),index:enemy.cmd-1}];
+ for(let i=enemy.cmd;i<(enemy.route?.length||0);i++){
+  const point=enemy.route[i];if(point.kind!=='move')break;
+  routeCells.push({x:Math.round(point.x),y:Math.round(point.y),index:i});if(point.checkpointIndex!=null)break;
+ }
+ const targets=battle.enemySkillTargets(enemy,{range:Number(skill.bb.range_radius),ranged:true,ignoreBlock:true}).filter(t=>routeCells.some(p=>p.x===Math.round(t.x)&&p.y===Math.round(t.y))).sort((a,b)=>Math.hypot(a.x-enemy.x,a.y-enemy.y)-Math.hypot(b.x-enemy.x,b.y-enemy.y));
+ const target=targets[0];if(!target||!beginEnemySkill(battle,enemy,skill))return;
+ const point=routeCells.find(p=>p.x===Math.round(target.x)&&p.y===Math.round(target.y)),old=enemy.route[point.index];
+ enemy.route=[...enemy.route.slice(0,enemy.cmd),{...(point.index>=enemy.cmd?old:{}),kind:'move',x:point.x,y:point.y},...enemy.route.slice(Math.max(enemy.cmd,point.index+1))];enemy.cmdLeft=null;
+ enemy.reidRushUntil=battle.s.time+Number(skill.bb.duration);enemy.speed=enemy.baseSpeed*(1+Number(skill.bb.move_speed));endEnemySkill(battle,enemy);
+ battle.emit('enemy-phase',{uid:enemy.uid,x:enemy.x,y:enemy.y,phase:'enemy-form',form:'冲锋'});
+}
 function tickMouseKingSkills(battle,enemy,control){
  const {low,high}=mouseKingTargets(battle,enemy);
  if(enemy.mouseMarkEnabled){enemy.mouseMinUid=low?.uid??null;enemy.mouseMaxUid=high?.uid??null;}
@@ -144,6 +160,7 @@ function tickMouseKingSkills(battle,enemy,control){
 export function tickEnemySkills(battle,enemy,dt){
  if(!enemy.enemySkills)return;
  if(enemy.hp<=0){cancelEnemyCast(battle,enemy);return;}
+ if(enemy.reidRushUntil!=null&&battle.s.time+1e-9>=enemy.reidRushUntil){enemy.reidRushUntil=null;enemy.speed=enemy.baseSpeed;}
  checkWEnrage(battle,enemy);
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
@@ -254,6 +271,7 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_1539_reid'&&dt===0&&!control.silenced)tryReidRush(battle,enemy);
  if(enemy.id==='enemy_1513_dekght_2'&&!control.silenced&&!enemy.action){
   const skill=enemy.enemySkills.find(s=>s.prefab==='TripleAttack'),targets=battle.enemySkillTargets(enemy).slice(0,3);
   if(skill&&targets.length&&beginEnemySkill(battle,enemy,skill)){

@@ -10,7 +10,10 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 export function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id==='enemy_1516_jakill'){
+ if(e.id==='enemy_1539_reid'){
+  e.enemyFormKind='reid';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.lowHpRatio=0;
+  if(e.lowHpTriggered){e.atk=e.baseAtk;e.speed=e.baseSpeed;}
+ }else if(e.id==='enemy_1516_jakill'){
   e.enemyFormKind='jesselton';e.enemyForm='warden';e.ranged=true;e.damageType='arts';e.res=e.baseRes+Number(e.enemyTalent['enhance.magic_resistance']);
   e.enemyAttack={...e.enemyAttack,groundOnly:true,excludeIds:['trap_025_prison']};e.formBaseShiftImmune=!!e.shiftImmune;
   e.jesseltonAtkScale=b.combatScale?.atk??1;e.jesseltonMoveScale=b.combatScale?.moveSpeed??1;
@@ -72,6 +75,15 @@ function finishTranslation(b,e){
 export function tickEnemyForm(b,e){
  if(e.enemyFormKind==='rotator'){tickRotatorForm(b,e);return;}
  if(!e.enemyFormKind||e.hp<=0)return;
+ if(e.enemyFormKind==='reid'){
+  if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
+   e.enemyForm='revived';e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
+   e.reidInvincibleUntil=b.s.time+Number(e.enemyTalent['Reborn.invincible']);e.invulnerable=b.s.time<e.reidInvincibleUntil;
+   for(const skill of e.enemySkills)skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;
+   announce(b,e,'重生完成');
+  }
+  if(e.enemyForm==='revived'&&b.s.time>=e.reidInvincibleUntil)e.invulnerable=false;
+ }
  if(e.enemyFormKind==='jesselton'&&e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
   const bb=e.enemyTalent;e.enemyForm='assassin';e.invulnerable=false;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;
   e.baseAtk+=Number(bb['enhance.atk'])*e.jesseltonAtkScale;e.atk=e.baseAtk;e.baseDef+=Number(bb['enhance.def']);e.def=e.baseDef;e.res=e.baseRes;
@@ -200,6 +212,10 @@ export function enemyFormStats(e){
 }
 
 export function enemyFormFatal(b,e){
+ if(e.enemyFormKind==='reid'&&e.enemyForm==='initial'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp*Number(e.enemyTalent['Reborn.hp_ratio']);
+  e.reidRushUntil=null;e.speed=e.baseSpeed;e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
  if(e.enemyFormKind==='jesselton'&&e.enemyForm==='warden'){
   cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['reborn.duration']);e.hp=e.maxHp;
   e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;

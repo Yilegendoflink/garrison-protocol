@@ -5917,9 +5917,9 @@ function initEnemySkills(enemy,raw,now){
  if(raw.skills?.some(s=>s.prefabKey==='boomb'))enemy.canAttack=enemy.baseCanAttack=false;
  if(enemy.id==='enemy_10001_trslim')enemy.lowHpRatio=0; // 逃跑由一次性技能负责，不走通用永久低血强化。
  if(enemy.id==='enemy_1504_cqbw')enemy.lowHpRatio=0;
- if(enemy.enemySkills)return;
+ if(enemy.enemySkills){for(const s of enemy.enemySkills)s.initCooldown??=Number(raw.skills?.find(row=>row.prefabKey===s.prefab)?.initCooldown??0);return;}
  enemy.enemySkills=(raw.skills||[]).filter(s=>s.prefabKey&&(!VISUAL_SKILLS.has(s.prefabKey)||s.prefabKey==='StartRun'&&enemy.id==='enemy_10001_trslim')&&!(raw.enemyBehavior?.ignoredSkillPrefabs||[]).includes(s.prefabKey)).map((s,index)=>({
-  index,prefab:s.prefabKey,priority:Number(s.priority)||0,cooldown:Number(s.cooldown),spCost:Number(s.spCost)||0,
+  index,prefab:s.prefabKey,priority:Number(s.priority)||0,cooldown:Number(s.cooldown),initCooldown:Number(s.initCooldown),spCost:Number(s.spCost)||0,
   nextAt:Number(s.initCooldown)>=0?now+Number(s.initCooldown):null,used:false,
   bb:Object.fromEntries((s.blackboard||[]).map(r=>[r.key,r.valueStr??r.value]))
  }));
@@ -6023,6 +6023,22 @@ function mouseKingTargets(battle,enemy){
  for(const target of targets){const hp=battle.stats(target).maxHp;if(!low||hp<low.hp)low={target,hp};if(!high||hp>high.hp)high={target,hp};}
  return {low:low?.target,high:high?.target};
 }
+
+function tryReidRush(battle,enemy){
+ if(enemy.enemyForm==='rebirth'||enemy.block!=null||enemy.action)return;
+ const skill=enemy.enemySkills.find(s=>s.prefab==='Rush');if(!skill||!enemySkillReady(enemy,skill,battle.s.time))return;
+ const routeCells=[{x:Math.round(enemy.x),y:Math.round(enemy.y),index:enemy.cmd-1}];
+ for(let i=enemy.cmd;i<(enemy.route?.length||0);i++){
+  const point=enemy.route[i];if(point.kind!=='move')break;
+  routeCells.push({x:Math.round(point.x),y:Math.round(point.y),index:i});if(point.checkpointIndex!=null)break;
+ }
+ const targets=battle.enemySkillTargets(enemy,{range:Number(skill.bb.range_radius),ranged:true,ignoreBlock:true}).filter(t=>routeCells.some(p=>p.x===Math.round(t.x)&&p.y===Math.round(t.y))).sort((a,b)=>Math.hypot(a.x-enemy.x,a.y-enemy.y)-Math.hypot(b.x-enemy.x,b.y-enemy.y));
+ const target=targets[0];if(!target||!beginEnemySkill(battle,enemy,skill))return;
+ const point=routeCells.find(p=>p.x===Math.round(target.x)&&p.y===Math.round(target.y)),old=enemy.route[point.index];
+ enemy.route=[...enemy.route.slice(0,enemy.cmd),{...(point.index>=enemy.cmd?old:{}),kind:'move',x:point.x,y:point.y},...enemy.route.slice(Math.max(enemy.cmd,point.index+1))];enemy.cmdLeft=null;
+ enemy.reidRushUntil=battle.s.time+Number(skill.bb.duration);enemy.speed=enemy.baseSpeed*(1+Number(skill.bb.move_speed));endEnemySkill(battle,enemy);
+ battle.emit('enemy-phase',{uid:enemy.uid,x:enemy.x,y:enemy.y,phase:'enemy-form',form:'冲锋'});
+}
 function tickMouseKingSkills(battle,enemy,control){
  const {low,high}=mouseKingTargets(battle,enemy);
  if(enemy.mouseMarkEnabled){enemy.mouseMinUid=low?.uid??null;enemy.mouseMaxUid=high?.uid??null;}
@@ -6047,6 +6063,7 @@ function tickMouseKingSkills(battle,enemy,control){
 function tickEnemySkills(battle,enemy,dt){
  if(!enemy.enemySkills)return;
  if(enemy.hp<=0){cancelEnemyCast(battle,enemy);return;}
+ if(enemy.reidRushUntil!=null&&battle.s.time+1e-9>=enemy.reidRushUntil){enemy.reidRushUntil=null;enemy.speed=enemy.baseSpeed;}
  checkWEnrage(battle,enemy);
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
@@ -6157,6 +6174,7 @@ function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_1539_reid'&&dt===0&&!control.silenced)tryReidRush(battle,enemy);
  if(enemy.id==='enemy_1513_dekght_2'&&!control.silenced&&!enemy.action){
   const skill=enemy.enemySkills.find(s=>s.prefab==='TripleAttack'),targets=battle.enemySkillTargets(enemy).slice(0,3);
   if(skill&&targets.length&&beginEnemySkill(battle,enemy,skill)){
@@ -6339,6 +6357,7 @@ function enemyConditionalAttackSpeed(e){
 }
 
 function enemyConditionalAttackMultiplier(e){
+ if(e.id==='enemy_1539_reid')return e.hp<=e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['AtkUp.atk']):1;
  if(e.knightRage)return 1+(Number(e.enemyTalent['triggerrage.atk'])||0);
  if(e.id==='enemy_1511_mdrock')return 1+(e.mudrockStacks||0)*Number(e.enemyTalent['charge.attack@enemy_mdrock_s_1[charge].atk']);
  return e.id==='enemy_2005_axetro'?1+(e.axetroStacks||0)*Number(e.enemyTalent['atkup.atk']):1;
@@ -6717,7 +6736,10 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id==='enemy_1516_jakill'){
+ if(e.id==='enemy_1539_reid'){
+  e.enemyFormKind='reid';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.lowHpRatio=0;
+  if(e.lowHpTriggered){e.atk=e.baseAtk;e.speed=e.baseSpeed;}
+ }else if(e.id==='enemy_1516_jakill'){
   e.enemyFormKind='jesselton';e.enemyForm='warden';e.ranged=true;e.damageType='arts';e.res=e.baseRes+Number(e.enemyTalent['enhance.magic_resistance']);
   e.enemyAttack={...e.enemyAttack,groundOnly:true,excludeIds:['trap_025_prison']};e.formBaseShiftImmune=!!e.shiftImmune;
   e.jesseltonAtkScale=b.combatScale?.atk??1;e.jesseltonMoveScale=b.combatScale?.moveSpeed??1;
@@ -6779,6 +6801,15 @@ function finishTranslation(b,e){
 function tickEnemyForm(b,e){
  if(e.enemyFormKind==='rotator'){tickRotatorForm(b,e);return;}
  if(!e.enemyFormKind||e.hp<=0)return;
+ if(e.enemyFormKind==='reid'){
+  if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
+   e.enemyForm='revived';e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
+   e.reidInvincibleUntil=b.s.time+Number(e.enemyTalent['Reborn.invincible']);e.invulnerable=b.s.time<e.reidInvincibleUntil;
+   for(const skill of e.enemySkills)skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;
+   announce(b,e,'重生完成');
+  }
+  if(e.enemyForm==='revived'&&b.s.time>=e.reidInvincibleUntil)e.invulnerable=false;
+ }
  if(e.enemyFormKind==='jesselton'&&e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
   const bb=e.enemyTalent;e.enemyForm='assassin';e.invulnerable=false;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;
   e.baseAtk+=Number(bb['enhance.atk'])*e.jesseltonAtkScale;e.atk=e.baseAtk;e.baseDef+=Number(bb['enhance.def']);e.def=e.baseDef;e.res=e.baseRes;
@@ -6907,6 +6938,10 @@ function enemyFormStats(e){
 }
 
 function enemyFormFatal(b,e){
+ if(e.enemyFormKind==='reid'&&e.enemyForm==='initial'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp*Number(e.enemyTalent['Reborn.hp_ratio']);
+  e.reidRushUntil=null;e.speed=e.baseSpeed;e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
  if(e.enemyFormKind==='jesselton'&&e.enemyForm==='warden'){
   cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['reborn.duration']);e.hp=e.maxHp;
   e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
@@ -7178,7 +7213,7 @@ class NativeBattle {
  refreshMudrockShield(enemy,bb){refreshEnemyMudrockShield(this,enemy,bb);}
  enemyHealthChanged(enemy){checkWEnrage(this,enemy);}
  enemyBeforeDamage(target,opts){return enemyFormBeforeDamage(this,target,opts);}
- enemySkillTargets(enemy,options=null){return enemyAttackTargets(this,options?{...enemy,range:options.range??enemy.range,enemyAttack:{...enemy.enemyAttack,groundOnly:options.groundOnly??enemy.enemyAttack?.groundOnly,ignoreBlock:options.ignoreBlock??enemy.enemyAttack?.ignoreBlock}}:enemy);}
+ enemySkillTargets(enemy,options=null){return enemyAttackTargets(this,options?{...enemy,ranged:options.ranged??enemy.ranged,range:options.range??enemy.range,enemyAttack:{...enemy.enemyAttack,groundOnly:options.groundOnly??enemy.enemyAttack?.groundOnly,ignoreBlock:options.ignoreBlock??enemy.enemyAttack?.ignoreBlock}}:enemy);}
  enemyElementMultiplier(target){return parasiteElementMultiplier(this,target);}
  onElementBurst(payload){spreadParasiteElement(this,payload);}
  onActorExit(target,info){enemyKnightExit(this,target);detachEnemyParasites(this,target);if(target.enemyFormKind==='parrot')releaseParrotPassenger(this,target);unloadEnemyTransport(this,target);enemyNearbyExit(this,target,info);}

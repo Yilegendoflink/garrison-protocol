@@ -46,6 +46,34 @@ test('旋转阶段读档保留保护期、结束时刻与下一次伤害时刻',
  let hits=0;restored.hurt=()=>hits++;advance(restored,.4);assert.equal(hits,0);advance(restored,.2);assert.equal(hits,1);
 });
 
+test('领袖复仇者半血加攻可逆且不凭血线加速，5秒重生只恢复半血并且只复活一次',()=>{
+ const {b,e}=arena('enemy_1539_reid'),atk=e.atk,speed=e.speed;e.hp=e.maxHp*.5;b.step();assert.ok(Math.abs(b.enemyAttackDamage(e)-atk*2.8)<1e-6);assert.equal(e.speed,speed);
+ e.hp=e.maxHp*.6;b.step();assert.equal(b.enemyAttackDamage(e),atk);strike(b,e,'true');assert.equal(e.enemyForm,'rebirth');assert.equal(e.hp,e.maxHp*.5);assert.equal(b.s.kills,0);
+ advance(b,4.9);assert.equal(e.invulnerable,true);advance(b,.1);assert.equal(e.enemyForm,'revived');assert.equal(e.invulnerable,false,'本期额外无敌时长为0');assert.equal(e.hp,e.maxHp*.5);assert.ok(Math.abs(b.enemyAttackDamage(e)-atk*2.8)<1e-6);
+ strike(b,e,'true');assert.equal(e.hp,0);assert.equal(b.s.kills,1);
+});
+
+test('复仇者只冲向下个原始检查点前路径上的最近目标，成功后4.5秒三倍移速再恢复',()=>{
+ const {b,e,ally}=arena('enemy_1539_reid');e.route=[{kind:'move',x:3,y:3},{kind:'move',x:4,y:3},{kind:'move',x:5,y:3,checkpointIndex:1},{kind:'move',x:6,y:3,checkpointIndex:2},{kind:'wait',time:600}];e.cmd=1;
+ const routeRef=e.route,original=structuredClone(e.route);addAlly(b,ally,4,3);const offPath=structuredClone(ally);offPath.uid+=100;offPath.x=3;offPath.y=4;b.s.units.push(offPath);
+ b.step();assert.ok(e.reidRushUntil>b.s.time);assert.equal(e.speed,e.baseSpeed*3);assert.equal(e.route[e.cmd].x,4);assert.deepEqual(routeRef,original);
+ b.s.units=[];advance(b,4.6);assert.equal(e.reidRushUntil,null);assert.equal(e.speed,e.baseSpeed);
+});
+
+test('复仇者无合法路径目标/超出本期1.5半径/已经阻挡时均不消耗冲锋',()=>{
+ for(const mode of ['off-path','far','checkpoint','blocked']){
+  const {b,e,ally}=arena('enemy_1539_reid');e.route=[{kind:'move',x:3,y:3},{kind:'move',x:4,y:3,checkpointIndex:1},{kind:'move',x:5,y:3},{kind:'wait',time:600}];e.cmd=1;
+  if(mode==='checkpoint')e.enemySkills[0].bb.range_radius=10;
+  addAlly(b,ally,mode==='off-path'?2:mode==='blocked'?3:5,3);b.step();assert.equal(e.reidRushUntil,undefined,mode);assert.equal(e.enemySkills[0].used,false,mode);
+ }
+});
+
+test('复仇者冲锋与重生分别跨JSON保留剩余计时，恢复不会额外复活或永久加速',()=>{
+ const {b,g,e,ally}=arena('enemy_1539_reid');e.route=[{kind:'move',x:3,y:3},{kind:'move',x:4,y:3,checkpointIndex:1},{kind:'wait',time:600}];e.cmd=1;addAlly(b,ally,4,3);b.step();b.s.units=[];advance(b,.5);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.enemies[0];assert.equal(copy.reidRushUntil,e.reidRushUntil);advance(restored,4.1);assert.equal(copy.speed,copy.baseSpeed);
+ strike(restored,copy,'true');advance(restored,2);const again=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(restored.s)));assert.ok(again);advance(again,3.1);assert.equal(again.s.enemies[0].enemyForm,'revived');assert.equal(again.s.enemies[0].invulnerable,false);
+});
+
 test('转译基底取消伤害，物法分别计数，第四次物理伤害只启动一次转换',()=>{
  const {b,e}=arena('enemy_10081_mpplai'),hp=e.hp,atk=e.baseAtk;
  for(let i=0;i<3;i++){assert.equal(strike(b,e,'physical').cancelled,true);strike(b,e,'arts');}

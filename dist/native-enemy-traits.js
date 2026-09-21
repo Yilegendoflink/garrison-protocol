@@ -64,6 +64,7 @@ export function enemyConditionalAttackSpeed(e){
 }
 
 export function enemyConditionalAttackMultiplier(e){
+ if(e.id==='enemy_1539_reid')return e.hp<=e.maxHp*Number(e.enemyTalent['atkup.hp_ratio'])?1+Number(e.enemyTalent['AtkUp.atk']):1;
  if(e.knightRage)return 1+(Number(e.enemyTalent['triggerrage.atk'])||0);
  if(e.id==='enemy_1511_mdrock')return 1+(e.mudrockStacks||0)*Number(e.enemyTalent['charge.attack@enemy_mdrock_s_1[charge].atk']);
  return e.id==='enemy_2005_axetro'?1+(e.axetroStacks||0)*Number(e.enemyTalent['atkup.atk']):1;
