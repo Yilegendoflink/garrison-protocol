@@ -32,7 +32,7 @@ test('持续伤害范围参数来自原表及显式PRTS覆盖：六类敌人各�
  const artillery=profiles('enemy_10122_uacann_2').attackZone;
  assert.deepEqual({r:artillery.radius,d:artillery.duration,i:artillery.interval,dmg:artillery.damage},{r:1,d:3,i:1,dmg:150});
  const tank=profiles('enemy_1272_nhtank').attackZone;
- assert.deepEqual({r:tank.radius,d:tank.duration,dmg:tank.damage},{r:2.2,d:10,dmg:50});
+ assert.deepEqual({r:tank.radius,d:tank.duration,dmg:tank.damage},{r:1.7,d:10,dmg:50});
  const nest=profiles('enemy_1234_dsubrl').selfField;
  assert.equal(nest.radius,1.6);assert.equal(nest.elementScale,0.05);assert.equal(nest.elementType,'neural');
  assert.equal(nest.atkScale,1,'PRTS明确每秒攻击力100%法术伤害，来源登记在enemy-behavior-overrides');

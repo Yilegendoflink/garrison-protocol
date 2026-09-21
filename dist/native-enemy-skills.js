@@ -102,7 +102,7 @@ function detonateC4(battle,enemy){
   battle.emit('impact',{uid:enemy.uid,x:target.x,y:target.y,radius:.3,type:'physical',enemy:true});
  }
 }
-export function cancelEnemyCast(battle,enemy){
+export function cancelEnemyCast(battle,enemy,{lostTarget=false}={}){
  const cast=enemy.enemyCast;if(!cast)return;
  if(cast.c4Targets){detonateC4(battle,enemy);return;}
  if(cast.knightCharge){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
@@ -113,7 +113,7 @@ export function cancelEnemyCast(battle,enemy){
   enemy.canAttack=false;
  }
  releaseCaptured(battle,enemy,cast);enemy.stanceUntil=0;
- endEnemySkill(battle,enemy,{refund:enemy.enemySkills[cast.index].prefab==='PollutedRangedAtk'});
+ endEnemySkill(battle,enemy,{refund:lostTarget&&enemy.enemySkills[cast.index].prefab==='PollutedRangedAtk'});
 }
 
 function mouseKingTargets(battle,enemy){
@@ -166,6 +166,12 @@ export function tickEnemySkills(battle,enemy,dt){
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
+ if(cast&&enemy.enemySkills[cast.index].prefab==='PollutedRangedAtk'&&enemy.action){
+  const action=enemy.action,target=getActor(battle.s,action.target);
+  if(!target?.deployed||target.hp<=0||(action.targetDeployGen!=null&&target.deployGen!==action.targetDeployGen)||!battle.enemySkillTargets(enemy).includes(target)){
+   enemy.action=null;cancelEnemyCast(battle,enemy,{lostTarget:true});return;
+  }
+ }
  if(enemy.id==='enemy_1509_mousek'){tickMouseKingSkills(battle,enemy,control);return;}
  if(cast?.knightCharge){
   if(enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}

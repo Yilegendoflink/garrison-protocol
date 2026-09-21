@@ -105,8 +105,9 @@ export function inferAttackZone(raw={}){
  const skill=enemySkill(raw),skillBb=skill?.bb||{};
  const polluted=Number(skillBb.polluted_damage_low);
  if(skill?.prefab==='PollutedRangedAtk'&&Number.isFinite(polluted)&&polluted>0){
-  const radius=Number(skillBb.range_radius),life=Number(skillBb.projectile_life_time);
-  return {trigger:'attack',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:10,interval:1,damage:polluted,damageHigh:Number(skillBb.polluted_damage_high),damageType:'true'};
+  // range_radius=2.2 是技能触发范围，污染区域为1.7（PRTS修订423034），不能混用。
+  const life=Number(skillBb.projectile_life_time);
+  return {trigger:'attack',radius:1.7,duration:Number.isFinite(life)&&life>0?life:10,interval:1,damage:polluted,damageHigh:Number(skillBb.polluted_damage_high),damageType:'true',shape:'circle',ignoreTargetability:true};
  }
  return null;
 }

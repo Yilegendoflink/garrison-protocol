@@ -9,6 +9,7 @@ const KNIGHT_PARTNER={enemy_1513_dekght:'enemy_1513_dekght_2',enemy_1513_dekght_
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.enemySkills?.some(s=>s.prefab==='PollutedRangedAtk'))e.enemyAttack={...e.enemyAttack,groundOnly:true,lowlandOnly:true};
  if(e.id==='enemy_1500_skulsr'){
   // PRTS修订415274：原表未提供的榴弹倍率26%、九格范围；减防量仍读取本期黑板。
   e.enemyAttack={...e.enemyAttack,groundOnly:true,splashGroundOnly:false,splashOnlyRanged:true,splash:{shape:'square',radius:1},rangedScale:.26};e.lowHpRatio=0;

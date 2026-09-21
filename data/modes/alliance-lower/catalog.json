@@ -112001,12 +112001,14 @@
         "groundZone": null,
         "attackZone": {
           "trigger": "attack",
-          "radius": 2.2,
+          "radius": 1.7,
           "duration": 10,
           "interval": 1,
           "damage": 50,
           "damageHigh": 25,
-          "damageType": "true"
+          "damageType": "true",
+          "shape": "circle",
+          "ignoreTargetability": true
         },
         "selfField": null,
         "deathZone": null,
@@ -112930,12 +112932,14 @@
         "groundZone": null,
         "attackZone": {
           "trigger": "attack",
-          "radius": 2.2,
+          "radius": 1.7,
           "duration": 10,
           "interval": 1,
           "damage": 50,
           "damageHigh": 25,
-          "damageType": "true"
+          "damageType": "true",
+          "shape": "circle",
+          "ignoreTargetability": true
         },
         "selfField": null,
         "deathZone": null,

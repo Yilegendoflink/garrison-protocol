@@ -124,6 +124,36 @@ test('战车使用初始满SP开炮，普通攻击回SP但不产生额外污染�
  assert.equal(e.sp,1);assert.equal(b.s.logicEffects.length,before);
 });
 
+test('战车两型只选低地非飞行目标，技能100%而阻挡普通攻击200%',()=>{
+ for(const id of ['enemy_1272_nhtank','enemy_1272_nhtank_2']){
+  const {b,ally}=arena(),e=spawn(b,id,3,3);addAlly(b,ally,4,3);b.map=structuredClone(b.map);e.atk=e.baseAtk=100;
+  b.map.grid[3][4].heightType='HIGHLAND';advance(b,2);assert.equal(e.sp,2);assert.equal(e.attackCount,0);
+  b.map.grid[3][4].heightType='LOWLAND';ally.flying=true;advance(b,2);assert.equal(e.attackCount,0);
+  ally.flying=false;ally.x=3;const hits=[];b.hurt=(_u,source)=>{if(source.uid===e.uid)hits.push(source.atk);};advance(b,1.5);assert.equal(hits[0],100);
+  advance(b,4.5);assert.equal(hits[1],200);assert.equal(e.sp,1);assert.equal(b.s.logicEffects.filter(f=>f.kind==='field').length,1);
+ }
+});
+
+test('战车污染施法失去目标退还2SP，不把眩晕中断误作退款',()=>{
+ for(const reason of ['retreat','hidden','stun']){
+  const {b,ally}=arena(),e=spawn(b,'enemy_1272_nhtank');addAlly(b,ally,4,3);b.map=structuredClone(b.map);b.map.grid[3][4].heightType='LOWLAND';b.step();assert.ok(e.enemyCast);assert.equal(e.sp,0);
+  if(reason==='retreat'){ally.deployed=false;ally.deployAt=100;}else if(reason==='hidden')applyStatus(ally,'invisible',10);else applyStatus(e,'stun',10);
+  b.step();assert.equal(e.enemyCast,null);assert.equal(e.sp,reason==='stun'?0:2);assert.equal(b.s.logicEffects.filter(f=>f.kind==='field').length,0);
+ }
+});
+
+test('战车污染圈半径1.7，覆盖不可选高台和飞行单位，不误用2.2的索敌半径',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_1272_nhtank');addAlly(b,ally,4,3);b.map=structuredClone(b.map);b.map.grid[3][4].heightType='LOWLAND';e.atk=1;advance(b,1.5);e.canAttack=false;
+ const zone=b.s.logicEffects.find(f=>f.kind==='field');assert.equal(zone.radius,1.7);ally.targetable=false;ally.flying=true;ally.x=6;let hp=ally.hp;advance(b,1);assert.equal(ally.hp,hp);
+ ally.x=5;ally.y=4;b.map.grid[4][5].heightType='HIGHLAND';hp=ally.hp;advance(b,1);assert.equal(hp-ally.hp,25);
+});
+
+test('战车施法存档保留目标部署代次，同UID重新部署时退款而不追射',()=>{
+ const {b,g,ally}=arena(),e=spawn(b,'enemy_1272_nhtank');addAlly(b,ally,4,3);b.map=structuredClone(b.map);b.map.grid[3][4].heightType='LOWLAND';b.step();assert.equal(e.sp,0);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const target=restored.s.units[0],tank=restored.s.enemies[0];target.deployGen++;
+ restored.step();assert.equal(tank.sp,2);assert.equal(tank.enemyCast,null);assert.equal(restored.s.logicEffects.filter(f=>f.kind==='field').length,0);
+});
+
 test('攻击击杀目标仍回复敌方SP，技能命中不当成普通攻击回点',()=>{
  const {b,ally}=arena(),e=spawn(b,'enemy_1183_mlasrt');ally.hp=0;
  b.resolveEnemyAttackEffects(e,ally);assert.equal(e.sp,1);
