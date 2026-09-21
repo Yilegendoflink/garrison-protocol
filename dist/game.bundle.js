@@ -5375,7 +5375,9 @@ function moveActor(battle,target,source,description=''){
  const away=/推开|推动|击退/.test(description),toward=/拖拽|拉向|拉至/.test(description);if(!away&&!toward)return false;
  const dx=target.x-source.x,dy=target.y-source.y,len=Math.hypot(dx,dy)||1,step=away?1:-1,nx=Math.round(target.x+(dx/len)*step),ny=Math.round(target.y+(dy/len)*step);
  if(!validMoveTile(battle,target,nx,ny))return false;
- return teleportActor(battle,target,{x:nx,y:ny,source,mode:away?'push':'pull'});
+ const moved=teleportActor(battle,target,{x:nx,y:ny,source,mode:away?'push':'pull'});
+ if(moved)battle.onActorShiftEnd?.(target,{source,mode:away?'push':'pull'});
+ return moved;
 }
 
 // 「换位置」类效果（盟约突袭的再部署、乌尔比安 S3 的船锚位移）的落点口径：地形按备战期
@@ -6485,6 +6487,7 @@ return {enemyAttackTargets,enemyAttackTargetCount,deliverEnemyAttack,tickEnemyPr
 const {cancelEnemyCast,beginEnemySkill,endEnemySkill} = load("native-enemy-skills.js");
 const {permissions,applyStatus} = load("status.js");
 const {FPS} = load("combat.js");
+const {attackableAllies,newAttackId} = load("native-effects.js");
 const TRANSLATOR='enemy_10081_mpplai';
 const GARGOYLES=new Set(['enemy_1172_dugago','enemy_1172_dugago_2']);
 const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form});
@@ -6492,7 +6495,9 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id===TRANSLATOR){
+ if(e.id==='enemy_10116_ymgtop'){
+  e.enemyFormKind='rotator';e.enemyForm='normal';e.rotationProtectedUntil=b.s.time+Number(e.enemyTalent['ProtectionTime.protection_duration']);e.ranged=false;
+ }else if(e.id===TRANSLATOR){
   e.enemyFormKind='translator';e.enemyForm='original';e.formDamageCounts={physical:0,arts:0};
   e.formBaseImmunities={...e.immunities};e.formBaseShiftImmune=!!e.shiftImmune;
   e.canAttack=e.baseCanAttack=false;e.shiftImmune=true;
@@ -6546,6 +6551,7 @@ function finishTranslation(b,e){
 }
 
 function tickEnemyForm(b,e){
+ if(e.enemyFormKind==='rotator'){tickRotatorForm(b,e);return;}
  if(!e.enemyFormKind||e.hp<=0)return;
  if(e.enemyFormKind==='translator'){
   if(e.enemyForm==='original'&&e.block!=null)startTranslation(b,e,'ghost');
@@ -6627,6 +6633,39 @@ function tickJetForm(b,e){
  }
 }
 
+function stopRotation(b,e){
+ e.enemyForm='normal';e.canAttack=e.baseCanAttack;e.action=null;e.rotationNextAt=null;
+ e.rotationProtectedUntil=b.s.time+Number(e.enemyTalent['ProtectionTime.protection_duration']);
+ const skill=e.enemySkills.find(s=>s.prefab==='SwitchModeTrigger');skill.nextAt=b.s.time+skill.cooldown;e.nextSkillAt=skill.nextAt;
+ announce(b,e,'停止旋转');
+}
+
+// 当前位移求解器是即时推拉；由逻辑入口在成功移动结束时通知，不把普通传送当失衡。
+function enemyFormShiftEnded(b,e){
+ if(e.enemyFormKind==='rotator'&&e.enemyForm==='rotating'&&b.s.time+1e-9>=e.rotationProtectedUntil)stopRotation(b,e);
+}
+
+function tickRotatorForm(b,e){
+ if(e.hp<=0||e.hidden)return;
+ const now=b.s.time,bb=e.enemyTalent,control=permissions(e),skill=e.enemySkills.find(s=>s.prefab==='SwitchModeTrigger');
+ if(!skill)return;
+ if(e.enemyForm==='normal'){
+  if(now+1e-9<e.rotationProtectedUntil||!control.skill||!control.attack||control.silenced||e.action)return;
+  if(!beginEnemySkill(b,e,skill))return;
+  endEnemySkill(b,e);e.enemyForm='rotating';e.canAttack=false;e.action=null;
+  e.rotationProtectedUntil=now+Number(bb['ProtectionTime.protection_duration']);e.enemyFormUntil=now+Number(bb['EndRotate.rotate_duration']);e.rotationNextAt=now+Number(bb['RotateDamage.interval']);announce(b,e,'漩涡形态');return;
+ }
+ while(e.hp>0&&e.rotationNextAt<=e.enemyFormUntil+1e-9&&now+1e-9>=e.rotationNextAt){
+  e.rotationNextAt+=Number(bb['RotateDamage.interval']);
+  if(!control.attack||control.silenced)continue;
+  const attackId=newAttackId(b);
+  for(const target of attackableAllies(b.s))if(!target.flying&&Math.hypot(target.x-e.x,target.y-e.y)<=Number(bb['RotateDamage.attack@range_radius'])+1e-9)
+   b.resolveEnemyStrike(e,target,{scale:Number(bb['RotateDamage.attack@atk_scale']),type:'physical',attackId,suppressAttackZone:true});
+  b.emit('impact',{uid:e.uid,x:e.x,y:e.y,radius:Number(bb['RotateDamage.attack@range_radius']),type:'physical',enemy:true});
+ }
+ if(now+1e-9>=e.enemyFormUntil)stopRotation(b,e);
+}
+
 function enemyFormStats(e){
  if(e.enemyFormKind==='gargoyle'&&e.enemyForm==='stone'){
   e.def+=Number(e.enemyTalent['stone.def'])||0;e.res+=Number(e.enemyTalent['stone.magic_resistance'])||0;
@@ -6642,7 +6681,7 @@ function enemyFormFatal(b,e){
  announce(b,e,'石像形态');return true;
 }
 
-return {initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,releaseParrotPassenger,enemyFormAfterDamage,enemyFormStats,enemyFormFatal};
+return {initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,releaseParrotPassenger,enemyFormAfterDamage,enemyFormShiftEnded,enemyFormStats,enemyFormFatal};
 },
 "native-enemy-transport.js": function(load) {
 const {isIsolated} = load("status.js");
@@ -6840,7 +6879,7 @@ const {tickDeepWater,tickSandStorm} = load("native-environment.js");
 const {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} = load("native-enemy-parasite.js");
 const {advanceEnemyFear} = load("native-enemy-fear.js");
 const {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} = load("native-enemy-transport.js");
-const {initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,releaseParrotPassenger} = load("native-enemy-forms.js");
+const {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,releaseParrotPassenger} = load("native-enemy-forms.js");
 const {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} = load("native-enemy-attacks.js");
 const {tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
 const {initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} = load("native-enemy-skills.js");
@@ -6893,6 +6932,7 @@ class NativeBattle {
   b.s=migrated;b.attachRuntime();return b;}catch{return null;}
  }
  enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
+ onActorShiftEnd(target){enemyFormShiftEnded(this,target);}
  enemyBeforeDamage(target,opts){return enemyFormBeforeDamage(this,target,opts);}
  enemySkillTargets(enemy){return enemyAttackTargets(this,enemy);}
  enemyElementMultiplier(target){return parasiteElementMultiplier(this,target);}

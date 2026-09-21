@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';import {NativeBattle} from '../dist/native-battle.js';
-import {NATIVE_DATA} from '../dist/runtime-data.js';import {dealDamage,applyHeal,moveActor,commitExit} from '../dist/native-effects.js';import {applyStatus} from '../dist/status.js';
+import {NATIVE_DATA} from '../dist/runtime-data.js';import {dealDamage,applyHeal,moveActor,teleportActor,commitExit} from '../dist/native-effects.js';import {applyStatus} from '../dist/status.js';
 
 function arena(id,{raw=NATIVE_DATA.enemies[id]}={}){
  const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.funds=100;assert.ok(g.perform('buy',0));const unit=g.s.units[0];let placed=false;
@@ -13,6 +13,38 @@ function arena(id,{raw=NATIVE_DATA.enemies[id]}={}){
 function advance(b,t){for(let i=0;i<Math.round(t*30);i++)b.step();}
 function strike(b,e,type){return dealDamage(b,{target:e,value:1e6,type,cause:'attack'});}
 function addAlly(b,u,x=3,y=3){u.x=x;u.y=y;u.deployed=true;u.hp=u.maxHp;applyStatus(u,'disarm',600);b.s.units.push(u);}
+
+test('水遁忍者10秒后旋转，圆形范围物理伤害无视迷彩但不对空，旋转不重复普攻',()=>{
+ const {b,e,ally}=arena('enemy_10116_ymgtop');e.atk=100;advance(b,9.9);assert.equal(e.enemyForm,'normal');advance(b,.1);assert.equal(e.enemyForm,'rotating');assert.equal(e.canAttack,false);
+ addAlly(b,ally,4,3);applyStatus(ally,'camouflage',60);const air=structuredClone(ally),far=structuredClone(ally);air.uid+=100;air.x=3;air.y=4;air.flying=true;far.uid+=101;far.x=4;far.y=4;b.s.units.push(air,far);
+ const hits=[];b.hurt=(target,source)=>hits.push({uid:target.uid,atk:source.atk,type:source.damageType});advance(b,2.1);
+ assert.deepEqual(hits,[{uid:ally.uid,atk:120,type:'physical'},{uid:ally.uid,atk:120,type:'physical'}]);assert.equal(e.attackCount,0);
+});
+
+test('旋转被缴械/晕眩/沉默抑制时跳过周期伤害，解除后不补发被抑制的多拍',()=>{
+ for(const kind of ['disarm','stun','silence']){
+  const {b,e,ally}=arena('enemy_10116_ymgtop');advance(b,10);addAlly(b,ally,4,3);let hits=0;b.hurt=()=>hits++;applyStatus(e,kind,2.2);advance(b,2.1);assert.equal(hits,0,kind);assert.equal(e.enemyForm,'rotating');advance(b,1);assert.equal(hits,1,kind);
+ }
+ const {b,e}=arena('enemy_10116_ymgtop');applyStatus(e,'silence',20);advance(b,11);assert.equal(e.enemyForm,'normal');
+});
+
+test('旋转达到本期时长后还原，技能CD仅从回到普通形态后计时',()=>{
+ const {b,e}=arena('enemy_10116_ymgtop');e.enemyTalent['EndRotate.rotate_duration']=2;e.enemySkills[0].cooldown=2;advance(b,10);advance(b,2);assert.equal(e.enemyForm,'normal');assert.equal(e.canAttack,true);assert.ok(Math.abs(e.enemySkills[0].nextAt-14)<.04);
+ advance(b,1.9);assert.equal(e.enemyForm,'normal');advance(b,.1);assert.equal(e.enemyForm,'rotating');
+});
+
+test('旋转一秒保护期内推拉不退形态，保护后成功推拉退出，普通传送或失败位移不触发',()=>{
+ const {b,e}=arena('enemy_10116_ymgtop');for(const row of b.map.grid)for(const t of row){t.heightType='LOWLAND';t.buildableType='ALL';t.passableMask='ALL';t.obstacle=false;}
+ advance(b,10.5);assert.equal(moveActor(b,e,{x:2,y:3,uid:999},'推动'),true);assert.equal(e.enemyForm,'rotating');advance(b,.6);
+ assert.equal(teleportActor(b,e,{x:5,y:3}),true);assert.equal(e.enemyForm,'rotating');e.shiftImmune=true;assert.equal(moveActor(b,e,{x:4,y:3},'推动'),false);assert.equal(e.enemyForm,'rotating');e.shiftImmune=false;
+ assert.equal(moveActor(b,e,{x:4,y:3},'推动'),true);assert.equal(e.enemyForm,'normal');assert.equal(e.canAttack,true);assert.ok(e.enemySkills[0].nextAt>b.s.time+59);
+});
+
+test('旋转阶段读档保留保护期、结束时刻与下一次伤害时刻',()=>{
+ const {b,g,e,ally}=arena('enemy_10116_ymgtop');advance(b,10.5);addAlly(b,ally,4,3);const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);
+ const copy=restored.s.enemies[0];assert.equal(copy.enemyForm,'rotating');assert.equal(copy.rotationProtectedUntil,e.rotationProtectedUntil);assert.equal(copy.enemyFormUntil,e.enemyFormUntil);assert.equal(copy.rotationNextAt,e.rotationNextAt);
+ let hits=0;restored.hurt=()=>hits++;advance(restored,.4);assert.equal(hits,0);advance(restored,.2);assert.equal(hits,1);
+});
 
 test('转译基底取消伤害，物法分别计数，第四次物理伤害只启动一次转换',()=>{
  const {b,e}=arena('enemy_10081_mpplai'),hp=e.hp,atk=e.baseAtk;

@@ -842,7 +842,9 @@ export function moveActor(battle,target,source,description=''){
  const away=/推开|推动|击退/.test(description),toward=/拖拽|拉向|拉至/.test(description);if(!away&&!toward)return false;
  const dx=target.x-source.x,dy=target.y-source.y,len=Math.hypot(dx,dy)||1,step=away?1:-1,nx=Math.round(target.x+(dx/len)*step),ny=Math.round(target.y+(dy/len)*step);
  if(!validMoveTile(battle,target,nx,ny))return false;
- return teleportActor(battle,target,{x:nx,y:ny,source,mode:away?'push':'pull'});
+ const moved=teleportActor(battle,target,{x:nx,y:ny,source,mode:away?'push':'pull'});
+ if(moved)battle.onActorShiftEnd?.(target,{source,mode:away?'push':'pull'});
+ return moved;
 }
 
 // 「换位置」类效果（盟约突袭的再部署、乌尔比安 S3 的船锚位移）的落点口径：地形按备战期

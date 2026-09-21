@@ -2,7 +2,7 @@ import {tickDeepWater,tickSandStorm} from './native-environment.js';
 import {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} from './native-enemy-parasite.js';
 import {advanceEnemyFear} from './native-enemy-fear.js';
 import {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} from './native-enemy-transport.js';
-import {initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,releaseParrotPassenger} from './native-enemy-forms.js';
+import {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,releaseParrotPassenger} from './native-enemy-forms.js';
 import {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} from './native-enemy-attacks.js';
 import {tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} from './native-enemy-traits.js';
 import {initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} from './native-enemy-skills.js';
@@ -56,6 +56,7 @@ export class NativeBattle {
   b.s=migrated;b.attachRuntime();return b;}catch{return null;}
  }
  enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
+ onActorShiftEnd(target){enemyFormShiftEnded(this,target);}
  enemyBeforeDamage(target,opts){return enemyFormBeforeDamage(this,target,opts);}
  enemySkillTargets(enemy){return enemyAttackTargets(this,enemy);}
  enemyElementMultiplier(target){return parasiteElementMultiplier(this,target);}
