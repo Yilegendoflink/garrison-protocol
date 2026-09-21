@@ -7,7 +7,7 @@ import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const names = ['data.js', 'benchmark.js', 'combat.js', 'status.js', 'targeting.js', 'actions.js', 'content.js', 'protocol.js', 'protocol-data.js', 'engine.js', 'renderer.js', 'session.js', 'catalog.js', 'screens.js', 'app.js','garrison.js','strategy.js','native-economy.js','runtime-data.js','native-branches.js','native-equipment.js','native-wave-defaults.js','native-wave-fill.js','native-wave-random.js','native-waves.js','native-wave-editor.js','native-sp.js','native-combat.js','native-operator-effects.js','native-effects.js','native-environment.js','native-enemy-skills.js','native-enemy-traits.js','native-enemy-attacks.js','native-enemy-forms.js','native-enemy-transport.js','native-enemy-fear.js','native-enemy-parasite.js','native-battle.js','native-session.js','native-fx.js','native-flight.js','native-skill-text.js','native-325.js','native-lobby.js','native-play.js'];
-names.push('native-shift.js');
+names.push('native-shift.js','native-miner.js');
 const factories = [];
 async function writeRetry(file,content){
   let last;

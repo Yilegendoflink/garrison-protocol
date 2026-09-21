@@ -90,9 +90,10 @@ export function enemyWineBuffs(battle,target){
  return result;
 }
 export function operators(s){return s.units||[];}
-export function alliedActors(s){return [...(s.units||[]),...(s.summons||[]).filter(x=>x.allied!==false)];}
+export function alliedActors(s){return [...(s.units||[]),...(s.summons||[]).filter(x=>x.allied!==false&&!x.neutral)];}
 export function enemyActors(s){return (s.enemies||[]).filter(e=>e.hp>0);}
-export function attackableAllies(s){return alliedActors(s).filter(u=>u.deployed&&u.hp>0&&u.targetable!==false);}
+export function enemyOpponents(s){return [...alliedActors(s),...(s.summons||[]).filter(u=>u.neutral)];}
+export function attackableAllies(s){return enemyOpponents(s).filter(u=>u.deployed&&u.hp>0&&u.targetable!==false);}
 export function lifeKey(u){return u.uid+':'+(u.deployGen||0);}
 export function chebyshev(a,b){return Math.max(Math.abs((a.x??0)-(b.x??0)),Math.abs((a.y??0)-(b.y??0)));}
 export function activeTalentsOf(battle,u){
@@ -344,7 +345,8 @@ export function applyHeal(battle,opts){
  const target=opts.target||getActor(battle.s,opts.targetUid);
  const origin=opts.origin||source;
  if(!source||!target)return 0;
- const enemyTarget=target&&battle.s.enemies.includes(target),healable=enemyTarget?battle.s.enemies.includes(source)&&target.hp>0&&(target===source||!isIsolated(target))&&!target.unhealable&&!target.statuses?.some(s=>s.kind==='healingBlocked'):battle.canHeal(target,source);
+ const medic=opts.minerMedicUid!=null?getActor(battle.s,opts.minerMedicUid):null,minerSelfHeal=source===target&&target.neutral&&target.id==='enemy_3010_mcreep'&&medic?.deployed&&medic.hp>0&&battle.profile(medic)?.profession==='MEDIC'&&battle.inside(medic,target)&&target.hp>0&&!target.unhealable&&!target.statuses?.some(s=>s.kind==='healingBlocked');
+ const enemyTarget=target&&battle.s.enemies.includes(target),healable=minerSelfHeal||(enemyTarget?battle.s.enemies.includes(source)&&target.hp>0&&(target===source||!isIsolated(target))&&!target.unhealable&&!target.statuses?.some(s=>s.kind==='healingBlocked'):battle.canHeal(target,source));
  if(!source||(!opts.persistAfterSourceGone&&((!source.deployed&&!battle.s.enemies.includes(source))||source.hp<=0))||!healable||!Number.isFinite(opts.amount)||opts.amount<=0)return 0;
  if(target.healable===false&&!opts.ignoreHealable)return 0;
  const event=nextEvent(battle,{cause:'heal',parentEventId:opts.parentEventId??null,effectId:opts.effectId??null,type:'heal'});
@@ -1274,6 +1276,7 @@ export function spawnSummon(battle,owner,spec){
 
 function tickSummons(battle,dt){
  for(const s of battle.s.summons.slice()){
+  if(s.neutral)continue;
   if(s.endsAt!=null&&battle.s.time>=s.endsAt){commitExit(battle,{target:s,reason:'forced'});continue;}
   if(s.canHeal&&battle.s.time+1e-9>=s.nextHealAt){for(const a of alliedActors(battle.s).filter(v=>v.deployed&&v.hp>0&&chebyshev(s,v)<=1&&v.healable!==false))applyHeal(battle,{source:s,target:a,amount:s.atk,origin:s});s.nextHealAt+=s.interval;}
   if(s.type==='ghost2-substitute'&&s.deployed&&s.hp>0){const owner=getActor(battle.s,s.ownerUid),talent=owner&&activeTalentsOf(battle,owner).find(t=>t.name==='拥抱自我'),bb=talent?.values||{};s.nextAuraAt??=battle.s.time+1;if(battle.s.time+1e-9>=s.nextAuraAt){s.nextAuraAt+=1;for(const e of enemyActors(battle.s).filter(e=>chebyshev(s,e)<=1)){applyStatus(e,'sluggish',1.1,{source:s.uid,resistible:false});dealDamage(battle,{source:owner||s,target:e,amount:(owner?battle.stats(owner).atk:s.atk)*(Number(bb.atk_scale)||.4),type:'arts',cause:'skill'});}}}

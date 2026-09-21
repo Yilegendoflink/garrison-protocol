@@ -464,6 +464,12 @@
     "enemy_1269_nhfly": {
       "staticRigid": true,
       "staticRigidSource": "https://prts.wiki/index.php?oldid=414409"
+    },
+    "enemy_3010_mcreep": {
+      "nonPrimary": true,
+      "notCountInTotal": true,
+      "randomPoolEligible": false,
+      "reason": "中立NPC依赖，不加入敌方随机池；PRTS修订421496"
     }
   }
 }
