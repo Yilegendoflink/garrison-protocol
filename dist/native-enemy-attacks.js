@@ -6,7 +6,7 @@ import {endEnemySkill} from './native-enemy-skills.js';
 export function enemyAttackTargets(battle,e,alive=attackableAllies(battle.s)){
  if(e.hidden)return [];
  const spec=e.enemyAttack||{},blocker=alive.find(u=>u.uid===e.block&&enemyTargetValid(u)&&!spec.excludeIds?.includes(u.id));
- const targets=e.ranged?alive.filter(u=>enemyTargetValid(u)&&!spec.excludeIds?.includes(u.id)&&!u.invisible&&!permissions(u).sleeping&&(!spec.groundOnly||!u.flying)&&(!spec.lowlandOnly||battle.map.grid[Math.round(u.y)]?.[Math.round(u.x)]?.heightType==='LOWLAND')&&
+ const targets=(e.ranged||spec.unblockedTargetIds)?alive.filter(u=>(!spec.unblockedTargetIds||spec.unblockedTargetIds.includes(u.id))&&enemyTargetValid(u)&&!spec.excludeIds?.includes(u.id)&&!u.invisible&&!permissions(u).sleeping&&(!spec.groundOnly||!u.flying)&&(!spec.lowlandOnly||battle.map.grid[Math.round(u.y)]?.[Math.round(u.x)]?.heightType==='LOWLAND')&&
   (enemyTargetInRange(e,u)||(e.specialSkill?.prefab==='CrossAttack'&&(Math.abs(e.x-u.x)<=1e-6||Math.abs(e.y-u.y)<=1e-6)))):[];
  targets.sort((a,b)=>compareEnemyTargets({tauntLevel:a.kind==='summon'?0:battle.stats(a).tauntLevel,deployAt:a.deployAt||0,uid:a.uid},{tauntLevel:b.kind==='summon'?0:battle.stats(b).tauntLevel,deployAt:b.deployAt||0,uid:b.uid}));
  if(blocker&&!spec.ignoreBlock)return [blocker,...targets.filter(t=>t!==blocker)];

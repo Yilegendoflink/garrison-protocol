@@ -286,7 +286,7 @@ export function dealDamage(battle,opts){
  const exposure=(target.statuses||[]).filter(s=>s.kind==='exposed').reduce((n,s)=>Math.max(n,Number(s.value)||1),1);
  if(opts.exposureHandledFor!==target.uid)value*=exposure;
  if(opts.directionHandledFor!==target.uid)value*=battle.enemyFacingDamageMultiplier?.(target,source,type)??1;
- if(opts.phaseHandledFor!==target.uid)value*=battle.enemyPhaseDamageMultiplier?.(target,type)??1;
+ if(opts.phaseHandledFor!==target.uid)value*=battle.enemyPhaseDamageMultiplier?.(target,type,source)??1;
  const protection=target.damageProtection;
  if(!opts.skipProtection&&protection&&protection.until!=null&&battle.s.time<protection.until){
   const immediateRatio=Math.max(0,Math.min(1,Number(protection.immediateRatio??1)));
@@ -994,6 +994,7 @@ export function grantShield(battle,target,spec){
  if(spec.id)target.shieldLayers=target.shieldLayers.filter(l=>{if(l.id!==spec.id)return true;log(battle,'replaced',{uid:target.uid,layerId:l.id});return false;});
  const layer={id:spec.id||('sh-'+battle.s.settle.nextEffectId++),remaining:spec.amount,max:spec.amount,endsAt:spec.endsAt,decayPerSec:spec.decayPerSec||0,sourceUid:spec.sourceUid};
  if(spec.types)layer.types=spec.types.slice();
+ if(spec.absorbSourceIds)layer.absorbSourceIds=spec.absorbSourceIds.slice();
  target.shieldLayers.push(layer);
  target.shield=target.shieldLayers.reduce((n,l)=>n+l.remaining,0);
  log(battle,'barrier-add',{uid:target.uid,amount:spec.amount,id:layer.id});

@@ -42,6 +42,7 @@ export function applyDamage(target, amount, {immortal = false, minHp = 0, type =
     for(const layer of target.shieldLayers){
       if(leftover<=0)break;
       if(layer.types&&!layer.types.includes(type))continue;
+      if(layer.absorbSourceIds&&!layer.absorbSourceIds.includes(sourceId))continue;
       const take=Math.min(leftover, Math.max(0, layer.remaining||0));
       layer.remaining-=take;leftover-=take;shield+=take;
       if(layer.remaining<=1e-9)depletedLayers.push(layer);

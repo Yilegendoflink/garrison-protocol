@@ -15,12 +15,30 @@ export function enemyChaliceProtection(battle,target){
  if(!source)return null;return {source,retained:Math.max(0,Math.min(1,Number(source.enemyTalent['takeDmg.damage_scale'])))};
 }
 
+const minerShieldActive=e=>e.shieldLayers?.some(l=>l.id==='rift-miner-shield'&&l.remaining>0);
+function syncMinerShield(e){
+ if(!e.minerShieldInitialized)return;
+ const active=minerShieldActive(e);e.taunt=e.minerShieldBaseTaunt+(active?1:0);
+ for(const kind of ['fear','sleep'])e.immunities[kind]=active?true:e.minerShieldBaseImmunities[kind];
+}
+export function enemyMinerShieldDamageMultiplier(e,source,type){
+ return minerShieldActive(e)&&source?.id!=='enemy_3010_mcreep'&&['physical','arts'].includes(type)?1-(Number(e.enemyTalent['M0Shield.damage_resistance'])||0):1;
+}
+
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.staticRigid=raw.enemyBehavior?.staticRigid===true;
  e.nonPrimary=raw.enemyBehavior?.nonPrimary===true;e.notCountInTotal=raw.enemyBehavior?.notCountInTotal??raw.notCountInTotal??false;
  if(raw.enemyBehavior?.isolated===true)e.isolated=true;
  if(e.id==='enemy_1367_dseed')e.shiftImmune=true; // 血珀是失衡免疫，不是静态刚体。
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
+ if(/^enemy_10127_rkmbst(?:_2)?$/.test(e.id)){
+  e.enemyAttack={...e.enemyAttack,unblockedTargetIds:['enemy_3001_upeopl','enemy_3002_ftrtal','enemy_3010_mcreep']};
+  if(!e.minerShieldInitialized&&Number(e.enemyTalent['M0Shield.init_shield_hp_ratio'])>0){
+   e.minerShieldInitialized=true;e.minerShieldBaseTaunt=e.taunt;e.minerShieldBaseImmunities={fear:!!e.immunities.fear,sleep:!!e.immunities.sleep};
+   grantShield(battle,e,{id:'rift-miner-shield',amount:e.maxHp*Number(e.enemyTalent['M0Shield.init_shield_hp_ratio']),types:['physical'],absorbSourceIds:['enemy_3010_mcreep']});
+  }
+  syncMinerShield(e);
+ }
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
  if(e.enemySkills?.some(s=>s.prefab==='PollutedRangedAtk'))e.enemyAttack={...e.enemyAttack,groundOnly:true,lowlandOnly:true};
  if(e.id==='enemy_1500_skulsr'){
@@ -79,6 +97,7 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
 
 export function enemyConditionalAttackSpeed(e){
  const bb=e.enemyTalent||{};
+ if(minerShieldActive(e))return Number(bb['M0Shield.attack_speed'])||0;
  if(e.enemyFormKind==='echo'&&e.enemyForm==='pipe')return Number(bb['1.attack_speed']);
  if(e.knightRage)return Number(bb['triggerrage.attack_speed'])||0;
  if(e.id==='enemy_1511_mdrock')return mudrockShieldActive(e)?e.mudrockShieldAspd||0:0;
@@ -234,6 +253,7 @@ export function consumeEnemyLancerRush(e){
 
 // refreshEnemyAuras 每帧先恢复基础防御/法抗，再调用此处，避免永久写回导致重复累加。
 export function refreshEnemyTraitStats(e){
+ syncMinerShield(e);
  const bb=e.enemyTalent||{},silenced=permissions(e).silenced;
  if(e.id==='enemy_1509_mousek'){e.mouseShieldDef=e.shieldLayers.some(l=>l.id==='mouseking-arts'&&l.remaining>0)?Number(bb['defup.def'])||0:0;e.def+=e.mouseShieldDef;}
  if(e.refractionBonus&&!silenced)e.res+=e.refractionBonus;
@@ -277,6 +297,7 @@ export function enemyTraitOnDamageSp(battle,e){
 }
 
 export function enemyTraitAfterDamage(battle,e,opts,result){
+ syncMinerShield(e);
  if(!e.enemyTraitsInitialized||result.total<=0)return;
  if(e.id==='enemy_2052_smgia'&&e.hp>0&&opts.environmental===true)applyStatus(e,'fragile',Number(e.enemyTalent['Weak.weak[limit]']),{source:e.uid,value:Number(e.enemyTalent['Weak.damage_scale']),resistible:false});
  if(e.id==='enemy_1509_mousek'&&e.mouseShieldDef&&!e.shieldLayers.some(l=>l.id==='mouseking-arts'&&l.remaining>0)){e.def-=e.mouseShieldDef;e.mouseShieldDef=0;}

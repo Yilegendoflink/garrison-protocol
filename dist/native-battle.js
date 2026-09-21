@@ -5,7 +5,7 @@ import {advanceEnemyFear} from './native-enemy-fear.js';
 import {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} from './native-enemy-transport.js';
 import {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyPhaseDamageMultiplier,enemyFormFatal,enemyFormAfterDamage,enemyFormHealthChanged,releaseParrotPassenger} from './native-enemy-forms.js';
 import {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} from './native-enemy-attacks.js';
-import {enemyTraitOnDamageSp,enemyEchoBurst,enemyChaliceProtection,liberateEnemyPrisoners,enemyKnightExit,enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} from './native-enemy-traits.js';
+import {enemyMinerShieldDamageMultiplier,enemyTraitOnDamageSp,enemyEchoBurst,enemyChaliceProtection,liberateEnemyPrisoners,enemyKnightExit,enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} from './native-enemy-traits.js';
 import {checkWEnrage,checkZaroCageHealth,initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} from './native-enemy-skills.js';
 import {branchBehavior,branchTrait,skillAntiAir} from './native-branches.js';
 import {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} from './native-equipment.js';
@@ -57,7 +57,7 @@ export class NativeBattle {
   b.s=migrated;b.attachRuntime();return b;}catch{return null;}
  }
  enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
- enemyPhaseDamageMultiplier(target,type){return enemyPhaseDamageMultiplier(target,type);}
+ enemyPhaseDamageMultiplier(target,type,source){return enemyPhaseDamageMultiplier(target,type)*enemyMinerShieldDamageMultiplier(target,source,type);}
  enemyChaliceProtection(target){return enemyChaliceProtection(this,target);}
  enemyEchoBurst(enemy,radius,damageScale,elementScale){return enemyEchoBurst(this,enemy,radius,damageScale,elementScale);}
  onActorShiftStart(target){cancelEnemyCast(this,target);}

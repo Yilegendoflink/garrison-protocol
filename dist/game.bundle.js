@@ -213,6 +213,7 @@ function applyDamage(target, amount, {immortal = false, minHp = 0, type = 'physi
     for(const layer of target.shieldLayers){
       if(leftover<=0)break;
       if(layer.types&&!layer.types.includes(type))continue;
+      if(layer.absorbSourceIds&&!layer.absorbSourceIds.includes(sourceId))continue;
       const take=Math.min(leftover, Math.max(0, layer.remaining||0));
       layer.remaining-=take;leftover-=take;shield+=take;
       if(layer.remaining<=1e-9)depletedLayers.push(layer);
@@ -4852,7 +4853,7 @@ function dealDamage(battle,opts){
  const exposure=(target.statuses||[]).filter(s=>s.kind==='exposed').reduce((n,s)=>Math.max(n,Number(s.value)||1),1);
  if(opts.exposureHandledFor!==target.uid)value*=exposure;
  if(opts.directionHandledFor!==target.uid)value*=battle.enemyFacingDamageMultiplier?.(target,source,type)??1;
- if(opts.phaseHandledFor!==target.uid)value*=battle.enemyPhaseDamageMultiplier?.(target,type)??1;
+ if(opts.phaseHandledFor!==target.uid)value*=battle.enemyPhaseDamageMultiplier?.(target,type,source)??1;
  const protection=target.damageProtection;
  if(!opts.skipProtection&&protection&&protection.until!=null&&battle.s.time<protection.until){
   const immediateRatio=Math.max(0,Math.min(1,Number(protection.immediateRatio??1)));
@@ -5560,6 +5561,7 @@ function grantShield(battle,target,spec){
  if(spec.id)target.shieldLayers=target.shieldLayers.filter(l=>{if(l.id!==spec.id)return true;log(battle,'replaced',{uid:target.uid,layerId:l.id});return false;});
  const layer={id:spec.id||('sh-'+battle.s.settle.nextEffectId++),remaining:spec.amount,max:spec.amount,endsAt:spec.endsAt,decayPerSec:spec.decayPerSec||0,sourceUid:spec.sourceUid};
  if(spec.types)layer.types=spec.types.slice();
+ if(spec.absorbSourceIds)layer.absorbSourceIds=spec.absorbSourceIds.slice();
  target.shieldLayers.push(layer);
  target.shield=target.shieldLayers.reduce((n,l)=>n+l.remaining,0);
  log(battle,'barrier-add',{uid:target.uid,amount:spec.amount,id:layer.id});
@@ -6654,12 +6656,30 @@ function enemyChaliceProtection(battle,target){
  if(!source)return null;return {source,retained:Math.max(0,Math.min(1,Number(source.enemyTalent['takeDmg.damage_scale'])))};
 }
 
+const minerShieldActive=e=>e.shieldLayers?.some(l=>l.id==='rift-miner-shield'&&l.remaining>0);
+function syncMinerShield(e){
+ if(!e.minerShieldInitialized)return;
+ const active=minerShieldActive(e);e.taunt=e.minerShieldBaseTaunt+(active?1:0);
+ for(const kind of ['fear','sleep'])e.immunities[kind]=active?true:e.minerShieldBaseImmunities[kind];
+}
+function enemyMinerShieldDamageMultiplier(e,source,type){
+ return minerShieldActive(e)&&source?.id!=='enemy_3010_mcreep'&&['physical','arts'].includes(type)?1-(Number(e.enemyTalent['M0Shield.damage_resistance'])||0):1;
+}
+
 function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.staticRigid=raw.enemyBehavior?.staticRigid===true;
  e.nonPrimary=raw.enemyBehavior?.nonPrimary===true;e.notCountInTotal=raw.enemyBehavior?.notCountInTotal??raw.notCountInTotal??false;
  if(raw.enemyBehavior?.isolated===true)e.isolated=true;
  if(e.id==='enemy_1367_dseed')e.shiftImmune=true; // 血珀是失衡免疫，不是静态刚体。
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
+ if(/^enemy_10127_rkmbst(?:_2)?$/.test(e.id)){
+  e.enemyAttack={...e.enemyAttack,unblockedTargetIds:['enemy_3001_upeopl','enemy_3002_ftrtal','enemy_3010_mcreep']};
+  if(!e.minerShieldInitialized&&Number(e.enemyTalent['M0Shield.init_shield_hp_ratio'])>0){
+   e.minerShieldInitialized=true;e.minerShieldBaseTaunt=e.taunt;e.minerShieldBaseImmunities={fear:!!e.immunities.fear,sleep:!!e.immunities.sleep};
+   grantShield(battle,e,{id:'rift-miner-shield',amount:e.maxHp*Number(e.enemyTalent['M0Shield.init_shield_hp_ratio']),types:['physical'],absorbSourceIds:['enemy_3010_mcreep']});
+  }
+  syncMinerShield(e);
+ }
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
  if(e.enemySkills?.some(s=>s.prefab==='PollutedRangedAtk'))e.enemyAttack={...e.enemyAttack,groundOnly:true,lowlandOnly:true};
  if(e.id==='enemy_1500_skulsr'){
@@ -6718,6 +6738,7 @@ function initEnemyTraits(battle,e,raw,{restore=false}={}){
 
 function enemyConditionalAttackSpeed(e){
  const bb=e.enemyTalent||{};
+ if(minerShieldActive(e))return Number(bb['M0Shield.attack_speed'])||0;
  if(e.enemyFormKind==='echo'&&e.enemyForm==='pipe')return Number(bb['1.attack_speed']);
  if(e.knightRage)return Number(bb['triggerrage.attack_speed'])||0;
  if(e.id==='enemy_1511_mdrock')return mudrockShieldActive(e)?e.mudrockShieldAspd||0:0;
@@ -6873,6 +6894,7 @@ function consumeEnemyLancerRush(e){
 
 // refreshEnemyAuras 每帧先恢复基础防御/法抗，再调用此处，避免永久写回导致重复累加。
 function refreshEnemyTraitStats(e){
+ syncMinerShield(e);
  const bb=e.enemyTalent||{},silenced=permissions(e).silenced;
  if(e.id==='enemy_1509_mousek'){e.mouseShieldDef=e.shieldLayers.some(l=>l.id==='mouseking-arts'&&l.remaining>0)?Number(bb['defup.def'])||0:0;e.def+=e.mouseShieldDef;}
  if(e.refractionBonus&&!silenced)e.res+=e.refractionBonus;
@@ -6916,6 +6938,7 @@ function enemyTraitOnDamageSp(battle,e){
 }
 
 function enemyTraitAfterDamage(battle,e,opts,result){
+ syncMinerShield(e);
  if(!e.enemyTraitsInitialized||result.total<=0)return;
  if(e.id==='enemy_2052_smgia'&&e.hp>0&&opts.environmental===true)applyStatus(e,'fragile',Number(e.enemyTalent['Weak.weak[limit]']),{source:e.uid,value:Number(e.enemyTalent['Weak.damage_scale']),resistible:false});
  if(e.id==='enemy_1509_mousek'&&e.mouseShieldDef&&!e.shieldLayers.some(l=>l.id==='mouseking-arts'&&l.remaining>0)){e.def-=e.mouseShieldDef;e.mouseShieldDef=0;}
@@ -7043,7 +7066,7 @@ function applyEnemyTraitAuras(battle){
  for(const target of allies)if(wolves.some(e=>near(e,target,1.5)))target.enemyAttackSpeedMod=(target.enemyAttackSpeedMod||0)-50;
 }
 
-return {enemyChaliceProtection,initEnemyTraits,enemyConditionalAttackSpeed,enemyConditionalAttackMultiplier,enemyEchoBurst,enemyKnightExit,refreshEnemyMudrockShield,enemyTraitBeforeStrike,enemyTraitDamageDealt,tickEnemyAttackContinuity,tickPompeiiExplosion,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitOnDamageSp,enemyTraitAfterDamage,liberateEnemyPrisoners,enemyTraitBeforeAttack,enemyTraitOnHit,syncEnemyConcealMarker,enemyStealAmmo,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,applyEnemyTraitAuras};
+return {enemyChaliceProtection,enemyMinerShieldDamageMultiplier,initEnemyTraits,enemyConditionalAttackSpeed,enemyConditionalAttackMultiplier,enemyEchoBurst,enemyKnightExit,refreshEnemyMudrockShield,enemyTraitBeforeStrike,enemyTraitDamageDealt,tickEnemyAttackContinuity,tickPompeiiExplosion,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitOnDamageSp,enemyTraitAfterDamage,liberateEnemyPrisoners,enemyTraitBeforeAttack,enemyTraitOnHit,syncEnemyConcealMarker,enemyStealAmmo,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,applyEnemyTraitAuras};
 },
 "native-enemy-attacks.js": function(load) {
 const {permissions,statusAttributeChanges,applyStatus} = load("status.js");
@@ -7053,7 +7076,7 @@ const {endEnemySkill} = load("native-enemy-skills.js");
 function enemyAttackTargets(battle,e,alive=attackableAllies(battle.s)){
  if(e.hidden)return [];
  const spec=e.enemyAttack||{},blocker=alive.find(u=>u.uid===e.block&&enemyTargetValid(u)&&!spec.excludeIds?.includes(u.id));
- const targets=e.ranged?alive.filter(u=>enemyTargetValid(u)&&!spec.excludeIds?.includes(u.id)&&!u.invisible&&!permissions(u).sleeping&&(!spec.groundOnly||!u.flying)&&(!spec.lowlandOnly||battle.map.grid[Math.round(u.y)]?.[Math.round(u.x)]?.heightType==='LOWLAND')&&
+ const targets=(e.ranged||spec.unblockedTargetIds)?alive.filter(u=>(!spec.unblockedTargetIds||spec.unblockedTargetIds.includes(u.id))&&enemyTargetValid(u)&&!spec.excludeIds?.includes(u.id)&&!u.invisible&&!permissions(u).sleeping&&(!spec.groundOnly||!u.flying)&&(!spec.lowlandOnly||battle.map.grid[Math.round(u.y)]?.[Math.round(u.x)]?.heightType==='LOWLAND')&&
   (enemyTargetInRange(e,u)||(e.specialSkill?.prefab==='CrossAttack'&&(Math.abs(e.x-u.x)<=1e-6||Math.abs(e.y-u.y)<=1e-6)))):[];
  targets.sort((a,b)=>compareEnemyTargets({tauntLevel:a.kind==='summon'?0:battle.stats(a).tauntLevel,deployAt:a.deployAt||0,uid:a.uid},{tauntLevel:b.kind==='summon'?0:battle.stats(b).tauntLevel,deployAt:b.deployAt||0,uid:b.uid}));
  if(blocker&&!spec.ignoreBlock)return [blocker,...targets.filter(t=>t!==blocker)];
@@ -7694,7 +7717,7 @@ const {advanceEnemyFear} = load("native-enemy-fear.js");
 const {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} = load("native-enemy-transport.js");
 const {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyPhaseDamageMultiplier,enemyFormFatal,enemyFormAfterDamage,enemyFormHealthChanged,releaseParrotPassenger} = load("native-enemy-forms.js");
 const {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} = load("native-enemy-attacks.js");
-const {enemyTraitOnDamageSp,enemyEchoBurst,enemyChaliceProtection,liberateEnemyPrisoners,enemyKnightExit,enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
+const {enemyMinerShieldDamageMultiplier,enemyTraitOnDamageSp,enemyEchoBurst,enemyChaliceProtection,liberateEnemyPrisoners,enemyKnightExit,enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
 const {checkWEnrage,checkZaroCageHealth,initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} = load("native-enemy-skills.js");
 const {branchBehavior,branchTrait,skillAntiAir} = load("native-branches.js");
 const {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} = load("native-equipment.js");
@@ -7745,7 +7768,7 @@ class NativeBattle {
   b.s=migrated;b.attachRuntime();return b;}catch{return null;}
  }
  enemyFacingDamageMultiplier(target,source,type){return enemyFacingDamageMultiplier(target,source,type);}
- enemyPhaseDamageMultiplier(target,type){return enemyPhaseDamageMultiplier(target,type);}
+ enemyPhaseDamageMultiplier(target,type,source){return enemyPhaseDamageMultiplier(target,type)*enemyMinerShieldDamageMultiplier(target,source,type);}
  enemyChaliceProtection(target){return enemyChaliceProtection(this,target);}
  enemyEchoBurst(enemy,radius,damageScale,elementScale){return enemyEchoBurst(this,enemy,radius,damageScale,elementScale);}
  onActorShiftStart(target){cancelEnemyCast(this,target);}
