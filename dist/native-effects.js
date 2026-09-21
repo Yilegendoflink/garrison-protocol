@@ -41,6 +41,10 @@ export function migrateBattle(saved){
 export function validateBattle(s,battle){
  if(!s||!Array.isArray(s.units)||!Array.isArray(s.enemies)||!Number.isFinite(s.time)||!Number.isFinite(s.frame)||!Number.isFinite(s.cost)||!Number.isFinite(s.costInitial)||!Number.isFinite(s.costMin)||!Number.isFinite(s.costMax)||!Number.isFinite(s.costRecoveryInterval)||!Number.isFinite(s.costRecoveryClock)||s.costRecoveryInterval<=0||s.costMin>s.costMax||s.cost<s.costMin)return 'invalid battle snapshot';
  const ids=new Set();
+ if(s.dominionCells!=null){
+  if(typeof s.dominionCells!=='object'||Array.isArray(s.dominionCells))return 'invalid dominion cells';
+  for(const [key,cell]of Object.entries(s.dominionCells))if(!cell||!Number.isInteger(cell.x)||!Number.isInteger(cell.y)||!Number.isFinite(cell.attackSpeed)||key!==cell.x+','+cell.y||!battle.map.grid[cell.y]?.[cell.x])return 'invalid dominion cell';
+ }
  for(const actor of [...s.units,...s.enemies,...(s.summons||[])]){
  if(!Number.isInteger(actor.uid)||ids.has(actor.uid))return 'duplicate or invalid uid';
  if(!Number.isFinite(actor.hp)||!Number.isFinite(actor.x)||!Number.isFinite(actor.y))return 'invalid actor values';
@@ -855,7 +859,7 @@ function validMoveTile(battle,target,x,y,{allowOccupied=false,allowFlyOnly=false
 export function teleportActor(battle,target,{x,y,source=null,mode='teleport',allowOccupied=false}={}){
  if(!target||target.hp<=0||target.hidden||x==null||y==null)return false;
  const nx=Math.round(x),ny=Math.round(y);if(!validMoveTile(battle,target,nx,ny,{allowOccupied,allowFlyOnly:true}))return false;
- const fx0=target.x,fy0=target.y;target.x=nx;target.y=ny;target.block=null;target.action=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode});battle.emit('move',{uid:target.uid,x:nx,y:ny,fromX:fx0,fromY:fy0,mode});return true;
+ const fx0=target.x,fy0=target.y;target.x=nx;target.y=ny;target.block=null;target.action=null;log(battle,'move',{uid:target.uid,sourceUid:source?.uid,x:nx,y:ny,mode});battle.onActorMoved?.(target);battle.emit('move',{uid:target.uid,x:nx,y:ny,fromX:fx0,fromY:fy0,mode});return true;
 }
 export function moveActor(battle,target,source,description=''){
  if(!target||target.hp<=0||target.hidden||target.levitated||target.shiftImmune)return false;

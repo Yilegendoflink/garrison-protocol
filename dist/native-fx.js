@@ -379,8 +379,9 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
  // 敌方留下的持续伤害区域（kind:'field'：污染秽蚀、燃烧区域、毒雾）和我方技能区域共用这套绘制。
  // 例外：6 人谢拉格的寒风区域（bond-kjerag-storm）是全场常驻判定，但**不留常驻底色**——
  // 表现只有每 25 秒起风时的全屏冰风（'ice-wind' → drawIceWind）。
+ const dominion=drawDominion(c,point,z,battle);
  const list=(s.logicEffects||[]).filter(fx=>fx.talentOrSkillId!=='bond-kjerag-storm'&&(fx.kind==='zone'||(fx.kind==='field'&&(Number(fx.values?.damage)>0||Number(fx.values?.atkScale)>0||Number(fx.values?.elementScale)>0)))&&(fx.endsAt==null||fx.endsAt>s.time));
- if(!list.length)return false;
+ if(!list.length)return dominion;
  for(const fx of list){
   const visual=fx.values?.mouseSand?{shape:'square',tone:'gold'}:fx.values?.enemyWineBuff?{shape:'circle',tone:'gold'}:battle.zoneVisual?battle.zoneVisual(fx.talentOrSkillId,fx.values||{}):{shape:'circle',tone:'arts'};
   const [light,deep]=ZONE_TONE[visual.tone]||ZONE_TONE.arts;
@@ -740,4 +741,11 @@ export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}
   c.restore();drew=true;
  }
  return drew;
+}
+
+export function drawDominion(c,point,z,battle){
+ const cells=Object.values(battle?.s?.dominionCells||{});if(!cells.length||battle.s.benchmark)return false;
+ c.save();c.fillStyle='rgba(33,18,48,.55)';c.strokeStyle='rgba(146,108,170,.55)';c.lineWidth=1;
+ for(const cell of cells){const p=point(cell.x,cell.y);c.fillRect(p.x-z.tw/2,p.y-z.th/2,z.tw,z.th);c.strokeRect(p.x-z.tw/2+.5,p.y-z.th/2+.5,z.tw-1,z.th-1);}
+ c.restore();return true;
 }

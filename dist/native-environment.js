@@ -1,6 +1,25 @@
 import {dealDamage,alliedActors} from './native-effects.js';
 import {applyStatus,removeStatus} from './status.js';
 
+export function dominionCell(battle,actor){
+ if(!actor||battle.s.benchmark)return null;
+ return battle.s.dominionCells?.[Math.round(actor.x)+','+Math.round(actor.y)]||null;
+}
+
+export function paintDominion(battle,enemy){
+ if(!battle.s.enemies.includes(enemy)||enemy.id!=='enemy_2048_smgrd'||enemy.hp<=0||enemy.hidden||enemy.flying||battle.s.benchmark)return;
+ const x=Math.round(enemy.x),y=Math.round(enemy.y),key=x+','+y;
+ if(enemy.dominionLastTile===key)return;enemy.dominionLastTile=key;
+ if(battle.map.grid[y]?.[x]?.heightType!=='LOWLAND')return;
+ const bb=enemy.enemyTalent,cells=battle.data.ranges[bb['BlackFog.range_id']]?.grids;if(!cells)return;
+ const field=battle.s.dominionCells??={};
+ for(const cell of cells){
+  const cx=x+cell.col,cy=y+cell.row,tile=battle.map.grid[cy]?.[cx];
+  if(!tile||tile.buildableType==='NONE'||tile.obstacle)continue;
+  const id=cx+','+cy;field[id]={x:cx,y:cy,attackSpeed:Math.min(field[id]?.attackSpeed??0,Number(bb['BlackFog.attack_speed'])||0)};
+ }
+}
+
 // 仅处理原始地图显式配置的“深水”控制器；它不同于有时间轴的涨/退潮。
 export function tickDeepWater(battle){
  const cfg=battle.map.environment?.deepWater,now=battle.s.time;
