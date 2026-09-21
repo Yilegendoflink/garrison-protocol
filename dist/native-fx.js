@@ -697,6 +697,10 @@ export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}
  const s=battle?.s;
  if(!s?.events)return false;
  let drew=false;
+ for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.xiMarkEnabled)for(const [uid,label,color]of [[e.xiNearestUid,'◆ 最近','#ff9d86'],[e.xiFarthestUid,'◇ 最远','#8acaff']]){
+  const target=[...(s.units||[]),...(s.summons||[])].find(a=>a.uid===uid&&a.deployed&&a.hp>0);if(!target)continue;
+  const p=point(target.x,target.y);c.save();c.font='bold 10px sans-serif';c.textAlign='center';c.fillStyle=color;c.fillText(formatText?formatText(label):label,p.x,p.y-z.th*.95-18);c.restore();drew=true;
+ }
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.mouseMarkEnabled)for(const [uid,label,color]of [[e.mouseMaxUid,'⊕ 最高生命','#ff887d'],[e.mouseMinUid,'▼ 最低生命','#86baff']]){
   const target=[...(s.units||[]),...(s.summons||[])].find(a=>a.uid===uid&&a.deployed&&a.hp>0);if(!target)continue;
   const p=point(target.x,target.y);c.save();c.font='bold 10px sans-serif';c.textAlign='center';c.fillStyle=color;c.fillText(formatText?formatText(label):label,p.x,p.y-z.th*.95-(uid===e.mouseMaxUid?26:14));c.restore();drew=true;

@@ -293,6 +293,7 @@ export function enemyPhaseDamageMultiplier(e,type){
 
 export function enemyFormFatal(b,e){
  if(e.enemyFormKind==='xi'&&e.enemyForm==='initial'){
+  e.xiMarkEnabled=false;e.xiNearestUid=null;e.xiFarthestUid=null;
   cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['reborn.duration']);e.hp=e.maxHp;
   e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
  }

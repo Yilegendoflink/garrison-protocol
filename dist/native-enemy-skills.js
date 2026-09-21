@@ -110,6 +110,7 @@ export function cancelEnemyCast(battle,enemy,{lostTarget=false}={}){
  if(enemy.zaroCage&&(enemy.hp<=0||enemy.enemyForm!=='initial'))clearZaroCage(battle,enemy);
  const cast=enemy.enemyCast;if(!cast)return;
  if(cast.c4Targets){detonateC4(battle,enemy);return;}
+ if(cast.xiCross){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.xiBurst){enemy.formHold=false;enemy.shiftImmune=cast.previousShiftImmune;enemy.shieldLayers=(enemy.shieldLayers||[]).filter(l=>l.id!=='xi-burst');enemy.shield=enemy.shieldLayers.reduce((n,l)=>n+l.remaining,0);endEnemySkill(battle,enemy);return;}
  if(cast.degenCircle){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.crossShot){enemy.formHold=false;enemy.formInvisible=enemy.baseInvisible;enemy.invisible=enemy.formInvisible&&!enemy.revealed;endEnemySkill(battle,enemy);return;}
@@ -198,6 +199,14 @@ function tickMouseKingSkills(battle,enemy,control){
  endEnemySkill(battle,enemy);
 }
 
+function xiTargets(battle,enemy){
+ return attackableAllies(battle.s).filter(t=>!t.flying&&enemyTargetValid(t)&&!t.invisible&&!permissions(t).sleeping).sort((a,b)=>Math.hypot(a.x-enemy.x,a.y-enemy.y)-Math.hypot(b.x-enemy.x,b.y-enemy.y)||a.uid-b.uid);
+}
+function tickXiMarks(battle,enemy){
+ const targets=enemy.xiMarkEnabled&&enemy.enemyForm!=='rebirth'?xiTargets(battle,enemy):[];
+ enemy.xiNearestUid=targets[0]?.uid??null;enemy.xiFarthestUid=enemy.enemyForm==='second'&&targets.length>1?targets.at(-1).uid:null;
+}
+
 function crownRouteGoal(route,cmd){
  let index=-1;
  for(let i=cmd;i<route.length;i++){if(route[i].kind!=='move')break;index=i;if(route[i].checkpointIndex!=null)break;}
@@ -262,12 +271,25 @@ export function tickEnemySkills(battle,enemy,dt){
  if(!enemy.enemySkills)return;
  if(enemy.hp<=0){cancelEnemyCast(battle,enemy);return;}
  if(tickCrownBlink(battle,enemy))return;
+ if(enemy.enemyFormKind==='xi')tickXiMarks(battle,enemy);
  if(enemy.enemyFormKind==='zaro')tickZaroCage(battle,enemy);
  if(enemy.reidRushUntil!=null&&battle.s.time+1e-9>=enemy.reidRushUntil){enemy.reidRushUntil=null;enemy.speed=enemy.baseSpeed;}
  checkWEnrage(battle,enemy);
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
+ if(cast?.xiCross){
+  if(enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
+  if(battle.s.time+1e-9>=cast.fireAt){
+   const skill=enemy.enemySkills[cast.index],cells=battle.data.ranges['x-6'].grids,attackId=newAttackId(battle);
+   for(const entry of cast.targets){const center=getActor(battle.s,entry.uid);if(!center?.deployed||center.hp<=0||center.deployGen!==entry.deployGen)continue;
+    for(const target of attackableAllies(battle.s))if(enemy.enemyCast===cast&&cells.some(p=>Math.round(target.x)-Math.round(center.x)===p.col&&Math.round(target.y)-Math.round(center.y)===p.row))battle.resolveEnemyStrike(enemy,target,{scale:Number(skill.bb.atk_scale),type:'arts',cause:'splash',attackId});
+    battle.emit('impact',{uid:enemy.uid,x:center.x,y:center.y,radius:2,type:'arts',enemy:true,shape:'cross'});
+   }
+   if(enemy.enemyCast===cast){enemy.formHold=false;endEnemySkill(battle,enemy);}
+  }
+  return;
+ }
  if(cast?.xiBurst){
   const layer=enemy.shieldLayers?.find(l=>l.id==='xi-burst'&&l.remaining>0);
   if(!layer||enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
@@ -416,7 +438,13 @@ export function tickEnemySkills(battle,enemy,dt){
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
  if(enemy.enemyFormKind==='xi'&&enemy.enemyForm!=='rebirth'&&!enemy.action&&!(enemy.attackCooldown>0)){
-  const skill=enemy.enemySkills.find(s=>s.prefab===(enemy.enemyForm==='second'?'ShieldBurstReborn':'ShieldBurst'));
+  const targets=xiTargets(battle,enemy),suffix=enemy.enemyForm==='second'?'Reborn':'',candidates=enemy.enemySkills.filter(s=>enemySkillReady(enemy,s,battle.s.time)&&targets.length&&(s.prefab==='CrossAttack'||s.prefab==='ShieldBurst'+suffix&&targets.some(t=>Math.hypot(t.x-enemy.x,t.y-enemy.y)<=Number(s.bb.range_radius)+1e-9)||s.prefab==='CrossAttackMark'+suffix&&!s.used));
+  const priority=Math.min(...candidates.map(s=>s.priority)),top=candidates.filter(s=>s.priority===priority),skill=top.length>1?top[Math.floor(battle.economy.random()*top.length)]:top[0];
+  if(skill?.prefab.startsWith('CrossAttackMark')&&beginEnemySkill(battle,enemy,skill)){enemy.xiMarkEnabled=true;endEnemySkill(battle,enemy);tickXiMarks(battle,enemy);return;}
+  if(skill?.prefab==='CrossAttack'){
+   const selected=[targets[0],...(enemy.enemyForm==='second'&&targets.length>1?[targets.at(-1)]:[])],timing=battle.enemyAttackTiming(enemy);
+   if(beginEnemySkill(battle,enemy,skill,{xiCross:true,targets:selected.map(t=>({uid:t.uid,deployGen:t.deployGen})),fireAt:battle.s.time+timing.windupFrames/FPS})){enemy.formHold=true;enemy.attackCooldown=timing.frames;return;}
+  }
   if(skill&&attackableAllies(battle.s).some(t=>enemyTargetValid(t)&&!t.flying&&!t.invisible&&!permissions(t).sleeping&&Math.hypot(t.x-enemy.x,t.y-enemy.y)<=Number(skill.bb.range_radius)+1e-9)&&beginEnemySkill(battle,enemy,skill,{xiBurst:true,fireAt:battle.s.time+14.33,endsAt:battle.s.time+Number(skill.bb.duration),fired:false,previousShiftImmune:!!enemy.shiftImmune})){
    enemy.formHold=true;enemy.shiftImmune=true;enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;grantShield(battle,enemy,{id:'xi-burst',amount:Number(skill.bb.dynamic),types:['physical','arts'],endsAt:enemy.enemyCast.endsAt,sourceUid:enemy.uid});return;
   }

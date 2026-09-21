@@ -5,6 +5,7 @@ import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {dealDamage,moveActor,commitExit} from '../dist/native-effects.js';
 import {applyStatus} from '../dist/status.js';
+import {drawEnemyPhase} from '../dist/native-fx.js';
 
 function arena(positions=[]){
  const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.funds=100;assert.ok(g.perform('buy',0));const u=g.s.units[0];let placed=false;
@@ -18,6 +19,31 @@ function arena(positions=[]){
 function advance(b,t){for(let i=0;i<Math.round(t*30);i++)b.step();}
 function fatal(b,e){dealDamage(b,{target:e,value:e.maxHp*10,type:'true'});}
 
+test('纬地经天按全场最近/最远选不同地面中心，x-6十字溅射可对空且重叠分别命中',()=>{
+ for(const second of [false,true]){
+  const {b,e,units}=arena([[4,3],[7,3],[6,3],[4,4],[5,4]]);units[3].flying=true;applyStatus(units[3],'camouflage',100);e.atk=10;
+  if(second){fatal(b,e);advance(b,15.1);e.atk=10;}e.action=null;e.attackCooldown=0;b.s.strikes=[];e.canAttack=false;e.enemySkills.find(s=>s.prefab==='CrossAttack').nextAt=b.s.time;
+  const hits=[];b.hurt=(u,source)=>hits.push([u.uid,source.atk]);b.step();assert.ok(e.enemyCast?.xiCross);advance(b,1.5);
+  assert.deepEqual(hits.map(h=>h[0]),[units[0].uid,units[2].uid,units[3].uid,...(second?[units[1].uid,units[2].uid]:[])]);assert.ok(hits.every(h=>h[1]===10));
+ }
+});
+
+test('自在最近/最远标记随位置变化更新，第二形态和JSON恢复保持规则',()=>{
+ const {b,g,e,units}=arena([[4,3],[7,3]]);e.canAttack=false;b.step();assert.equal(e.xiNearestUid,units[0].uid);assert.equal(e.xiFarthestUid,null);
+ units[0].x=6;units[1].x=4;b.step();assert.equal(e.xiNearestUid,units[1].uid);fatal(b,e);assert.equal(e.xiNearestUid,null);advance(b,5);assert.equal(e.xiNearestUid,units[1].uid);assert.equal(e.xiFarthestUid,units[0].uid);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);restored.s.units[0].hp=0;restored.step();assert.equal(restored.s.enemies[0].xiNearestUid,units[1].uid);assert.equal(restored.s.enemies[0].xiFarthestUid,null);
+});
+
+test('纬地经天只剩一个目标时不重复释放，旧中心再部署不被追踪',()=>{
+ const {b,g,e}=arena([[6,3]]);fatal(b,e);advance(b,15.1);e.action=null;e.attackCooldown=0;e.canAttack=false;e.enemySkills.find(s=>s.prefab==='CrossAttack').nextAt=b.s.time;b.step();assert.equal(e.enemyCast.targets.length,1);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);restored.s.units[0].deployGen++;const hits=[];restored.hurt=u=>hits.push(u.uid);advance(restored,1.5);assert.deepEqual(hits,[]);assert.equal(restored.s.enemies[0].enemyCast,null);
+});
+
+test('自在标记绘制只读取逻辑目标，不修改战斗状态',()=>{
+ const s={events:[],time:0,enemies:[{hp:100,xiMarkEnabled:true,xiNearestUid:1,xiFarthestUid:2}],units:[{uid:1,deployed:true,hp:1,x:1,y:1},{uid:2,deployed:true,hp:1,x:2,y:1}]},before=JSON.stringify(s),labels=[];
+ const c={save(){},restore(){},fillText(text){labels.push(text);}};assert.equal(drawEnemyPhase(c,(x,y)=>({x,y}),{th:20},{s}),true);assert.deepEqual(labels,['◆ 最近','◇ 最远']);assert.equal(JSON.stringify(s),before);
+});
+
 function shieldArena(second=false){
  const scene=arena([[5,3],[5,4],[6,5]]),{b,e}=scene;e.atk=e.baseAtk=10;
  if(second){fatal(b,e);advance(b,15.1);e.atk=10;}
@@ -28,7 +54,7 @@ test('自在两阶段蓄盾取本期2500/3000，14.33秒后600%/800%爆发且不
  for(const second of [false,true]){
   const {b,e,units,skill}=shieldArena(second);assert.equal(e.shield,second?3000:2500);assert.equal(e.shiftImmune,true);units[1].flying=true;const hits=[];b.hurt=(u,source,opts)=>hits.push([u.uid,source.atk,opts.cause]);
   advance(b,14.3);assert.equal(hits.length,0);advance(b,1/30);assert.deepEqual(hits,[[units[0].uid,second?80:60,'splash']]);assert.ok(e.enemyCast);
-  advance(b,.7);assert.equal(e.enemyCast,null);assert.equal(e.shield,0);assert.equal(e.shiftImmune,false);assert.ok(Math.abs(skill.nextAt-(b.s.time+70))<.05);
+  advance(b,.7);assert.ok(!e.enemyCast?.xiBurst);assert.equal(e.shield,0);assert.equal(e.shiftImmune,false);assert.ok(Math.abs(skill.nextAt-(b.s.time+70))<.05);
  }
 });
 
@@ -40,7 +66,7 @@ test('物理/法术击破自在蓄力屏障会打断，真实伤害穿过屏障�
 });
 
 test('自在蓄力存档保留护盾/剩余时间，重生取消旧技能而不取消重生失衡免疫',()=>{
- const {b,g,e}=shieldArena();advance(b,10);const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const hits=[];restored.hurt=u=>hits.push(u.uid);advance(restored,4.4);assert.equal(hits.length,2);advance(restored,1);assert.equal(restored.s.enemies[0].enemyCast,null);
+ const {b,g,e}=shieldArena();advance(b,10);const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const hits=[];restored.hurt=u=>hits.push(u.uid);advance(restored,4.4);assert.equal(hits.length,2);advance(restored,1);assert.ok(!restored.s.enemies[0].enemyCast?.xiBurst);
  fatal(b,e);assert.equal(e.enemyForm,'rebirth');assert.equal(e.enemyCast,null);assert.equal(e.shiftImmune,true);assert.equal(e.shield,0);advance(b,5);assert.equal(e.enemyForm,'second');assert.equal(e.shiftImmune,false);
 });
 
@@ -50,7 +76,7 @@ test('自在首次致命伤5秒重生，二阶段仅加攻5%及10秒无敌，跨
 });
 
 test('自在普攻按半径2.5索敌而非十字全场，无法以飞行单位为目标',()=>{
- const {b,e,units}=arena([[6,3],[4,4]]);units[1].flying=true;const hits=[];b.hurt=u=>hits.push(u.uid);advance(b,18);assert.deepEqual(hits,[]);units[1].flying=false;advance(b,1.5);assert.deepEqual(hits,[units[1].uid]);assert.equal(e.specialSkill,null);
+ const {b,e,units}=arena([[6,3],[4,4]]);units[1].flying=true;const hits=[];b.hurt=u=>hits.push(u.uid);advance(b,14);assert.deepEqual(hits,[]);units[1].flying=false;advance(b,1.5);assert.deepEqual(hits,[units[1].uid]);assert.equal(e.specialSkill,null);
 });
 
 test('自在二阶段重复攻击优先不同目标，只有一名时重复两次，整轮只记一次攻击',()=>{
