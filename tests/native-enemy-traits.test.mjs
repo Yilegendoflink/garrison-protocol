@@ -15,6 +15,28 @@ function spawn(b,id,x=3,y=3){const raw=NATIVE_DATA.enemies[id],o=b.map.origin,p=
 function advance(b,seconds){for(let i=0;i<Math.round(seconds*30);i++)b.step();}
 function addAlly(b,u,x,y){u.x=x;u.y=y;u.hp=u.maxHp;u.deployed=true;applyStatus(u,'disarm',600);b.s.units.push(u);}
 
+test('伙友联动使用两个独立圆形半径，离开或来源消失立即还原',()=>{
+ const {b,ally}=arena(),guard=spawn(b,'enemy_1174_duholy'),blade=spawn(b,'enemy_1175_dushdo_2',4,4);guard.canAttack=blade.canAttack=false;addAlly(b,ally,3.8,3.8);
+ b.step();assert.equal(ally.enemyAttackSpeedMod,0);assert.equal(blade.attackIntervalMod,0,'方形角落不在伙伴半径1.4内');
+ blade.x=4.3;blade.y=3;b.step();assert.equal(blade.attackIntervalMod,-1.3);assert.equal(ally.enemyAttackSpeedMod,0,'伙伴就位但我方仍在1.1圆形外');
+ ally.x=4;ally.y=3;b.step();assert.equal(ally.enemyAttackSpeedMod,-30);assert.equal(b.enemyAttackTiming(blade).frames,24);
+ blade.hidden=true;b.step();assert.equal(ally.enemyAttackSpeedMod,0);blade.hidden=false;b.step();assert.equal(ally.enemyAttackSpeedMod,-30);
+ commitExit(b,{target:guard});b.step();assert.equal(ally.enemyAttackSpeedMod,0);assert.equal(blade.attackIntervalMod,0);
+});
+
+test('伙友两型卫队不重复叠减速，联动不可沉默但折射可沉默，并覆盖飞行召唤物',()=>{
+ const {b,ally}=arena(),a=spawn(b,'enemy_1174_duholy'),c=spawn(b,'enemy_1174_duholy_2'),blade=spawn(b,'enemy_1175_dushdo_2',4,3);for(const e of [a,c,blade]){e.canAttack=false;applyStatus(e,'silence',20);}addAlly(b,ally,3,4);
+ const summon={uid:900001,kind:'summon',type:'test',x:3,y:4,hp:100,maxHp:100,deployed:true,flying:true,statuses:[],canAttack:false};b.s.summons.push(summon);b.step();
+ assert.equal(a.res,a.baseRes);assert.equal(ally.enemyAttackSpeedMod,-30);assert.equal(summon.enemyAttackSpeedMod,-30);assert.equal(blade.attackIntervalMod,-1.3);
+ ally.x=7;summon.x=7;b.step();assert.equal(ally.enemyAttackSpeedMod,0);assert.equal(summon.enemyAttackSpeedMod,0);
+});
+
+test('伙友数值读取本期黑板，恢复存档重算范围，改为不可选时不残留旧减速',()=>{
+ const {b,ally}=arena(),guard=spawn(b,'enemy_1174_duholy'),blade=spawn(b,'enemy_1175_dushdo_2',4,3);guard.canAttack=blade.canAttack=false;addAlly(b,ally,3,4);guard.enemyTalent['traitAbility.attack_speed']=-60;blade.enemyTalent['traitAbility.base_attack_time']=-.5;b.step();
+ assert.equal(ally.enemyAttackSpeedMod,-60);assert.equal(blade.attackIntervalMod,-.5);
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);restored.s.units[0].targetable=false;restored.step();assert.equal(restored.s.units[0].enemyAttackSpeedMod,0);
+});
+
 test('寻仇者半血及以下增攻，治疗跨线即时恢复，反复跨线不叠加且不受沉默影响',()=>{
  const {b}=arena(),e=spawn(b,'enemy_1025_reveng');const atk=e.baseAtk;
  e.hp=e.maxHp*.5;b.step();assert.equal(e.atk,atk*2);applyStatus(e,'silence',60);b.step();assert.equal(e.atk,atk*2);
