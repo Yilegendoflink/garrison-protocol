@@ -1,5 +1,5 @@
 import {permissions,applyStatus,removeStatus,isIsolated} from './status.js';
-import {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId,addEffect} from './native-effects.js';
+import {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId,addEffect,grantShield} from './native-effects.js';
 import {FPS} from './combat.js';
 import {windupSeconds} from './native-combat.js';
 
@@ -210,6 +210,12 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_2008_flking'&&!control.silenced&&!enemy.action){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='refreshshield');
+  if(skill&&beginEnemySkill(battle,enemy,skill)){
+   grantShield(battle,enemy,{id:'tombstone-shield',amount:enemy.maxHp*Number(skill.bb.hp_ratio),sourceUid:enemy.uid});endEnemySkill(battle,enemy);return;
+  }
+ }
  if(enemy.id==='enemy_1511_mdrock'&&!control.silenced&&!enemy.action){
   const skill=enemy.enemySkills.find(s=>s.prefab==='RefreshShield');
   if(skill&&beginEnemySkill(battle,enemy,skill)){battle.refreshMudrockShield(enemy,skill.bb);endEnemySkill(battle,enemy);return;}

@@ -8,6 +8,7 @@ const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.id==='enemy_2008_flking')e.costEffects=[]; // 修复旧存档：原关卡削弱不是墓碑自身能力。
  if(e.id==='enemy_1511_mdrock'){
   e.immunities.sleep=true;e.mudrockStacks??=0;
   e.mudrockShieldHpBonus??=Number(e.enemyTalent['shield.max_hp'])||0;e.mudrockShieldAspd??=Number(e.enemyTalent['shield.attack_speed'])||0;

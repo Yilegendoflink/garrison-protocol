@@ -125812,7 +125812,7 @@
         "stanceDuration": 0,
         "stallTimeout": 2,
         "complexity": "complex",
-        "randomPoolEligible": false,
+        "randomPoolEligible": true,
         "attackStunEvery": 0,
         "attackStunDuration": 0,
         "attackElement": null,
@@ -125842,7 +125842,16 @@
             "hp_ratio": 0.1
           }
         },
-        "attackProfile": null,
+        "attackProfile": {
+          "groundOnly": true,
+          "splashGroundOnly": false,
+          "splashOnlyRanged": true,
+          "splash": {
+            "shape": "square",
+            "radius": 1
+          },
+          "rangedScaleKey": "atkdown.atk_scale"
+        },
         "periodicSpawn": null,
         "spawnOnDeath": null,
         "specialAtkScale": 0,

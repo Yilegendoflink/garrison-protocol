@@ -195,6 +195,24 @@ test('泥岩屏障在场时真实攻速增加50，破盾后周期恢复且控制
  dealDamage(b,{target:enemy,value:5500,type:'arts'});advance(b,8);assert.ok(Math.abs(times.at(-1)-times.at(-2)-4.5)<.04);applyStatus(enemy,'disarm',30);advance(b,2);assert.equal(enemy.shield,0);enemy.statuses=[];enemy.action=null;b.step();assert.equal(enemy.shield,5500);
 });
 
+test('墓碑未阻挡时40%远程九格溅射，可溅射飞行但不以其为主目标；被阻挡后全倍率单体',()=>{
+ const ranged=arena('enemy_2008_flking',{x:3,y:4,positions:[[3,3],[4,3],[2,3],[5,3]]});ranged.allies[1].flying=true;ranged.allies[1].deployAt=200;
+ const hits=[];ranged.b.hurt=(u,e)=>hits.push({uid:u.uid,atk:e.atk});advance(ranged.b,1.5);assert.deepEqual(hits.map(h=>h.uid).sort((a,b)=>a-b),ranged.allies.slice(0,3).map(a=>a.uid).sort((a,b)=>a-b));assert.ok(hits.every(h=>h.atk===.4));assert.deepEqual([ranged.strikes[0].targetX,ranged.strikes[0].targetY],[3,3]);
+ const melee=arena('enemy_2008_flking',{positions:[[3,3],[4,3]]}),close=[];melee.b.hurt=(u,e)=>close.push({uid:u.uid,atk:e.atk});advance(melee.b,1.5);assert.deepEqual(close,[{uid:melee.allies[0].uid,atk:1}]);assert.equal(melee.strikes[0].ranged,false);
+});
+
+test('墓碑屏障10秒首刷、30秒周期，按当前最大生命10%替换并吸收全类型',()=>{
+ const {b,enemy}=arena('enemy_2008_flking');enemy.canAttack=false;advance(b,9.9);assert.equal(enemy.shield,0);advance(b,.1);assert.equal(enemy.shield,enemy.maxHp*.1);
+ let remaining=enemy.shield;for(const type of ['physical','arts','true','elemental']){const hp=enemy.hp;dealDamage(b,{target:enemy,value:10,type});remaining-=10;assert.equal(enemy.shield,remaining);assert.equal(enemy.hp,hp);}
+ advance(b,30);assert.equal(enemy.shield,enemy.maxHp*.1);assert.equal(enemy.shieldLayers.filter(l=>l.id==='tombstone-shield').length,1);
+});
+
+test('墓碑不产生原地图费用/再部署削弱，旧存档误挂效果在恢复时清理',()=>{
+ const {b,g,enemy,allies}=arena('enemy_2008_flking');enemy.canAttack=false;assert.deepEqual(enemy.costEffects,[]);b.refreshEnemyCostEffects();assert.equal(b.s.enemyCostRecoveryMultiplier,1);assert.equal(b.s.enemyRespawnTimeMultiplier,1);
+ const respawn=b.stats(allies[0]).respawnTime;assert.equal(b.respawnTime(allies[0]),respawn);
+ enemy.costEffects=[{costRecoveryMultiplier:.5,respawnTimeMultiplier:2}];const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);assert.deepEqual(restored.s.enemies[0].costEffects,[]);restored.refreshEnemyCostEffects();assert.equal(restored.s.enemyCostRecoveryMultiplier,1);
+});
+
 test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{
  const {b,enemy,allies}=arena('enemy_10144_xdelk_2');b.step();const started=b.s.time;
  assert.equal(enemy.enemyCast?.charge,true);const hp=allies[0].hp;advance(b,6.5);assert.equal(allies[0].hp,hp);

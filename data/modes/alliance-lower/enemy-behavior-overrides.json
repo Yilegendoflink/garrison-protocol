@@ -304,6 +304,20 @@
     "enemy_1504_cqbw": {
       "randomPoolEligible": true,
       "reason": "C4的目标/3.2秒施法/中断引爆/本期20秒冷却及首次半血清CD已完成真实step与存档场景；普攻不对空，技能狂暴后可对空"
+    },
+    "enemy_2008_flking": {
+      "randomPoolEligible": true,
+      "attackProfile": {
+        "groundOnly": true,
+        "splashGroundOnly": false,
+        "splashOnlyRanged": true,
+        "splash": {
+          "shape": "square",
+          "radius": 1
+        },
+        "rangedScaleKey": "atkdown.atk_scale"
+      },
+      "reason": "PRTS：未阻挡远程40%倍率及九格溅射（可溅射飞行），被阻挡近战单体；周期刷新10%最大生命全类型屏障。图鉴全场削弱属于地图，不能挂到本体"
     }
   }
 }

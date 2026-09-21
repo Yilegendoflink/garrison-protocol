@@ -29,7 +29,8 @@ export function deliverEnemyAttack(battle,packet){
  const enemy=getActor(battle.s,packet.owner);if(!enemy||enemy.hp<=0)return;
  const target=getActor(battle.s,packet.target),control=permissions(enemy);
  if(control.attack&&!enemy.hidden&&target?.hp>0){
-  const spec=enemy.enemyAttack||{},splash=packet.special?.splash?{shape:'cross'}:spec.splash;
+  const spec=enemy.enemyAttack||{},ranged=packet.ranged??(enemy.ranged&&enemy.block!==target.uid);
+  const splash=spec.splashOnlyRanged&&!ranged?null:packet.special?.splash?{shape:'cross'}:spec.splash;
   if(spec.projectile?.delay>0){
    const config=spec.projectile,amount=enemy.atk*(Number(packet.special?.scale??packet.scale)||1)*(1+Math.min(0,statusAttributeChanges(enemy).attack||0));
    battle.s.enemyProjectiles??=[];
@@ -37,11 +38,12 @@ export function deliverEnemyAttack(battle,packet){
    battle.emit('strike',{uid:enemy.uid,x:enemy.x,y:enemy.y,targetX:target.x,targetY:target.y,ranged:true,enemy:true,type:enemy.damageType,style:'artillery'});
    return;
   }
-  const victims=[target,...(splash?attackableAllies(battle.s).filter(u=>u!==target&&(!spec.groundOnly||!u.flying)&&inSplash(target,u,splash)):[])];
-  battle.emit('strike',{uid:enemy.uid,x:enemy.x,y:enemy.y,targetX:target.x,targetY:target.y,ranged:enemy.ranged,enemy:true,type:packet.special?.type||enemy.damageType,style:splash?'splash':packet.special?.prefab||'single',hit:packet.hitIndex??packet.hit});
+  const victims=[target,...(splash?attackableAllies(battle.s).filter(u=>u!==target&&(!(spec.splashGroundOnly??spec.groundOnly)||!u.flying)&&inSplash(target,u,splash)):[])];
+  const scale=(Number(packet.scale)||1)*(ranged&&spec.rangedScaleKey?Number(enemy.enemyTalent[spec.rangedScaleKey])||1:1);
+  battle.emit('strike',{uid:enemy.uid,x:enemy.x,y:enemy.y,targetX:target.x,targetY:target.y,ranged,enemy:true,type:packet.special?.type||enemy.damageType,style:splash?'splash':packet.special?.prefab||'single',hit:packet.hitIndex??packet.hit});
   if(enemy.powStartedAt!=null&&!enemy.powSpent)enemy.powHit=true;
   for(const victim of victims){
-   battle.resolveEnemyStrike(enemy,victim,{...packet,suppressAttackZone:victim!==target});
+   battle.resolveEnemyStrike(enemy,victim,{...packet,scale,suppressAttackZone:victim!==target});
    battle.resolveEnemyAttackEffects(enemy,victim,{count:false,extra:packet.special});
   }
  }
@@ -66,7 +68,7 @@ export function releaseEnemyAttack(battle,enemy,action){
  battle.recordEnemyAttack(enemy,action.special);
  if(hits>1&&enemy.enemyCast)enemy.enemyCast.multiAttack=true;
  for(let i=0;i<targets.length;i++){
-  const packet={enemyAttack:true,owner:enemy.uid,target:targets[i],special:action.special,scale:action.scale,attackId:action.attackId,hit:0,last:hits===1&&i===targets.length-1};
+  const packet={enemyAttack:true,owner:enemy.uid,target:targets[i],special:action.special,scale:action.scale,ranged:action.ranged,attackId:action.attackId,hit:0,last:hits===1&&i===targets.length-1};
   deliverEnemyAttack(battle,packet);
   for(let hit=1;hit<hits;hit++)scheduleStrikes(battle.s,1,{...packet,hitIndex:hit,delay:hit*gap,last:hit===hits-1&&i===targets.length-1});
  }
