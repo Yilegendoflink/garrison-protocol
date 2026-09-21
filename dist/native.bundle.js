@@ -6082,7 +6082,7 @@ function tickEnemySkills(battle,enemy,dt){
 return {initEnemySkills,changeEnemySp,enemySpEvent,enemySkillReady,beginEnemySkill,endEnemySkill,selectEnemyAttackSkill,cancelEnemyCast,tickEnemySkills};
 },
 "native-enemy-traits.js": function(load) {
-const {permissions,applyStatus} = load("status.js");
+const {permissions,applyStatus,statusAttributeChanges} = load("status.js");
 const {grantGuard,dealDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor} = load("native-effects.js");
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
 const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
@@ -6258,6 +6258,12 @@ function enemyTraitAfterAttack(battle,e){
 
 function enemyTraitOnDeath(battle,e,info){
  const bb=e.enemyTalent||{};
+ if(bb['Boom.heal_scale']>0&&bb['Boom.projectile_range']>0&&!permissions(e).silenced&&info.reason!=='leak'){
+  const amount=e.atk*(1+Math.min(0,statusAttributeChanges(e).attack||0))*Number(bb['Boom.heal_scale']);
+  for(const target of battle.s.enemies)if(target!==e&&target.hp>0&&!target.hidden&&near(e,target,Number(bb['Boom.projectile_range'])))
+   applyHeal(battle,{source:e,target,amount,persistAfterSourceGone:true,parentEventId:info.event?.eventId});
+  battle.emit('impact',{uid:e.uid,x:e.x,y:e.y,radius:Number(bb['Boom.projectile_range']),type:'healing',enemy:true});
+ }
  if(bb['Expose.range_radius']>0&&!permissions(e).silenced&&!['leak','fall'].includes(info.reason)){
   for(const target of alliedActors(battle.s))if(target.deployed&&target.hp>0&&near(e,target,Number(bb['Expose.range_radius'])))applyStatus(target,'exposed',Number(bb['Expose.weak[limit]']),{source:e.uid,value:Number(bb['Expose.damage_scale']),resistible:false});
  }

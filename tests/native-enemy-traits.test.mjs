@@ -49,6 +49,31 @@ test('圆仔朝向与倒走炫耀计时随JSON保留，演出不产生伤害或�
  restored.s.units[0].x=-200;restored.step();assert.equal(copy.facingX,-1);assert.equal(copy.walkingBackward,false);assert.equal(copy.nextShowAt,null);
 });
 
+test('祭司学徒死亡治疗按当前攻击力与原表倍率结算，圆形范围含飞行敌人、不治疗我方或消失目标',()=>{
+ const {b,ally}=arena();addAlly(b,ally,3,3);ally.hp-=100;const alliedHp=ally.hp,source=spawn(b,'enemy_10156_mncrer');source.atk=200;
+ const ground=spawn(b,'enemy_1025_reveng',4,3),air=spawn(b,'enemy_1005_yokai',3,4),far=spawn(b,'enemy_1025_reveng',4,4),hidden=spawn(b,'enemy_1025_reveng',3,3);
+ for(const e of [ground,air,far,hidden]){e.maxHp=e.hp=5000;e.hp-=2000;}hidden.hidden=true;
+ commitExit(b,{target:source,reason:'knockdown'});
+ assert.equal(ground.hp,4000);assert.equal(air.hp,4000);assert.equal(far.hp,3000);assert.equal(hidden.hp,3000);assert.equal(ally.hp,alliedHp);
+ assert.equal(source.healing,2000);assert.equal(commitExit(b,{target:source}),false);assert.equal(ground.hp,4000);
+});
+
+test('祭司死亡治疗受沉默/禁疗限制，漏怪不触发，坠落仍触发且不超过生命上限',()=>{
+ for(const mode of ['silence','blocked','leak','fall']){
+  const {b}=arena(),source=spawn(b,'enemy_10156_mncrer'),target=spawn(b,'enemy_1025_reveng',4,3);source.atk=100;target.hp=target.maxHp-100;
+  if(mode==='silence')applyStatus(source,'silence',60);if(mode==='blocked')applyStatus(target,'healingBlocked',60);
+  const hp=target.hp;commitExit(b,{target:source,reason:mode==='leak'||mode==='fall'?mode:'knockdown'});
+  assert.equal(target.hp,mode==='fall'?target.maxHp:hp,mode);
+ }
+});
+
+test('真实step持续伤害击倒祭司也治疗一次，攻击弱化同步降低死亡治疗量',()=>{
+ const {b}=arena(),source=spawn(b,'enemy_10156_mncrer'),target=spawn(b,'enemy_1025_reveng',4,3);source.atk=100;source.hp=1;target.hp=target.maxHp-1000;const hp=target.hp;
+ applyStatus(source,'attackDown',60,{value:-.5});
+ b.s.logicEffects.push({id:b.s.settle.nextEffectId++,kind:'dot',sourceUid:null,targetUid:source.uid,interval:1,nextAt:b.s.time+1,endsAt:b.s.time+2,values:{damage:10,type:'true'},snapshot:{damage:10},refKind:'owner',persistAfterSourceGone:true});
+ advance(b,1.1);assert.equal(source.hp,0);assert.equal(target.hp,hp+250);advance(b,1);assert.equal(target.hp,hp+250);
+});
+
 test('折射被沉默取消法抗，解除沉默后恢复，连续帧不重复叠加',()=>{
  const {b}=arena(),e=spawn(b,'enemy_1166_dusbr');assert.equal(e.res,e.baseRes+70);
  advance(b,1);assert.equal(e.res,e.baseRes+70);applyStatus(e,'silence',1);b.step();assert.equal(e.res,e.baseRes);
