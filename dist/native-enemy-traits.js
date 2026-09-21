@@ -1,4 +1,4 @@
-import {enemyMovementSpeed,permissions,applyStatus,statusAttributeChanges,isIsolated} from './status.js';
+import {enemyMovementSpeed,permissions,applyStatus,removeStatus,statusAttributeChanges,isIsolated} from './status.js';
 import {gainSp} from './native-sp.js';
 import {grantGuard,grantShield,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} from './native-effects.js';
 
@@ -437,4 +437,30 @@ export function applyEnemyTraitAuras(battle){
  // 远古威慑在重生/第二形态生效；本体黑板未给范围与攻速值，取PRTS修订415307。
  const wolves=live.filter(e=>e.enemyFormKind==='zaro'&&e.enemyForm!=='initial');
  for(const target of allies)if(wolves.some(e=>near(e,target,1.5)))target.enemyAttackSpeedMod=(target.enemyAttackSpeedMod||0)-50;
+}
+
+// 交战不是普通阻挡：保留原索敌，仅对已绑定双方施加束缚。
+export function tickMinerEngagements(battle){
+ const state=battle.s,all=[...state.enemies,...state.summons],sources=state.enemies.filter(e=>e.hp>0&&e.deployed!==false&&!e.hidden&&!e.flying&&Number(e.enemyTalent?.['BlockMcreep.block_mcreep_cnt'])>0);
+ if(!sources.length&&!state.minerEngagements?.length)return;
+ if(state.time+1e-9<(state.nextMinerEngagementAt??0))return;
+ state.nextMinerEngagementAt=(state.nextMinerEngagementAt??0)+.3;while(state.nextMinerEngagementAt<=state.time)state.nextMinerEngagementAt+=.3;
+ const live=a=>a&&a.hp>0&&!a.hidden&&a.deployed!==false,gen=a=>a?.deployGen??0,key=p=>'miner-engagement:'+p.enemyUid+':'+p.enemyGen;
+ const byId=new Map(all.map(a=>[a.uid,a])),old=state.minerEngagements||[],pairs=[];
+ for(const pair of old){
+  const enemy=byId.get(pair.enemyUid),miner=byId.get(pair.minerUid),range=Number(enemy?.enemyTalent?.['BlockMcreep.range_radius'])+Number(enemy?.enemyTalent?.['BlockMcreep.range_radius_add']);
+  if(live(enemy)&&live(miner)&&miner.id==='enemy_3010_mcreep'&&gen(enemy)===pair.enemyGen&&gen(miner)===pair.minerGen&&!enemy.flying&&!miner.flying&&Math.hypot(enemy.x-miner.x,enemy.y-miner.y)<=range+1e-9)pairs.push(pair);
+  else if(miner)removeStatus(miner,'root',key(pair));
+ }
+ const claimed=new Set(pairs.map(p=>p.minerUid)),miners=all.filter(a=>a.id==='enemy_3010_mcreep'&&live(a)&&!a.flying);
+ for(const enemy of sources.sort((a,b)=>a.uid-b.uid)){
+  const count=Math.floor(Number(enemy.enemyTalent['BlockMcreep.block_mcreep_cnt'])),range=Number(enemy.enemyTalent['BlockMcreep.range_radius']);if(!(range>0))continue;
+  let free=count-pairs.filter(p=>p.enemyUid===enemy.uid&&p.enemyGen===gen(enemy)).length;
+  const candidates=miners.filter(m=>!claimed.has(m.uid)&&Math.hypot(enemy.x-m.x,enemy.y-m.y)<=range+Math.max(0,Number(m.hitRadius)||0)+1e-9).sort((a,b)=>Math.hypot(enemy.x-a.x,enemy.y-a.y)-Math.hypot(enemy.x-b.x,enemy.y-b.y)||a.uid-b.uid);
+  for(const miner of candidates){if(free--<=0)break;pairs.push({enemyUid:enemy.uid,enemyGen:gen(enemy),minerUid:miner.uid,minerGen:gen(miner)});claimed.add(miner.uid);}
+ }
+ const held=new Set(pairs.map(p=>key(p)));
+ for(const pair of old){const enemy=byId.get(pair.enemyUid);if(enemy&&!held.has(key(pair)))removeStatus(enemy,'root',key(pair));}
+ for(const pair of pairs){applyStatus(byId.get(pair.enemyUid),'root',.4,{source:key(pair),resistible:false});applyStatus(byId.get(pair.minerUid),'root',.4,{source:key(pair),resistible:false});}
+ state.minerEngagements=pairs;
 }

@@ -42,6 +42,7 @@ export function migrateBattle(saved){
 export function validateBattle(s,battle){
  if(!s||!Array.isArray(s.units)||!Array.isArray(s.enemies)||!Number.isFinite(s.time)||!Number.isFinite(s.frame)||!Number.isFinite(s.cost)||!Number.isFinite(s.costInitial)||!Number.isFinite(s.costMin)||!Number.isFinite(s.costMax)||!Number.isFinite(s.costRecoveryInterval)||!Number.isFinite(s.costRecoveryClock)||s.costRecoveryInterval<=0||s.costMin>s.costMax||s.cost<s.costMin)return 'invalid battle snapshot';
  if(s.bloodDebt!=null&&(!Number.isFinite(s.bloodDebt.value)||!Number.isFinite(s.bloodDebt.capacity)||s.bloodDebt.capacity<=0||s.bloodDebt.value<0||s.bloodDebt.value>s.bloodDebt.capacity||!Number.isFinite(s.bloodDebt.settlementUntil)))return 'invalid blood debt';
+ if(s.minerEngagements!=null&&(!Array.isArray(s.minerEngagements)||!Number.isFinite(s.nextMinerEngagementAt)||new Set(s.minerEngagements.map(p=>p.minerUid)).size!==s.minerEngagements.length||s.minerEngagements.some(p=>!['enemyUid','enemyGen','minerUid','minerGen'].every(k=>Number.isInteger(p[k])&&p[k]>=0))))return 'invalid miner engagement';
  const ids=new Set();
  if(s.dominionCells!=null){
   if(typeof s.dominionCells!=='object'||Array.isArray(s.dominionCells))return 'invalid dominion cells';

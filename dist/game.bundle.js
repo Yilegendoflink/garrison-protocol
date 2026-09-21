@@ -4610,6 +4610,7 @@ function migrateBattle(saved){
 function validateBattle(s,battle){
  if(!s||!Array.isArray(s.units)||!Array.isArray(s.enemies)||!Number.isFinite(s.time)||!Number.isFinite(s.frame)||!Number.isFinite(s.cost)||!Number.isFinite(s.costInitial)||!Number.isFinite(s.costMin)||!Number.isFinite(s.costMax)||!Number.isFinite(s.costRecoveryInterval)||!Number.isFinite(s.costRecoveryClock)||s.costRecoveryInterval<=0||s.costMin>s.costMax||s.cost<s.costMin)return 'invalid battle snapshot';
  if(s.bloodDebt!=null&&(!Number.isFinite(s.bloodDebt.value)||!Number.isFinite(s.bloodDebt.capacity)||s.bloodDebt.capacity<=0||s.bloodDebt.value<0||s.bloodDebt.value>s.bloodDebt.capacity||!Number.isFinite(s.bloodDebt.settlementUntil)))return 'invalid blood debt';
+ if(s.minerEngagements!=null&&(!Array.isArray(s.minerEngagements)||!Number.isFinite(s.nextMinerEngagementAt)||new Set(s.minerEngagements.map(p=>p.minerUid)).size!==s.minerEngagements.length||s.minerEngagements.some(p=>!['enemyUid','enemyGen','minerUid','minerGen'].every(k=>Number.isInteger(p[k])&&p[k]>=0))))return 'invalid miner engagement';
  const ids=new Set();
  if(s.dominionCells!=null){
   if(typeof s.dominionCells!=='object'||Array.isArray(s.dominionCells))return 'invalid dominion cells';
@@ -6652,7 +6653,7 @@ function tickEnemySkills(battle,enemy,dt){
 return {initEnemySkills,changeEnemySp,enemySpEvent,enemySkillReady,beginEnemySkill,endEnemySkill,selectEnemyAttackSkill,checkWEnrage,cancelEnemyCast,checkZaroCageHealth,tickEnemySkills};
 },
 "native-enemy-traits.js": function(load) {
-const {enemyMovementSpeed,permissions,applyStatus,statusAttributeChanges,isIsolated} = load("status.js");
+const {enemyMovementSpeed,permissions,applyStatus,removeStatus,statusAttributeChanges,isIsolated} = load("status.js");
 const {gainSp} = load("native-sp.js");
 const {grantGuard,grantShield,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} = load("native-effects.js");
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
@@ -7092,7 +7093,33 @@ function applyEnemyTraitAuras(battle){
  for(const target of allies)if(wolves.some(e=>near(e,target,1.5)))target.enemyAttackSpeedMod=(target.enemyAttackSpeedMod||0)-50;
 }
 
-return {enemyChaliceProtection,enemyMinerShieldDamageMultiplier,initEnemyTraits,enemyConditionalAttackSpeed,enemyConditionalAttackMultiplier,enemyEchoBurst,enemyKnightExit,refreshEnemyMudrockShield,enemyTraitBeforeStrike,enemyTraitDamageDealt,tickEnemyAttackContinuity,tickPompeiiExplosion,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitOnDamageSp,enemyTraitAfterDamage,liberateEnemyPrisoners,enemyTraitBeforeAttack,enemyTraitOnHit,syncEnemyConcealMarker,enemyStealAmmo,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,applyEnemyTraitAuras};
+// 交战不是普通阻挡：保留原索敌，仅对已绑定双方施加束缚。
+function tickMinerEngagements(battle){
+ const state=battle.s,all=[...state.enemies,...state.summons],sources=state.enemies.filter(e=>e.hp>0&&e.deployed!==false&&!e.hidden&&!e.flying&&Number(e.enemyTalent?.['BlockMcreep.block_mcreep_cnt'])>0);
+ if(!sources.length&&!state.minerEngagements?.length)return;
+ if(state.time+1e-9<(state.nextMinerEngagementAt??0))return;
+ state.nextMinerEngagementAt=(state.nextMinerEngagementAt??0)+.3;while(state.nextMinerEngagementAt<=state.time)state.nextMinerEngagementAt+=.3;
+ const live=a=>a&&a.hp>0&&!a.hidden&&a.deployed!==false,gen=a=>a?.deployGen??0,key=p=>'miner-engagement:'+p.enemyUid+':'+p.enemyGen;
+ const byId=new Map(all.map(a=>[a.uid,a])),old=state.minerEngagements||[],pairs=[];
+ for(const pair of old){
+  const enemy=byId.get(pair.enemyUid),miner=byId.get(pair.minerUid),range=Number(enemy?.enemyTalent?.['BlockMcreep.range_radius'])+Number(enemy?.enemyTalent?.['BlockMcreep.range_radius_add']);
+  if(live(enemy)&&live(miner)&&miner.id==='enemy_3010_mcreep'&&gen(enemy)===pair.enemyGen&&gen(miner)===pair.minerGen&&!enemy.flying&&!miner.flying&&Math.hypot(enemy.x-miner.x,enemy.y-miner.y)<=range+1e-9)pairs.push(pair);
+  else if(miner)removeStatus(miner,'root',key(pair));
+ }
+ const claimed=new Set(pairs.map(p=>p.minerUid)),miners=all.filter(a=>a.id==='enemy_3010_mcreep'&&live(a)&&!a.flying);
+ for(const enemy of sources.sort((a,b)=>a.uid-b.uid)){
+  const count=Math.floor(Number(enemy.enemyTalent['BlockMcreep.block_mcreep_cnt'])),range=Number(enemy.enemyTalent['BlockMcreep.range_radius']);if(!(range>0))continue;
+  let free=count-pairs.filter(p=>p.enemyUid===enemy.uid&&p.enemyGen===gen(enemy)).length;
+  const candidates=miners.filter(m=>!claimed.has(m.uid)&&Math.hypot(enemy.x-m.x,enemy.y-m.y)<=range+Math.max(0,Number(m.hitRadius)||0)+1e-9).sort((a,b)=>Math.hypot(enemy.x-a.x,enemy.y-a.y)-Math.hypot(enemy.x-b.x,enemy.y-b.y)||a.uid-b.uid);
+  for(const miner of candidates){if(free--<=0)break;pairs.push({enemyUid:enemy.uid,enemyGen:gen(enemy),minerUid:miner.uid,minerGen:gen(miner)});claimed.add(miner.uid);}
+ }
+ const held=new Set(pairs.map(p=>key(p)));
+ for(const pair of old){const enemy=byId.get(pair.enemyUid);if(enemy&&!held.has(key(pair)))removeStatus(enemy,'root',key(pair));}
+ for(const pair of pairs){applyStatus(byId.get(pair.enemyUid),'root',.4,{source:key(pair),resistible:false});applyStatus(byId.get(pair.minerUid),'root',.4,{source:key(pair),resistible:false});}
+ state.minerEngagements=pairs;
+}
+
+return {enemyChaliceProtection,enemyMinerShieldDamageMultiplier,initEnemyTraits,enemyConditionalAttackSpeed,enemyConditionalAttackMultiplier,enemyEchoBurst,enemyKnightExit,refreshEnemyMudrockShield,enemyTraitBeforeStrike,enemyTraitDamageDealt,tickEnemyAttackContinuity,tickPompeiiExplosion,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitOnDamageSp,enemyTraitAfterDamage,liberateEnemyPrisoners,enemyTraitBeforeAttack,enemyTraitOnHit,syncEnemyConcealMarker,enemyStealAmmo,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,applyEnemyTraitAuras,tickMinerEngagements};
 },
 "native-enemy-attacks.js": function(load) {
 const {permissions,statusAttributeChanges,applyStatus} = load("status.js");
@@ -7745,7 +7772,7 @@ const {advanceEnemyFear} = load("native-enemy-fear.js");
 const {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} = load("native-enemy-transport.js");
 const {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyPhaseDamageMultiplier,enemyFormFatal,enemyFormAfterDamage,enemyFormHealthChanged,releaseParrotPassenger} = load("native-enemy-forms.js");
 const {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} = load("native-enemy-attacks.js");
-const {enemyMinerShieldDamageMultiplier,enemyTraitOnDamageSp,enemyEchoBurst,enemyChaliceProtection,liberateEnemyPrisoners,enemyKnightExit,enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
+const {tickMinerEngagements,enemyMinerShieldDamageMultiplier,enemyTraitOnDamageSp,enemyEchoBurst,enemyChaliceProtection,liberateEnemyPrisoners,enemyKnightExit,enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
 const {checkWEnrage,checkZaroCageHealth,initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} = load("native-enemy-skills.js");
 const {branchBehavior,branchTrait,skillAntiAir} = load("native-branches.js");
 const {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakness} = load("native-equipment.js");
@@ -8460,7 +8487,7 @@ class NativeBattle {
   }
   step(){
   if(this.s.finished)return;if(this.s.settle.fault)throw Error('战斗结算异常');if(!this.s.settle.queue.length){this.s.settle.byId={};this.s.settle.consumed=[];}const dt=1/FPS;this.s.frame++;this.s.time=this.s.frame/FPS;while(this.s.queue.length&&this.s.queue[0].at<=this.s.time)this.spawn(this.s.queue.shift());this.refreshEnemyCostEffects();this.tickCost(dt);
-  for(const e of this.s.enemies){tickStatuses(e,dt);this.tickEnemyRevive(e);tickEnemyForm(this,e);tickEnemySkills(this,e,dt);tickEnemyTraits(this,e,dt);if(e.palsyCharges>0&&e.statusResistance>0&&this.s.time>=(e.palsyDecayAt||0)){e.palsyCharges--;e.palsyDecayAt=this.s.time+5;}if(e.artsWeak?.until<this.s.time)e.artsWeak=null;if(e.hp>0&&e.regen>0)e.hp=Math.min(e.maxHp,e.hp+e.regen*dt);if(e.hp>0&&!e.lowHpTriggered&&e.lowHpRatio>0&&e.hp/e.maxHp<=e.lowHpRatio){e.lowHpTriggered=true;if(e.lowHpAttackMultiplier>0)e.atk=e.baseAtk*e.lowHpAttackMultiplier;if(e.lowHpMoveMultiplier>0)e.speed=e.baseSpeed*e.lowHpMoveMultiplier;if(e.lowHpUnblockTime>0){e.unblockable=true;e.unblockableUntil=this.s.time+e.lowHpUnblockTime;}this.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'low-hp'});}if(e.unblockableUntil!=null&&this.s.time>=e.unblockableUntil)e.unblockable=false;}tickEnemyNeurotoxin(this);tickDeepWater(this);tickSandStorm(this);tickEnemyTransport(this);this.refreshEnemyAuras();this.tickEnemyDeathEye();this.tickEnemyInvisibleShield();this.flushEnemySpawns();
+  for(const e of this.s.enemies){tickStatuses(e,dt);this.tickEnemyRevive(e);tickEnemyForm(this,e);tickEnemySkills(this,e,dt);tickEnemyTraits(this,e,dt);if(e.palsyCharges>0&&e.statusResistance>0&&this.s.time>=(e.palsyDecayAt||0)){e.palsyCharges--;e.palsyDecayAt=this.s.time+5;}if(e.artsWeak?.until<this.s.time)e.artsWeak=null;if(e.hp>0&&e.regen>0)e.hp=Math.min(e.maxHp,e.hp+e.regen*dt);if(e.hp>0&&!e.lowHpTriggered&&e.lowHpRatio>0&&e.hp/e.maxHp<=e.lowHpRatio){e.lowHpTriggered=true;if(e.lowHpAttackMultiplier>0)e.atk=e.baseAtk*e.lowHpAttackMultiplier;if(e.lowHpMoveMultiplier>0)e.speed=e.baseSpeed*e.lowHpMoveMultiplier;if(e.lowHpUnblockTime>0){e.unblockable=true;e.unblockableUntil=this.s.time+e.lowHpUnblockTime;}this.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'low-hp'});}if(e.unblockableUntil!=null&&this.s.time>=e.unblockableUntil)e.unblockable=false;}tickMinerEngagements(this);tickEnemyNeurotoxin(this);tickDeepWater(this);tickSandStorm(this);tickEnemyTransport(this);this.refreshEnemyAuras();this.tickEnemyDeathEye();this.tickEnemyInvisibleShield();this.flushEnemySpawns();
   for(const u of this.s.units){
    const previousStatuses=new Set((u.statuses||[]).map(v=>v.kind));tickStatuses(u,dt);for(const status of u.statuses||[])if(!previousStatuses.has(status.kind))dispatch(this,'status-applied',{source:null,target:u,status});const wasSkill=this.skillActive(u);u.skillLeft=Math.max(0,u.skillLeft-dt);u.spLock=Math.max(0,(u.spLock||0)-dt);if(u.focusHealAfter!=null&&this.s.time>=u.focusHealAfter)u.focusHeal=true;
    if(wasSkill&&!this.skillActive(u)){u.action=null;this.emit('skill-end',{uid:u.uid,x:u.x,y:u.y});dispatch(this,'skill-end',{target:u});}
