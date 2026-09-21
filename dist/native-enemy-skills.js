@@ -48,6 +48,9 @@ export function beginEnemySkill(battle,enemy,skill,extra={}){
  const spent=extra.allSp?enemy.sp:skill.spCost;
  changeEnemySp(enemy,-spent);
  enemy.enemyCast={index:skill.index,spent,...extra};
+ if(skill.prefab==='DeathEye'){
+  enemy.enemyCast.immunities={...enemy.immunities};removeStatus(enemy,'silence');enemy.immunities={...enemy.immunities,silence:true};
+ }
  battle.emit('enemy-skill-start',{uid:enemy.uid,x:enemy.x,y:enemy.y,skill:skill.prefab,sp:enemy.sp});
  return true;
 }
@@ -220,7 +223,7 @@ export function tickEnemySkills(battle,enemy,dt){
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
- if(cast&&enemy.enemySkills[cast.index].prefab==='PollutedRangedAtk'&&enemy.action){
+ if(cast&&['PollutedRangedAtk','DeathEye'].includes(enemy.enemySkills[cast.index].prefab)&&enemy.action){
   const action=enemy.action,target=getActor(battle.s,action.target);
   if(!target?.deployed||target.hp<=0||(action.targetDeployGen!=null&&target.deployGen!==action.targetDeployGen)||!battle.enemySkillTargets(enemy).includes(target)){
    enemy.action=null;cancelEnemyCast(battle,enemy,{lostTarget:true});return;

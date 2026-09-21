@@ -25,6 +25,36 @@ function spawn(b,id,x=3,y=3,raw=NATIVE_DATA.enemies[id]){
 function advance(b,seconds){for(let i=0;i<Math.round(seconds*30);i++)b.step();}
 function addAlly(b,ally,x,y){ally.x=x;ally.y=y;ally.deployed=true;ally.hp=ally.maxHp;applyStatus(ally,'disarm',600);b.s.units.push(ally);}
 
+function deathEyeArena(){
+ const scene=arena(),{b,ally}=scene,e=spawn(b,'enemy_1275_dwlock_2',3,3);addAlly(b,ally,4,3);e.atk=e.baseAtk=1;
+ for(let i=0;i<600&&!e.deathEye;i++)b.step();assert.ok(e.deathEye);return {...scene,e};
+}
+
+test('死亡之眼期间沉默反制，八次持续伤害后终结，24秒CD从施法完成开始',()=>{
+ const {b,e,ally}=deathEyeArena(),end=e.deathEye.endsAt;assert.equal(e.immunities.silence,true);assert.equal(applyStatus(e,'silence',30),false);
+ const before=b.s.logicLog.filter(x=>x.type==='damage'&&x.cause==='dot'&&x.sourceUid===e.uid).length;advance(b,8.1);
+ const hits=b.s.logicLog.filter(x=>x.type==='damage'&&x.cause==='dot'&&x.sourceUid===e.uid);assert.equal(hits.length-before,8);assert.equal(e.deathEye,null);assert.equal(e.enemyCast,null);assert.ok(!e.immunities.silence);assert.ok(ally.elemental.necrosis>0);
+ assert.ok(Math.abs(e.enemySkills[0].nextAt-(end+24))<.04);assert.equal(applyStatus(e,'silence',1),true);
+});
+
+test('死亡之眼受眩晕或缴械中断不结算终结凋亡，恢复沉默可施加并进入冷却',()=>{
+ for(const control of ['stun','disarm']){
+  const {b,e,ally}=deathEyeArena();advance(b,1);const injury=ally.elemental?.necrosis||0;applyStatus(e,control,3);b.step();const stopped=b.s.time;
+  assert.equal(e.deathEye,null);assert.equal(e.enemyCast,null);assert.ok(!e.immunities.silence);assert.ok(Math.abs(e.enemySkills[0].nextAt-stopped-24)<1e-8);assert.equal(ally.elemental?.necrosis||0,injury);
+ }
+});
+
+test('死亡之眼引导存档保留沉默反制与目标代次，同UID再部署立即断开',()=>{
+ const {b,g,e}=deathEyeArena();advance(b,2);const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const caster=restored.s.enemies[0],target=restored.s.units[0];assert.equal(applyStatus(caster,'silence',10),false);
+ target.deployGen++;const hp=target.hp;restored.step();assert.equal(caster.deathEye,null);assert.equal(caster.enemyCast,null);assert.ok(!caster.immunities.silence);assert.equal(target.hp,hp);
+});
+
+test('死亡之眼在启动前摇失去目标也终止，不能锁上再部署的同UID',()=>{
+ const {b,ally}=arena(),e=spawn(b,'enemy_1275_dwlock_2');addAlly(b,ally,4,3);e.atk=1;
+ for(let i=0;i<600&&!e.enemyCast;i++)b.step();assert.ok(e.action);assert.equal(e.deathEye,undefined);assert.equal(e.immunities.silence,true);
+ ally.deployGen++;b.step();assert.equal(e.action,null);assert.equal(e.enemyCast,null);assert.ok(!e.deathEye);assert.ok(!e.immunities.silence);
+});
+
 function crownArena(){
  const scene=arena(),{b,ally}=scene,e=spawn(b,'enemy_1502_crowns');e.atk=1;advance(b,15);
  b.map=structuredClone(b.map);for(let x=2;x<=7;x++)Object.assign(b.map.grid[3][x],{heightType:'LOWLAND',passableMask:'ALL',obstacle:false});
