@@ -25,6 +25,45 @@ const {chromium}=pw.default||pw;
 const suites=new Map();
 const suite=(name,fn)=>suites.set(name,fn);
 
+async function acceptRoundBounty(page){const card=page.locator('[data-act=round-bounty]').first();if(await card.isVisible())await card.click();}
+
+suite('bounty-decisions',async(browser)=>{
+ const {NATIVE_DATA}=await import('../dist/runtime-data.js'),{NativeSession}=await import('../dist/native-session.js');
+ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+ page.on('pageerror',e=>errors.push(e.message));await fs.mkdir('artifacts/bounty-decisions',{recursive:true});
+ await page.goto(pathToFileURL(path.resolve('dist/index.html')).href);await page.waitForFunction(()=>window.__garrisonReady);
+ await page.locator('[data-act=new]').click();await page.locator('[data-act=begin]').click();
+ const cards=page.locator('[data-act=round-bounty]');assert.equal(await cards.count(),4);
+ const rewards=await cards.locator('.native-bounty-prize>b').allTextContents();assert.ok(rewards.includes('1')&&rewards.includes('4'));
+ await page.waitForFunction(()=>document.querySelector('.native-choice-overlay')?.getAnimations({subtree:true}).every(a=>a.playState==='finished'));
+ await page.screenshot({path:'artifacts/bounty-decisions/bounty.png',fullPage:true});
+ await page.locator('[data-act=bounty-later]').click();assert.equal(await page.locator('.native-choice-overlay').count(),0);
+ await page.locator('[data-act=start]').click();assert.equal(await cards.count(),4);
+ const picked=await cards.first().getAttribute('data-id');await cards.first().click();assert.equal(await page.locator('.native-choice-overlay').count(),0);
+ assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('garrison-native-manual-v1')).s.roundBounty.selected),picked);
+ await page.reload();await page.waitForFunction(()=>window.__garrisonReady);assert.equal(await page.locator('[data-act=round-bounty]').count(),0);
+ const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.round=5;g.s.phase='intermission';assert.ok(g.advanceRound());assert.equal(g.s.phase,'decision');
+ const record=JSON.parse(JSON.stringify(g.snapshot()));
+ await page.addInitScript(record=>{localStorage.setItem('garrison-native-manual-v1',JSON.stringify(record));localStorage.setItem('garrison-native-safe-v1',JSON.stringify(record));},record);
+ const restoreDecision=async()=>{await page.reload();await page.waitForFunction(()=>window.__garrisonReady);if(await page.locator('[data-act=resume]').isVisible())await page.locator('[data-act=resume]').click();await page.locator('[data-choice-kind=decision]').waitFor();};
+ await restoreDecision();assert.equal(await page.locator('.native-choice-card[data-act=decision]').count(),3);
+ await page.waitForFunction(()=>document.querySelector('.native-choice-overlay')?.getAnimations({subtree:true}).every(a=>a.playState==='finished'));
+ await page.screenshot({path:'artifacts/bounty-decisions/decision.png',fullPage:true});
+ await page.locator('.native-choice-card[data-act=decision]').first().click();await page.locator('[data-choice-kind=bounty]').waitFor();assert.equal(await cards.count(),4);
+ for(const viewport of [{width:375,height:812},{width:768,height:420}]){
+  await page.setViewportSize(viewport);await page.emulateMedia({reducedMotion:'reduce'});await restoreDecision();
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  const section=page.locator('.native-choice-overlay>section'),box=await section.boundingBox();assert.ok(box.x>=0&&box.x+box.width<=viewport.width+1);
+  await page.screenshot({path:`artifacts/bounty-decisions/decision-${viewport.width}.png`,fullPage:true});
+  await page.locator('.native-choice-card[data-act=decision]').first().click();await page.locator('[data-choice-kind=bounty]').waitFor();
+  await page.screenshot({path:`artifacts/bounty-decisions/bounty-${viewport.width}.png`,fullPage:true});
+  assert.ok(await cards.first().evaluate(el=>getComputedStyle(el).animationName==='none'));
+  await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>!!document.activeElement.closest('.native-choice-overlay')));
+ }
+ assert.deepEqual(errors,[]);await page.close();
+ await fs.writeFile('artifacts/bounty-decisions/browser.json',JSON.stringify({passed:true,checks:['四选一且含1/4奖金','暂缓后开战前重新选择','选择持久化','机变三选一后显示本轮悬赏','同结算风格的入场/扫光','窄屏和横屏无横向溢出','减动效','键盘焦点约束'],errors},null,2)+'\n');
+});
+
 suite('wave-activities',async(browser)=>{
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
  page.on('pageerror',e=>errors.push(e.message));
@@ -100,7 +139,7 @@ const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];p
  await page.locator('[data-act=limits]').click();assert.ok(await page.locator('#native-modal').isVisible());assert.match(await page.locator('#native-modal').innerText(),/已知差异/);await page.locator('#native-modal [data-act=close]').click();
  await page.locator('[data-act=editor]').click();assert.ok(await page.locator('.wave-ed').isVisible());assert.match(await page.locator('body').innerText(),/配置管理/);await page.locator('[data-act=ed-tools]').click();await page.locator('[data-act=ed-defaults]').click();await page.locator('[data-act=ed-tools]').click();assert.match(await page.locator('body').innerText(),/模板敌人/);await page.screenshot({path:'artifacts/s0-s3/editor.png'});await page.locator('[data-act=home]').click();
  await page.locator('[data-act=sandbox]').click();assert.ok(await page.locator('.native-game.is-sandbox').isVisible());assert.ok(await page.locator('#sandbox-op-search').count());const sandboxAll=await page.locator('[data-sandbox-op]:visible').count();await page.locator('#sandbox-op-search').fill('山');assert.equal(await page.locator('[data-sandbox-op]:visible').count(),2);await page.locator('#sandbox-op-search').fill('');assert.equal(await page.locator('[data-sandbox-op]:visible').count(),sandboxAll);await page.locator('[data-act=sandbox-add-op]').first().click();const sandboxCanvas=page.locator('#native-canvas'),sandboxRect=await sandboxCanvas.boundingBox();assert.ok(sandboxRect);await page.mouse.click(sandboxRect.x+sandboxRect.width*.35,sandboxRect.y+sandboxRect.height*.25);await page.locator('.native-facing').waitFor({state:'visible'});await page.locator('.native-facing [data-act=aim][data-dir="0"]').click();await page.locator('.native-facing [data-act=place-confirm]').click();await page.locator('[data-act=sandbox-add-dummy]').click();assert.match(await page.locator('.sandbox-inline-picked').innerText(),/不行动木桩/);await page.locator('.native-controls [data-act=sandbox-start]').click();assert.ok(await page.locator('.native-game.is-sandbox.is-battle').isVisible());assert.match(await page.locator('#native-wave-progress').innerText(),/击倒 0 \/ 1/);await page.locator('[data-act=sandbox-fill-sp]').first().click();await page.locator('[data-act=sandbox-skill]').first().click();await page.locator('[data-act=sandbox-step]').click();await page.locator('[data-act=sandbox-reset]').click();assert.ok(await page.locator('.native-game.is-sandbox').isVisible());assert.ok(await page.locator('#sandbox-op-search').count());await page.locator('[data-act=sandbox-exit]').click();assert.ok(await page.locator('.native-lobby').isVisible());
- await page.locator('[data-act=new]').click();assert.match(await page.locator('body').innerText(),/战前准备/);await page.locator('[data-act=begin]').click();assert.ok(await page.locator('.native-game').isVisible());
+ await page.locator('[data-act=new]').click();assert.match(await page.locator('body').innerText(),/战前准备/);await page.locator('[data-act=begin]').click();await acceptRoundBounty(page);assert.ok(await page.locator('.native-game').isVisible());
  const buy=page.locator('[data-act=buy]').first();await buy.click();await buy.click();assert.equal(await page.locator('.native-bench [data-act=select]').count(),1);const handUnit=page.locator('.native-bench [data-act=select]').first();await handUnit.click();assert.equal(await page.locator('.native-dossier').count(),1);await page.locator('[data-act=inspect-close]').click();assert.equal(await page.locator('.native-dossier').count(),0);await handUnit.click();assert.equal(await page.locator('.native-dossier').count(),1);await page.locator('[data-act=limits]').click();assert.equal(await page.locator('.native-dossier').count(),0);assert.equal(await page.locator('#native-modal').count(),0);await page.waitForTimeout(550);const canvas=page.locator('#native-canvas');await canvas.scrollIntoViewIfNeeded();const rect=await canvas.boundingBox();assert.ok(rect);await page.mouse.click(rect.x+rect.width*.35,rect.y+rect.height*.25);await page.locator('.native-facing').waitFor({state:'visible'});await page.locator('.native-facing [data-act=aim][data-dir="0"]').click();await page.locator('.native-facing [data-act=place-confirm]').click();assert.match(await page.locator('#native-wave-progress').innerText(),/1 \/ 8/);await page.screenshot({path:'artifacts/s0-s3/prep.png'});
  await page.locator('[data-act=start]').click();await page.waitForFunction(()=>document.querySelector('.native-game')?.classList.contains('is-battle'));await page.waitForTimeout(250);assert.match(await page.locator('#native-status').innerText(),/费用|秒/);await page.screenshot({path:'artifacts/s0-s3/combat.png'});
  await page.locator('[data-act=pause]').click();assert.match(await page.locator('[data-act=pause]').innerText(),/继续/);await page.locator('[data-act=pause]').click();
@@ -115,7 +154,7 @@ suite("combat",async(browser)=>{
 const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{const now=Date.now();Date.now=()=>now;});
   await page.goto(pathToFileURL(path.resolve('dist/index.html')).href);await page.waitForFunction(()=>window.__garrisonReady);
-  await page.locator('[data-act=new]').click();await page.locator('[data-act=begin]').click();
+  await page.locator('[data-act=new]').click();await page.locator('[data-act=begin]').click();await acceptRoundBounty(page);
   await page.locator('[data-act=buy]').first().click();await page.locator('[data-act=buy]').first().click();await page.locator('.native-bench [data-act=select]').first().click();
   const cv=page.locator('canvas');let placed=false;
   for(const y of [.5,.65,.35]){for(const x of [.3,.4,.5,.6]){const r=await cv.boundingBox();await cv.click({position:{x:r.width*x,y:r.height*y}});if(await page.locator('.native-facing').isVisible()){await page.locator('[data-act=aim][data-dir="0"]').click();await page.locator('[data-act=place-confirm]').click();placed=true;break;}}if(placed)break;}
@@ -207,7 +246,7 @@ async function openGame(opts){
  await page.goto(URL);
  await page.waitForFunction(()=>window.__garrisonReady===true);
  await page.locator('[data-act=new]').click();
- await page.locator('[data-act=begin]').click();
+ await page.locator('[data-act=begin]').click();await acceptRoundBounty(page);
  await page.waitForSelector('.native-game .native-bonds');
  return {ctx,page};
 }
@@ -294,7 +333,7 @@ suite('round-end',async(browser)=>{
    page.on('pageerror',e=>errors.push(e.message));
    await page.route('**/native.bundle.js*',route=>route.fulfill({contentType:'application/javascript',body:instrumented}));
    await page.goto(URL);await page.waitForFunction(()=>window.__garrisonReady);
-   await page.locator('[data-act=new]').click();await page.locator('[data-act=begin]').click();
+   await page.locator('[data-act=new]').click();await page.locator('[data-act=begin]').click();await acceptRoundBounty(page);
    if(mode==='animations-disabled')await page.addStyleTag({content:'*{animation:none!important;transition:none!important}'});
    if(mode==='animations-paused')await page.addStyleTag({content:'.native-round-end *{animation-play-state:paused!important}'});
    for(const loss of [10,0]){
@@ -339,7 +378,7 @@ suite('round-end-flow',async(browser)=>{
    page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
    await page.route('**/native.bundle.js*',route=>route.fulfill({contentType:'application/javascript',body:instrumented}));
    await page.goto(URL);await page.waitForFunction(()=>window.__garrisonReady);
-   await page.locator('[data-act=new]').click();await page.locator('[data-act=begin]').click();
+   await page.locator('[data-act=new]').click();await page.locator('[data-act=begin]').click();await acceptRoundBounty(page);
    if(kind!=='wave')await page.evaluate(()=>{
     const {state,render,buildPhasePlan,data}=window.__roundEndFlow;
     state.game.s.round=buildPhasePlan(data,state.game.s.modeId).find(t=>t.isBossTurn).round;render();
