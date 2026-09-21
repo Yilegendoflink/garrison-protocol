@@ -143,6 +143,15 @@ test('泥岩增益只认自身法术屏障，其他屏障不延续增益，读�
  advance(b,17);dealDamage(b,{target:e,value:1000,type:'arts'});const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.enemies[0];assert.equal(copy.maxHp,e.maxHp);assert.equal(copy.hp,e.hp);assert.equal(copy.shield,e.shield);assert.deepEqual(copy.shieldLayers.find(l=>l.id==='mudrock-arts').types,['arts']);
 });
 
+test('骑士同伴死亡或漏怪均狂暴且只加一次，不发生误推导的自身死亡爆炸',()=>{
+ for(const [id,partner]of [['enemy_1513_dekght','enemy_1513_dekght_2'],['enemy_1513_dekght_2','enemy_1513_dekght']])for(const reason of ['knockdown','leak']){
+  const {b,ally}=arena();addAlly(b,ally,3,3);const e=spawn(b,id),other=spawn(b,partner),hp=ally.hp;
+  assert.equal(e.deathExplosion,null);assert.equal(other.deathExplosion,null);commitExit(b,{target:other,reason});assert.equal(e.knightRage,true);assert.equal(e.speed,e.baseSpeed*2.5);assert.equal(ally.hp,hp,'伙伴退场不是死亡炸弹');
+  commitExit(b,{target:other,reason});assert.equal(e.speed,e.baseSpeed*2.5);
+  const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);assert.equal(restored.s.enemies.find(x=>x.uid===e.uid).knightRage,true);
+ }
+});
+
 test('折射被沉默取消法抗，解除沉默后恢复，连续帧不重复叠加',()=>{
  const {b}=arena(),e=spawn(b,'enemy_1166_dusbr');assert.equal(e.res,e.baseRes+70);
  advance(b,1);assert.equal(e.res,e.baseRes+70);applyStatus(e,'silence',1);b.step();assert.equal(e.res,e.baseRes);

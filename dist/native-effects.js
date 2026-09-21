@@ -657,6 +657,16 @@ function zoneActors(battle,fx,side){
 function settlePeriodic(battle,fx){
  const source=getActor(battle.s,fx.sourceUid);
  if(fx.kind==='delayed'){
+  if(fx.values?.knightBomb){
+   const t=getActor(battle.s,fx.targetUid);
+   if(t?.deployed&&t.hp>0&&t.deployGen===fx.targetDeployGen){
+    const live=source&&source.hp>0,attacker=live?source:{atk:fx.snapshot.damage,damageType:'arts'};
+    for(const target of attackableAllies(battle.s))if(Math.abs(Math.round(target.x)-Math.round(t.x))+Math.abs(Math.round(target.y)-Math.round(t.y))<=1)
+     battle.hurt(target,attacker,{damageAmount:fx.snapshot.damage,attackId:fx.attackId,sourceLess:!live});
+    battle.emit('impact',{x:t.x,y:t.y,radius:1,type:'arts',enemy:true});
+   }
+   return;
+  }
   const t=getActor(battle.s,fx.targetUid);if(t&&t.hp>0)dealDamage(battle,{source,target:t,amount:fx.snapshot?.damage??fx.values?.amount??0,type:fx.values?.type||'physical',cause:'delayed',effectId:fx.id,parentEventId:fx.parentEventId});
  }else if(fx.kind==='dot'){
   const t=getActor(battle.s,fx.targetUid);if(!t||t.hp<=0||(fx.targetDeployGen!=null&&t.deployGen!==fx.targetDeployGen))return;

@@ -4,10 +4,12 @@ import {grantGuard,grantShield,dealDamage,applyElementDamage,applyHeal,applyRege
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
 const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
 const NEURO_SPAWNERS=new Set(['enemy_1439_dslntf','enemy_1439_dslntf_2']);
+const KNIGHT_PARTNER={enemy_1513_dekght:'enemy_1513_dekght_2',enemy_1513_dekght_2:'enemy_1513_dekght'};
 
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(KNIGHT_PARTNER[e.id]){e.deathExplosion=null;if(e.id==='enemy_1513_dekght_2')e.damageType='arts';}
  if(e.id==='enemy_2008_flking')e.costEffects=[]; // 修复旧存档：原关卡削弱不是墓碑自身能力。
  if(e.id==='enemy_1511_mdrock'){
   e.immunities.sleep=true;e.mudrockStacks??=0;
@@ -50,14 +52,24 @@ export function initEnemyTraits(battle,e,raw,{restore=false}={}){
 
 export function enemyConditionalAttackSpeed(e){
  const bb=e.enemyTalent||{};
+ if(e.knightRage)return Number(bb['triggerrage.attack_speed'])||0;
  if(e.id==='enemy_1511_mdrock')return mudrockShieldActive(e)?e.mudrockShieldAspd||0:0;
  if(e.id==='enemy_2005_axetro')return (e.axetroStacks||0)*(Number(bb['atkup.attack_speed'])||0);
  return e.id==='enemy_1050_lslime'&&e.hp<e.maxHp*Number(bb['selfbuff.hp_ratio'])?Number(bb['selfbuff.attack_speed'])||0:0;
 }
 
 export function enemyConditionalAttackMultiplier(e){
+ if(e.knightRage)return 1+(Number(e.enemyTalent['triggerrage.atk'])||0);
  if(e.id==='enemy_1511_mdrock')return 1+(e.mudrockStacks||0)*Number(e.enemyTalent['charge.attack@enemy_mdrock_s_1[charge].atk']);
  return e.id==='enemy_2005_axetro'?1+(e.axetroStacks||0)*Number(e.enemyTalent['atkup.atk']):1;
+}
+
+export function enemyKnightExit(battle,target){
+ const partner=KNIGHT_PARTNER[target.id];if(!partner||!battle.s.enemies.includes(target))return;
+ for(const e of battle.s.enemies)if(e.id===partner&&e.hp>0&&!e.knightRage){
+  e.knightRage=true;e.speed=e.baseSpeed*(1+(Number(e.enemyTalent['triggerrage.move_speed'])||0));
+  battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form:'狂暴'});
+ }
 }
 
 function mudrockShieldActive(e){return e.shieldLayers?.some(l=>l.id==='mudrock-arts'&&l.remaining>0);}

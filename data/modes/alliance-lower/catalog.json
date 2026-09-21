@@ -123534,12 +123534,7 @@
         "attackStunDuration": 0,
         "attackElement": null,
         "attackElementScale": 0,
-        "deathExplosion": {
-          "type": "physical",
-          "scale": 1,
-          "radius": 1,
-          "requiresFire": false
-        },
+        "deathExplosion": null,
         "aura": null,
         "magicResistanceBonus": 0,
         "lowHpRatio": 0,
@@ -123718,12 +123713,7 @@
         "attackStunDuration": 0,
         "attackElement": null,
         "attackElementScale": 0,
-        "deathExplosion": {
-          "type": "arts",
-          "scale": 1,
-          "radius": 1,
-          "requiresFire": false
-        },
+        "deathExplosion": null,
         "aura": null,
         "magicResistanceBonus": 0,
         "lowHpRatio": 0,

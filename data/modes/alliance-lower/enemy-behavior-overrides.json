@@ -137,7 +137,8 @@
       "attackProfile": {
         "targets": 2
       },
-      "attackSource": "PRTS 2026-09-12快照：凋零骑士 天赋；本期黑板参数优先"
+      "attackSource": "PRTS 2026-09-12快照：凋零骑士 天赋；本期黑板参数优先",
+      "deathExplosion": false
     },
     "enemy_10018_sgrobh": {
       "attackProfile": {
@@ -216,7 +217,8 @@
           "shape": "cross"
         }
       },
-      "attackSource": "PRTS 2026-09-12快照：腐败骑士 天赋；本期黑板参数优先"
+      "attackSource": "PRTS 2026-09-12快照：腐败骑士 天赋；本期黑板参数优先",
+      "deathExplosion": false
     },
     "enemy_10081_mpplai": {
       "randomPoolEligible": true,

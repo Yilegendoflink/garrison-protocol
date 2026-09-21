@@ -101,6 +101,7 @@ function detonateC4(battle,enemy){
 export function cancelEnemyCast(battle,enemy){
  const cast=enemy.enemyCast;if(!cast)return;
  if(cast.c4Targets){detonateC4(battle,enemy);return;}
+ if(cast.knightCharge){enemy.formHold=false;endEnemySkill(battle,enemy);return;}
  if(cast.bomb){enemy.formHold=false;endEnemySkill(battle,enemy,{refund:true});return;}
  if(cast.charge&&!cast.hitAttempted){
   const short=(enemy.statuses||[]).some(s=>s.kind==='stun'||s.kind==='sleep');
@@ -119,6 +120,20 @@ export function tickEnemySkills(battle,enemy,dt){
  if(enemy.runUntil!=null&&battle.s.time+1e-9>=enemy.runUntil){enemy.runUntil=null;enemy.speed=enemy.baseSpeed;enemy.unblockable=enemy.baseUnblockable;}
  if(enemy.wineCarrying&&enemy.block!=null){enemy.wineCarrying=false;enemy.canAttack=enemy.baseCanAttack;enemy.speed=enemy.baseSpeed;}
  const control=permissions(enemy),cast=enemy.enemyCast;
+ if(cast?.knightCharge){
+  if(enemy.hidden||!control.attack||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
+  if(battle.s.time+1e-9>=cast.endsAt){
+   const target=getActor(battle.s,cast.targetUid),skill=enemy.enemySkills[cast.index];
+   endEnemySkill(battle,enemy);enemy.formHold=false;
+   if(target?.hp>0&&target.deployed&&target.deployGen===cast.targetDeployGen&&enemy.block===target.uid){
+    const attackId=newAttackId(battle);
+    for(const victim of attackableAllies(battle.s))if(Math.abs(Math.round(victim.x)-Math.round(target.x))+Math.abs(Math.round(victim.y)-Math.round(target.y))<=1)
+     battle.resolveEnemyStrike(enemy,victim,{scale:Number(skill.bb[victim===target?'atk_scale':'dekght[aoe].atk_scale']),type:'physical',attackId,suppressAttackZone:true});
+    battle.emit('impact',{uid:enemy.uid,x:target.x,y:target.y,radius:1,type:'physical',enemy:true});
+   }
+  }
+  return;
+ }
  if(cast?.c4Targets){
   if(enemy.hidden||!control.attack||!control.skill||control.silenced||battle.s.time+1e-9>=cast.endsAt)detonateC4(battle,enemy);
   return;
@@ -210,6 +225,20 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_1513_dekght_2'&&!control.silenced&&!enemy.action){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='TripleAttack'),targets=battle.enemySkillTargets(enemy).slice(0,3);
+  if(skill&&targets.length&&beginEnemySkill(battle,enemy,skill)){
+   const attackId=newAttackId(battle),delay=Number(skill.bb['dekght_2[aoe].interval']),amount=battle.enemyAttackDamage(enemy,Number(skill.bb['dekght_2[aoe].atk_scale']));
+   for(const target of targets)addEffect(battle,{kind:'delayed',stackRule:'stack',sourceUid:enemy.uid,targetUid:target.uid,targetDeployGen:target.deployGen,talentOrSkillId:'knight-explosive-arrow',attackId,interval:null,nextAt:battle.s.time+delay,endsAt:battle.s.time+delay,values:{knightBomb:true,type:'arts'},snapshot:{damage:amount},refKind:'owner',persistAfterSourceGone:true});
+   enemy.attackCooldown=Math.ceil(enemy.interval*FPS);endEnemySkill(battle,enemy);return;
+  }
+ }
+ if(enemy.id==='enemy_1513_dekght'&&!control.silenced&&!enemy.action&&enemy.block!=null){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='ChargeAttack'),target=getActor(battle.s,enemy.block);
+  if(skill&&target&&beginEnemySkill(battle,enemy,skill,{knightCharge:true,targetUid:target.uid,targetDeployGen:target.deployGen,endsAt:battle.s.time+Number(skill.bb.duration)})){
+   enemy.formHold=true;enemy.attackCooldown=Math.ceil(enemy.interval*FPS);return;
+  }
+ }
  if(enemy.id==='enemy_2008_flking'&&!control.silenced&&!enemy.action){
   const skill=enemy.enemySkills.find(s=>s.prefab==='refreshshield');
   if(skill&&beginEnemySkill(battle,enemy,skill)){

@@ -701,6 +701,10 @@ export function drawEnemyPhase(c,point,z,battle,{reduceFx=false,formatText=null}
   const target=[...(s.units||[]),...(s.summons||[])].find(a=>a.uid===bomb.uid&&a.deployGen===bomb.deployGen&&a.deployed&&a.hp>0);if(!target)continue;
   const p=point(target.x,target.y),text='C4 '+Math.max(0,e.enemyCast.endsAt-s.time).toFixed(1);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#ff997c';c.fillText(text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
  }
+ for(const fx of s.logicEffects||[])if(fx.values?.knightBomb&&fx.nextAt!=null){
+  const target=[...(s.units||[]),...(s.summons||[])].find(a=>a.uid===fx.targetUid&&a.deployGen===fx.targetDeployGen&&a.deployed&&a.hp>0);if(!target)continue;
+  const p=point(target.x,target.y),text='爆炸箭 '+Math.max(0,fx.nextAt-s.time).toFixed(1);c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#d9a5ff';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;
+ }
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&e.facingX!=null){const p=point(e.x,e.y),text=e.facingX>0?'正面 →':'← 正面';c.save();c.font='bold 11px sans-serif';c.textAlign='center';c.fillStyle='#f4d38b';c.fillText(formatText?formatText(text):text,p.x,p.y-z.th*.95-15);c.restore();drew=true;}
  for(const e of s.enemies||[])if(e.hp>0&&!e.hidden&&(e.parasiteTargetUid!=null||e.palsyCharges>0)){
   const p=point(e.x,e.y),text=e.parasiteTargetUid!=null?'寄生中':'麻痹 '+e.palsyCharges;

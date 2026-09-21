@@ -200,7 +200,8 @@ export function enemyBehaviorProfile(raw={}){
  const stunMatch=text.match(/攻击\s*(\d+)次后[^。；;]*晕眩/),stunBefore=stunMatch?Number(stunMatch[1]):(/数次攻击后[^。；;]*晕眩/.test(text)?Number(raw.skills?.[0]?.spCost)||3:0);
  const elementKey=/侵蚀损伤/.test(text)?'corrosion':/凋亡损伤/.test(text)?'necrosis':/灼燃损伤/.test(text)?'burn':/神经损伤/.test(text)?'neural':null;
  const elementScale=Number(talentBb['epdamage.attack@ep_damage_ratio']??talentBb['EpDamage.attack@ep_damage_ratio']??talentBb['empty.attack@ep_damage_ratio']??talentBb['combat.attack@ep_damage_ratio']??talentBb['ep_damage_ratio']);
- const explosion= /死亡[^。；;]*(?:产生|造成|爆炸)/.test(text)?{type:/法术/.test(text)?'arts':'physical',scale:Number(bb['boom.atk_scale'])||1,radius:Number(behavior.deathExplosionRadius??raw.deathExplosionRadius)||1,requiresFire:/点燃状态/.test(text)}:null;
+ const inferredExplosion= /死亡[^。；;]*(?:产生|造成|爆炸)/.test(text)?{type:/法术/.test(text)?'arts':'physical',scale:Number(bb['boom.atk_scale'])||1,radius:Number(behavior.deathExplosionRadius??raw.deathExplosionRadius)||1,requiresFire:/点燃状态/.test(text)}:null;
+ const explosion=Object.hasOwn(behavior,'deathExplosion')?(behavior.deathExplosion||null):inferredExplosion;
  const auraDef=Number(bb['defup.def']);
  const auraRadius=Number(bb['defup.range_radius']);
  const magicResistanceBonus=Number(bb['refracting.magic_resistance']);

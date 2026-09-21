@@ -213,6 +213,35 @@ test('墓碑不产生原地图费用/再部署削弱，旧存档误挂效果在�
  enemy.costEffects=[{costRecoveryMultiplier:.5,respawnTimeMultiplier:2}];const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);assert.deepEqual(restored.s.enemies[0].costEffects,[]);restored.refreshEnemyCostEffects();assert.equal(restored.s.enemyCostRecoveryMultiplier,1);
 });
 
+test('腐败骑士22秒后蓄力4秒，300%主伤害与十字溅射共用一次出手',()=>{
+ const {b,enemy,allies}=arena('enemy_1513_dekght',{positions:[[3,3],[4,3],[4,4]]});enemy.canAttack=false;const hits=[];b.hurt=(u,e)=>hits.push({uid:u.uid,atk:e.atk,type:e.damageType});
+ advance(b,21.9);assert.equal(enemy.enemyCast,undefined);advance(b,.1);assert.equal(enemy.enemyCast?.knightCharge,true);advance(b,3.9);assert.equal(hits.length,0);advance(b,.1);
+ assert.deepEqual(hits,[{uid:allies[0].uid,atk:3,type:'physical'},{uid:allies[1].uid,atk:3,type:'physical'}]);assert.equal(enemy.enemyCast,null);assert.ok(Math.abs(enemy.enemySkills[0].nextAt-48)<.04);
+});
+
+test('腐败骑士蓄力受控会取消，目标脱离阻挡不隔空命中；中途存档继续剩余时间',()=>{
+ const {b,g,enemy,allies}=arena('enemy_1513_dekght');enemy.canAttack=false;b.hurt=()=>{};advance(b,23);const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);let restoredHits=0;restored.hurt=()=>restoredHits++;advance(restored,3.1);assert.equal(restoredHits,1);
+ applyStatus(enemy,'stun',1);b.step();assert.equal(enemy.enemyCast,null);assert.equal(enemy.formHold,false);
+ enemy.enemySkills[0].nextAt=b.s.time;advance(b,1.1);assert.equal(enemy.enemyCast?.knightCharge,true);allies[0].x=8;let hits=0;b.hurt=()=>hits++;advance(b,4.1);assert.equal(hits,0);
+});
+
+test('凋零骑士普攻为法术，同伴退场后实际伤害与攻速增加且移速为2.5倍',()=>{
+ const {b,enemy,allies}=arena('enemy_1513_dekght_2',{x:3,y:4,positions:[[3,3]]}),u=allies[0],stats=b.stats.bind(b);b.stats=a=>({...stats(a),def:0,magicResistance:0,maxHp:50000});u.hp=50000;b.economy.random=()=>.999;
+ b.spawn({id:'enemy_1513_dekght',route:0});const partner=b.s.enemies.at(-1);commitExit(b,{target:partner});assert.equal(enemy.damageType,'arts');assert.equal(enemy.speed,enemy.baseSpeed*2.5);
+ const before=u.hp;b.hurt(u,enemy);assert.ok(Math.abs(before-u.hp-1.8)<1e-6);const times=[],record=b.recordEnemyAttack.bind(b);b.recordEnemyAttack=(e,s)=>{times.push(b.s.time);record(e,s);};advance(b,6);assert.ok(times.length>=3);assert.ok(Math.abs(times[1]-times[0]-2)<.04);
+});
+
+test('凋零骑士三目标爆炸箭在2.5秒后分别十字爆炸，重叠区域可受到不同箭的伤害',()=>{
+ const {b,enemy,allies}=arena('enemy_1513_dekght_2',{x:3,y:4,positions:[[3,3],[2,3],[4,3],[3,2]]});enemy.canAttack=false;const hits=[];b.hurt=(u,e,opts={})=>hits.push({uid:u.uid,amount:opts.damageAmount,type:e.damageType});
+ advance(b,22);const arrows=b.s.logicEffects.filter(f=>f.values?.knightBomb);assert.equal(arrows.length,3);assert.ok(arrows.every(f=>f.snapshot.damage===1.6));advance(b,2.4);assert.equal(hits.length,0);advance(b,.1);assert.ok(hits.length>3);assert.ok(hits.every(h=>h.type==='arts'&&h.amount===1.6));assert.ok(hits.filter(h=>h.uid===allies[0].uid).length>=2);assert.equal(b.s.logicEffects.filter(f=>f.values?.knightBomb).length,0);
+});
+
+test('爆炸箭读档保留命中标记，来源死亡仍爆炸，已撤退目标的旧标记不追随再部署',()=>{
+ const {b,g,enemy,allies}=arena('enemy_1513_dekght_2',{x:3,y:4,positions:[[3,3],[2,3]]});enemy.canAttack=false;advance(b,23);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);restored.spawn({id:'enemy_1007_slime',route:0});restored.s.enemies.at(-1).canAttack=false;commitExit(restored,{target:restored.s.enemies[0]});const hits=[];restored.hurt=(u,e,opts)=>hits.push(opts);advance(restored,1.6);assert.ok(hits.length>0);assert.ok(hits.every(h=>h.sourceLess));
+ for(const u of allies){commitExit(b,{target:u,reason:'retreat'});b.deploy(u);applyStatus(u,'disarm',60);}let stale=0;b.hurt=()=>stale++;advance(b,1.6);assert.equal(stale,0);
+});
+
 test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{
  const {b,enemy,allies}=arena('enemy_10144_xdelk_2');b.step();const started=b.s.time;
  assert.equal(enemy.enemyCast?.charge,true);const hp=allies[0].hp;advance(b,6.5);assert.equal(allies[0].hp,hp);
