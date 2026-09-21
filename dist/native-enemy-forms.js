@@ -10,7 +10,10 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 export function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id==='enemy_1539_reid'){
+ if(e.id==='enemy_1525_blkswb'){
+  e.enemyFormKind='degen';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.statusResistance=.5;e.damageType='physical';e.ranged=false;
+  e.enemyBlockedDefPenetration=Number(e.enemyTalent['DefPenetrate.enemy_blkswb_t_2.def_penetrate']);
+ }else if(e.id==='enemy_1539_reid'){
   e.enemyFormKind='reid';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.lowHpRatio=0;
   if(e.lowHpTriggered){e.atk=e.baseAtk;e.speed=e.baseSpeed;}
  }else if(e.id==='enemy_1516_jakill'){
@@ -75,6 +78,21 @@ function finishTranslation(b,e){
 export function tickEnemyForm(b,e){
  if(e.enemyFormKind==='rotator'){tickRotatorForm(b,e);return;}
  if(!e.enemyFormKind||e.hp<=0)return;
+ if(e.enemyFormKind==='degen'){
+  if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
+   e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
+   e.enemyAttack={...e.enemyAttack,hits:2};e.enemyBlockedDefPenetration=Number(e.enemyTalent['DefPenetrate.enemy_blkswb_t_2[reborn].def_penetrate']);
+   e.degenInvincibleUntil=b.s.time+Number(e.enemyTalent['Reborn.invincible']);e.invulnerable=true;
+   for(const skill of e.enemySkills||[]){skill.used=false;skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;}
+   announce(b,e,'第二形态');
+  }
+  if(e.enemyForm==='second'){
+   if(e.degenInvincibleUntil!=null&&b.s.time+1e-9>=e.degenInvincibleUntil){e.invulnerable=false;e.degenInvincibleUntil=null;}
+   if(e.block!=null)e.degenRevealUntil=b.s.time+3;
+   e.formInvisible=b.s.time+1e-9>=(e.degenRevealUntil||0);e.invisible=e.formInvisible&&!e.revealed;
+  }
+  return;
+ }
  if(e.enemyFormKind==='reid'){
   if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
    e.enemyForm='revived';e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
@@ -212,6 +230,10 @@ export function enemyFormStats(e){
 }
 
 export function enemyFormFatal(b,e){
+ if(e.enemyFormKind==='degen'&&e.enemyForm==='initial'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp;
+  e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
  if(e.enemyFormKind==='reid'&&e.enemyForm==='initial'){
   cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp*Number(e.enemyTalent['Reborn.hp_ratio']);
   e.reidRushUntil=null;e.speed=e.baseSpeed;e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;

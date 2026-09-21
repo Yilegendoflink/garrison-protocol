@@ -6917,7 +6917,10 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id==='enemy_1539_reid'){
+ if(e.id==='enemy_1525_blkswb'){
+  e.enemyFormKind='degen';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.statusResistance=.5;e.damageType='physical';e.ranged=false;
+  e.enemyBlockedDefPenetration=Number(e.enemyTalent['DefPenetrate.enemy_blkswb_t_2.def_penetrate']);
+ }else if(e.id==='enemy_1539_reid'){
   e.enemyFormKind='reid';e.enemyForm='initial';e.formBaseShiftImmune=!!e.shiftImmune;e.lowHpRatio=0;
   if(e.lowHpTriggered){e.atk=e.baseAtk;e.speed=e.baseSpeed;}
  }else if(e.id==='enemy_1516_jakill'){
@@ -6982,6 +6985,21 @@ function finishTranslation(b,e){
 function tickEnemyForm(b,e){
  if(e.enemyFormKind==='rotator'){tickRotatorForm(b,e);return;}
  if(!e.enemyFormKind||e.hp<=0)return;
+ if(e.enemyFormKind==='degen'){
+  if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
+   e.enemyForm='second';e.enemyFormUntil=null;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
+   e.enemyAttack={...e.enemyAttack,hits:2};e.enemyBlockedDefPenetration=Number(e.enemyTalent['DefPenetrate.enemy_blkswb_t_2[reborn].def_penetrate']);
+   e.degenInvincibleUntil=b.s.time+Number(e.enemyTalent['Reborn.invincible']);e.invulnerable=true;
+   for(const skill of e.enemySkills||[]){skill.used=false;skill.nextAt=skill.initCooldown>=0?b.s.time+skill.initCooldown:null;}
+   announce(b,e,'第二形态');
+  }
+  if(e.enemyForm==='second'){
+   if(e.degenInvincibleUntil!=null&&b.s.time+1e-9>=e.degenInvincibleUntil){e.invulnerable=false;e.degenInvincibleUntil=null;}
+   if(e.block!=null)e.degenRevealUntil=b.s.time+3;
+   e.formInvisible=b.s.time+1e-9>=(e.degenRevealUntil||0);e.invisible=e.formInvisible&&!e.revealed;
+  }
+  return;
+ }
  if(e.enemyFormKind==='reid'){
   if(e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
    e.enemyForm='revived';e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;e.canAttack=e.baseCanAttack;e.action=null;e.attackCooldown=0;
@@ -7119,6 +7137,10 @@ function enemyFormStats(e){
 }
 
 function enemyFormFatal(b,e){
+ if(e.enemyFormKind==='degen'&&e.enemyForm==='initial'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp;
+  e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
  if(e.enemyFormKind==='reid'&&e.enemyForm==='initial'){
   cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['Reborn.duration']);e.hp=e.maxHp*Number(e.enemyTalent['Reborn.hp_ratio']);
   e.reidRushUntil=null;e.speed=e.baseSpeed;e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
@@ -8007,7 +8029,7 @@ class NativeBattle {
   if(type==='arts'&&this.on('arcaneShip')&&this.owns(u,'arcaneShip'))e.artsWeak={value:this.rows.arcaneShip.count>=3&&e.hp/e.maxHp<.5?.68+.014*(this.layers.arcaneShip||0):.2+.01*(this.layers.arcaneShip||0),until:this.s.time+3};
  }
  hurt(u,e,{attackId=null,parentEventId=null,sourceLess=false,damageAmount=null,cause='attack',defPenetration=null}={}){const p=this.profile(u),skillIndex=p.skillIndex??u.source?.skillIndex;if(u.id==="char_311_mudrok"&&u.invulnerableUntil>this.s.time)return;if(u.id==="char_1032_excu2"&&skillIndex===1&&this.skillActive(u)&&e.damageType==="physical"&&this.economy.random()<Number(blackboard(p.skill?.blackboard).prob||0)){u.ammo=Math.min(u.ammoMax||Infinity,(u.ammo||0)+Number(blackboard(p.skill?.blackboard).recover_cnt||1));return;}let evade=this.behavior(u).evasion,evadeProb=branchTrait(p).values.prob??evade;if(u.physicalEvadeOnce&&e.damageType==='physical'){u.physicalEvadeOnce=false;evade=1;evadeProb=1;}else if(u.physicalEvadeUntil>this.s.time&&['physical'].includes(e.damageType)){evade=1;evadeProb=u.physicalEvadeProb||0;}else if(u.skillEvasionProb>0&&this.skillActive(u)&&['physical','arts'].includes(e.damageType)){evade=1;evadeProb=u.skillEvasionProb;}const tippiTalent=(p.activeTalents||[]).find(t=>t.name==='片场工作指南'),tippiQuiet=tippiTalent&&this.s.time-(u.lastDamagedAt??u.deployAt??0)>=Number(blackboard(tippiTalent.blackboard).stack_time||9);if(tippiQuiet&&e.damageType!=='true'){u.lastDamagedAt=this.s.time;this.s.effects.push({x:u.x,y:u.y,text:'闪避',life:.5,type:'evade'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'evade'});return;}if(u.id==='char_420_flamtl'&&u.flamFollowUp==null)u.flamFollowUp=false;const flamAura=this.s.units.some(v=>v.deployed&&v.hp>0&&v.id==='char_420_flamtl'&&(this.profile(v).activeTalents||[]).some(t=>t.name==='红松骑士团团长')&&Array.isArray(this.profile(u).bonds)&&this.profile(u).bonds.includes('kazimierzShip'));if(flamAura&&e.damageType!=='true'&&this.economy.random()<.22){if(u.id==='char_420_flamtl')u.flamFollowUp=true;this.s.effects.push({x:u.x,y:u.y,text:'闪避',life:.5,type:'evade'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'evade'});return;}const mountainTalent=p.charId==='char_264_f12yin'&&(p.activeTalents||[]).find(t=>t.name==='强壮肉体'),mountainProb=mountainTalent?Number(blackboard(mountainTalent.blackboard).prob)||.15:0;if(mountainProb>0&&e.damageType==='physical'&&this.economy.random()<mountainProb){this.s.effects.push({x:u.x,y:u.y,text:'闪避',life:.5,type:'evade'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'evade'});return;}const lapSkill=(p.charId==='char_140_whitew'&&(skillIndex??0)===0&&this.skillActive(u)),lapProb=lapSkill?Number(blackboard(p.skill.blackboard).prob):0;if(lapProb>0&&e.damageType==='physical'&&this.economy.random()<lapProb){this.s.effects.push({x:u.x,y:u.y,text:'抵挡',life:.5,type:'block'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'block'});return;}const armor=(p.activeTalents||[]).find(t=>t.name==='战术装甲'),armorProb=armor?Number(blackboard(armor.blackboard).prob):0;if(armorProb>0&&this.economy.random()<armorProb){this.s.effects.push({x:u.x,y:u.y,text:'抵挡',life:.5,type:'block'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'block'});return;}if(evade&&['physical','arts'].includes(e.damageType)&&this.economy.random()<evadeProb){if(u.id==='char_420_flamtl')u.flamFollowUp=true;this.s.effects.push({x:u.x,y:u.y,text:'闪避',life:.5,type:'evade'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'evade'});return;}let value=damage({amount:e.atk,type:e.damageType,defense:this.stats(u).def,resistance:this.stats(u).magicResistance});if(this.on('emptyShip'))value*=.8;
-  const enemyAttack=Number.isFinite(damageAmount)?damageAmount:this.enemyAttackDamage(e,1,u);value=damage({amount:enemyAttack,type:e.damageType,defense:this.stats(u).def*(1-(defPenetration??e.enemyDefPenetration??0)),resistance:this.stats(u).magicResistance});if(this.on('emptyShip'))value*=.8;if(u.damageResistance>0)value*=Math.max(0,1-u.damageResistance);const titi=this.s.units.find(v=>v.id==='char_4056_titi'&&v.deployed&&v.hp>0&&this.skillActive(v)&&(this.profile(v).skillIndex??v.source?.skillIndex)===2);if(titi&&u.id!==titi.id&&u.hp-value<=0){u.hp=1;applyStatus(u,'sleep',Math.max(1,titi.skillLeft||5),{source:titi.uid,resistible:false});return;}if(u.id==='char_4064_mlynar'&&this.s.enemies.filter(x=>x.hp>0&&Math.max(Math.abs(x.x-u.x),Math.abs(x.y-u.y))<=1).length>=3)value*=.85;const rmixerIndex=p.skillIndex??u.source?.skillIndex,rmixerBB=rmixerIndex===1?blackboard(p.skill?.blackboard):null;if(p.charId==='char_4194_rmixer'&&this.skillActive(u)&&rmixerIndex===1&&rmixerBB&&u.ammo>=Number(rmixerBB.ammo_cost||25)&&u.hp-value<=1){u.ammo-=Number(rmixerBB.ammo_cost||25);u.hp=1;this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'guard'});return;}dealDamage(this,{source:sourceLess?null:e,target:u,value,type:e.damageType,cause,attackId,parentEventId});u.lastDamagedAt=this.s.time;if(cause==='attack'&&spTypeOf(this.profile(u).skill)==='INCREASE_WHEN_TAKEN_DAMAGE')gainSp(u,this.profile(u).skill,undefined,this.spCost(u));
+  const enemyAttack=Number.isFinite(damageAmount)?damageAmount:this.enemyAttackDamage(e,1,u);value=damage({amount:enemyAttack,type:e.damageType,defense:this.stats(u).def*(1-(defPenetration??(e.block===u.uid?e.enemyBlockedDefPenetration:null)??e.enemyDefPenetration??0)),resistance:this.stats(u).magicResistance});if(this.on('emptyShip'))value*=.8;if(u.damageResistance>0)value*=Math.max(0,1-u.damageResistance);const titi=this.s.units.find(v=>v.id==='char_4056_titi'&&v.deployed&&v.hp>0&&this.skillActive(v)&&(this.profile(v).skillIndex??v.source?.skillIndex)===2);if(titi&&u.id!==titi.id&&u.hp-value<=0){u.hp=1;applyStatus(u,'sleep',Math.max(1,titi.skillLeft||5),{source:titi.uid,resistible:false});return;}if(u.id==='char_4064_mlynar'&&this.s.enemies.filter(x=>x.hp>0&&Math.max(Math.abs(x.x-u.x),Math.abs(x.y-u.y))<=1).length>=3)value*=.85;const rmixerIndex=p.skillIndex??u.source?.skillIndex,rmixerBB=rmixerIndex===1?blackboard(p.skill?.blackboard):null;if(p.charId==='char_4194_rmixer'&&this.skillActive(u)&&rmixerIndex===1&&rmixerBB&&u.ammo>=Number(rmixerBB.ammo_cost||25)&&u.hp-value<=1){u.ammo-=Number(rmixerBB.ammo_cost||25);u.hp=1;this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'guard'});return;}dealDamage(this,{source:sourceLess?null:e,target:u,value,type:e.damageType,cause,attackId,parentEventId});u.lastDamagedAt=this.s.time;if(cause==='attack'&&spTypeOf(this.profile(u).skill)==='INCREASE_WHEN_TAKEN_DAMAGE')gainSp(u,this.profile(u).skill,undefined,this.spCost(u));
  }
   tickBondIdle(u,dt){
    if(!this.on('raidShip')||!this.owns(u,'raidShip')||!u.deployed||u.hp<=0)return;
