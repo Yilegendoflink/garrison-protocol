@@ -873,6 +873,7 @@ export function moveActor(battle,target,source,description='',options={}){
  const away=/推开|推动|击退/.test(description),toward=/拖拽|拉向|拉至/.test(description);if(!away&&!toward)return false;
  if(away&&Number.isFinite(options.forceLevel))return startEnemyPush(battle,target,source,options);
  if(toward&&Number.isFinite(options.forceLevel))return options.radialImpulse?startEnemyPush(battle,target,source,{...options,directional:false,reverse:true}):startEnemyPull(battle,target,source,options);
+ if(target.staticRigid)return false; // 未知力度的旧近似不能把静态刚体直接搬走。
  const dx=target.x-source.x,dy=target.y-source.y,len=Math.hypot(dx,dy)||1,step=away?1:-1,nx=Math.round(target.x+(dx/len)*step),ny=Math.round(target.y+(dy/len)*step);
  if(!validMoveTile(battle,target,nx,ny))return false;
  const moved=teleportActor(battle,target,{x:nx,y:ny,source,mode:away?'push':'pull'});

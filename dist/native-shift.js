@@ -14,6 +14,7 @@ export function startEnemyPush(battle,target,source,{forceLevel,directional=fals
  const speed=SPEEDS[Math.max(0,Math.min(6,Math.floor(level)+3))];if(!(speed>0))return false;
  const previous=target.shift;
  target.shift={vx:(previous?.vx||0)+dx/length*speed,vy:(previous?.vy||0)+dy/length*speed,hardUntil:previous?.hardUntil??battle.s.time+.1,startedAt:previous?.startedAt??battle.s.time,sourceUid:source.uid??null,projectile:!previous&&projectile,fresh:!previous,pulls:previous?.pulls||[],nextDamageAt:previous?.nextDamageAt??battle.s.time+Number(target.enemyTalent?.['unbalanced_bleed.interval']||1)};
+ if(target.staticRigid)target.shift.vx=target.shift.vy=0;
  target.block=null;target.action=null;battle.onActorShiftStart?.(target);battle.emit('shift-start',{uid:target.uid,x:target.x,y:target.y,forceLevel});return true;
 }
 
@@ -23,6 +24,7 @@ export function startEnemyPull(battle,target,source,{forceLevel,anchorOffset=.5,
  const level=forceLevel-(target.weight||0),force=PULL_FORCES[Math.max(0,Math.min(6,Math.floor(level)+3))];if(!(force>0))return false;
  const [dx,dy]=[[1,0],[0,-1],[-1,0],[0,1]][source.dir??owner?.dir??0],x=source.x+dx*anchorOffset,y=source.y+dy*anchorOffset,initialDistance=Math.hypot(target.x-x,target.y-y);if(initialDistance<1e-9)return false;
  const previous=target.shift;target.shift??={vx:0,vy:0,hardUntil:battle.s.time+.1,startedAt:battle.s.time,sourceUid:source.uid??null,projectile:false,fresh:false,nextDamageAt:battle.s.time+Number(target.enemyTalent?.['unbalanced_bleed.interval']||1)};
+ if(target.staticRigid)target.shift.vx=target.shift.vy=0;
  target.shift.pulls??=[];target.shift.pulls.push({sourceUid:source.uid??null,sourceDeployGen:owner?.deployGen??null,x:source.x,y:source.y,dx,dy,anchorOffset,initialDistance,force,endsAt:battle.s.time+(level < -1 ? .5 : 1),stopRadius,stopImmediately});
  target.block=null;target.action=null;if(!previous)battle.onActorShiftStart?.(target);battle.emit('shift-start',{uid:target.uid,x:target.x,y:target.y,forceLevel,mode:'pull'});return true;
 }
@@ -72,13 +74,14 @@ export function advanceEnemyShift(battle,target,dt){
  if(target.hp<=0){target.shift=null;return false;}
  if(target.hidden||target.shiftImmune||target.levitated){finish(battle,target);return false;}
  battle.onActorShiftTick?.(target,state);if(target.hp<=0){target.shift=null;return false;}
+ if(target.staticRigid)state.vx=state.vy=0;
  let speed=Math.hypot(state.vx,state.vy);
  if(!(state.fresh&&state.projectile)){
   const next=Math.max(0,speed-4.905*dt)/(1+Math.max(0,target.shiftDrag||0)*dt),scale=speed>0?next/speed:0;state.vx*=scale;state.vy*=scale;speed=next;
  }
  state.fresh=false;
  const pulls=activePulls(battle,state);state.pulls=pulls;
- if(!pullStop(battle,target,pulls))for(const pull of pulls){const origin=pullOrigin(battle,pull),dx=origin.x+pull.dx*pull.anchorOffset-target.x,dy=origin.y+pull.dy*pull.anchorOffset-target.y,distance=Math.hypot(dx,dy);if(distance>1e-9){const force=pull.force*Math.pow(distance/pull.initialDistance,4);if(!Number.isFinite(force))continue;state.vx+=dx/distance*force*dt;state.vy+=dy/distance*force*dt;}}
+ if(!target.staticRigid&&!pullStop(battle,target,pulls))for(const pull of pulls){const origin=pullOrigin(battle,pull),dx=origin.x+pull.dx*pull.anchorOffset-target.x,dy=origin.y+pull.dy*pull.anchorOffset-target.y,distance=Math.hypot(dx,dy);if(distance>1e-9){const force=pull.force*Math.pow(distance/pull.initialDistance,4);if(!Number.isFinite(force))continue;state.vx+=dx/distance*force*dt;state.vy+=dy/distance*force*dt;}}
  speed=Math.hypot(state.vx,state.vy);
  if(!state.pulls.length&&speed<=.1&&battle.s.time+1e-9>=state.hardUntil){finish(battle,target);return false;}
  const steps=Math.max(1,Math.min(128,Math.ceil(speed*dt/.1)));

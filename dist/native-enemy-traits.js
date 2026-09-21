@@ -15,6 +15,8 @@ export function enemyChaliceProtection(battle,target){
 }
 
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
+ e.staticRigid=raw.enemyBehavior?.staticRigid===true;
+ if(e.id==='enemy_1367_dseed')e.shiftImmune=true; // 血珀是失衡免疫，不是静态刚体。
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
  if(e.enemySkills?.some(s=>s.prefab==='PollutedRangedAtk'))e.enemyAttack={...e.enemyAttack,groundOnly:true,lowlandOnly:true};

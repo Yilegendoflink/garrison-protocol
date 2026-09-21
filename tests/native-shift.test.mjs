@@ -26,6 +26,21 @@ test('有明确力度的推动逐帧运动，30帧离散摩擦位移匹配PRTS�
  const {b,e}=openArena();moveActor(b,e,{x:1,y:3},'推动',{forceLevel:0,projectile:true});advance(b,2);assert.ok(Math.abs(e.x-2-1.6958)<.00002);
 });
 
+test('静态刚体进入失衡并打断攻击，但零速度/零位移，0.1秒后退出；不同于失衡免疫',()=>{
+ const {b,e}=openArena('enemy_1005_yokai');assert.equal(e.staticRigid,true);e.action={left:30};assert.equal(moveActor(b,e,{x:1,y:3},'推动',{forceLevel:0}),true);assert.equal(e.action,null);assert.equal(e.shift.vx,0);advance(b,2/30);assert.ok(e.shift);assert.equal(e.x,2);advance(b,1/30);assert.equal(e.shift,null);assert.equal(e.x,2);
+ e.shiftImmune=true;assert.equal(moveActor(b,e,{x:1,y:3},'推动',{forceLevel:0}),false);assert.equal(e.shift,null);
+});
+
+test('静态刚体持续受拉力时保留失衡，解绑后退出；不限制普通传送',()=>{
+ const {b,e}=openArena('enemy_1005_yokai');moveActor(b,e,{x:1,y:3},'拖拽',{forceLevel:0});advance(b,.5);assert.ok(e.shift);assert.equal(e.x,2);advance(b,.5);assert.equal(e.shift,null);assert.equal(e.x,2);
+ assert.equal(moveActor(b,e,{x:1,y:3},'推动'),false);assert.equal(teleportActor(b,e,{x:3,y:3}),true);assert.equal(e.x,3);
+});
+
+test('静态刚体登记覆盖当前档案且不把所有飞行单位混为静态',()=>{
+ const profiles=[...Object.values(NATIVE_DATA.enemies),...Object.values(NATIVE_DATA.enemyDependencies),...Object.values(NATIVE_DATA.levels).flatMap(l=>Object.values(l.enemyProfiles||{}))],ids=new Set(profiles.filter(e=>e.enemyBehavior.staticRigid).map(e=>e.prefabKey));assert.equal(ids.size,29);assert.ok(ids.has('enemy_1430_lrrook'));assert.ok(ids.has('enemy_1040_bombd'));assert.ok(ids.has('enemy_1269_nhfly'));assert.equal(NATIVE_DATA.enemies.enemy_10045_parrot.enemyBehavior.staticRigid,false);
+ const {b,e}=arena('enemy_1367_dseed',{raw:NATIVE_DATA.enemyDependencies.enemy_1367_dseed});assert.equal(e.staticRigid,false);assert.equal(e.shiftImmune,true);assert.equal(moveActor(b,e,{x:2,y:3},'推动',{forceLevel:10}),false);
+});
+
 test('力度重量差不足不进入失衡，结束事件仅在实际运动停止时触发',()=>{
  const {b,e}=openArena('enemy_10112_ymgds');e.weight=3;assert.equal(moveActor(b,e,{x:1,y:3},'推动',{forceLevel:0}),false);assert.equal(e.shift,undefined);
  e.weight=0;moveActor(b,e,{x:1,y:3},'推动',{forceLevel:0});advance(b,.2);assert.ok(e.shift);assert.equal(e.statuses.some(s=>s.kind==='stun'),false);advance(b,1);assert.equal(e.shift,null);assert.ok(e.statuses.some(s=>s.kind==='stun'));
