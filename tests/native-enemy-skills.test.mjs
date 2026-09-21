@@ -57,6 +57,18 @@ test('魂灵圣杯按伤害结算后保留5%，余量由圣杯承担真实伤害
  const before=target.hp,next=a.hp;dealDamage(b,{target,amount:200,type:'arts'});assert.equal(before-target.hp,5);assert.equal(next-a.hp,95);assert.equal(a.res,30,'承担伤害不再扣一次圣杯法抗');
 });
 
+test('圣杯在首次受伤前绑定来源，后来进入的较小UID不抢占已有保护',()=>{
+ const {b}=arena(),older=spawn(b,'enemy_1430_lrrook',7,3,chaliceRaw),first=spawn(b,'enemy_1430_lrrook',3,3,chaliceRaw),target=spawn(b,'enemy_1007_slime',4,3);target.canAttack=false;b.step();assert.equal(target.chaliceUid,first.uid);
+ older.x=3;b.step();assert.equal(target.chaliceUid,first.uid);const hp=first.hp,other=older.hp;dealDamage(b,{target,value:100,type:'true'});assert.equal(hp-first.hp,95);assert.equal(older.hp,other);
+ first.hidden=true;b.step();assert.equal(target.chaliceUid,older.uid);const remaining=older.hp;dealDamage(b,{target,value:100,type:'true'});assert.equal(remaining-older.hp,95);
+});
+
+test('未受伤的圣杯绑定可跨JSON，离开范围清除，重新进入按当前来源建立保护',()=>{
+ const {b,g}=arena(),older=spawn(b,'enemy_1430_lrrook',7,3,chaliceRaw),first=spawn(b,'enemy_1430_lrrook',3,3,chaliceRaw),target=spawn(b,'enemy_1007_slime',4,3);target.canAttack=false;b.step();older.x=3;
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.enemies.find(e=>e.uid===target.uid);restored.step();assert.equal(copy.chaliceUid,first.uid);
+ copy.x=7;restored.step();assert.equal(copy.chaliceUid,null);copy.x=4;restored.step();assert.equal(copy.chaliceUid,older.uid);
+});
+
 test('圣杯分摊在次数护盾/屏障之后，真实伤害可分摊，生命流失与斩杀标记绕过',()=>{
  const {b}=arena(),cup=spawn(b,'enemy_1430_lrrook',3,3,chaliceRaw),target=spawn(b,'enemy_1007_slime',4,3);target.shield=60;const chp=cup.hp,hp=target.hp;
  dealDamage(b,{target,value:100,type:'true'});assert.equal(hp-target.hp,2);assert.equal(chp-cup.hp,38);target.barriers=[{charges:1}];const before=cup.hp;dealDamage(b,{target,value:100,type:'true'});assert.equal(cup.hp,before);

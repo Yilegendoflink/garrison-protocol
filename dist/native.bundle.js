@@ -6600,7 +6600,7 @@ const KNIGHT_PARTNER={enemy_1513_dekght:'enemy_1513_dekght_2',enemy_1513_dekght_
 
 function enemyChaliceProtection(battle,target){
  if(!battle.s.enemies.includes(target))return null;
- if(target.hidden||target.flying&&!target.groundNavigation||isIsolated(target)){target.chaliceUid=null;return null;}
+ if(target.hp<=0||target.hidden||target.flying&&!target.groundNavigation||isIsolated(target)){target.chaliceUid=null;return null;}
  const sources=battle.s.enemies.filter(e=>e!==target&&e.hp>0&&!e.hidden&&e.id==='enemy_1430_lrrook'&&Number.isFinite(Number(e.enemyTalent?.['takeDmg.damage_scale']))&&near(e,target,Number(e.enemyTalent?.['takeDmg.range_radius'])));
  const source=sources.find(e=>e.uid===target.chaliceUid)||sources.sort((a,b)=>a.uid-b.uid)[0];target.chaliceUid=source?.uid??null;
  if(!source)return null;return {source,retained:Math.max(0,Math.min(1,Number(source.enemyTalent['takeDmg.damage_scale'])))};
@@ -6972,6 +6972,7 @@ function applyEnemyTraitAuras(battle){
   }
  }
  for(const target of live){target.res+=target.enemyResAura||0;target.enemyResAura=0;}
+ if(live.some(e=>e.id==='enemy_1430_lrrook')||battle.s.enemies.some(e=>e.chaliceUid!=null))for(const target of battle.s.enemies)enemyChaliceProtection(battle,target);
  // 远古威慑在重生/第二形态生效；本体黑板未给范围与攻速值，取PRTS修订415307。
  const wolves=live.filter(e=>e.enemyFormKind==='zaro'&&e.enemyForm!=='initial');
  for(const target of allies)if(wolves.some(e=>near(e,target,1.5)))target.enemyAttackSpeedMod=(target.enemyAttackSpeedMod||0)-50;
