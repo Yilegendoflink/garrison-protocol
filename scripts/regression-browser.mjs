@@ -198,6 +198,95 @@ console.log(fail.length?('FAIL\n'+fail.join('\n')):'PASS');
 if(fail.length)throw Error('mobile-bonds 失败：\n'+fail.join('\n'));
 });
 
+// 结算必须在系统/游戏减动效及完全禁用 CSS 动画时仍然可见、可操作。
+suite('round-end',async(browser)=>{
+ const source=await fs.readFile('dist/native.bundle.js','utf8');
+ const marker="root.setAttribute('data-view','native');";
+ assert.ok(source.includes(marker));
+ const instrumented=source.replace(marker,"window.__roundEndTest={state,render,roundEndBegin};"+marker);
+ for(const mode of ['normal','system-reduced','game-reduced','animations-disabled','animations-paused']){
+  const page=await browser.newPage({viewport:{width:1280,height:800},reducedMotion:mode==='system-reduced'?'reduce':'no-preference'}),errors=[];
+  try{
+   page.on('pageerror',e=>errors.push(e.message));
+   await page.route('**/native.bundle.js*',route=>route.fulfill({contentType:'application/javascript',body:instrumented}));
+   await page.goto(URL);await page.waitForFunction(()=>window.__garrisonReady);
+   await page.locator('[data-act=new]').click();await page.locator('[data-act=begin]').click();
+   if(mode==='animations-disabled')await page.addStyleTag({content:'*{animation:none!important;transition:none!important}'});
+   if(mode==='animations-paused')await page.addStyleTag({content:'.native-round-end *{animation-play-state:paused!important}'});
+   for(const loss of [10,0]){
+    const intro=await page.evaluate(({mode,loss})=>{
+     const {state,render,roundEndBegin}=window.__roundEndTest,g=state.game;
+     state.reduceFx=mode==='game-reduced';g.s.phase='intermission';g.s.lastBattle={loss,leaks:loss};
+     render();roundEndBegin(g);
+     const style=selector=>getComputedStyle(document.querySelector(selector)).opacity;
+     return {banner:style('.native-round-end-banner'),wave:style('.native-round-end-wave'),english:style('.native-round-end-wave em')};
+    },{mode,loss});
+    if(mode==='system-reduced'||mode==='animations-disabled')assert.deepEqual(intro,{banner:'1',wave:'1',english:'1'},mode+'：禁用动画时波次横幅仍应显示');
+    await page.waitForFunction(loss=>{
+     const layer=document.querySelector('.native-round-end');
+     return layer?.dataset.stage==='count'&&(!loss||layer.querySelector('.native-round-end-value')?.textContent===String(loss));
+    },loss);
+    const visible=await page.evaluate(()=>{
+     const banner=document.querySelector('.native-round-end-banner'),body=banner.querySelector('.native-round-end-body'),button=body.querySelector('button'),r=button.getBoundingClientRect();
+     return {banner:getComputedStyle(banner).opacity,body:getComputedStyle(body).opacity,width:r.width,hit:button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))};
+    });
+    assert.equal(visible.banner,'1',mode+'：结算横幅可见');
+    // 等待普通模式下正文的透明度过渡结束，避免在过渡首帧取样。
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.native-round-end-body')).opacity==='1');
+    assert.ok(visible.width>=190&&visible.hit,mode+'：按钮未缩扁且可点击');
+    if(!loss)assert.equal(await page.locator('.native-round-end-perfect').innerText(),'完美通关');
+    await page.locator('.native-round-end [data-act=next]').click();
+    assert.equal(await page.locator('.native-round-end').count(),0);
+    assert.notEqual(await page.evaluate(()=>window.__roundEndTest.state.game.s.phase),'intermission');
+   }
+   assert.deepEqual(errors,[],mode);
+  }finally{await page.close();}
+ }
+});
+
+suite('round-end-flow',async(browser)=>{
+ const source=await fs.readFile('dist/native.bundle.js','utf8'),marker="root.setAttribute('data-view','native');";
+ assert.ok(source.includes(marker));
+ const instrumented=source.replace(marker,"window.__roundEndFlow={state,render,buildPhasePlan,data};"+marker);
+ for(const kind of ['wave','dummy-timeout','dummy-manual']){
+  const page=await browser.newPage({reducedMotion:'no-preference'}),errors=[];
+  try{
+   page.on('pageerror',e=>errors.push(e.message));
+   page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+   await page.route('**/native.bundle.js*',route=>route.fulfill({contentType:'application/javascript',body:instrumented}));
+   await page.goto(URL);await page.waitForFunction(()=>window.__garrisonReady);
+   await page.locator('[data-act=new]').click();await page.locator('[data-act=begin]').click();
+   if(kind!=='wave')await page.evaluate(()=>{
+    const {state,render,buildPhasePlan,data}=window.__roundEndFlow;
+    state.game.s.round=buildPhasePlan(data,state.game.s.modeId).find(t=>t.isBossTurn).round;render();
+   });
+   await page.locator('[data-act=start]').click();
+   if(kind==='dummy-manual')await page.locator('[data-act=stop]').click();
+   else await page.evaluate(()=>{
+    const b=window.__roundEndFlow.state.game.battle;
+    // 保留真实 tick -> finishCurrentBattle -> frame -> render 的结算链路，只快进到时限前。
+    b.s.frame=Math.ceil(b.s.limit*30)-1;b.s.time=b.s.frame/30;
+   });
+   if(kind==='wave'){
+    await page.waitForSelector('.native-round-end[data-stage=count]');
+    await page.locator('.native-round-end [data-act=next]').click();
+    assert.equal(await page.evaluate(()=>window.__roundEndFlow.state.game.s.round),2);
+   }else{
+    await page.waitForSelector('#native-modal');
+    assert.match(await page.locator('#native-modal').innerText(),/木桩测试完成/);
+    await page.locator('#native-modal [data-act=close]').click();
+    await page.reload();await page.waitForFunction(()=>window.__garrisonReady);
+    assert.equal(await page.evaluate(()=>window.__roundEndFlow.state.game.s.phase),'finished');
+    await page.locator('[data-act=result]').click();
+    assert.match(await page.locator('#native-modal').innerText(),/木桩测试完成/);
+    await page.locator('#native-modal [data-act=home]').click();
+    assert.equal(await page.locator('.native-lobby').count(),1);
+   }
+   assert.deepEqual(errors,[],kind);
+  }finally{await page.close();}
+ }
+});
+
 const argv=process.argv.slice(2);
 if(argv.includes('--list')){console.log([...suites.keys()].join('\n'));process.exit(0);}
 const picked=argv.filter(a=>!a.startsWith('-'));

@@ -27,14 +27,14 @@ function spawnEnemy(b,id,x,y){
 function zones(b){return (b.s.logicEffects||[]).filter(f=>f.kind==='field');}
 const profiles=id=>NATIVE_DATA.enemies[id].enemyBehavior;
 
-test('持续伤害范围的参数全部来自原表：六类敌人各自的区域字段',()=>{
+test('持续伤害范围参数来自原表及显式PRTS覆盖：六类敌人各自的区域字段',()=>{
  const artillery=profiles('enemy_10122_uacann_2').attackZone;
  assert.deepEqual({r:artillery.radius,d:artillery.duration,i:artillery.interval,dmg:artillery.damage},{r:1,d:3,i:1,dmg:150});
  const tank=profiles('enemy_1272_nhtank').attackZone;
  assert.deepEqual({r:tank.radius,d:tank.duration,dmg:tank.damage},{r:2.2,d:10,dmg:50});
  const nest=profiles('enemy_1234_dsubrl').selfField;
  assert.equal(nest.radius,1.6);assert.equal(nest.elementScale,0.05);assert.equal(nest.elementType,'neural');
- assert.equal(nest.atkScale,0,'原表没有常驻法术伤害的倍率，不能凭空给一个');
+ assert.equal(nest.atkScale,1,'PRTS明确每秒攻击力100%法术伤害，来源登记在enemy-behavior-overrides');
  const die=profiles('enemy_1267_nhpbr').deathZone;
  assert.deepEqual({r:die.radius,d:die.duration,i:die.interval,dmg:die.damage,atk:Number(die.atkScale)||0},{r:2,d:8,i:1,dmg:50,atk:0});
  const bleed=profiles('enemy_1270_nhstlk').bleeding;
@@ -72,7 +72,7 @@ test('集团军重型火炮开火后留下燃烧区域，按原表数值持续�
  b.resolveEnemyStrike(enemy,u,{});
  const zone=zones(b)[0];
  assert.ok(zone,'开火后应当留下一片区域');
- assert.equal(zone.radius,1);assert.equal(zone.values.damage,150);assert.equal(zone.values.damageType,'true');
+ assert.equal(zone.radius,1);assert.equal(zone.values.damage,150);assert.equal(zone.values.damageType,'arts','PRTS燃烧区域为法术持续伤害');
  assert.equal(Math.round(zone.endsAt-b.s.time),3);
  const hp=u.hp;
  b.s.time+=1.1;b.tickEnemyGroundZones();

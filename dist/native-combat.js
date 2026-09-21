@@ -49,7 +49,7 @@ function mergeInferred(inferred,override){
 }
 
 function enemySkill(raw={}){
- const skill=(raw.skills||[]).find(x=>x?.prefabKey&&!['BornAnim','StartRun','EndAnim','BeginAnim'].includes(x.prefabKey));
+ const skill=(raw.skills||[]).find(x=>x?.prefabKey&&!(raw.enemyBehavior?.ignoredSkillPrefabs||[]).includes(x.prefabKey)&&!['BornAnim','StartRun','EndAnim','BeginAnim'].includes(x.prefabKey));
  if(!skill)return null;
  const bb={};for(const row of skill.blackboard||[])if(row?.key!=null)bb[row.key]=Number.isFinite(Number(row.value))?Number(row.value):row.value;
  return {prefab:skill.prefabKey,cooldown:Number(skill.cooldown),initCooldown:Number(skill.initCooldown),spCost:Number(skill.spCost)||0,bb};
@@ -80,7 +80,7 @@ export function inferDeathZone(raw={}){
  const damage=firstTemplateField(bb,'PollutedDie','polluted_damage_low');
  if(!Number.isFinite(damage)||damage<=0)return null;
  const radius=firstTemplateField(bb,'PollutedDie','projectile_range'),life=firstTemplateField(bb,'PollutedDie','projectile_life_time'),interval=firstTemplateField(bb,'PollutedDie','interval');
- return {trigger:'death',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:8,interval:Number.isFinite(interval)&&interval>0?interval:1,damage,damageType:'true'};
+ return {trigger:'death',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:8,interval:Number.isFinite(interval)&&interval>0?interval:1,damage,damageHigh:firstTemplateField(bb,'PollutedDie','polluted_damage_high'),damageType:'true'};
 }
 
 // 射击落点区域（ProjectileBoomRange 等）：普通攻击命中后在目标格留一片持续伤害区。
@@ -91,13 +91,13 @@ export function inferAttackZone(raw={}){
  const damage=firstTemplateField(bb,'ProjectileBoomRange','attack@value');
  if(/燃烧区域/.test(text)&&Number.isFinite(damage)&&damage>0){
   const radius=firstTemplateField(bb,'ProjectileBoomRange','attack@projectile_range'),life=firstTemplateField(bb,'ProjectileBoomRange','attack@projectile_life_time');
-  return {trigger:'attack',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:3,interval:1,damage,damageType:'true'};
+  return {trigger:'attack',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:3,interval:1,damage,damageType:'arts'};
  }
  const skill=enemySkill(raw),skillBb=skill?.bb||{};
  const polluted=Number(skillBb.polluted_damage_low);
  if(skill?.prefab==='PollutedRangedAtk'&&Number.isFinite(polluted)&&polluted>0){
   const radius=Number(skillBb.range_radius),life=Number(skillBb.projectile_life_time);
-  return {trigger:'attack',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:10,interval:1,damage:polluted,damageType:'true'};
+  return {trigger:'attack',radius:Number.isFinite(radius)&&radius>0?radius:1,duration:Number.isFinite(life)&&life>0?life:10,interval:1,damage:polluted,damageHigh:Number(skillBb.polluted_damage_high),damageType:'true'};
  }
  return null;
 }
@@ -114,9 +114,9 @@ export function inferSelfField(raw={}){
  const payload=z=>!!z&&(Number(z.damage)>0||Number(z.atkScale)>0||Number(z.elementScale)>0);
  if(behavior.selfField&&payload(behavior.selfField)&&Number(behavior.selfField.radius)>0)return behavior.selfField;
  if(!/持续对周围造成/.test(text)||!(Number.isFinite(radius)&&radius>0))return null;
- const elementScale=Number(talentBb['EpDamage.ep_damage_ratio']??talentBb['epdamage.attack@ep_damage_ratio']);
+ const elementScale=Number(talentBb['EpDamage.ep_damage_ratio']??talentBb['epdamage.attack@ep_damage_ratio']??talentBb['aoe.ep_damage_ratio']);
  const elementType=/神经损伤/.test(text)?'neural':/侵蚀损伤/.test(text)?'corrosion':/凋亡损伤/.test(text)?'necrosis':/灼燃损伤/.test(text)?'burn':null;
- const atkScale=Number(talentBb['EpDamage.attack@atk_scale']??talentBb['EpDamage.damage_atk_scale']);
+ const atkScale=Number(talentBb['EpDamage.attack@atk_scale']??talentBb['EpDamage.damage_atk_scale']??talentBb['aoe.atk_scale']);
  const hasElement=Number.isFinite(elementScale)&&elementScale>0&&elementType;
  const hasDamage=Number.isFinite(atkScale)&&atkScale>0;
  if(!hasElement&&!hasDamage)return null;
@@ -199,7 +199,7 @@ export function enemyBehaviorProfile(raw={}){
  const randomPoolEligible=behavior.randomPoolEligible??(complexity!=='complex');
  const stunMatch=text.match(/攻击\s*(\d+)次后[^。；;]*晕眩/),stunBefore=stunMatch?Number(stunMatch[1]):(/数次攻击后[^。；;]*晕眩/.test(text)?Number(raw.skills?.[0]?.spCost)||3:0);
  const elementKey=/侵蚀损伤/.test(text)?'corrosion':/凋亡损伤/.test(text)?'necrosis':/灼燃损伤/.test(text)?'burn':/神经损伤/.test(text)?'neural':null;
- const elementScale=Number(talentBb['epdamage.attack@ep_damage_ratio']??talentBb['EpDamage.attack@ep_damage_ratio']??talentBb['empty.attack@ep_damage_ratio']??talentBb['ep_damage_ratio']);
+ const elementScale=Number(talentBb['epdamage.attack@ep_damage_ratio']??talentBb['EpDamage.attack@ep_damage_ratio']??talentBb['empty.attack@ep_damage_ratio']??talentBb['combat.attack@ep_damage_ratio']??talentBb['ep_damage_ratio']);
  const explosion= /死亡[^。；;]*(?:产生|造成|爆炸)/.test(text)?{type:/法术/.test(text)?'arts':'physical',scale:Number(bb['boom.atk_scale'])||1,radius:Number(behavior.deathExplosionRadius??raw.deathExplosionRadius)||1,requiresFire:/点燃状态/.test(text)}:null;
  const auraDef=Number(bb['defup.def']);
  const auraRadius=Number(bb['defup.range_radius']);
@@ -209,7 +209,7 @@ export function enemyBehaviorProfile(raw={}){
  const lowHpAttackScale=Number(bb['enrage.damage_scale']??behavior.lowHpAttackScale);
  const lowHpMoveScale=Number(bb['move_speed']??bb['run.attack@move_speed']);
  const lowHpUnblockTime=Number(bb['block_free_time']??behavior.lowHpUnblockTime);
- const initialInvisible=behavior.initialInvisible??/^\s*(?:<[^>]+>)*隐匿/.test(String(raw.description||''));
+ const initialInvisible=behavior.initialInvisible??(/^\s*(?:<[^>]+>)*隐匿/.test(String(raw.description||''))||/在被阻挡前无法被攻击/.test(String(raw.description||''))||(raw.ability||[]).some(a=>/^隐匿(?:[，；。;]|$)/.test(typeof a==='string'?a:a.text||'')));
  const initialUnblockable=behavior.initialUnblockable??/无法被阻挡/.test(text);
  const initialShield=Number(bb['shield.dynamic']??behavior.initialShield);
  // 「特殊生命值机制」：图鉴描述为「需要 N 次伤害击倒」，生命值即为所需次数。碎片敌人（applyWay=NONE）
@@ -271,7 +271,7 @@ export function enemyBehaviorProfile(raw={}){
   attackStunDuration:Number(bb.stun)||Number(behavior.attackStunDuration)||0,
   attackElement:elementKey,
   attackElementScale:Number.isFinite(elementScale)&&elementScale>0?elementScale:0,
-  deathExplosion:explosion,
+  deathExplosion:explosion?{...explosion,...(behavior.deathExplosionDelay!=null?{delay:Number(behavior.deathExplosionDelay)}:{}),...(behavior.deathExplosionGroundOnly?{groundOnly:true}:{})}:null,
   // 只认 defup.* 这类「给周围友军加防」的真光环。aura.* 前缀是自身条件判定
   // （例如「周围半径1.5内存在燃烧的芦苇丛时自身减伤」），不是发给别人的光环，
   // 之前把 aura.damage_resistance 当光环发出去，等于把减伤白送给周围所有敌人。
@@ -293,6 +293,11 @@ export function enemyBehaviorProfile(raw={}){
   daggers:daggers||null,
   revive:revive||null,
   specialSkill,
+  ...(behavior.ignoredSkillPrefabs?{ignoredSkillPrefabs:[...behavior.ignoredSkillPrefabs]}:{}),
+  ...(behavior.scopeNote?{scopeNote:behavior.scopeNote}:{}),
+  attackProfile:behavior.attackProfile||null,
+  periodicSpawn:behavior.periodicSpawn||null,
+  spawnOnDeath:behavior.spawnOnDeath??(enemyTalentString(raw,'DeathRattle.enemy_key')?{enemyKey:enemyTalentString(raw,'DeathRattle.enemy_key'),count:1,delay:.8,scatter:.1}:enemyTalentString(raw,'Summon.enemy_key')?{enemyKey:enemyTalentString(raw,'Summon.enemy_key'),count:Number(talentBb['Summon.cnt'])||1,delay:0,scatter:.1}:null),
   specialAtkScale:Number.isFinite(specialAtkScale)&&specialAtkScale>0?specialAtkScale:0,
   firstAttackSplash,
   meleeAttackScale:Number.isFinite(meleeAttackScale)&&meleeAttackScale>0?meleeAttackScale:0,
@@ -391,20 +396,21 @@ export function resolveBlocks(units,enemies,capOf){
 }
 export function compileRoute(route,to,walk,bfs){
  const start=to(route.startPosition),end=to(route.endPosition);
- const raw=[{kind:'move',x:start.x,y:start.y},...(route.checkpoints||[]).map(c=>{
-  const p=c.position?to(c.position):start,type=c.type||'MOVE';
-  if(type==='WAIT_FOR_SECONDS'||type==='WAIT')return {kind:'wait',x:null,y:null,time:c.time||0};
-  if(type==='DISAPPEAR')return {kind:'disappear',x:null,y:null};
-  if(type==='APPEAR_AT_POS'||type==='APPEAR')return {kind:'appear',x:p.x,y:p.y};
-  if(type==='MOVE'||type==='PATROL_MOVE')return {kind:'move',x:p.x,y:p.y};
+ const raw=[{kind:'move',x:start.x,y:start.y},...(route.checkpoints||[]).map((c,index)=>{
+  const p=c.position?to(c.position):start,type=c.type||'MOVE',checkpointIndex=index+1;
+  if(type==='WAIT_FOR_SECONDS'||type==='WAIT')return {checkpointIndex,kind:'wait',x:null,y:null,time:c.time||0};
+  if(type==='DISAPPEAR')return {checkpointIndex,kind:'disappear',x:null,y:null};
+  if(type==='APPEAR_AT_POS'||type==='APPEAR')return {checkpointIndex,kind:'appear',x:p.x,y:p.y};
+  if(type==='MOVE'||type==='PATROL_MOVE')return {checkpointIndex,kind:'move',x:p.x,y:p.y};
   throw Error('未支持的路线指令 '+type);
  }),{kind:'move',x:end.x,y:end.y}];
  const steps=[{kind:'move',x:start.x,y:start.y}];let cur=start;
  const pushWalk=(dest)=>{
-  if(cur.x===dest.x&&cur.y===dest.y)return;
-  if(!walk){steps.push({kind:'move',x:dest.x,y:dest.y});cur=dest;return;}
+  if(cur.x===dest.x&&cur.y===dest.y){if(dest.checkpointIndex!=null)steps.push({...dest});return;}
+  if(!walk){steps.push({...dest,kind:'move'});cur=dest;return;}
   const segment=bfs(cur,dest);if(!segment)throw Error('原始路线不可达：'+cur.x+','+cur.y+' → '+dest.x+','+dest.y);
   for(const p of segment)steps.push({kind:'move',x:p.x,y:p.y});
+  if(dest.checkpointIndex!=null)steps.at(-1).checkpointIndex=dest.checkpointIndex;
   cur=dest;
  };
  for(const node of raw){
@@ -417,6 +423,7 @@ export function compileRoute(route,to,walk,bfs){
  }
  return steps.length?steps:[{kind:'move',x:start.x,y:start.y}];
 }
+function reachedCheckpoint(e,node){if(node.checkpointIndex!=null)e.lastCheckpoint=Math.max(e.lastCheckpoint||0,node.checkpointIndex);}
 export function advanceEnemy(e,dt,onEvent,stopForAttack=false){
  if(e.hp<=0||e.trainingDummy||!e.route)return false;
  if(!Number.isInteger(e.cmd))e.cmd=Math.min(e.route.length,(e.segment||0)+1);
@@ -424,20 +431,21 @@ export function advanceEnemy(e,dt,onEvent,stopForAttack=false){
  while(e.cmd<e.route.length){
   const s=e.route[e.cmd];
   if(s.kind==='wait'){
+   reachedCheckpoint(e,s);
    if(e.cmdLeft==null)e.cmdLeft=s.time;
    const used=Math.min(dt,e.cmdLeft);e.cmdLeft-=used;dt-=used;
    if(e.cmdLeft<=1e-9){e.cmd++;e.cmdLeft=null;}
    if(dt<=1e-9)break;
    continue;
   }
-  if(s.kind==='disappear'){e.hidden=true;e.untargetable=true;e.block=null;e.action=null;e.cmd++;e.cmdLeft=null;onEvent?.('disappear',e);continue;}
-  if(s.kind==='appear'){e.x=s.x;e.y=s.y;e.hidden=false;e.untargetable=false;e.cmd++;e.cmdLeft=null;onEvent?.('appear',e);continue;}
+  if(s.kind==='disappear'){reachedCheckpoint(e,s);e.hidden=true;e.untargetable=true;e.block=null;e.action=null;e.cmd++;e.cmdLeft=null;onEvent?.('disappear',e);continue;}
+  if(s.kind==='appear'){reachedCheckpoint(e,s);e.x=s.x;e.y=s.y;e.hidden=false;e.untargetable=false;e.cmd++;e.cmdLeft=null;onEvent?.('appear',e);continue;}
   const dx=s.x-e.x,dy=s.y-e.y,d=Math.hypot(dx,dy);
-  if(d<=1e-9){e.cmd++;continue;}
+  if(d<=1e-9){reachedCheckpoint(e,s);e.cmd++;continue;}
   const speed=(!e.block&&permissions(e).move&&!stopForAttack)?e.speed*(e.moveSpeedMod??1)*slow:0;
   if(speed<=0||dt<=1e-9)break;
   const move=speed*dt;
-  if(d<=move){e.x=s.x;e.y=s.y;e.cmd++;e.cmdLeft=null;dt-=d/speed;}
+  if(d<=move){e.x=s.x;e.y=s.y;reachedCheckpoint(e,s);e.cmd++;e.cmdLeft=null;dt-=d/speed;}
   else{e.x+=dx/d*move;e.y+=dy/d*move;break;}
  }
  e.progress=remainingDistance(e);

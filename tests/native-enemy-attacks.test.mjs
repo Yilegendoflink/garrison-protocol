@@ -1,0 +1,141 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {NativeSession} from '../dist/native-session.js';
+import {NativeBattle} from '../dist/native-battle.js';
+import {NATIVE_DATA} from '../dist/runtime-data.js';
+import {applyStatus} from '../dist/status.js';
+import {commitExit} from '../dist/native-effects.js';
+import {drawEnemyProjectiles} from '../dist/native-fx.js';
+
+function arena(id,{x=3,y=3,positions=[[3,3]]}={}){
+ const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.funds=100;assert.ok(g.perform('buy',0));const unit=g.s.units[0];let placed=false;
+ for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(g.canDeploy(unit.uid,x,y))placed=g.deploy(unit.uid,x,y,0);
+ assert.ok(placed);assert.ok(g.perform('start'));const b=g.battle,template=b.s.units[0];b.s.queue=[];b.s.enemies=[];b.s.limit=1000;
+ b.map=structuredClone(b.map);b.s.units=positions.map(([x,y],i)=>{const u=structuredClone(template);u.uid+=i*100;u.x=x;u.y=y;u.deployed=true;u.deployAt=i===0?100:0;applyStatus(u,'disarm',600);b.map.grid[y][x].heightType='LOWLAND';return u;});
+ const raw=NATIVE_DATA.enemies[id],o=b.map.origin,spot={col:o.col+x,row:o.row-y};
+ b.level={...b.level,routes:[{motionMode:raw.motion,startPosition:spot,endPosition:spot,checkpoints:[{type:'WAIT_FOR_SECONDS',time:600}]}],enemyProfiles:{...b.level.enemyProfiles,[id]:raw}};
+ b.spawn({id,route:0});const enemy=b.s.enemies[0];enemy.atk=enemy.baseAtk=1;
+ const strikes=[],emit=b.emit.bind(b);b.emit=(kind,row)=>{if(kind==='strike'&&row.enemy)strikes.push({...row,time:b.s.time});emit(kind,row);};
+ return {b,g,enemy,allies:b.s.units,strikes};
+}
+function advance(b,s){for(let i=0;i<Math.round(s*30);i++)b.step();}
+
+test('澪普通与强化攻击均二连击，按一次攻击回复SP，技能直到末击才结束',()=>{
+ const {b,enemy,strikes}=arena('enemy_10118_ymgprc');advance(b,1.1);
+ assert.equal(strikes.length,2);assert.equal(enemy.attackCount,1);assert.equal(enemy.sp,1);
+ enemy.sp=3;enemy.attackCooldown=0;advance(b,.94);assert.equal(enemy.sp,0);assert.ok(enemy.enemyCast?.multiAttack);
+ advance(b,.2);assert.equal(strikes.length,4);assert.equal(enemy.enemyCast,null);assert.equal(enemy.sp,0);
+});
+
+test('自制投石机一次攻击三次命中，相隔0.3秒，读档保留尚未发生的命中',()=>{
+ const {b,g,enemy,strikes}=arena('enemy_10162_mnctpt',{x:3,y:4});advance(b,2.2);
+ assert.equal(strikes.length,1);assert.equal(b.s.strikes.filter(s=>s.enemyAttack).length,2);assert.equal(enemy.attackCount,1);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);
+ const before=restored.s.units[0].hp;advance(restored,.6);assert.ok(restored.s.units[0].hp<before);
+ assert.equal(restored.s.strikes.filter(s=>s.enemyAttack).length,0);assert.equal(restored.s.enemies[0].attackCount,1);
+ advance(b,.6);assert.equal(strikes.length,3);assert.ok(Math.abs(strikes[1].time-strikes[0].time-.3)<.04);
+});
+
+test('多连击在首击后受控制，不继续造成后续命中',()=>{
+ const {b,enemy,strikes}=arena('enemy_10162_mnctpt',{x:3,y:4});advance(b,2.2);assert.equal(strikes.length,1);
+ applyStatus(enemy,'stun',3);advance(b,1);assert.equal(strikes.length,1);
+});
+
+test('骨刺未暴露时同时攻击3个目标，被阻挡后退回单目标',()=>{
+ const free=arena('enemy_9008_acbunn',{x:3,y:4,positions:[[2,3],[3,2],[4,3]]});advance(free.b,1.4);
+ assert.equal(free.enemy.block,null);assert.equal(free.strikes.length,3);assert.equal(free.enemy.attackCount,1);
+ const blocked=arena('enemy_9008_acbunn',{positions:[[3,3],[2,3],[4,3]]});advance(blocked.b,1.4);
+ assert.ok(blocked.enemy.block!=null);assert.equal(blocked.strikes.length,1);
+});
+
+test('控潮术师普通攻击溅射以目标为中心，仅覆盖相邻四格且附加侵蚀',()=>{
+ const {b,allies,enemy}=arena('enemy_1161_tidmag',{x:3,y:5,positions:[[3,3],[4,3],[4,4]]});
+ const hp=allies.map(u=>u.hp);advance(b,1);
+ assert.ok(allies[0].hp<hp[0]);assert.ok(allies[1].hp<hp[1]);assert.equal(allies[2].hp,hp[2]);
+ assert.ok(allies[0].elemental.corrosion>0&&allies[1].elemental.corrosion>0);assert.equal(allies[2].elemental?.corrosion||0,0);assert.equal(enemy.attackCount,1);
+});
+
+test('火炮溅射伤害多个目标，但一发炮弹仅留下一个燃烧区',()=>{
+ const {b,allies}=arena('enemy_10122_uacann_2',{x:3,y:5,positions:[[3,3],[4,3],[4,4]]});const hp=allies.map(u=>u.hp);
+ advance(b,2);assert.ok(allies[0].hp<hp[0]);assert.ok(allies[1].hp<hp[1]);assert.equal(allies[2].hp,hp[2]);
+ assert.equal(b.s.logicEffects.filter(f=>f.kind==='field').length,1);
+});
+
+test('独轮车玩具普通攻击选择两个不同目标',()=>{
+ const {b,enemy,strikes}=arena('enemy_10018_sgrobh',{x:3,y:4,positions:[[3,3],[2,4],[4,4]]});advance(b,1.6);
+ assert.equal(strikes.length,2);assert.equal(new Set(strikes.map(s=>s.targetX+','+s.targetY)).size,2);assert.equal(enemy.attackCount,1);
+});
+
+test('自行炮先锁最大生命目标所在九格，再逐次轰炸其中生命比例最高者',()=>{
+ const {b,enemy,allies}=arena('enemy_1273_stmgun_2',{x:3,y:5,positions:[[3,3],[4,3]]});
+ const stats=b.stats.bind(b);b.stats=u=>({...stats(u),maxHp:u.uid===allies[0].uid?2000:1000});
+ advance(b,9.9);allies[0].hp=100;allies[1].hp=1000;for(let i=0;i<180&&!enemy.enemyCast;i++)b.step();const castAt=b.s.time;
+ assert.equal(enemy.enemyCast?.channel,'cannon');assert.deepEqual([enemy.enemyCast.x,enemy.enemyCast.y],[3,3]);
+ assert.equal(applyStatus(enemy,'stun',3),false,'施法期间临时免疫眩晕');
+ const hits=[],hurt=b.hurt.bind(b);b.hurt=(u,e)=>{hits.push({uid:u.uid,type:e.damageType,atk:e.atk});hurt(u,e);};
+ advance(b,.5);assert.equal(hits[0].uid,allies[1].uid);assert.equal(hits[0].type,'arts');assert.equal(hits[0].atk,.55);
+ allies[0].hp=2000;allies[1].hp=1;advance(b,.5);assert.equal(hits[1].uid,allies[0].uid);
+ advance(b,5);assert.equal(hits.length,10);assert.equal(enemy.enemyCast,null);assert.ok(Math.abs(enemy.enemySkills[0].nextAt-(castAt+31))<.04);
+ assert.equal(applyStatus(enemy,'stun',1),true,'施法结束恢复原免疫属性');
+});
+
+test('爵士乐手隐匿时不普攻不施法，被反隐后引导灼燃，沉默立即中断',()=>{
+ const {b,enemy,allies,strikes}=arena('enemy_10034_cnvsax',{x:3,y:4,positions:[[3,3]]});
+ advance(b,6);assert.ok(enemy.enemyCast==null);assert.equal(strikes.length,0);
+ enemy.revealed=true;enemy.revealUntil=b.s.time+20;advance(b,.1);assert.equal(enemy.enemyCast?.channel,'jazz');
+ const hp=allies[0].hp;advance(b,.5);assert.ok(allies[0].hp<hp);assert.ok(allies[0].elemental.burn>0);
+ applyStatus(enemy,'silence',3);b.step();assert.equal(enemy.enemyCast,null);const stopped=allies[0].hp;advance(b,1);assert.equal(allies[0].hp,stopped);
+});
+
+test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{
+ const {b,enemy,allies}=arena('enemy_10144_xdelk_2');b.step();const started=b.s.time;
+ assert.equal(enemy.enemyCast?.charge,true);const hp=allies[0].hp;advance(b,6.5);assert.equal(allies[0].hp,hp);
+ advance(b,.1);assert.ok(allies[0].hp<hp);assert.equal(enemy.enemyCast.hitAttempted,true);
+ advance(b,1.4);assert.equal(enemy.enemyCast,null);assert.equal(enemy.enemyLostUntil,undefined);assert.ok(Math.abs(enemy.enemySkills[0].nextAt-(started+28))<.04);
+});
+
+test('卢鲁蓄力遭眩晕中断进入4秒失落，失去目标则结束后失落5秒',()=>{
+ const controlled=arena('enemy_10144_xdelk_2');controlled.b.step();applyStatus(controlled.enemy,'stun',1);controlled.b.step();
+ assert.equal(controlled.enemy.enemyCast,null);assert.equal(controlled.enemy.canAttack,false);const end=controlled.enemy.enemyLostUntil;
+ assert.ok(Math.abs(end-controlled.b.s.time-4)<1e-8);advance(controlled.b,3);assert.equal(controlled.enemy.canAttack,false);advance(controlled.b,1.1);assert.equal(controlled.enemy.canAttack,true);
+ const escaped=arena('enemy_10144_xdelk_2');escaped.b.step();escaped.allies[0].x=8;escaped.allies[0].y=5;advance(escaped.b,8);
+ assert.equal(escaped.enemy.enemyCast,null);assert.equal(escaped.enemy.canAttack,false);assert.ok(Math.abs(escaped.enemy.enemyLostUntil-escaped.b.s.time-5)<.04);
+});
+
+test('帝国炮火锁定发射时位置，3秒后爆炸；原目标移开能避开，后来进入者受伤',()=>{
+ const {b,enemy,allies}=arena('enemy_1112_emppnt',{x:3,y:5,positions:[[3,3],[7,3]]});
+ for(let i=0;i<600&&!b.s.enemyProjectiles.length;i++)b.step();assert.equal(b.s.enemyProjectiles.length,1);enemy.canAttack=false;
+ const shot=b.s.enemyProjectiles[0],hp=allies.map(u=>u.hp);assert.equal(shot.targetX,3);assert.equal(shot.targetY,3);
+ allies[0].x=7;allies[1].x=3;allies[1].y=4;advance(b,2.9);assert.deepEqual(allies.map(u=>u.hp),hp);
+ advance(b,.1);assert.equal(allies[0].hp,hp[0]);assert.ok(allies[1].hp<hp[1]);assert.equal(b.s.enemyProjectiles.length,0);
+});
+
+test('帝国炮火发射者死亡不撤销已发射炮弹，命中使用缓存攻击力且没有来源uid',()=>{
+ const {b,enemy,allies}=arena('enemy_1112_emppnt_2',{x:3,y:5});
+ for(let i=0;i<600&&!b.s.enemyProjectiles.length;i++)b.step();const amount=b.s.enemyProjectiles[0].amount;
+ enemy.atk=10000;b.s.queue.push({id:'enemy_1007_slime',route:0,at:100});commitExit(b,{target:enemy});
+ const hits=[],hurt=b.hurt.bind(b);b.hurt=(u,e,opts)=>{hits.push({atk:e.atk,uid:e.uid});hurt(u,e,opts);};const hp=allies[0].hp;
+ advance(b,3);assert.equal(b.s.enemies.length,0);assert.equal(hits.length,1);assert.equal(hits[0].atk,amount);assert.equal(hits[0].uid,undefined);assert.ok(allies[0].hp<hp);
+});
+
+test('位置炮弹跨JSON存档保留落点与剩余时间，非法数值存档拒绝恢复',()=>{
+ const {b,g,enemy}=arena('enemy_1112_emppnt',{x:3,y:5});
+ for(let i=0;i<600&&!b.s.enemyProjectiles.length;i++)b.step();enemy.canAttack=false;advance(b,1);
+ const saved=JSON.parse(JSON.stringify(b.s)),restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,saved);assert.ok(restored);
+ const hp=restored.s.units[0].hp;advance(restored,1.9);assert.equal(restored.s.units[0].hp,hp);advance(restored,.1);assert.ok(restored.s.units[0].hp<hp);
+ saved.enemyProjectiles[0].amount=null;assert.equal(NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,saved),null);
+});
+
+test('位置炮弹轨迹/预警绘制不写战斗状态，减少特效时仍保留落点圈',()=>{
+ const state={time:1,enemyProjectiles:[{startedAt:0,impactAt:3,startX:1,startY:1,targetX:3,targetY:3,radius:1.2,amount:10}]},before=JSON.stringify(state),ops=[];
+ const c={save(){},restore(){},beginPath(){},ellipse(){ops.push('circle');},stroke(){},arc(){ops.push('shot');},fill(){}};
+ assert.equal(drawEnemyProjectiles(c,(x,y)=>({x:x*20,y:y*10}),{tw:40,th:20},{s:state}),true);assert.deepEqual(ops,['circle','shot']);
+ ops.length=0;drawEnemyProjectiles(c,(x,y)=>({x,y}),{tw:40,th:20},{s:state},{reduceFx:true});assert.deepEqual(ops,['circle']);assert.equal(JSON.stringify(state),before);
+});
+
+test('帝国炮火无来源伤害不会让荆棘对伪造攻击者进行反伤',()=>{
+ const {b,enemy,allies}=arena('enemy_1112_emppnt',{x:3,y:5});
+ const [chessId,p]=Object.entries(NATIVE_DATA.profiles).find(([,p])=>p.charId==='char_136_hsguma'),u=allies[0];
+ u.id='char_136_hsguma';u.chessId=chessId;u.source={...u.source,charId:u.id,chessId,skillIndex:1};u.hp=u.maxHp=p.attributes.maxHp;b.economy.random=()=>.99;
+ for(let i=0;i<600&&!b.s.enemyProjectiles.length;i++)b.step();enemy.canAttack=false;const hp=u.hp;advance(b,3);
+ assert.ok(u.hp<hp);assert.equal(b.s.logicLog.some(x=>x.cause==='reflect'),false);assert.ok(b.s.logicLog.filter(x=>x.type==='damage').every(x=>Number.isFinite(x.hp)));
+});

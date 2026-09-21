@@ -398,30 +398,41 @@ html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px
 /* ── 回合结束演出：暗屏 + 拉出横幅（横幅留在场上，文字在横幅内换场）─────────────
    横幅先拉出并显示「波次结束 / WAVE END」，1 秒后只让这行文字离场，横幅不动，
    「损失生命 / 完美通关」的播报接着在同一个横幅里出现。只做表现，数值来自 s.lastBattle。 */
-.native-round-end{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;color:#e7fff4;font-family:inherit;text-align:center}
-.native-round-end-dim{position:absolute;inset:0;background:#04090c;opacity:0;animation:native-round-dim .4s ease-out forwards}
-.native-round-end-banner{position:relative;display:grid;place-items:center;min-width:min(600px,88vw);min-height:clamp(150px,24vh,210px);padding:22px 46px;border-top:2px solid #62d7b2;border-bottom:2px solid #62d7b2;background:linear-gradient(90deg,#0c1b18f7,#16352ef7,#0c1b18f7);box-shadow:0 0 0 1px #3c5b52,0 18px 60px #000a;opacity:0;transform:scaleX(.04);transform-origin:left center;animation:native-round-banner-in .5s cubic-bezier(.16,.9,.2,1) forwards}
-.native-round-end-wave{grid-area:1/1;display:flex;align-items:baseline;gap:16px;opacity:0}
-.native-round-end[data-stage=wave] .native-round-end-wave{animation:native-round-wave-in .45s cubic-bezier(.16,.9,.2,1) .16s forwards}
+.native-round-end{--round-accent:#77e8d0;position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;color:#e7fff4;font-family:inherit;text-align:center;padding:12px;box-sizing:border-box}
+.native-round-end[data-tone=danger]{--round-accent:#ffac88}
+/* 公共减动效规则会 animation:none!important，静态样式必须保持可见，不能依赖动画解除透明。 */
+.native-round-end-dim{position:absolute;inset:0;background:#04090c;opacity:.9;animation:native-round-dim .4s ease-out forwards}
+.native-round-end-banner{position:relative;isolation:isolate;overflow:hidden;display:grid;place-items:center;box-sizing:border-box;width:min(680px,100%);min-height:320px;padding:48px 32px 28px;border:1px solid #41665f;border-top:2px solid var(--round-accent);border-bottom:2px solid var(--round-accent);background:linear-gradient(90deg,#091819ed,#112b2be0,#091819ed),repeating-linear-gradient(0deg,transparent 0 23px,#77e8d016 23px 24px),repeating-linear-gradient(90deg,transparent 0 23px,#77e8d016 23px 24px);box-shadow:0 16px 48px #0008,inset 0 0 48px #77e8d008;opacity:1;transform:none;animation:native-round-banner-in .55s cubic-bezier(.16,.9,.2,1) forwards}
+.native-round-end-banner:before{content:'STRONGHOLD PROTOCOL / BATTLE LOG';position:absolute;top:15px;left:22px;right:22px;padding-bottom:10px;border-bottom:1px solid #77e8d026;text-align:left;font:10px var(--mono,monospace);letter-spacing:.18em;color:#83aaa3;pointer-events:none}
+.native-round-end-banner:after{content:'';position:absolute;z-index:-1;top:0;bottom:0;left:0;width:18%;border-right:1px solid var(--round-accent);background:linear-gradient(90deg,transparent,#77e8d01c);opacity:0;pointer-events:none;animation:native-round-scan 1.2s .12s ease-out both}
+.native-round-end-wave{grid-area:1/1;display:flex;flex-direction:column;align-items:center;gap:15px;opacity:0;pointer-events:none}
+.native-round-end-wave:before{content:'';width:30px;height:3px;background:var(--round-accent);box-shadow:-40px 0 #77e8d033,40px 0 #77e8d033}
+.native-round-end[data-stage=wave] .native-round-end-wave{opacity:1;animation:native-round-wave-in .45s cubic-bezier(.16,.9,.2,1) .16s both}
 .native-round-end[data-stage=out] .native-round-end-wave{animation:native-round-wave-out .34s ease-in forwards}
-.native-round-end-wave b{font-size:clamp(22px,3.4vw,32px);letter-spacing:.34em;color:#eafff5}
-.native-round-end-wave em{font:600 12px var(--mono,'Arial Narrow',sans-serif);font-style:normal;letter-spacing:.5em;color:#62d7b2;opacity:0}
-.native-round-end[data-stage=wave] .native-round-end-wave em{animation:native-round-text-in .4s .32s ease-out forwards}
-.native-round-end[data-stage=out] .native-round-end-wave em{opacity:1}
-.native-round-end-body{grid-area:1/1;display:grid;justify-items:center;gap:6px;opacity:0;transform:translateY(10px);transition:opacity .3s ease-out,transform .3s ease-out}
-.native-round-end[data-stage=count] .native-round-end-body{opacity:1;transform:none}
-.native-round-end-round{margin:0;color:#80b5ab;font:600 11px var(--mono,'Arial Narrow',sans-serif);letter-spacing:.3em}
-.native-round-end-label{margin:0;color:#b5cec2;font-size:13px;letter-spacing:.24em}
-.native-round-end-value{font:700 clamp(52px,9vw,84px)/1 var(--mono,'Arial Narrow',sans-serif);font-variant-numeric:tabular-nums;color:#eafff5;text-shadow:0 8px 34px #000a}
-.native-round-end[data-tone=danger] .native-round-end-value{color:#ff8b78;text-shadow:0 0 30px #ff5a3c59,0 8px 34px #000a}
-.native-round-end-perfect{margin:0;font-weight:700;font-size:clamp(28px,5vw,46px);line-height:1.2;letter-spacing:.3em;color:#8ef0c6;text-shadow:0 0 30px #4fd8a659}
-.native-round-end-hp{margin:2px 0 14px;color:#9dbcb1;font-size:12px;letter-spacing:.08em}
-.native-round-end .native-primary{min-width:200px}
+.native-round-end-wave b{font-size:clamp(26px,4.4vw,46px);font-weight:700;line-height:1.3;letter-spacing:.3em;text-indent:.3em;color:#eafff5;text-shadow:0 0 24px #77e8d025}
+.native-round-end-wave em{font:500 11px var(--mono,monospace);font-style:normal;letter-spacing:.65em;text-indent:.65em;color:var(--round-accent);opacity:1}
+.native-round-end[data-stage=wave] .native-round-end-wave em{animation:native-round-text-in .4s .32s ease-out both}
+.native-round-end-body{grid-area:1/1;display:grid;justify-items:center;gap:7px;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .3s ease-out,transform .3s ease-out}
+.native-round-end[data-stage=count] .native-round-end-body{opacity:1;transform:none;pointer-events:auto}
+/* 结算由 JS 时钟推进；进场动画即使被环境暂停，也不能继续用透明首帧遮住操作。 */
+.native-round-end[data-stage=count] .native-round-end-banner{animation:none;opacity:1;transform:none}
+.native-round-end[data-stage=count] .native-round-end-dim{animation:none;opacity:.9}
+.native-round-end-round{margin:0;color:#80b5ab;font:600 11px var(--mono,monospace);letter-spacing:.3em}
+.native-round-end-label{margin:0;color:#b5cec2;font-size:12px;letter-spacing:.24em}
+.native-round-end-value{font:600 clamp(48px,8vh,72px)/1 var(--mono,monospace);font-variant-numeric:tabular-nums;color:var(--round-accent);text-shadow:0 0 26px #77e8d022}
+.native-round-end-perfect{margin:10px 0;font-weight:600;font-size:clamp(26px,4vw,40px);line-height:1.2;letter-spacing:.2em;color:var(--round-accent)}
+.native-round-end-hp{margin:3px 0 12px;color:#9dbcb1;font-size:12px;letter-spacing:.08em}
+.native-round-end .native-primary{min-width:220px;padding:11px 24px;border:1px solid var(--round-accent);border-radius:0;background:#77e8d00c;color:#e7fff4;letter-spacing:.12em;box-shadow:inset 3px 0 var(--round-accent);transition:background .15s}
+.native-round-end .native-primary:hover{background:#77e8d021}
+.native-round-end .native-primary:focus-visible{outline:2px solid #fff;outline-offset:4px}
 @keyframes native-round-dim{from{opacity:0}to{opacity:.9}}
-@keyframes native-round-banner-in{from{opacity:0;transform:scaleX(.04)}60%{opacity:1}to{opacity:1;transform:scaleX(1)}}
-@keyframes native-round-wave-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@keyframes native-round-wave-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-8px)}}
-@keyframes native-round-text-in{from{opacity:0;letter-spacing:.9em}to{opacity:1;letter-spacing:.5em}}
+@keyframes native-round-banner-in{from{opacity:0;transform:scaleX(.08) scaleY(.96)}55%{opacity:1;transform:scaleX(1) scaleY(.96)}to{opacity:1;transform:none}}
+@keyframes native-round-scan{from{opacity:0;transform:translateX(-100%)}15%{opacity:.8}80%{opacity:.5}to{opacity:0;transform:translateX(570%)}}
+@keyframes native-round-wave-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes native-round-wave-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-12px)}}
+@keyframes native-round-text-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .native-round-end[data-reduce] .native-round-end-dim,.native-round-end[data-reduce] .native-round-end-banner,.native-round-end[data-reduce] .native-round-end-wave,.native-round-end[data-reduce] .native-round-end-wave em{animation-duration:.01s;animation-delay:0s}
+.native-round-end[data-reduce] .native-round-end-banner:after{animation:none}
 .native-round-end[data-reduce] .native-round-end-body{transition-duration:.01s}
-@media(prefers-reduced-motion:reduce){.native-round-end-dim,.native-round-end-banner,.native-round-end-wave,.native-round-end-wave em{animation-duration:.01s;animation-delay:0s}.native-round-end-body{transition-duration:.01s}}
+@media(prefers-reduced-motion:reduce){.native-round-end-dim,.native-round-end-banner,.native-round-end-wave,.native-round-end-wave em{animation-duration:.01s;animation-delay:0s}.native-round-end-banner:after{animation:none}.native-round-end-body{transition-duration:.01s}}
+@media(max-height:500px){.native-round-end-banner{min-height:0;padding:42px 24px 18px}.native-round-end-body{gap:4px}.native-round-end-value{font-size:44px}.native-round-end-hp{margin-bottom:8px}.native-round-end-wave{padding:12px 0}.native-round-end-wave b{font-size:30px}}

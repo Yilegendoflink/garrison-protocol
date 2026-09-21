@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "custom:example",
+  "provider": "custom",
+  "description": "原创占位动画示例；不会自动加入游戏干员池",
+  "attribution": {
+    "author": "Garrison Protocol contributors",
+    "note": "Original geometric placeholder; replace with your own animation"
+  },
+  "operators": [
+    {
+      "id": "clockwork",
+      "name": "自制发条小人（示例）",
+      "models": {
+        "front": {
+          "format": "spritesheet",
+          "image": {
+            "file": "clockwork.png",
+            "bytes": 147,
+            "sha256": "2130f8ea49cbaaa5144fc9722648c6e6acb284c36f4217497d9579eac577b78c",
+            "width": 64,
+            "height": 32
+          },
+          "frameWidth": 32,
+          "frameHeight": 32,
+          "animations": [
+            {
+              "name": "rest",
+              "frames": [
+                0
+              ],
+              "fps": 1,
+              "duration": 1
+            },
+            {
+              "name": "swing",
+              "frames": [
+                0,
+                1,
+                0
+              ],
+              "fps": 6,
+              "duration": 0.5
+            }
+          ],
+          "bindings": {
+            "states": {
+              "idle": {
+                "animation": "rest",
+                "loop": true,
+                "status": "confirmed"
+              },
+              "attack": {
+                "animation": "swing",
+                "loop": false,
+                "status": "confirmed",
+                "hitTime": 0.16666666666666666
+              }
+            },
+            "skills": {
+              "clockwork:overdrive": {
+                "start": {
+                  "animation": "swing",
+                  "loop": false,
+                  "status": "confirmed"
+                }
+              }
+            }
+          },
+          "visualVerified": false
+        }
+      }
+    }
+  ]
+}

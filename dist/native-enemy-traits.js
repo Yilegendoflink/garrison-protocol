@@ -1,0 +1,160 @@
+import {permissions,applyStatus} from './status.js';
+import {grantGuard,dealDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor} from './native-effects.js';
+
+const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
+
+export function initEnemyTraits(battle,e,raw,{restore=false}={}){
+ e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
+ e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.enemyTraitsInitialized)return;
+ if(restore){e.baseRes-=Number(raw.enemyBehavior?.magicResistanceBonus)||0;e.res=e.baseRes;}
+ e.enemyTraitsInitialized=true;e.attackSpeedMod??=0;
+ const bb=e.enemyTalent||{};
+ e.refractionBonus=Number(bb['refracting.magic_resistance']??bb['Refracting.magic_resistance'])||0;
+ e.refractionHp=Number(bb['Refracting.max_hp'])||0;
+ if(e.refractionHp){e.hp*=1+e.refractionHp;e.maxHp*=1+e.refractionHp;}
+ const charges=Number(bb['Shield.max_block_damage_cnt'])||0;
+ if(charges>0)grantGuard(battle,e,{id:'enemy-born-guard',charges,types:['physical','arts'],sourceUid:e.uid});
+ if(e.selfField||e.id==='enemy_10054_cjhot'){e.canAttack=false;e.baseCanAttack=false;e.immunities.sluggish=true;}
+ if(bb['periodic_damage.damage']>0)e.nextSelfDamageAt=battle.s.time+1;
+ if(bb['confinement.times']>0){e.prisonAttacks=0;e.prisonReleased=false;}
+ if(bb['pow.time']>0){e.powStartedAt=battle.s.time;e.powBaseAttack=e.enemyAttack;e.enemyAttack={...e.enemyAttack,splash:{shape:'square',radius:1}};e.attackElement='burn';e.attackElementScale=Number(bb['pow.attack@ep_damage_ratio']);}
+ if(e.specialSkill?.prefab==='onfire')e.nextIgnitionCheck=battle.s.time+.2;
+ if(e.specialSkill?.prefab==='InvisibleCombat'&&e.formInvisible)e.invisibleStrikeReady=true;
+ if(e.id==='enemy_1367_dseed'){e.unblockable=e.baseUnblockable=true;e.formHold=true;e.nextBloodLossAt=battle.s.time+1;}
+ refreshEnemyTraitStats(e);
+}
+
+// refreshEnemyAuras 每帧先恢复基础防御/法抗，再调用此处，避免永久写回导致重复累加。
+export function refreshEnemyTraitStats(e){
+ const bb=e.enemyTalent||{},silenced=permissions(e).silenced;
+ if(e.refractionBonus&&!silenced)e.res+=e.refractionBonus;
+ const layers=e.armorLossStacks||0,max=Number(bb['def_reduce.max_stack_cnt']);
+ if(layers>=2&&max>0){e.def=Math.max(0,e.def+Number(bb['def_reduce.def'])*layers/max);e.res=Math.max(0,e.res+Number(bb['def_reduce.magic_resistance'])*layers/max);}
+ if(e.prisonReleased===false){e.attackSpeedMod+=(Number(bb['confinement.attack_speed'])||0);e.def+=Number(bb['confinement.def'])||0;}
+ if(e.prisonReleased){e.res+=Number(bb['liberty.magic_resistance'])||0;}
+}
+
+export function tickEnemyTraits(battle,e,dt){
+ if(!e.enemyTraitsInitialized||e.hp<=0)return;
+ const bb=e.enemyTalent||{};
+ if(bb['SelfFear.fear']>0&&!e.selfFearTriggered&&e.hp/e.maxHp<.5){e.selfFearTriggered=true;applyStatus(e,'fear',Number(bb['SelfFear.fear']),{source:e.uid});e.selfFearSpeedUntil=battle.s.time+Number(bb['SelfFear.speed_duration']);e.speed=e.baseSpeed*Number(bb['SelfFear.move_speed']);}
+ if(e.selfFearSpeedUntil!=null&&battle.s.time>=e.selfFearSpeedUntil){e.selfFearSpeedUntil=null;e.speed=e.baseSpeed;}
+ if(e.powStartedAt!=null&&!e.powSpent){const age=Math.floor((battle.s.time-e.powStartedAt+1e-9)*10)/10;e.atk=e.baseAtk*(1+Number(bb['pow.add_max_atk'])*Math.min(1,age/Number(bb['pow.time'])));}
+ if(e.nextIgnitionCheck!=null&&!e.onFire&&battle.s.time+1e-9>=e.nextIgnitionCheck){
+  e.nextIgnitionCheck=battle.s.time+.2;
+  if(!e.hidden&&!e.flying&&battle.s.enemies.some(source=>source.hp>0&&!source.hidden&&source.enemyTalent?.['pow.time']>0&&near(source,e,.5))){e.onFire=true;battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form:'燃烧'});}
+ }
+ if(e.id==='enemy_10034_cnvsax'){const concealed=e.invisible&&!e.revealed&&e.block==null;e.canAttack=!concealed&&e.block!=null;e.damageType='physical';}
+ if(e.refractionHp&&!e.refractionHpLost&&permissions(e).silenced){
+  e.refractionHpLost=true;const ratio=1+e.refractionHp;e.maxHp/=ratio;e.hp/=ratio;
+ }
+ if(bb['periodic_damage.damage']>0){while(e.hp>0&&battle.s.time+1e-9>=e.nextSelfDamageAt){e.nextSelfDamageAt+=1;dealDamage(battle,{target:e,value:Number(bb['periodic_damage.damage']),type:'true',cause:'dot'});}}
+ if(e.prisonReleased&&bb['liberty.hp_recovery_per_sec']>0)applyRegen(battle,{source:e,target:e,amount:Number(bb['liberty.hp_recovery_per_sec'])*dt});
+ // 当前地图没有唤血祭坛/沥血王座实体，血珀按无祭坛分支每秒流失10%生命。
+ if(e.id==='enemy_1367_dseed')while(e.hp>0&&battle.s.time+1e-9>=e.nextBloodLossAt){e.nextBloodLossAt+=1;applyLoss(battle,{target:e,amount:e.maxHp*Number(bb['Passive.hp_ratio'])});}
+}
+
+export function enemyTraitAfterDamage(battle,e,opts,result){
+ if(!e.enemyTraitsInitialized||result.total<=0)return;
+ const bb=e.enemyTalent||{},max=Number(bb['def_reduce.max_stack_cnt']);
+ if(bb['Expose.weak[limit]']>0&&!bb['Expose.range_radius']&&!permissions(e).silenced){
+  const source=opts.source||getActor(battle.s,opts.sourceUid);
+  if(battle.s.units.includes(source))applyStatus(source,'exposed',Number(bb['Expose.weak[limit]']),{source:e.uid,value:Number(bb['Expose.damage_scale']),resistible:false});
+ }
+ if(e.hp<=0)return;
+ if(max>0){
+  const old=e.armorLossStacks||0,next=Math.min(max,old+1);e.armorLossStacks=next;
+  const delta=(next>=2?next:0)-(old>=2?old:0);
+  e.def=Math.max(0,e.def+Number(bb['def_reduce.def'])*delta/max);e.res=Math.max(0,e.res+Number(bb['def_reduce.magic_resistance'])*delta/max);
+ }
+ if(bb['run.attack@move_speed']>0&&/^enemy_2001_duckmi/.test(e.id))e.speed=e.baseSpeed*(1+Number(bb['run.attack@move_speed']));
+}
+
+function releasePrisoner(battle,e){
+ if(e.prisonReleased!==false)return;
+ const bb=e.enemyTalent;e.prisonReleased=true;e.atk=e.baseAtk*(1+(Number(bb['liberty.atk'])||0));
+ e.attackSpeedMod-=(Number(bb['confinement.attack_speed'])||0);e.def-=(Number(bb['confinement.def'])||0);e.res+=Number(bb['liberty.magic_resistance'])||0;
+ e.enemyDefPenetration=Number(bb['liberty.def_penetrate'])||0;
+ battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'liberation'});
+}
+export function enemyTraitBeforeAttack(battle,e){
+ if(e.prisonReleased!==false)return;
+ e.prisonAttacks++;
+ if(e.prisonAttacks<Number(e.enemyTalent['confinement.times']))return;
+ releasePrisoner(battle,e);
+ if(/^enemy_1121_lifbos/.test(e.id))for(const other of battle.s.enemies)if(other.hp>0)releasePrisoner(battle,other);
+}
+export function enemyTraitOnHit(battle,e,target){
+ const stun=Number(e.enemyTalent?.['Combat.attack@stun']);
+ if(stun>0&&target.hp>0)applyStatus(target,'stun',stun,{source:e.uid});
+}
+
+export function syncEnemyConcealMarker(e){
+ if(e.specialSkill?.prefab!=='InvisibleCombat')return;
+ const active=e.invisible&&!e.revealed&&e.block==null;
+ if(active&&!e.invisibleCombatWasActive)e.invisibleStrikeReady=true;
+ e.invisibleCombatWasActive=active;
+}
+
+export function enemyStealAmmo(battle,e,target){
+ const amount=Number(e.enemyTalent?.['DamageOrBullet.attack@minus_bullet'])||0;
+ if(amount<=0||!(target.ammo>0))return false;
+ const used=Math.min(amount,target.ammo);target.ammo-=used;
+ battle.garrisonAmmoEvent(target,used);dispatch(battle,'ammo',{source:target,target,used});
+ battle.emit('ammo',{uid:target.uid,x:target.x,y:target.y,ammo:target.ammo,used});
+ if(target.ammo===0&&!target.skillLeft){battle.emit('skill-end',{uid:target.uid,x:target.x,y:target.y});dispatch(battle,'skill-end',{target});}
+ battle.emit('enemy-ability',{uid:e.uid,x:e.x,y:e.y,ability:'steal-ammo',targetUid:target.uid,used});
+ return true;
+}
+
+export function enemyTraitAfterAttack(battle,e){
+ if(e.powHit){e.powSpent=true;e.powHit=false;e.atk=e.baseAtk;e.enemyAttack=e.powBaseAttack;e.attackElementScale=Number(e.enemyTalent['pow.attack@ep_damage_ratio_normal']);}
+ if(e.id==='enemy_1269_nhfly'&&permissions(e).attack)commitExit(battle,{target:e,reason:'self-destruct'});
+}
+
+export function enemyTraitOnDeath(battle,e,info){
+ const bb=e.enemyTalent||{};
+ if(bb['Expose.range_radius']>0&&!permissions(e).silenced&&!['leak','fall'].includes(info.reason)){
+  for(const target of alliedActors(battle.s))if(target.deployed&&target.hp>0&&near(e,target,Number(bb['Expose.range_radius'])))applyStatus(target,'exposed',Number(bb['Expose.weak[limit]']),{source:e.uid,value:Number(bb['Expose.damage_scale']),resistible:false});
+ }
+ if(bb['DeadBoom.duration']>0&&!['leak','fall'].includes(info.reason)){
+  for(const target of attackableAllies(battle.s))if(!target.flying&&near(e,target,1.25)){
+   dealDamage(battle,{source:e,target,amount:e.atk,type:'arts',cause:'extra',parentEventId:info.event?.eventId});
+   applyStatus(target,'attackSpeedDown',Number(bb['DeadBoom.duration']),{source:e.uid,value:Number(bb['DeadBoom.attack_speed'])});
+  }
+  battle.emit('impact',{x:e.x,y:e.y,radius:1.25,type:'arts',enemy:true});
+ }
+ const spec=e.spawnOnDeath;if(!spec||['leak','fall'].includes(info.reason))return;
+ for(let i=0;i<spec.count;i++){
+  const scatter=Number(spec.scatter)||0,x=Math.round(e.x)+(battle.economy.random()*2-1)*scatter,y=Math.round(e.y)+(battle.economy.random()*2-1)*scatter;
+  battle.queueEnemySpawn({id:spec.enemyKey},{x,y,route:structuredClone(e.route),cmd:e.cmd||0},spec.delay||0);
+ }
+}
+
+// commitExit 在生命周期去重后调用：普攻、DOT、强制退场和我方撤退共用这条入口。
+export function enemyNearbyExit(battle,target){
+ if(target.kind==='summon'||target.device)return;
+ for(const e of battle.s.enemies){
+  const bb=e.enemyTalent||{},max=Number(bb['Attack.max_stack_cnt']);
+  if(e===target||e.hp<=0||!(max>0)||!near(e,target,Number(bb['Attack.range_radius'])))continue;
+  e.deathGrowthStacks=Math.min(max,(e.deathGrowthStacks||0)+1);
+  e.atk=e.baseAtk*(1+e.deathGrowthStacks*Number(bb['Attack.atk']));
+  applyHeal(battle,{source:e,target:e,amount:e.maxHp*Number(bb['Attack.hp_ratio'])});
+  battle.emit('enemy-ability',{uid:e.uid,x:e.x,y:e.y,ability:'death-growth',stacks:e.deathGrowthStacks});
+ }
+}
+
+export function applyEnemyTraitAuras(battle){
+ const live=battle.s.enemies.filter(e=>e.hp>0&&!e.hidden),allies=attackableAllies(battle.s);
+ for(const source of live){const bb=source.enemyTalent||{};
+  if(bb['magdef_add.magic_resistance']>0&&!permissions(source).silenced){
+   for(const target of live)if(target!==source&&near(source,target,2.5))target.enemyResAura=Math.max(target.enemyResAura||0,Number(bb['magdef_add.magic_resistance']));
+  }
+  if(bb['auraDefup.def']>0){for(const target of live)if(target!==source&&target.enemyTalent?.['auraDefup.def']>0&&near(source,target,1.5))target.def+=Number(bb['auraDefup.def']);}
+  if(bb['atkSpeedDown.attack_speed']<0&&!permissions(source).silenced){
+   for(const target of allies)if(near(source,target,Number(bb['defup.range_radius'])))target.enemyAttackSpeedMod=Math.min(target.enemyAttackSpeedMod||0,100*Number(bb['atkSpeedDown.attack_speed']));
+  }
+ }
+ for(const target of live){target.res+=target.enemyResAura||0;target.enemyResAura=0;}
+}

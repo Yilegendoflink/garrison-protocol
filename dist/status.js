@@ -1,10 +1,11 @@
 // Common status semantics; durations are simulation seconds, never render time.
-const CONTROL={stun:['attack','move','block','skill'],frozen:['attack','move','block','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:['attack','move','block','skill'],terror:['attack','move','block','skill'],tremble:['attack','move','block','skill'],disarm:['attack'],root:['move'],silence:[]};
+const CONTROL={skillLock:['skill'],unableAct:['attack','move','block','skill'],stun:['attack','move','block','skill'],frozen:['attack','move','block','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:[],selfFear:[],terror:['attack','move','block','skill'],tremble:['attack','skill'],disarm:['attack'],root:['move'],silence:[]};
 export function applyStatus(target,kind,duration,{source=null,value=1,resistible=true}={}){
- if(!Number.isFinite(duration)||duration<=0||target.hp<=0)return false;if(target.immunities?.[kind])return false;
- if(['sleep','levitate','fear','terror','tremble'].includes(kind)&&Object.hasOwn(target,'block'))target.block=null;target.statuses??=[];
+ if(!Number.isFinite(duration)||duration<=0||target.hp<=0)return false;if(target.immunities?.[kind])return false;if(['fear','selfFear'].includes(kind)&&target.chessId)return false;
+ if(['sleep','levitate','fear','selfFear','terror'].includes(kind)&&Object.hasOwn(target,'block'))target.block=null;target.statuses??=[];
  const time=duration*(resistible?1-Math.min(1,Math.max(0,target.statusResistance||0)):1),existing=target.statuses.find(s=>s.kind===kind&&s.source===source);
  if(time<=0)return false;
+ if(['fear','selfFear'].includes(kind)){target.fearRevision=(target.fearRevision||0)+1;target.fearSource=source;}
  // Cold upgrades to frozen when it lands a second time. A target immune to frozen keeps the cold it
  // already has (and refreshes it) instead of having the debuff stripped and gaining nothing.
  if(kind==='cold'&&target.statuses.some(s=>s.kind==='cold')){
@@ -25,7 +26,7 @@ export function removeStatus(target,kind,source){
  return true;
 }
 export function tickStatuses(target,dt){if(!Number.isFinite(dt)||dt<0)throw Error('Invalid status delta');target.statuses??=[];for(const s of target.statuses)s.remaining-=dt;target.statuses=target.statuses.filter(s=>s.remaining>1e-9);target.invisible=target.formInvisible===true||(target.statuses.some(s=>['invisible','camouflage'].includes(s.kind))&&!target.revealed);target.levitated=target.statuses.some(s=>s.kind==='levitate');target.fragile=target.statuses.filter(s=>s.kind==='fragile').reduce((v,s)=>Math.max(v,s.value||1),1);}
-export function permissions(target){const denied=new Set();for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!(target.statuses||[]).some(s=>['sleep','levitate'].includes(s.kind)),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
-export function statusAttributeChanges(target){const s=target.statuses||[];return {attackSpeed:s.some(s=>s.kind==='cold'||s.kind==='frozen')?-30:0,resistance:s.some(s=>s.kind==='frozen')?-15:0,attack:s.filter(s=>s.kind==='attackDown').reduce((v,x)=>Math.min(v,x.value??0),0),defense:s.filter(s=>s.kind==='defDown').reduce((v,x)=>Math.min(v,x.value??0),0),magicResistance:s.filter(s=>s.kind==='resDown').reduce((v,x)=>Math.min(v,x.value??0),0)};}
+export function permissions(target){const denied=new Set();for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!(target.statuses||[]).some(s=>['sleep','levitate','fear','selfFear'].includes(s.kind)),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
+export function statusAttributeChanges(target){const s=target.statuses||[];return {attackSpeed:(s.some(s=>s.kind==='cold'||s.kind==='frozen')?-30:0)+s.filter(s=>s.kind==='attackSpeedDown').reduce((n,s)=>n+(s.value||0),0),resistance:s.some(s=>s.kind==='frozen')?-15:0,attack:s.filter(s=>s.kind==='attackDown').reduce((v,x)=>Math.min(v,x.value??0),0),defense:s.filter(s=>s.kind==='defDown').reduce((v,x)=>Math.min(v,x.value??0),0),magicResistance:s.filter(s=>s.kind==='resDown').reduce((v,x)=>Math.min(v,x.value??0),0)};}
 export function abilityEnabled(target,{silenceable=false}={}){return !silenceable||!permissions(target).silenced;}
 export function wakeOnHit(target){if(target.wakeOnDamage)target.statuses=(target.statuses||[]).filter(s=>s.kind!=='sleep');}

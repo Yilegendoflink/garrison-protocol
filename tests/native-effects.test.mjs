@@ -987,7 +987,7 @@ test('山 S2 获得阻挡与最大生命回复，S3 推动并触发物理闪避'
 });
 
 test('哈洛德优先治疗元素损伤目标并按条件降低元素损伤',()=>{
- const {b}=openBattle([{chessId:'chess_char_2_05_b',skillIndex:1},reps.operators.yak]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_4114_harold'),ally=b.s.units.find(x=>x.id==='char_199_yak'),e=enemy(b,{x:ally.x,y:ally.y,hp:100000});ally.x=u.x+1;ally.y=u.y;ally.elemental={neural:ally.maxHp*.6};ally.hp=ally.maxHp-500;u.sp=b.spCost(u);b.activate(u);const hp=ally.hp;b.heal(u,ally,100);assert.ok(ally.hp>hp);const before=ally.elemental.neural;applyElementDamage(b,{source:e,target:ally,amount:100,type:'neural'});assert.ok(ally.elemental.neural-before<=85);
+ const {b}=openBattle([{chessId:'chess_char_2_05_b',skillIndex:1},reps.operators.yak]);deployNow(b);const u=b.s.units.find(x=>x.id==='char_4114_harold'),ally=b.s.units.find(x=>x.id==='char_199_yak'),e=enemy(b,{x:ally.x,y:ally.y,hp:100000});ally.x=u.x+1;ally.y=u.y;ally.elemental={neural:600};ally.hp=ally.maxHp-500;u.sp=b.spCost(u);b.activate(u);const hp=ally.hp;b.heal(u,ally,100);assert.ok(ally.hp>hp);const before=ally.elemental.neural;applyElementDamage(b,{source:e,target:ally,amount:100,type:'neural'});assert.ok(ally.elemental.neural-before<=85);
 });
 
 test('浊心斯卡蒂 S1 分摊伤害，S2 鼓舞友方攻防',()=>{

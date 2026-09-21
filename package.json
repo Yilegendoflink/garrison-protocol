@@ -24,6 +24,9 @@
     "data:fetch-mode": "node scripts/fetch-alliance-data.mjs && node scripts/fetch-alliance-levels.mjs",
     "release:check": "node scripts/check-release.mjs",
     "data:assets": "node scripts/sync-mode-assets.mjs",
+    "data:animations:sync": "node scripts/sync-operator-animations.mjs",
+    "data:animations:check": "node scripts/operator-animations.mjs validate",
+    "data:animations": "node scripts/operator-animations.mjs",
     "data:branches": "node scripts/fetch-branch-sources.mjs && node scripts/build-branch-records.mjs"
   },
   "engines": {

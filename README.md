@@ -22,7 +22,7 @@
 
 最终领袖阶段仍是无限生命木桩，150 秒且允许手动结束；报告只统计本阶段伤害。
 
-工作区可能还有未提交的战斗盟约改动，不以工作区草稿当作已发布内容。
+功能分支上的提交不等于已发布内容。敌人特殊行为的已实现范围、剩余缺口和暂停检查点见 [敌人行为审计](docs/ENEMY_BEHAVIOR_GAP_AUDIT.md)。
 
 2026-09-13 的地图裁切、预置工事、分支规则修正仍然有效，详见 [BRANCH_RULES.md](BRANCH_RULES.md)。
 
@@ -50,6 +50,7 @@
 - `dist/native-battle.js`、`dist/native-combat.js`、`dist/native-effects.js`、`dist/native-operator-effects.js`：战斗循环、结算与逐名适配。
 - `dist/native-sp.js`、`dist/native-waves.js`、`dist/native-wave-editor.js`：技力与波次编制。
 - `scripts/build-native.mjs`：将固定历史库编入客户端。
+- 我方干员模型资源、动作清单和自制动画包约定见 [动画数据库](data/operator-animations/README.md)；独立采集与校验，尚未接入棋盘播放。
 - `dist/legacy.html`：此前的演示与资料库。
 
 期次资料见 `data/modes/alliance-lower/README.md`。早期阶段文档作为历史记录保留；当前事实以本页和 `AGENTS.md` 为准。
