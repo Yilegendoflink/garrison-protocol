@@ -3,7 +3,7 @@ import {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAt
 import {FPS} from './combat.js';
 import {windupSeconds} from './native-combat.js';
 
-const ATTACK_SKILLS=new Set(['AOEAttack','CrossAttack','PowerAttack','StunAttack','stuncombat','DeathEye','PollutedRangedAtk']);
+const ATTACK_SKILLS=new Set(['AOEAttack','CrossAttack','PowerAttack','StunAttack','stuncombat','DeathEye','PollutedRangedAtk','ironsandstorm','armorpiercing']);
 const VISUAL_SKILLS=new Set(['BornAnim','StartRun','EndAnim','BeginAnim']);
 
 // 敌人只有一个共享SP槽；每个技能有独立CD。负CD表示不靠CD自动就绪，仍可消耗SP。
@@ -65,6 +65,8 @@ export function endEnemySkill(battle,enemy,{refund=false}={}){
 export function selectEnemyAttackSkill(battle,enemy,target){
  if(!target||enemy.enemyCast)return null;
  const ready=enemy.enemySkills.filter(s=>ATTACK_SKILLS.has(s.prefab)&&enemySkillReady(enemy,s,battle.s.time)&&
+  !(s.prefab==='ironsandstorm'&&enemy.enemyForm!=='warden')&&
+  !(s.prefab==='armorpiercing'&&(enemy.enemyForm!=='assassin'||enemy.block!==target.uid))&&
   !(s.prefab==='CrossAttack'&&Math.abs(enemy.x-target.x)>1e-6&&Math.abs(enemy.y-target.y)>1e-6)&&
   !(s.prefab==='DeathEye'&&enemy.deathEye));
  if(!ready.length)return null;
@@ -72,7 +74,8 @@ export function selectEnemyAttackSkill(battle,enemy,target){
  const skill=top.length===1?top[0]:top[Math.floor(battle.economy.random()*top.length)];
  return {index:skill.index,prefab:skill.prefab,scale:Number(skill.bb.atk_scale??skill.bb.damage_scale)||1,
   radius:Number(skill.bb.range_radius)||1,splash:skill.prefab==='AOEAttack',stun:Number(skill.bb.stun)||0,
-  type:skill.prefab==='CrossAttack'?'arts':null,noDirectAttack:skill.prefab==='DeathEye',polluted:skill.prefab==='PollutedRangedAtk'};
+  type:['CrossAttack','ironsandstorm'].includes(skill.prefab)?'arts':skill.prefab==='armorpiercing'?'physical':null,noDirectAttack:skill.prefab==='DeathEye',polluted:skill.prefab==='PollutedRangedAtk',
+  targets:skill.prefab==='ironsandstorm'?Number(skill.bb.max_target):undefined,hits:skill.prefab==='armorpiercing'?Number(skill.bb.times):undefined,defPenetration:skill.prefab==='armorpiercing'?Number(skill.bb.def_penetrate):undefined};
 }
 
 function releaseCaptured(battle,enemy,cast){

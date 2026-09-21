@@ -10,7 +10,11 @@ const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'en
 export function initEnemyForm(b,e){
  if(['hover','jet','parrot'].includes(e.enemyFormKind))e.groundNavigation=true;
  if(e.enemyFormKind)return;
- if(e.id==='enemy_10116_ymgtop'){
+ if(e.id==='enemy_1516_jakill'){
+  e.enemyFormKind='jesselton';e.enemyForm='warden';e.ranged=true;e.damageType='arts';e.res=e.baseRes+Number(e.enemyTalent['enhance.magic_resistance']);
+  e.enemyAttack={...e.enemyAttack,groundOnly:true,excludeIds:['trap_025_prison']};e.formBaseShiftImmune=!!e.shiftImmune;
+  e.jesseltonAtkScale=b.combatScale?.atk??1;e.jesseltonMoveScale=b.combatScale?.moveSpeed??1;
+ }else if(e.id==='enemy_10116_ymgtop'){
   e.enemyFormKind='rotator';e.enemyForm='normal';e.rotationProtectedUntil=b.s.time+Number(e.enemyTalent['ProtectionTime.protection_duration']);e.ranged=false;
  }else if(e.id===TRANSLATOR){
   e.enemyFormKind='translator';e.enemyForm='original';e.formDamageCounts={physical:0,arts:0};
@@ -68,6 +72,13 @@ function finishTranslation(b,e){
 export function tickEnemyForm(b,e){
  if(e.enemyFormKind==='rotator'){tickRotatorForm(b,e);return;}
  if(!e.enemyFormKind||e.hp<=0)return;
+ if(e.enemyFormKind==='jesselton'&&e.enemyForm==='rebirth'&&b.s.time+1e-9>=e.enemyFormUntil){
+  const bb=e.enemyTalent;e.enemyForm='assassin';e.invulnerable=false;e.formHold=false;e.unblockable=e.baseUnblockable;e.shiftImmune=e.formBaseShiftImmune;
+  e.baseAtk+=Number(bb['enhance.atk'])*e.jesseltonAtkScale;e.atk=e.baseAtk;e.baseDef+=Number(bb['enhance.def']);e.def=e.baseDef;e.res=e.baseRes;
+  e.interval+=Number(bb['enhance.base_attack_time']);e.baseSpeed+=Number(bb['enhance.move_speed'])*e.jesseltonMoveScale;e.speed=e.baseSpeed;
+  e.ranged=false;e.damageType='physical';e.enemyAttack={...e.enemyAttack,excludeIds:[]};e.canAttack=e.baseCanAttack;e.sp=0;e.attackCooldown=0;e.action=null;
+  for(const s of e.enemySkills){s.nextAt=s.cooldown>=0?b.s.time+s.cooldown:null;s.used=false;}b.liberatePrisoners();announce(b,e,'杀手形态');
+ }
  if(e.enemyFormKind==='translator'){
   if(e.enemyForm==='original'&&e.block!=null)startTranslation(b,e,'ghost');
   if(e.enemyForm==='transforming'&&b.s.time+1e-9>=e.enemyFormUntil)finishTranslation(b,e);
@@ -182,12 +193,17 @@ function tickRotatorForm(b,e){
 }
 
 export function enemyFormStats(e){
+ if(e.enemyFormKind==='jesselton'&&e.enemyForm==='warden')e.res+=Number(e.enemyTalent['enhance.magic_resistance']);
  if(e.enemyFormKind==='gargoyle'&&e.enemyForm==='stone'){
   e.def+=Number(e.enemyTalent['stone.def'])||0;e.res+=Number(e.enemyTalent['stone.magic_resistance'])||0;
  }
 }
 
 export function enemyFormFatal(b,e){
+ if(e.enemyFormKind==='jesselton'&&e.enemyForm==='warden'){
+  cancelEnemyCast(b,e);e.enemyForm='rebirth';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['reborn.duration']);e.hp=e.maxHp;
+  e.action=null;e.block=null;e.formHold=true;e.invulnerable=true;e.unblockable=true;e.shiftImmune=true;e.canAttack=false;announce(b,e,'重生中');return true;
+ }
  if(e.enemyFormKind!=='gargoyle'||e.enemyForm!=='ground'||e.pillarBrokenUntil>b.s.time)return false;
  cancelEnemyCast(b,e);
  e.enemyForm='stone';e.enemyFormUntil=b.s.time+Number(e.enemyTalent['stone.duration']);

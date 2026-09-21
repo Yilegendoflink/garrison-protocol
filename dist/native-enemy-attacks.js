@@ -5,8 +5,8 @@ import {endEnemySkill} from './native-enemy-skills.js';
 
 export function enemyAttackTargets(battle,e,alive=attackableAllies(battle.s)){
  if(e.hidden)return [];
- const spec=e.enemyAttack||{},blocker=alive.find(u=>u.uid===e.block&&enemyTargetValid(u));
- const targets=e.ranged?alive.filter(u=>enemyTargetValid(u)&&!u.invisible&&!permissions(u).sleeping&&(!spec.groundOnly||!u.flying)&&
+ const spec=e.enemyAttack||{},blocker=alive.find(u=>u.uid===e.block&&enemyTargetValid(u)&&!spec.excludeIds?.includes(u.id));
+ const targets=e.ranged?alive.filter(u=>enemyTargetValid(u)&&!spec.excludeIds?.includes(u.id)&&!u.invisible&&!permissions(u).sleeping&&(!spec.groundOnly||!u.flying)&&
   (enemyTargetInRange(e,u)||(e.specialSkill?.prefab==='CrossAttack'&&(Math.abs(e.x-u.x)<=1e-6||Math.abs(e.y-u.y)<=1e-6)))):[];
  targets.sort((a,b)=>compareEnemyTargets({tauntLevel:a.kind==='summon'?0:battle.stats(a).tauntLevel,deployAt:a.deployAt||0,uid:a.uid},{tauntLevel:b.kind==='summon'?0:battle.stats(b).tauntLevel,deployAt:b.deployAt||0,uid:b.uid}));
  if(blocker&&!spec.ignoreBlock)return [blocker,...targets.filter(t=>t!==blocker)];
@@ -28,7 +28,7 @@ function inSplash(center,target,spec){
 export function deliverEnemyAttack(battle,packet){
  const enemy=getActor(battle.s,packet.owner);if(!enemy||enemy.hp<=0)return;
  const target=getActor(battle.s,packet.target),control=permissions(enemy);
- if(control.attack&&!enemy.hidden&&target?.hp>0){
+ if(control.attack&&enemy.canAttack!==false&&!enemy.hidden&&target?.hp>0&&(packet.targetDeployGen==null||target.deployGen===packet.targetDeployGen)){
   const spec=enemy.enemyAttack||{},ranged=packet.ranged??(enemy.ranged&&enemy.block!==target.uid);
   const splash=spec.splashOnlyRanged&&!ranged?null:packet.special?.splash?{shape:'cross'}:spec.splash;
   if(spec.projectile?.delay>0){
@@ -64,11 +64,11 @@ export function tickEnemyProjectiles(battle){
 }
 
 export function releaseEnemyAttack(battle,enemy,action){
- const targets=action.targets||[action.target],spec=enemy.enemyAttack||{},hits=Math.max(1,spec.hits||1),gap=Number(spec.hitInterval)||TENTATIVE_HIT_GAP;
+ const targets=action.targets||[action.target],spec=enemy.enemyAttack||{},hits=Math.max(1,action.special?.hits??spec.hits??1),gap=Number(spec.hitInterval)||TENTATIVE_HIT_GAP;
  battle.recordEnemyAttack(enemy,action.special);
  if(hits>1&&enemy.enemyCast)enemy.enemyCast.multiAttack=true;
  for(let i=0;i<targets.length;i++){
-  const packet={enemyAttack:true,owner:enemy.uid,target:targets[i],special:action.special,scale:action.scale,ranged:action.ranged,attackId:action.attackId,hit:0,last:hits===1&&i===targets.length-1};
+  const packet={enemyAttack:true,owner:enemy.uid,target:targets[i],targetDeployGen:getActor(battle.s,targets[i])?.deployGen,special:action.special,scale:action.scale,ranged:action.ranged,attackId:action.attackId,hit:0,last:hits===1&&i===targets.length-1};
   deliverEnemyAttack(battle,packet);
   for(let hit=1;hit<hits;hit++)scheduleStrikes(battle.s,1,{...packet,hitIndex:hit,delay:hit*gap,last:hit===hits-1&&i===targets.length-1});
  }

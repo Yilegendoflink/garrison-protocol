@@ -255,6 +255,7 @@ function releasePrisoner(battle,e){
  e.enemyDefPenetration=Number(bb['liberty.def_penetrate'])||0;
  battle.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'liberation'});
 }
+export function liberateEnemyPrisoners(battle){for(const e of battle.s.enemies)if(e.hp>0)releasePrisoner(battle,e);}
 export function enemyTraitBeforeAttack(battle,e){
  if(e.prisonReleased!==false)return;
  e.prisonAttacks++;
