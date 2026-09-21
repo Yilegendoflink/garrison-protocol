@@ -261,7 +261,7 @@ return {FPS,clamp,attribute,attackTiming,damage,applyDamage,recoverHP,spCapacity
 },
 "status.js": function(load) {
 // Common status semantics; durations are simulation seconds, never render time.
-const CONTROL={skillLock:['skill'],unableAct:['attack','move','block','skill'],stun:['attack','move','block','skill'],frozen:['attack','move','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:[],selfFear:[],terror:['attack','move','block','skill'],tremble:['attack','skill'],disarm:['attack'],root:['move'],silence:[]};
+const CONTROL={skillLock:['skill'],unableAct:['attack','move','block','skill'],stun:['attack','move','block','skill'],frozen:['attack','move','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:[],selfFear:[],terror:['attack','move','block','skill'],tremble:['attack','skill'],disarm:['attack'],forcedDisarm:['attack'],root:['move'],silence:[]};
 function applyStatus(target,kind,duration,{source=null,value=1,resistible=true,frostSide='ally'}={}){
  if(!Number.isFinite(duration)||duration<=0||target.hp<=0)return false;if(target.immunities?.[kind])return false;if(['fear','selfFear'].includes(kind)&&target.chessId)return false;
  if(['sleep','levitate','fear','selfFear','terror'].includes(kind)&&Object.hasOwn(target,'block'))target.block=null;target.statuses??=[];
@@ -6909,7 +6909,7 @@ return {enemyAttackTargets,enemyAttackTargetCount,deliverEnemyAttack,tickEnemyPr
 const {cancelEnemyCast,beginEnemySkill,endEnemySkill} = load("native-enemy-skills.js");
 const {permissions,applyStatus} = load("status.js");
 const {FPS} = load("combat.js");
-const {attackableAllies,newAttackId} = load("native-effects.js");
+const {attackableAllies,alliedActors,newAttackId} = load("native-effects.js");
 const TRANSLATOR='enemy_10081_mpplai';
 const GARGOYLES=new Set(['enemy_1172_dugago','enemy_1172_dugago_2']);
 const announce=(b,e,form)=>b.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'enemy-form',form});
@@ -7069,9 +7069,24 @@ function tickParrotForm(b,e){
 }
 
 function enemyFormAfterDamage(b,e,result){
+ enemyFormHealthChanged(b,e);
  if(e.enemyFormKind!=='parrot'||e.hp<=0||result.total<=0||e.enemyForm==='grounded'||e.parrotDamageUsed)return;
  e.parrotDamageUsed=true;const prefix=e.enemyForm==='carrying'?'M1SpeedUp':'M0SpeedUp';
  e.parrotBoostUntil=b.s.time+Number(e.enemyTalent[prefix+'.duration']);e.speed=e.baseSpeed*Number(e.enemyTalent[prefix+'.move_speed']);
+}
+
+function enemyFormHealthChanged(b,e){
+ if(e.enemyFormKind!=='degen'||e.enemyForm!=='second')return;
+ const bb=e.enemyTalent,ratio=Number(bb['ClearSp.hp_ratio']);if(!(ratio>0))return;
+ const steps=Math.min(Math.floor(1/ratio),Math.floor((1-Math.max(0,e.hp)/e.maxHp+1e-9)/ratio));
+ while((e.degenPressureSteps||0)<steps){
+  e.degenPressureSteps=(e.degenPressureSteps||0)+1;
+  for(const target of alliedActors(b.s))if(target.deployed&&target.hp>0&&Math.hypot(target.x-e.x,target.y-e.y)<=Number(bb['ClearSp.range_radius'])+1e-9){
+   applyStatus(target,'forcedDisarm',Number(bb['ClearSp.duration']),{source:e.uid,resistible:false});applyStatus(target,'spBlock',Number(bb['ClearSp.duration']),{source:e.uid,resistible:false});target.action=null;
+   if(b.s.units.includes(target))target.sp=0;
+  }
+  announce(b,e,'瞬息杀机');
+ }
 }
 
 function tickJetForm(b,e){
@@ -7157,7 +7172,7 @@ function enemyFormFatal(b,e){
  announce(b,e,'石像形态');return true;
 }
 
-return {initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,releaseParrotPassenger,enemyFormAfterDamage,enemyFormShiftEnded,enemyFormStats,enemyFormFatal};
+return {initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,releaseParrotPassenger,enemyFormAfterDamage,enemyFormHealthChanged,enemyFormShiftEnded,enemyFormStats,enemyFormFatal};
 },
 "native-enemy-transport.js": function(load) {
 const {isIsolated} = load("status.js");
@@ -7355,7 +7370,7 @@ const {paintDominion,dominionCell,tickDeepWater,tickSandStorm} = load("native-en
 const {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} = load("native-enemy-parasite.js");
 const {advanceEnemyFear} = load("native-enemy-fear.js");
 const {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} = load("native-enemy-transport.js");
-const {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,releaseParrotPassenger} = load("native-enemy-forms.js");
+const {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,enemyFormHealthChanged,releaseParrotPassenger} = load("native-enemy-forms.js");
 const {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} = load("native-enemy-attacks.js");
 const {liberateEnemyPrisoners,enemyKnightExit,enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} = load("native-enemy-traits.js");
 const {checkWEnrage,initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} = load("native-enemy-skills.js");
@@ -7417,7 +7432,7 @@ class NativeBattle {
  enemyDamageDealt(enemy,opts,result){enemyTraitDamageDealt(this,enemy,result);}
  liberatePrisoners(){liberateEnemyPrisoners(this);}
  refreshMudrockShield(enemy,bb){refreshEnemyMudrockShield(this,enemy,bb);}
- enemyHealthChanged(enemy){checkWEnrage(this,enemy);}
+ enemyHealthChanged(enemy){checkWEnrage(this,enemy);enemyFormHealthChanged(this,enemy);}
  enemyBeforeDamage(target,opts){return enemyFormBeforeDamage(this,target,opts);}
  enemySkillTargets(enemy,options=null){return enemyAttackTargets(this,options?{...enemy,ranged:options.ranged??enemy.ranged,range:options.range??enemy.range,enemyAttack:{...enemy.enemyAttack,groundOnly:options.groundOnly??enemy.enemyAttack?.groundOnly,ignoreBlock:options.ignoreBlock??enemy.enemyAttack?.ignoreBlock}}:enemy);}
  enemyElementMultiplier(target){return parasiteElementMultiplier(this,target);}

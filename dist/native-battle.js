@@ -2,7 +2,7 @@ import {paintDominion,dominionCell,tickDeepWater,tickSandStorm} from './native-e
 import {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} from './native-enemy-parasite.js';
 import {advanceEnemyFear} from './native-enemy-fear.js';
 import {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} from './native-enemy-transport.js';
-import {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,releaseParrotPassenger} from './native-enemy-forms.js';
+import {enemyFormShiftEnded,initEnemyForm,enemyFormBeforeDamage,tickEnemyForm,enemyFormStats,enemyFormFatal,enemyFormAfterDamage,enemyFormHealthChanged,releaseParrotPassenger} from './native-enemy-forms.js';
 import {enemyAttackTargets,enemyAttackTargetCount,releaseEnemyAttack,deliverEnemyAttack,tickEnemyProjectiles} from './native-enemy-attacks.js';
 import {liberateEnemyPrisoners,enemyKnightExit,enemyTraitBeforeStrike,refreshEnemyMudrockShield,enemyTraitDamageDealt,tickEnemyAttackContinuity,enemyConditionalAttackMultiplier,tickPompeiiExplosion,enemyConditionalAttackSpeed,tickEnemyNeurotoxin,enemyFacingAfterMove,enemyFacingDamageMultiplier,tickEnemyLancer,consumeEnemyLancerRush,initEnemyTraits,refreshEnemyTraitStats,tickEnemyTraits,enemyTraitAfterDamage,enemyTraitBeforeAttack,enemyTraitOnHit,enemyTraitAfterAttack,enemyTraitOnDeath,enemyNearbyExit,enemyStealAmmo,syncEnemyConcealMarker,applyEnemyTraitAuras} from './native-enemy-traits.js';
 import {checkWEnrage,initEnemySkills,enemySpEvent,selectEnemyAttackSkill,beginEnemySkill,endEnemySkill,tickEnemySkills,cancelEnemyCast} from './native-enemy-skills.js';
@@ -65,7 +65,7 @@ export class NativeBattle {
  enemyDamageDealt(enemy,opts,result){enemyTraitDamageDealt(this,enemy,result);}
  liberatePrisoners(){liberateEnemyPrisoners(this);}
  refreshMudrockShield(enemy,bb){refreshEnemyMudrockShield(this,enemy,bb);}
- enemyHealthChanged(enemy){checkWEnrage(this,enemy);}
+ enemyHealthChanged(enemy){checkWEnrage(this,enemy);enemyFormHealthChanged(this,enemy);}
  enemyBeforeDamage(target,opts){return enemyFormBeforeDamage(this,target,opts);}
  enemySkillTargets(enemy,options=null){return enemyAttackTargets(this,options?{...enemy,ranged:options.ranged??enemy.ranged,range:options.range??enemy.range,enemyAttack:{...enemy.enemyAttack,groundOnly:options.groundOnly??enemy.enemyAttack?.groundOnly,ignoreBlock:options.ignoreBlock??enemy.enemyAttack?.ignoreBlock}}:enemy);}
  enemyElementMultiplier(target){return parasiteElementMultiplier(this,target);}

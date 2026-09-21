@@ -1,7 +1,7 @@
 import {cancelEnemyCast,beginEnemySkill,endEnemySkill} from './native-enemy-skills.js';
 import {permissions,applyStatus} from './status.js';
 import {FPS} from './combat.js';
-import {attackableAllies,newAttackId} from './native-effects.js';
+import {attackableAllies,alliedActors,newAttackId} from './native-effects.js';
 
 const TRANSLATOR='enemy_10081_mpplai';
 const GARGOYLES=new Set(['enemy_1172_dugago','enemy_1172_dugago_2']);
@@ -162,9 +162,24 @@ function tickParrotForm(b,e){
 }
 
 export function enemyFormAfterDamage(b,e,result){
+ enemyFormHealthChanged(b,e);
  if(e.enemyFormKind!=='parrot'||e.hp<=0||result.total<=0||e.enemyForm==='grounded'||e.parrotDamageUsed)return;
  e.parrotDamageUsed=true;const prefix=e.enemyForm==='carrying'?'M1SpeedUp':'M0SpeedUp';
  e.parrotBoostUntil=b.s.time+Number(e.enemyTalent[prefix+'.duration']);e.speed=e.baseSpeed*Number(e.enemyTalent[prefix+'.move_speed']);
+}
+
+export function enemyFormHealthChanged(b,e){
+ if(e.enemyFormKind!=='degen'||e.enemyForm!=='second')return;
+ const bb=e.enemyTalent,ratio=Number(bb['ClearSp.hp_ratio']);if(!(ratio>0))return;
+ const steps=Math.min(Math.floor(1/ratio),Math.floor((1-Math.max(0,e.hp)/e.maxHp+1e-9)/ratio));
+ while((e.degenPressureSteps||0)<steps){
+  e.degenPressureSteps=(e.degenPressureSteps||0)+1;
+  for(const target of alliedActors(b.s))if(target.deployed&&target.hp>0&&Math.hypot(target.x-e.x,target.y-e.y)<=Number(bb['ClearSp.range_radius'])+1e-9){
+   applyStatus(target,'forcedDisarm',Number(bb['ClearSp.duration']),{source:e.uid,resistible:false});applyStatus(target,'spBlock',Number(bb['ClearSp.duration']),{source:e.uid,resistible:false});target.action=null;
+   if(b.s.units.includes(target))target.sp=0;
+  }
+  announce(b,e,'瞬息杀机');
+ }
 }
 
 function tickJetForm(b,e){
