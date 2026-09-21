@@ -52,6 +52,37 @@ test('弑君者闪现受沉默限制，未阻挡不释放，未就绪也不释�
  ally.x=e.x;e.enemySkills[0].nextAt=b.s.time+2;e.attackCooldown=0;b.step();assert.equal(e.enemySkills[0].used,false);
 });
 
+test('弑君者按原始路径点方向跨过绕路展开点，落地重新寻路且不修改共享路线',()=>{
+ const {b,e}=crownArena(),route=[{kind:'move',x:3,y:3},{kind:'move',x:3,y:4},{kind:'move',x:4,y:4},{kind:'move',x:5,y:4},{kind:'move',x:7,y:3,checkpointIndex:1},{kind:'wait',x:7,y:3,time:600}];e.route=route;e.cmd=1;const before=JSON.stringify(route);
+ b.step();advance(b,.5);assert.equal(e.x,4.5);assert.equal(e.y,3);assert.equal(e.route[e.cmd].y,3);assert.ok(e.route[e.cmd].x>e.x);assert.equal(JSON.stringify(route),before);assert.notEqual(e.route,route);assert.ok(e.route.some(p=>p.checkpointIndex===1));
+});
+
+test('弑君者直线跨过原始检查点后跳过对应停驻，保留下一检查点',()=>{
+ const {b,e}=crownArena();e.route=[{kind:'move',x:3,y:3},{kind:'move',x:4,y:3,checkpointIndex:1},{kind:'wait',x:4,y:3,time:600,checkpointIndex:2},{kind:'move',x:7,y:3,checkpointIndex:3},{kind:'wait',x:7,y:3,time:600}];e.cmd=1;
+ b.step();advance(b,.5);assert.equal(e.x,4.5);assert.equal(e.lastCheckpoint,2);assert.equal(e.route[e.cmd].kind,'move');assert.ok(e.route.slice(e.cmd).some(p=>p.checkpointIndex===3));assert.equal(e.route.slice(e.cmd).some(p=>p.checkpointIndex===2),false);
+});
+
+test('弑君者斜向闪现跨过近检查点时，跳过此前的绕行格与该点停驻',()=>{
+ const {b,e}=crownArena();Object.assign(b.map.grid[4][4],{passableMask:'ALL',obstacle:false});e.route=[{kind:'move',x:3,y:3},{kind:'move',x:3,y:4},{kind:'move',x:4,y:4,checkpointIndex:1},{kind:'wait',x:4,y:4,time:600,checkpointIndex:2},{kind:'move',x:7,y:3,checkpointIndex:3}];e.cmd=1;
+ b.step();advance(b,.5);assert.ok(Math.abs(e.x-(3+1.5/Math.SQRT2))<1e-8);assert.equal(e.lastCheckpoint,2);assert.equal(e.route.slice(e.cmd).some(p=>p.kind==='wait'),false);assert.ok(e.route.slice(e.cmd).some(p=>p.checkpointIndex===3));
+});
+
+test('弑君者停驻时没有行动目标则使用最近实际移动方向',()=>{
+ const {b,e,ally}=crownArena();ally.x=0;b.step();const x=e.x;assert.ok(x>3);assert.equal(e.moveDirection.x,1);
+ e.route=[{kind:'wait',x:e.x,y:e.y,time:600}];e.cmd=0;e.cmdLeft=null;ally.x=e.x;e.attackCooldown=0;b.step();advance(b,.5);assert.ok(Math.abs(e.x-x-1.5)<1e-8);
+});
+
+test('弑君者前摇内落点变成不可通行时不传送，保护按原期限结束',()=>{
+ const {b,e}=crownArena();b.step();b.map.grid[3][5].passableMask='NONE';applyStatus(e,'root',10);advance(b,.5);assert.equal(e.x,3);assert.equal(e.invulnerable,true);advance(b,.5);assert.equal(e.invulnerable,false);assert.equal(e.unblockable,false);
+});
+
+test('弑君者落地后原检查点不可达时停留，存档后通路恢复才重新接路',()=>{
+ const {b,g,e}=crownArena();for(const [x,y]of [[6,3],[7,2],[7,4],[8,3]])if(b.map.grid[y]?.[x])b.map.grid[y][x].passableMask='NONE';
+ b.step();advance(b,1.1);assert.equal(e.x,4.5);assert.ok(e.crownRejoin);assert.equal(e.formHold,true);assert.equal(e.invulnerable,false);
+ const restored=NativeBattle.restore(NATIVE_DATA,g,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const crown=restored.s.enemies[0];advance(restored,.2);assert.equal(crown.x,4.5);
+ restored.map.grid[3][6].passableMask='ALL';restored.step();assert.equal(crown.crownRejoin,null);assert.equal(crown.formHold,false);assert.ok(crown.x>4.5);
+});
+
 test('暴鸰等待技能初始CD且只投弹一次，九格溅射包含迷彩，结束后移速翻倍而非普通攻击',()=>{
  const {b,ally}=arena(),e=spawn(b,'enemy_1040_bombd',3,3);e.atk=e.baseAtk=100;
  addAlly(b,ally,4,3);const splash=structuredClone(ally),outside=structuredClone(ally);splash.uid+=100;splash.x=5;splash.y=4;outside.uid+=101;outside.x=6;

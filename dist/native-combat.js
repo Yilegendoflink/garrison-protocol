@@ -455,6 +455,7 @@ export function advanceEnemy(e,dt,onEvent,stopForAttack=false){
   if(d<=1e-9){reachedCheckpoint(e,s);e.cmd++;continue;}
   const speed=(!e.block&&permissions(e).move&&!stopForAttack)?enemyMovementSpeed(e)*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*slow:0;
   if(speed<=0||dt<=1e-9)break;
+  e.moveDirection={x:dx/d,y:dy/d};
   const move=speed*dt;
   if(d<=move){e.x=s.x;e.y=s.y;reachedCheckpoint(e,s);e.cmd++;e.cmdLeft=null;dt-=d/speed;}
   else{e.x+=dx/d*move;e.y+=dy/d*move;break;}

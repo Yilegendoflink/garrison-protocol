@@ -157,30 +157,51 @@ function tickMouseKingSkills(battle,enemy,control){
  endEnemySkill(battle,enemy);
 }
 
+function crownRouteGoal(route,cmd){
+ let index=-1;
+ for(let i=cmd;i<route.length;i++){if(route[i].kind!=='move')break;index=i;if(route[i].checkpointIndex!=null)break;}
+ return index;
+}
+
+function rejoinCrownRoute(battle,enemy){
+ const pending=enemy.crownRejoin;if(!pending)return true;
+ const route=enemy.route||[],index=crownRouteGoal(route,enemy.cmd);
+ if(index<0){enemy.formHold=pending.formHold;enemy.crownRejoin=null;return true;}
+ const goal=route[index],origin=battle.map.origin,toMap=(x,y)=>({col:origin.col+x,row:origin.row-y});let path;
+ try{path=battle.path({startPosition:toMap(Math.round(enemy.x),Math.round(enemy.y)),endPosition:toMap(goal.x,goal.y),checkpoints:[],allowDiagonalMove:enemy.routeDiagonal},false).slice(1);}
+ catch(error){if(!String(error.message).startsWith('原始路线不可达：'))throw error;enemy.formHold=true;return false;}
+ // 路径数组可能被多个实体共享，只替换本体的剩余段，保留原始路径点编号与后续指令。
+ if(path.length)Object.assign(path.at(-1),goal);else path=[{...goal}];
+ enemy.route=[...route.slice(0,enemy.cmd),...path,...route.slice(index+1)];enemy.cmdLeft=null;enemy.formHold=pending.formHold;enemy.crownRejoin=null;return true;
+}
+
 function tickCrownBlink(battle,enemy){
+ if(enemy.crownRejoin){const ready=rejoinCrownRoute(battle,enemy);if(enemy.crownBlink)enemy.formHold=true;else if(!ready)return true;}
  const state=enemy.crownBlink;if(!state)return false;
  if(!state.moved&&battle.s.time+1e-9>=state.moveAt){
   state.moved=true;
   if(teleportActor(battle,enemy,{x:state.x,y:state.y,source:enemy,mode:'blink',allowOccupied:true,exactCoordinates:true,allowFlyOnly:false})){
-   enemy.cmd=state.cmd;enemy.cmdLeft=null;enemy.lastCheckpoint=Math.max(enemy.lastCheckpoint||0,state.checkpoint||0);
+   enemy.cmd=state.cmd;enemy.cmdLeft=null;enemy.lastCheckpoint=Math.max(enemy.lastCheckpoint||0,state.checkpoint||0);enemy.crownRejoin={formHold:state.restore.formHold};rejoinCrownRoute(battle,enemy);enemy.formHold=true;
   }
  }
- if(battle.s.time+1e-9>=state.endsAt){Object.assign(enemy,state.restore);enemy.crownBlink=null;return false;}
+ if(battle.s.time+1e-9>=state.endsAt){Object.assign(enemy,state.restore);if(enemy.crownRejoin)enemy.formHold=true;enemy.crownBlink=null;return false;}
  return true;
 }
 
 function tryCrownBlink(battle,enemy){
  if(enemy.block==null||enemy.action||enemy.attackCooldown>0)return false;
  const skill=enemy.enemySkills.find(s=>s.prefab==='blink');if(!skill||!enemySkillReady(enemy,skill,battle.s.time))return false;
- const route=enemy.route||[];let goal=null;
- for(let i=enemy.cmd;i<route.length;i++){const p=route[i];if(p.kind!=='move')break;goal=p;if(p.checkpointIndex!=null)break;}
- if(!goal)return false;
- const dx=goal.x-enemy.x,dy=goal.y-enemy.y,length=Math.hypot(dx,dy),distance=Number(skill.bb.dist);if(length<1e-9||!(distance>0))return false;
+ const route=enemy.route||[],index=crownRouteGoal(route,enemy.cmd),goal=route[index];
+ const dx=goal?goal.x-enemy.x:enemy.moveDirection?.x??0,dy=goal?goal.y-enemy.y:enemy.moveDirection?.y??0,length=Math.hypot(dx,dy),distance=Number(skill.bb.dist);if(length<1e-9||!(distance>0))return false;
  const x=enemy.x+dx/length*distance,y=enemy.y+dy/length*distance,tile=battle.map.grid[Math.round(y)]?.[Math.round(x)];
  const valid=tile&&tile.passableMask!=='NONE'&&tile.passableMask!=='FLY_ONLY'&&!tile.obstacle;
  if(!beginEnemySkill(battle,enemy,skill))return false;
  const restore={unblockable:!!enemy.unblockable,invulnerable:!!enemy.invulnerable,shiftImmune:!!enemy.shiftImmune,formHold:!!enemy.formHold,canAttack:enemy.canAttack};
  let cmd=enemy.cmd,checkpoint=enemy.lastCheckpoint||0;
+ if(valid&&goal&&length<=distance+1e-9){
+  cmd=index+1;checkpoint=Math.max(checkpoint,goal.checkpointIndex||0);
+  while(route[cmd]?.kind==='wait'&&route[cmd].x===goal.x&&route[cmd].y===goal.y){checkpoint=Math.max(checkpoint,route[cmd].checkpointIndex||0);cmd++;}
+ }
  if(valid)while(cmd<route.length){const p=route[cmd];if(!['move','wait'].includes(p.kind))break;const px=p.x-enemy.x,py=p.y-enemy.y,along=(px*dx+py*dy)/length,lateral=Math.abs(px*dy-py*dx)/length;if(lateral>.01||along<-.01||along>distance+1e-9)break;checkpoint=Math.max(checkpoint,p.checkpointIndex||0);cmd++;}
  enemy.crownBlink={moveAt:battle.s.time+.5,endsAt:battle.s.time+1,moved:!valid,x,y,cmd,checkpoint,restore};
  enemy.unblockable=true;enemy.block=null;
