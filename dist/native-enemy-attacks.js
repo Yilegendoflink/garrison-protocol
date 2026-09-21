@@ -1,6 +1,6 @@
 import {permissions,statusAttributeChanges,applyStatus} from './status.js';
 import {attackableAllies,getActor} from './native-effects.js';
-import {compareEnemyTargets,enemyTargetValid,enemyTargetInRange,scheduleStrikes,TENTATIVE_HIT_GAP} from './native-combat.js';
+import {compareEnemyTargets,enemyTargetValid,enemyTargetInRange,scheduleStrikes,TENTATIVE_HIT_GAP,enemyChainTargets} from './native-combat.js';
 import {endEnemySkill} from './native-enemy-skills.js';
 
 export function enemyAttackTargets(battle,e,alive=attackableAllies(battle.s)){
@@ -29,6 +29,16 @@ export function deliverEnemyAttack(battle,packet){
  const enemy=getActor(battle.s,packet.owner);if(!enemy||enemy.hp<=0)return;
  const target=getActor(battle.s,packet.target),control=permissions(enemy);
  if(control.attack&&enemy.canAttack!==false&&!enemy.hidden&&target?.hp>0&&(packet.targetDeployGen==null||target.deployGen===packet.targetDeployGen)){
+  if(enemy.id==='enemy_2050_smsha'&&!packet.special){
+   const bb=enemy.enemyTalent,chain=enemyChainTargets(target,attackableAllies(battle.s).filter(t=>enemyTargetValid(t)&&!t.invisible&&!permissions(t).sleeping),Number(bb['Attack.attack@chain.max_target']),Number(bb['Attack.attack@projectile_range']));
+   let from=enemy;
+   for(let i=0;i<chain.length;i++){
+    const victim=chain[i];applyStatus(victim,'cold',Number(bb['Attack.attack@freeze']),{source:enemy.uid});
+    battle.resolveEnemyStrike(enemy,victim,{...packet,scale:(Number(packet.scale)||1)*Math.pow(Number(bb['Attack.attack@chain.atk_scale']),i),type:'arts'});
+    battle.emit('strike',{uid:enemy.uid,x:from.x,y:from.y,targetX:victim.x,targetY:victim.y,ranged:true,enemy:true,type:'arts',style:'chain',hit:i});from=victim;
+   }
+   return;
+  }
   const spec=enemy.enemyAttack||{},ranged=packet.ranged??(enemy.ranged&&enemy.block!==target.uid);
   const splash=spec.splashOnlyRanged&&!ranged?null:packet.special?.splash?{shape:'cross'}:spec.splash;
   if(spec.projectile?.delay>0){

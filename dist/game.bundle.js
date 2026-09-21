@@ -289,7 +289,7 @@ function removeStatus(target,kind,source){
 }
 function tickStatuses(target,dt){if(!Number.isFinite(dt)||dt<0)throw Error('Invalid status delta');target.statuses??=[];for(const s of target.statuses)s.remaining-=dt;target.statuses=target.statuses.filter(s=>s.remaining>1e-9);target.invisible=target.formInvisible===true||(target.statuses.some(s=>['invisible','camouflage'].includes(s.kind))&&!target.revealed);target.levitated=target.statuses.some(s=>s.kind==='levitate');target.fragile=target.statuses.filter(s=>s.kind==='fragile').reduce((v,s)=>Math.max(v,s.value||1),1);}
 function permissions(target){const denied=new Set();for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!(target.statuses||[]).some(s=>['sleep','levitate','fear','selfFear'].includes(s.kind)),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
-function statusAttributeChanges(target){const s=target.statuses||[];return {attackSpeed:(s.some(s=>s.kind==='cold'||s.kind==='frozen')?-30:0)+s.filter(s=>s.kind==='attackSpeedDown').reduce((n,s)=>n+(s.value||0),0),resistance:s.some(s=>s.kind==='frozen')?-15:0,attack:s.filter(s=>s.kind==='attackDown').reduce((v,x)=>Math.min(v,x.value??0),0),defense:s.filter(s=>s.kind==='defDown').reduce((v,x)=>Math.min(v,x.value??0),0),magicResistance:s.filter(s=>s.kind==='resDown').reduce((v,x)=>Math.min(v,x.value??0),0)};}
+function statusAttributeChanges(target){const s=target.statuses||[];return {attackSpeed:(s.some(s=>s.kind==='cold'||s.kind==='frozen')?-30:0)+s.filter(s=>s.kind==='attackSpeedDown'||s.kind==='attackSpeedUp').reduce((n,s)=>n+(s.value||0),0),resistance:s.some(s=>s.kind==='frozen')?-15:0,attack:s.filter(s=>s.kind==='attackDown').reduce((v,x)=>Math.min(v,x.value??0),0),defense:s.filter(s=>s.kind==='defDown').reduce((v,x)=>Math.min(v,x.value??0),0),magicResistance:s.filter(s=>s.kind==='resDown').reduce((v,x)=>Math.min(v,x.value??0),0)};}
 function abilityEnabled(target,{silenceable=false}={}){return !silenceable||!permissions(target).silenced;}
 function isIsolated(target){
  if(!target||target.immunities?.isolated)return false;
@@ -298,7 +298,9 @@ function isIsolated(target){
 }
 function wakeOnHit(target){if(target.wakeOnDamage)target.statuses=(target.statuses||[]).filter(s=>s.kind!=='sleep');}
 
-return {applyStatus,removeStatus,tickStatuses,permissions,statusAttributeChanges,abilityEnabled,isIsolated,wakeOnHit};
+function enemyMovementSpeed(target){const bonus=(target.statuses||[]).filter(s=>s.kind==='chainMoveSpeed').reduce((n,s)=>Math.max(n,Number(s.value)||0),0);return target.speed+(target.baseSpeed??target.speed)*bonus;}
+
+return {applyStatus,removeStatus,tickStatuses,permissions,statusAttributeChanges,abilityEnabled,isIsolated,wakeOnHit,enemyMovementSpeed};
 },
 "targeting.js": function(load) {
 // Range geometry does not select targets or cause damage. Local +x is forward.
@@ -3446,12 +3448,21 @@ return {spTypeOf,usesSp,skillKind,ammoCount,spIncrement,initSpOf,spCap,spBlocked
 },
 "native-combat.js": function(load) {
 const {attribute,FPS} = load("combat.js");
-const {permissions} = load("status.js");
+const {enemyMovementSpeed,permissions} = load("status.js");
 const {skillKind} = load("native-sp.js");
 // Tentative adapters — not original animation tables. Do not treat as restored data.
 const TENTATIVE_WINDUP_RATIO=.3;
 const TENTATIVE_PROJECTILE_SPEED=6;
 const TENTATIVE_HIT_GAP=2/FPS;
+
+function enemyChainTargets(first,candidates,count,radius){
+ const chain=first?[first]:[];
+ while(chain.length&&chain.length<count){
+  const last=chain.at(-1),next=candidates.filter(t=>t.hp>0&&!chain.some(x=>x.uid===t.uid)&&Math.hypot(t.x-last.x,t.y-last.y)<=radius+1e-9).sort((a,b)=>Math.hypot(a.x-last.x,a.y-last.y)-Math.hypot(b.x-last.x,b.y-last.y)||a.uid-b.uid)[0];
+  if(!next)break;chain.push(next);
+ }
+ return chain;
+}
 
 // Enemy movement and attack are intentionally separate.  The original game has
 // enemies that fire while moving, enemies that hold after acquiring a target,
@@ -3889,7 +3900,7 @@ function advanceEnemy(e,dt,onEvent,stopForAttack=false){
   if(s.kind==='appear'){reachedCheckpoint(e,s);e.x=s.x;e.y=s.y;e.hidden=false;e.untargetable=false;e.cmd++;e.cmdLeft=null;onEvent?.('appear',e);continue;}
   const dx=s.x-e.x,dy=s.y-e.y,d=Math.hypot(dx,dy);
   if(d<=1e-9){reachedCheckpoint(e,s);e.cmd++;continue;}
-  const speed=(!e.block&&permissions(e).move&&!stopForAttack)?e.speed*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*slow:0;
+  const speed=(!e.block&&permissions(e).move&&!stopForAttack)?enemyMovementSpeed(e)*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*slow:0;
   if(speed<=0||dt<=1e-9)break;
   const move=speed*dt;
   if(d<=move){e.x=s.x;e.y=s.y;reachedCheckpoint(e,s);e.cmd++;e.cmdLeft=null;dt-=d/speed;}
@@ -3942,7 +3953,7 @@ function windupSeconds(interval,override){
  return interval*TENTATIVE_WINDUP_RATIO;
 }
 
-return {TENTATIVE_WINDUP_RATIO,TENTATIVE_PROJECTILE_SPEED,TENTATIVE_HIT_GAP,ENEMY_MOVEMENT_POLICIES,inferDeathZone,inferAttackZone,inferSelfField,inferToxicZone,enemyBehaviorProfile,enemyTargetValid,enemyTargetInRange,enemyShouldHoldPosition,remainingDistance,specialPriority,compareOperatorTargets,compareEnemyTargets,enemyBlockCost,canStayBlocked,resolveBlocks,compileRoute,advanceEnemy,enemySpecialTraitId,enemyBleedingTraitId,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds};
+return {TENTATIVE_WINDUP_RATIO,TENTATIVE_PROJECTILE_SPEED,TENTATIVE_HIT_GAP,enemyChainTargets,ENEMY_MOVEMENT_POLICIES,inferDeathZone,inferAttackZone,inferSelfField,inferToxicZone,enemyBehaviorProfile,enemyTargetValid,enemyTargetInRange,enemyShouldHoldPosition,remainingDistance,specialPriority,compareOperatorTargets,compareEnemyTargets,enemyBlockCost,canStayBlocked,resolveBlocks,compileRoute,advanceEnemy,enemySpecialTraitId,enemyBleedingTraitId,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds};
 },
 "native-operator-effects.js": function(load) {
 const {applyStatus,removeStatus} = load("status.js");
@@ -5928,7 +5939,7 @@ return {dominionCell,paintDominion,tickDeepWater,shelteredFromSand,tickSandStorm
 const {permissions,applyStatus,removeStatus,isIsolated} = load("status.js");
 const {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId,addEffect,grantShield} = load("native-effects.js");
 const {FPS} = load("combat.js");
-const {windupSeconds} = load("native-combat.js");
+const {windupSeconds,enemyChainTargets} = load("native-combat.js");
 const ATTACK_SKILLS=new Set(['AOEAttack','CrossAttack','PowerAttack','StunAttack','stuncombat','DeathEye','PollutedRangedAtk','ironsandstorm','armorpiercing']);
 const VISUAL_SKILLS=new Set(['BornAnim','StartRun','EndAnim','BeginAnim']);
 
@@ -6198,6 +6209,20 @@ function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_2050_smsha'&&!control.silenced&&!enemy.action){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='ChainBuff');
+  const candidates=battle.s.enemies.filter(e=>e!==enemy&&e.hp>0&&!e.hidden&&!e.untargetable&&!e.invulnerable&&!permissions(e).sleeping&&!isIsolated(e));
+  const first=candidates.filter(e=>Math.hypot(e.x-enemy.x,e.y-enemy.y)<=enemy.range).sort((a,b)=>(b.taunt||0)-(a.taunt||0)||b.uid-a.uid)[0];
+  if(skill&&first&&beginEnemySkill(battle,enemy,skill)){
+   const chain=enemyChainTargets(first,candidates,Number(skill.bb['chain.max_target']),Number(skill.bb.projectile_range)),amount=battle.enemyAttackDamage(enemy,Number(skill.bb.atk_scale)),attackId=newAttackId(battle);let from=enemy;
+   for(let i=0;i<chain.length;i++){
+    const target=chain[i];dealDamage(battle,{source:enemy,target,amount:amount*Math.pow(Number(skill.bb['chain.atk_scale']),i),type:'arts',cause:'skill',attackId});
+    if(target.hp>0){applyStatus(target,'attackSpeedUp',Number(skill.bb.duration),{source:'snow-priest-gift',value:Number(skill.bb.attack_speed),resistible:false});applyStatus(target,'chainMoveSpeed',Number(skill.bb.duration),{source:'snow-priest-gift',value:Number(skill.bb.move_speed),resistible:false});}
+    battle.emit('strike',{uid:enemy.uid,x:from.x,y:from.y,targetX:target.x,targetY:target.y,ranged:true,enemy:true,type:'arts',style:'chain-buff',hit:i});from=target;
+   }
+   enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;endEnemySkill(battle,enemy);return;
+  }
+ }
  if(enemy.id==='enemy_2003_rockman'&&!control.silenced&&!enemy.action){
   const skill=enemy.enemySkills.find(s=>s.prefab==='StunAttack');
   const targets=battle.enemySkillTargets(enemy,{ranged:true,ignoreBlock:true}).filter(t=>!t.statuses?.some(s=>s.kind==='stun')).sort((a,b)=>Math.hypot(a.x-enemy.x,a.y-enemy.y)-Math.hypot(b.x-enemy.x,b.y-enemy.y));
@@ -6324,7 +6349,7 @@ function tickEnemySkills(battle,enemy,dt){
 return {initEnemySkills,changeEnemySp,enemySpEvent,enemySkillReady,beginEnemySkill,endEnemySkill,selectEnemyAttackSkill,checkWEnrage,cancelEnemyCast,tickEnemySkills};
 },
 "native-enemy-traits.js": function(load) {
-const {permissions,applyStatus,statusAttributeChanges,isIsolated} = load("status.js");
+const {enemyMovementSpeed,permissions,applyStatus,statusAttributeChanges,isIsolated} = load("status.js");
 const {grantGuard,grantShield,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} = load("native-effects.js");
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
 const YUANZAI=new Set(['enemy_2085_skzjxd','enemy_2085_skzjxd_2']);
@@ -6334,6 +6359,7 @@ const KNIGHT_PARTNER={enemy_1513_dekght:'enemy_1513_dekght_2',enemy_1513_dekght_
 function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.id==='enemy_2050_smsha')e.damageType='arts';
  if(e.id==='enemy_1509_mousek'){
   e.immunities.sleep=true;e.damageType='arts';e.enemyAttack={...e.enemyAttack,groundOnly:true};e.aura=null;e.lowHpRatio=0;
   if(e.lowHpTriggered&&e.atk===e.baseAtk*Number(e.enemyTalent['enrage.damage_scale']))e.atk=e.baseAtk;
@@ -6518,7 +6544,7 @@ function consumeEnemyLancerRush(e){
  if(!e.lancerRush?.active)return 0;
  // “当前移动速度”包含减速，但不是阻挡后的实际位移速度（后者为0）。
  const slow=e.statuses.some(s=>s.kind==='sluggish')? .2:1;
- const amount=e.speed*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*slow*Number(e.enemyTalent['firstattack.atk_scale']);
+ const amount=enemyMovementSpeed(e)*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*slow*Number(e.enemyTalent['firstattack.atk_scale']);
  stopLancerRush(e);return amount;
 }
 
@@ -6682,7 +6708,7 @@ return {initEnemyTraits,enemyConditionalAttackSpeed,enemyConditionalAttackMultip
 "native-enemy-attacks.js": function(load) {
 const {permissions,statusAttributeChanges,applyStatus} = load("status.js");
 const {attackableAllies,getActor} = load("native-effects.js");
-const {compareEnemyTargets,enemyTargetValid,enemyTargetInRange,scheduleStrikes,TENTATIVE_HIT_GAP} = load("native-combat.js");
+const {compareEnemyTargets,enemyTargetValid,enemyTargetInRange,scheduleStrikes,TENTATIVE_HIT_GAP,enemyChainTargets} = load("native-combat.js");
 const {endEnemySkill} = load("native-enemy-skills.js");
 function enemyAttackTargets(battle,e,alive=attackableAllies(battle.s)){
  if(e.hidden)return [];
@@ -6710,6 +6736,16 @@ function deliverEnemyAttack(battle,packet){
  const enemy=getActor(battle.s,packet.owner);if(!enemy||enemy.hp<=0)return;
  const target=getActor(battle.s,packet.target),control=permissions(enemy);
  if(control.attack&&enemy.canAttack!==false&&!enemy.hidden&&target?.hp>0&&(packet.targetDeployGen==null||target.deployGen===packet.targetDeployGen)){
+  if(enemy.id==='enemy_2050_smsha'&&!packet.special){
+   const bb=enemy.enemyTalent,chain=enemyChainTargets(target,attackableAllies(battle.s).filter(t=>enemyTargetValid(t)&&!t.invisible&&!permissions(t).sleeping),Number(bb['Attack.attack@chain.max_target']),Number(bb['Attack.attack@projectile_range']));
+   let from=enemy;
+   for(let i=0;i<chain.length;i++){
+    const victim=chain[i];applyStatus(victim,'cold',Number(bb['Attack.attack@freeze']),{source:enemy.uid});
+    battle.resolveEnemyStrike(enemy,victim,{...packet,scale:(Number(packet.scale)||1)*Math.pow(Number(bb['Attack.attack@chain.atk_scale']),i),type:'arts'});
+    battle.emit('strike',{uid:enemy.uid,x:from.x,y:from.y,targetX:victim.x,targetY:victim.y,ranged:true,enemy:true,type:'arts',style:'chain',hit:i});from=victim;
+   }
+   return;
+  }
   const spec=enemy.enemyAttack||{},ranged=packet.ranged??(enemy.ranged&&enemy.block!==target.uid);
   const splash=spec.splashOnlyRanged&&!ranged?null:packet.special?.splash?{shape:'cross'}:spec.splash;
   if(spec.projectile?.delay>0){
@@ -7048,7 +7084,7 @@ return {initEnemyTransport,syncPassengerPositions,tickEnemyTransport,unloadEnemy
 },
 "native-enemy-fear.js": function(load) {
 const {getActor} = load("native-effects.js");
-const {permissions} = load("status.js");
+const {enemyMovementSpeed,permissions} = load("status.js");
 const {advanceEnemy,remainingDistance} = load("native-combat.js");
 const key=p=>p.x+','+p.y;
 const cell=e=>({x:Math.round(e.x),y:Math.round(e.y)});
@@ -7123,7 +7159,7 @@ function advanceEnemyFear(b,e,dt){
   else{state.path=e.flying?[]:pathTo(tree,state.targetCenter);state.path.push(state.targetOffset);state.index=0;}
  }
  if(state.index>=state.path.length)choosePath(b,e,state);
- let distance=Math.max(0,e.speed*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*dt*((e.statuses||[]).some(s=>s.kind==='sluggish')?.2:1));
+ let distance=Math.max(0,enemyMovementSpeed(e)*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*dt*((e.statuses||[]).some(s=>s.kind==='sluggish')?.2:1));
  while(distance>0&&state.index<state.path.length){
   const to=state.path[state.index],dx=to.x-e.x,dy=to.y-e.y,d=Math.hypot(dx,dy);
   if(d<=distance){e.x=to.x;e.y=to.y;state.index++;distance-=d;}

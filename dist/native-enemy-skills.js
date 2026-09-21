@@ -1,7 +1,7 @@
 import {permissions,applyStatus,removeStatus,isIsolated} from './status.js';
 import {attackableAllies,dealDamage,applyElementDamage,commitExit,getActor,newAttackId,addEffect,grantShield} from './native-effects.js';
 import {FPS} from './combat.js';
-import {windupSeconds} from './native-combat.js';
+import {windupSeconds,enemyChainTargets} from './native-combat.js';
 
 const ATTACK_SKILLS=new Set(['AOEAttack','CrossAttack','PowerAttack','StunAttack','stuncombat','DeathEye','PollutedRangedAtk','ironsandstorm','armorpiercing']);
 const VISUAL_SKILLS=new Set(['BornAnim','StartRun','EndAnim','BeginAnim']);
@@ -272,6 +272,20 @@ export function tickEnemySkills(battle,enemy,dt){
   endEnemySkill(battle,enemy);return;
  }
  if(enemy.hidden||enemy.enemyCast||!control.skill||!control.attack)return;
+ if(enemy.id==='enemy_2050_smsha'&&!control.silenced&&!enemy.action){
+  const skill=enemy.enemySkills.find(s=>s.prefab==='ChainBuff');
+  const candidates=battle.s.enemies.filter(e=>e!==enemy&&e.hp>0&&!e.hidden&&!e.untargetable&&!e.invulnerable&&!permissions(e).sleeping&&!isIsolated(e));
+  const first=candidates.filter(e=>Math.hypot(e.x-enemy.x,e.y-enemy.y)<=enemy.range).sort((a,b)=>(b.taunt||0)-(a.taunt||0)||b.uid-a.uid)[0];
+  if(skill&&first&&beginEnemySkill(battle,enemy,skill)){
+   const chain=enemyChainTargets(first,candidates,Number(skill.bb['chain.max_target']),Number(skill.bb.projectile_range)),amount=battle.enemyAttackDamage(enemy,Number(skill.bb.atk_scale)),attackId=newAttackId(battle);let from=enemy;
+   for(let i=0;i<chain.length;i++){
+    const target=chain[i];dealDamage(battle,{source:enemy,target,amount:amount*Math.pow(Number(skill.bb['chain.atk_scale']),i),type:'arts',cause:'skill',attackId});
+    if(target.hp>0){applyStatus(target,'attackSpeedUp',Number(skill.bb.duration),{source:'snow-priest-gift',value:Number(skill.bb.attack_speed),resistible:false});applyStatus(target,'chainMoveSpeed',Number(skill.bb.duration),{source:'snow-priest-gift',value:Number(skill.bb.move_speed),resistible:false});}
+    battle.emit('strike',{uid:enemy.uid,x:from.x,y:from.y,targetX:target.x,targetY:target.y,ranged:true,enemy:true,type:'arts',style:'chain-buff',hit:i});from=target;
+   }
+   enemy.attackCooldown=battle.enemyAttackTiming(enemy).frames;endEnemySkill(battle,enemy);return;
+  }
+ }
  if(enemy.id==='enemy_2003_rockman'&&!control.silenced&&!enemy.action){
   const skill=enemy.enemySkills.find(s=>s.prefab==='StunAttack');
   const targets=battle.enemySkillTargets(enemy,{ranged:true,ignoreBlock:true}).filter(t=>!t.statuses?.some(s=>s.kind==='stun')).sort((a,b)=>Math.hypot(a.x-enemy.x,a.y-enemy.y)-Math.hypot(b.x-enemy.x,b.y-enemy.y));

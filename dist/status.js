@@ -27,7 +27,7 @@ export function removeStatus(target,kind,source){
 }
 export function tickStatuses(target,dt){if(!Number.isFinite(dt)||dt<0)throw Error('Invalid status delta');target.statuses??=[];for(const s of target.statuses)s.remaining-=dt;target.statuses=target.statuses.filter(s=>s.remaining>1e-9);target.invisible=target.formInvisible===true||(target.statuses.some(s=>['invisible','camouflage'].includes(s.kind))&&!target.revealed);target.levitated=target.statuses.some(s=>s.kind==='levitate');target.fragile=target.statuses.filter(s=>s.kind==='fragile').reduce((v,s)=>Math.max(v,s.value||1),1);}
 export function permissions(target){const denied=new Set();for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!(target.statuses||[]).some(s=>['sleep','levitate','fear','selfFear'].includes(s.kind)),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
-export function statusAttributeChanges(target){const s=target.statuses||[];return {attackSpeed:(s.some(s=>s.kind==='cold'||s.kind==='frozen')?-30:0)+s.filter(s=>s.kind==='attackSpeedDown').reduce((n,s)=>n+(s.value||0),0),resistance:s.some(s=>s.kind==='frozen')?-15:0,attack:s.filter(s=>s.kind==='attackDown').reduce((v,x)=>Math.min(v,x.value??0),0),defense:s.filter(s=>s.kind==='defDown').reduce((v,x)=>Math.min(v,x.value??0),0),magicResistance:s.filter(s=>s.kind==='resDown').reduce((v,x)=>Math.min(v,x.value??0),0)};}
+export function statusAttributeChanges(target){const s=target.statuses||[];return {attackSpeed:(s.some(s=>s.kind==='cold'||s.kind==='frozen')?-30:0)+s.filter(s=>s.kind==='attackSpeedDown'||s.kind==='attackSpeedUp').reduce((n,s)=>n+(s.value||0),0),resistance:s.some(s=>s.kind==='frozen')?-15:0,attack:s.filter(s=>s.kind==='attackDown').reduce((v,x)=>Math.min(v,x.value??0),0),defense:s.filter(s=>s.kind==='defDown').reduce((v,x)=>Math.min(v,x.value??0),0),magicResistance:s.filter(s=>s.kind==='resDown').reduce((v,x)=>Math.min(v,x.value??0),0)};}
 export function abilityEnabled(target,{silenceable=false}={}){return !silenceable||!permissions(target).silenced;}
 export function isIsolated(target){
  if(!target||target.immunities?.isolated)return false;
@@ -35,3 +35,5 @@ export function isIsolated(target){
  return !!(target.isolated||target.statuses?.some(s=>s.kind==='isolated')||(target.isolateWhileConcealed&&(target.invisible||target.formInvisible)&&target.block==null));
 }
 export function wakeOnHit(target){if(target.wakeOnDamage)target.statuses=(target.statuses||[]).filter(s=>s.kind!=='sleep');}
+
+export function enemyMovementSpeed(target){const bonus=(target.statuses||[]).filter(s=>s.kind==='chainMoveSpeed').reduce((n,s)=>Math.max(n,Number(s.value)||0),0);return target.speed+(target.baseSpeed??target.speed)*bonus;}

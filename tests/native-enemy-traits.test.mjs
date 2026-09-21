@@ -3,7 +3,7 @@ import {NativeSession} from '../dist/native-session.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {dealDamage,applyElementDamage,applyLoss,commitExit,addDamageRedirect,grantGuard,grantShield,applyHeal,revealEnemy,enemyWineBuffs} from '../dist/native-effects.js';
-import {applyStatus,isIsolated} from '../dist/status.js';
+import {applyStatus,isIsolated,statusAttributeChanges,enemyMovementSpeed} from '../dist/status.js';
 
 function arena(){
  const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.funds=100;assert.ok(g.perform('buy',0));const unit=g.s.units[0];let placed=false;
@@ -167,6 +167,23 @@ test('真实step的环境标记触发脆弱，预计算/直接伤害均生效但
 test('脆弱在递归分摊中不对原接收者重复乘算，状态与环境标记效果可存档',()=>{
  const {b}=arena(),e=spawn(b,'enemy_2052_smgia'),other=spawn(b,'enemy_1025_reveng');dealDamage(b,{target:e,value:1,type:'true',environmental:true});addDamageRedirect(b,e,{targetUid:other.uid,ratio:.5});const hp=e.hp,hp2=other.hp;dealDamage(b,{target:e,value:100,type:'physical'});assert.equal(hp-e.hp,100);assert.equal(hp2-other.hp,100);
  const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);restored.step();assert.equal(restored.s.enemies.find(x=>x.uid===e.uid).fragile,2);
+});
+
+test('雪祀馈赠先对三名敌人造成10%法伤，再给予10秒攻速/移速，不选择自己或孤立目标',()=>{
+ const {b}=arena(),caster=spawn(b,'enemy_2050_smsha',3,3);caster.atk=100;const a=spawn(b,'enemy_1007_slime',4,3),c=spawn(b,'enemy_1007_slime',5,3),d=spawn(b,'enemy_1007_slime',6,3),isolated=spawn(b,'enemy_10031_cnvsld',4,3);a.taunt=5;
+ const hp=[a,c,d,isolated,caster].map(e=>e.hp);advance(b,15);
+ [a,c,d].forEach((e,i)=>{assert.equal(e.hp,hp[i]-10);assert.equal(statusAttributeChanges(e).attackSpeed,100);assert.equal(enemyMovementSpeed(e),e.baseSpeed*2);});assert.equal(isolated.hp,hp[3]);assert.equal(caster.hp,hp[4]);assert.equal(caster.statuses.some(s=>s.kind==='chainMoveSpeed'),false);
+ a.route=[{kind:'move',x:4,y:3},{kind:'move',x:9,y:3},{kind:'wait',time:600}];a.cmd=0;a.cmdLeft=null;const x=a.x;b.step();assert.ok(Math.abs(a.x-x-a.baseSpeed*2/30)<1e-6);advance(b,10.1);assert.equal(statusAttributeChanges(a).attackSpeed,0);assert.equal(enemyMovementSpeed(a),a.baseSpeed);
+});
+
+test('雪祀馈赠受沉默阻止，目标沉睡不被选中',()=>{
+ const {b}=arena(),caster=spawn(b,'enemy_2050_smsha'),target=spawn(b,'enemy_1007_slime',4,3);applyStatus(caster,'silence',16);advance(b,15.5);assert.equal(caster.enemySkills[0].used,false);
+ applyStatus(target,'sleep',10);advance(b,1);assert.equal(caster.enemySkills[0].used,false);target.statuses=[];b.step();assert.equal(caster.enemySkills[0].used,true);
+});
+
+test('雪祀馈赠状态跨JSON继续倒计时，来源死亡不提前删除，到期恢复',()=>{
+ const {b}=arena(),caster=spawn(b,'enemy_2050_smsha'),target=spawn(b,'enemy_1007_slime',4,3);caster.atk=1;advance(b,15.5);const remaining=target.statuses.find(s=>s.kind==='chainMoveSpeed').remaining;commitExit(b,{target:caster});b.step();
+ const restored=NativeBattle.restore(NATIVE_DATA,b.economy,b.map,b.turn,JSON.parse(JSON.stringify(b.s)));assert.ok(restored);const copy=restored.s.enemies.find(e=>e.uid===target.uid);assert.equal(statusAttributeChanges(copy).attackSpeed,100);advance(restored,remaining+.1);assert.equal(statusAttributeChanges(copy).attackSpeed,0);assert.equal(enemyMovementSpeed(copy),copy.baseSpeed);
 });
 
 test('折射被沉默取消法抗，解除沉默后恢复，连续帧不重复叠加',()=>{

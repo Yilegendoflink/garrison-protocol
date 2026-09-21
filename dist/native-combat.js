@@ -1,11 +1,20 @@
 import {attribute,FPS} from './combat.js';
-import {permissions} from './status.js';
+import {enemyMovementSpeed,permissions} from './status.js';
 import {skillKind} from './native-sp.js';
 
 // Tentative adapters — not original animation tables. Do not treat as restored data.
 export const TENTATIVE_WINDUP_RATIO=.3;
 export const TENTATIVE_PROJECTILE_SPEED=6;
 export const TENTATIVE_HIT_GAP=2/FPS;
+
+export function enemyChainTargets(first,candidates,count,radius){
+ const chain=first?[first]:[];
+ while(chain.length&&chain.length<count){
+  const last=chain.at(-1),next=candidates.filter(t=>t.hp>0&&!chain.some(x=>x.uid===t.uid)&&Math.hypot(t.x-last.x,t.y-last.y)<=radius+1e-9).sort((a,b)=>Math.hypot(a.x-last.x,a.y-last.y)-Math.hypot(b.x-last.x,b.y-last.y)||a.uid-b.uid)[0];
+  if(!next)break;chain.push(next);
+ }
+ return chain;
+}
 
 // Enemy movement and attack are intentionally separate.  The original game has
 // enemies that fire while moving, enemies that hold after acquiring a target,
@@ -443,7 +452,7 @@ export function advanceEnemy(e,dt,onEvent,stopForAttack=false){
   if(s.kind==='appear'){reachedCheckpoint(e,s);e.x=s.x;e.y=s.y;e.hidden=false;e.untargetable=false;e.cmd++;e.cmdLeft=null;onEvent?.('appear',e);continue;}
   const dx=s.x-e.x,dy=s.y-e.y,d=Math.hypot(dx,dy);
   if(d<=1e-9){reachedCheckpoint(e,s);e.cmd++;continue;}
-  const speed=(!e.block&&permissions(e).move&&!stopForAttack)?e.speed*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*slow:0;
+  const speed=(!e.block&&permissions(e).move&&!stopForAttack)?enemyMovementSpeed(e)*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*slow:0;
   if(speed<=0||dt<=1e-9)break;
   const move=speed*dt;
   if(d<=move){e.x=s.x;e.y=s.y;reachedCheckpoint(e,s);e.cmd++;e.cmdLeft=null;dt-=d/speed;}

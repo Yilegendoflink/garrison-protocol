@@ -265,6 +265,12 @@ test('纠缠藤蔓两次普攻回满2SP，第三次技能消耗一次并施加�
  advance(b,4.1);assert.equal(enemy.sp,2);assert.equal(stuns.length,0);advance(b,3);assert.equal(enemy.sp,0);assert.equal(stuns.length,1);assert.ok(stuns[0]>7.4&&stuns[0]<=7.5);assert.equal(enemy.attackCount,3);
 });
 
+test('陷落雪祀普通攻击逐跳找1.6半径内不同目标，三跳衰减并施加寒冷，只计一次普通攻击',()=>{
+ const {b,enemy,allies}=arena('enemy_2050_smsha',{x:3,y:4,positions:[[5,4],[6,4],[7,4],[5,2]]});allies[2].flying=true;enemy.enemySp={type:'INCREASE_WHEN_ATTACK',max:10,increment:1};enemy.sp=0;
+ applyStatus(enemy,'silence',60);const hits=[];b.hurt=(u,e)=>hits.push({uid:u.uid,atk:e.atk,type:e.damageType,cold:u.statuses.some(s=>s.kind==='cold')});advance(b,1.7);
+ assert.deepEqual(hits.map(h=>h.uid),allies.slice(0,3).map(u=>u.uid));[1,.85,.85*.85].forEach((v,i)=>assert.ok(Math.abs(hits[i].atk-v)<1e-9));assert.ok(hits.every(h=>h.type==='arts'&&h.cold));assert.equal(enemy.attackCount,1);assert.equal(enemy.sp,1);
+});
+
 test('乌顶巨角卢鲁阻挡后优先蓄力，6.6秒才命中，8秒结束技能',()=>{
  const {b,enemy,allies}=arena('enemy_10144_xdelk_2');b.step();const started=b.s.time;
  assert.equal(enemy.enemyCast?.charge,true);const hp=allies[0].hp;advance(b,6.5);assert.equal(allies[0].hp,hp);

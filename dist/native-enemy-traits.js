@@ -1,4 +1,4 @@
-import {permissions,applyStatus,statusAttributeChanges,isIsolated} from './status.js';
+import {enemyMovementSpeed,permissions,applyStatus,statusAttributeChanges,isIsolated} from './status.js';
 import {grantGuard,grantShield,dealDamage,applyElementDamage,applyHeal,applyRegen,applyLoss,commitExit,dispatch,attackableAllies,alliedActors,getActor,addEffect,newAttackId} from './native-effects.js';
 
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<=r+1e-9;
@@ -9,6 +9,7 @@ const KNIGHT_PARTNER={enemy_1513_dekght:'enemy_1513_dekght_2',enemy_1513_dekght_
 export function initEnemyTraits(battle,e,raw,{restore=false}={}){
  e.enemyAttack??=raw.enemyBehavior?.attackProfile||null;
  e.spawnOnDeath??=raw.enemyBehavior?.spawnOnDeath||null;
+ if(e.id==='enemy_2050_smsha')e.damageType='arts';
  if(e.id==='enemy_1509_mousek'){
   e.immunities.sleep=true;e.damageType='arts';e.enemyAttack={...e.enemyAttack,groundOnly:true};e.aura=null;e.lowHpRatio=0;
   if(e.lowHpTriggered&&e.atk===e.baseAtk*Number(e.enemyTalent['enrage.damage_scale']))e.atk=e.baseAtk;
@@ -193,7 +194,7 @@ export function consumeEnemyLancerRush(e){
  if(!e.lancerRush?.active)return 0;
  // “当前移动速度”包含减速，但不是阻挡后的实际位移速度（后者为0）。
  const slow=e.statuses.some(s=>s.kind==='sluggish')? .2:1;
- const amount=e.speed*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*slow*Number(e.enemyTalent['firstattack.atk_scale']);
+ const amount=enemyMovementSpeed(e)*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*slow*Number(e.enemyTalent['firstattack.atk_scale']);
  stopLancerRush(e);return amount;
 }
 
