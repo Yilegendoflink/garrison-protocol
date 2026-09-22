@@ -608,3 +608,74 @@ html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px
 }
 
 .native-wave-bounty-note{margin:6px 0 0;color:#f0d18a;font-size:11px;line-height:1.5}
+
+/* ── 编制台 · 两个页面（敌人编制／盟约禁用）──────────────────────────── */
+.wave-ed-pages{display:flex;gap:4px;flex-wrap:wrap}
+.wave-ed-pages button{padding:8px 12px}
+.wave-ed-pages button.chosen{outline:0;border-color:var(--we-accent);color:var(--we-accent);background:var(--we-raised);font-weight:700}
+.wave-ed-bonds{margin-top:24px}
+.wave-ed-bond-rule{color:var(--we-muted);font-size:12px}
+.wave-ed-bond-temp{border-left:3px solid var(--we-warning);padding-left:10px;color:var(--we-warning)}
+.wave-ed-bonds-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.wave-ed-bonds-tools input{flex:1 1 220px;max-width:360px}
+.wave-ed-bonds-group{display:flex;gap:8px;align-items:baseline;margin:22px 0 10px;font-size:13px;letter-spacing:.1em;color:var(--we-ink)}
+.wave-ed-bonds-group small{color:var(--we-muted);font-weight:400;letter-spacing:0}
+.wave-ed-bonds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px}
+.wave-ed-bond{display:flex;flex-direction:column;min-width:0;background:var(--we-panel);border:1px solid var(--we-line)}
+.wave-ed-bond.core{border-left:3px solid var(--we-accent)}
+.wave-ed-bond>header{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--we-line)}
+.wave-ed-bond>header>div:first-child{display:flex;flex-direction:column;min-width:0}
+.wave-ed-bond>header b{font-size:13px;font-weight:600}
+.wave-ed-bond>header small{color:var(--we-muted);font-size:10px;letter-spacing:.1em}
+.wave-ed-bond>header>span{margin-left:auto;color:var(--we-muted);font-size:11px;white-space:nowrap}
+.wave-ed-bond-actions{display:flex;gap:4px;width:100%}
+.wave-ed-bond-actions button{flex:1;min-height:30px;padding:4px 6px;font-size:11px}
+.wave-ed-bond-members{display:flex;flex-direction:column;max-height:236px;overflow:auto;padding:4px}
+.wave-ed-bond-member{display:flex;gap:8px;align-items:center;padding:5px 8px;border-radius:4px;cursor:pointer}
+.wave-ed-bond-member:hover{background:var(--we-raised)}
+.wave-ed-bond-member input{width:15px;height:15px;min-height:0;padding:0;accent-color:var(--we-accent)}
+.wave-ed-bond-member span{display:flex;flex-direction:column;min-width:0}
+.wave-ed-bond-member b{font-size:12px;font-weight:500}
+.wave-ed-bond-member small{color:var(--we-muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wave-ed-bond-member.exempt{background:var(--we-raised)}
+.wave-ed-bond-member.exempt b{color:var(--we-accent)}
+.wave-ed-bond .wave-ed-empty{padding:16px 8px!important}
+/* 作战前简报的「盟约缺席情况」：沿用大厅那份深色卡片语言。
+   核心盟约全列出来，被禁的灰掉＋划掉；附加盟约只列被禁的，同样灰掉＋划掉。
+   被禁干员太多，不铺在页面上，点按钮开弹窗看头像。 */
+.native-ban-bonds{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px;margin:12px 0}
+.native-ban-bond{display:flex;flex-direction:column;gap:2px;padding:10px 12px;color:#e8f4ef;background:#0d2023d9;border:1px solid #386764;box-shadow:0 14px 40px #0002}
+.native-ban-bond.available{border-left:3px solid #79dcb7}
+.native-ban-bond.banned{border-color:#4a5f5b;background:#0a1a1cb3;opacity:.62}
+.native-ban-bond.banned b{text-decoration:line-through;text-decoration-color:#8fb3aa}
+.native-ban-bond.banned small,.native-ban-bond.banned span{color:#7e9891}
+.native-ban-bond b{font-size:14px}
+.native-ban-bond small{color:#80b5ab;font-size:10px;letter-spacing:.1em}
+.native-ban-bond span{color:#f0d18a;font-size:11px}
+.native-ban-heading{display:flex;gap:8px;align-items:baseline;font-size:15px;margin:18px 0 8px}
+.native-ban-heading small{color:#80b5ab;font-size:11px;font-weight:400;letter-spacing:0}
+.native-ban-none{color:#80b5ab;font-size:12px;margin:4px 0}
+.native-ban-open{margin-top:6px;padding:10px 16px;cursor:pointer}
+/* 对局内的「禁用名单」入口：桌面在顶栏，手机在「战况 / 设置」面板里。
+   盟约那列**不放**入口（电脑、手机都不放）——那列只列当前盟约。 */
+.native-top .native-ban-entry{border-left:3px solid #c9836a}
+html.native-landscape-ui #native-modal .native-ban-entry{display:block;width:100%;min-height:34px;margin:6px 0;padding:10px;border-left:3px solid #c9836a;text-align:center}
+.native-ban-note{color:#a7c5bd;font-size:12px;line-height:1.7}
+.native-ban-note+.native-ban-note{margin-top:-4px}
+.native-ban-operators{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px;margin:12px 0;max-height:52vh;overflow:auto}
+.native-ban-operators>.native-ban-none{grid-column:1/-1}
+.native-ban-operators figure{display:flex;flex-direction:column;align-items:center;gap:4px;margin:0}
+.native-ban-op-art{display:block;width:64px;height:64px;background:#0d2023;border:1px solid #386764;overflow:hidden}
+.native-ban-operators img{width:100%;height:100%;object-fit:cover;filter:grayscale(.8) brightness(.85)}
+.native-ban-operators figcaption{display:flex;flex-direction:column;align-items:center;font-size:11px;line-height:1.35;text-align:center}
+.native-ban-operators figcaption b{font-size:12px;font-weight:600}
+.native-ban-operators figcaption small{color:#80b5ab;font-size:10px}
+.native-ban-operators figcaption em{color:#f0d18a;font-size:10px;font-style:normal}
+.native-ban-foot{color:#80b5ab;font-size:11px;margin:8px 0}
+@media(max-width:720px){
+ .wave-ed-top{flex-wrap:wrap;gap:10px}
+ .wave-ed-top .wave-ed-autosave{margin-left:0}
+ .wave-ed-bonds-grid{grid-template-columns:1fr}
+ .native-ban-bonds{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .native-ban-operators{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}
+}

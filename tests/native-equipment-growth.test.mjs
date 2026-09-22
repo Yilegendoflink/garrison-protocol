@@ -6,6 +6,7 @@ import {applyStatus} from '../dist/status.js';
 import {spCap} from '../dist/native-sp.js';
 import {enemy} from './effects-harness.mjs';
 import {equipRune,equipMagicPenetration,equipWeakness} from '../dist/native-equipment.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 // 装备效果补全（第二批）：叠层成长、回复/技力、成对联动、战斗期新机制、跨回合装备。
 // 判定口径见 EQUIPMENT_EFFECT_AUDIT.md 的「落地进度」。
@@ -24,7 +25,7 @@ const OP={
  swift:'char_496_wildmn',swiftMate:'char_4151_tinman',
 };
 function startSession(specs,{seed=5}={}){
- const g=new NativeSession(NATIVE_DATA,{seed,bandId:'band_bldsk'});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed,bandId:'band_bldsk'});
  g.s.funds=9999;g.s.capacity=16;g.s.rewardPending=null;g.s.rewardQueue=[];
  const made=specs.map(spec=>{
   const charId=typeof spec==='string'?spec:spec.charId;
@@ -87,7 +88,7 @@ test('天师古鼎：本回合每获得 1 名干员 +25 攻速（上限 3 层）
 });
 
 test('天师古鼎＋炎国短刀：炎干员每次获得干员给 2 资金（每回合最多 3 次）',()=>{
- const g=new NativeSession(NATIVE_DATA,{seed:7,bandId:'band_bldsk'});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:7,bandId:'band_bldsk'});
  g.s.funds=9999;
  const owner=g.gain(NATIVE_DATA.profiles['chess_char_1_03_a'].chessId);
  g.s.rewardPending=null;g.s.rewardQueue=[];
@@ -300,7 +301,7 @@ test('家族徽章：【叙拉古】携带者隐匿期间攻击力成长，失�
 });
 
 test('博士投影（普通）：下个回合开始时销毁装备并把携带者晋升为精锐干员',()=>{
- const g=new NativeSession(NATIVE_DATA,{seed:11,bandId:'band_bldsk'});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:11,bandId:'band_bldsk'});
  g.s.funds=9999;
  const unit=g.gain(NATIVE_DATA.profiles['chess_char_1_03_a'].chessId);
  g.s.rewardPending=null;g.s.rewardQueue=[];
@@ -364,7 +365,7 @@ test('天马之枪：与天马之盔成对时额外造成 30% 攻击力真实伤
 });
 
 test('“神秘顾客”主动销毁时给 1 份资金',()=>{
- const g=new NativeSession(NATIVE_DATA,{seed:13,bandId:'band_bldsk'});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:13,bandId:'band_bldsk'});
  g.s.funds=20;
  const item=g.gainItem('chess_item_6_01_m');
  assert.equal(g.s.items.some(i=>i.uid===item.uid),true,'道具应当在整备区');

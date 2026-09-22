@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {NATIVE_DATA as data} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {activeBonds} from '../dist/protocol.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 // 装备的 `giveBondId` 是**它自己的盟约归属**（商店与具名池按它取货），不是给携带者的盟约。
 // 曾经的实现把每件装备的 giveBondId 一律叠进 u.bondIds，于是「给谁都装一件谢拉格不融冰」
@@ -14,7 +15,7 @@ const YAK='chess_char_1_02_a';            // 角峰（kjeragShip）
 const GHOST='chess_char_2_07_a';          // 幽灵鲨（egirShip，不是谢拉格）
 
 function session(seed=5){
- const g=new NativeSession(data,{seed,bandId:'band_bldsk'});
+ const g=new NativeSession(data,{bondBan:NO_BOND_BAN,seed,bandId:'band_bldsk'});
  g.s.funds=9999;g.s.rewardPending=null;g.s.rewardQueue=[];
  return g;
 }

@@ -3,12 +3,13 @@ import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} fro
 import {drawConcealOverlay,concealActive,drawStatuses} from '../dist/native-fx.js';
 import {commitExit} from '../dist/native-effects.js';
 import {openBattle,deployNow,enemy,byId} from './effects-harness.mjs';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 // 隐匿（INVISIBLE）：统一口径是「不能被不同阵营选中」，被阻挡即视为脱离隐匿；
 // 表现层给我方与敌方都套暗灰色滤镜 + 马赛克。计划与后续项见 INVISIBILITY_PLAN.md。
 const chessOf=charId=>Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId===charId&&!s.isHidden).chessId;
 function liveBattle(charIds){
- const g=new NativeSession(NATIVE_DATA,{seed:9});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:9});
  g.s.funds=9999;g.s.rewardPending=null;g.s.rewardQueue=[];
  const units=charIds.map(id=>g.gain(chessOf(id)));
  g.s.rewardPending=null;g.s.rewardQueue=[];

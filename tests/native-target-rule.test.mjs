@@ -1,11 +1,12 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} from '../dist/runtime-data.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 // 索敌规则是「优先」不是「只能」。回归的是这一条：规则过滤后一个都不剩时必须回退，
 // 否则深靛（不以束缚状态的敌人为攻击目标）与隐现（优先攻击使用远程武器的敌人）会完全不攻击。
 const chessOf=charId=>Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId===charId&&!s.isHidden).chessId;
 function liveBattle(charId){
- const g=new NativeSession(NATIVE_DATA,{seed:9});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:9});
  g.s.funds=9999;g.s.rewardPending=null;g.s.rewardQueue=[];
  const unit=g.gain(chessOf(charId));g.s.rewardPending=null;g.s.rewardQueue=[];
  let placed=false;

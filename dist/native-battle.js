@@ -631,7 +631,10 @@ export class NativeBattle {
   if(!actor)return;
   for(const owner of this.s.units){
    if(owner.hp<=0)continue;const gs=this.profile(owner).garrisons;if(!gs?.length)continue;
-   if(!this.range(owner).some(c=>c.x===actor.x&&c.y===actor.y))continue;
+   // 「范围内」按持有者的**当前**攻击范围算：开技扩范围（银灰真银斩 3-12→3-7、凛御银灰 3-7/3-1）
+   // 时判定跟着扩大，开缩小范围的技能（银灰雪境生存法则 1-2）时也跟着缩小。写成 this.range(owner)
+   // 会永远按基础范围判定（用户 2026-09-22 问到的就是这条）。
+   if(!this.range(owner,this.skillActive(owner)).some(c=>c.x===actor.x&&c.y===actor.y))continue;
    for(const g of gs){
     if(!g||g.eventType!=='IN_BATTLE')continue;const b=blackboard(g.blackboard),key=b.key||'';
     let prob=1;

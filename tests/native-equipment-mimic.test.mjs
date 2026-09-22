@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 // 拟态物质（chess_item_5_05_e_a／精英 _b，效果 key use_equip_reward_char_chess，黑板为空）：
 // 描述写「装备时销毁，若已拥有至少2名该初始干员，则再获得1名该初始干员；否则随机获得1名同盟约初始干员」，
@@ -9,7 +10,7 @@ const ITEM='chess_item_5_05_e_a',ITEM_ELITE='chess_item_5_05_e_b';
 const info=NATIVE_DATA.season.effectInfoDataDict;
 
 function session(){
- const g=new NativeSession(NATIVE_DATA,{seed:7,bandId:'band_bldsk'});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:7,bandId:'band_bldsk'});
  g.s.funds=9999;g.s.capacity=16;g.s.rewardPending=null;g.s.rewardQueue=[];
  return g;
 }

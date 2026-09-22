@@ -4,10 +4,11 @@ import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {deployNow,enemy} from './effects-harness.mjs';
 import {drawIceWind,drawZones} from '../dist/native-fx.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 const uniqueBond=(id,count)=>[...new Map(Object.values(NATIVE_DATA.season.charShopChessDatas).filter(s=>s.charId&&NATIVE_DATA.season.charChessDataDict[s.chessId].bondIds.includes(id)).map(s=>[s.charId,s.chessId])).values()].slice(0,count);
 function kjeragBattle(count=6){
- const g=new NativeSession(NATIVE_DATA,{seed:1});g.s.funds=9999;g.s.capacity=16;
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:1});g.s.funds=9999;g.s.capacity=16;
  for(const id of uniqueBond('kjeragShip',count))g.gain(id);
  g.s.rewardPending=null;g.s.rewardQueue=[];
  for(const u of g.s.units){let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++){if(g.s.units.some(v=>v.uid!==u.uid&&v.position?.x===x&&v.position?.y===y))continue;if(g.canDeploy(u.uid,x,y))placed=g.deploy(u.uid,x,y,0);}assert.ok(placed,'no tile for '+u.chessId);}

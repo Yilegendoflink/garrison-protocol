@@ -1,6 +1,7 @@
 import {runStrategyEvent,strategyCoverage} from './strategy.js';
 import {PreparationState,activeBonds,blackboard,purchasePrice,restoreStock,stockOf} from './protocol.js';
 import {runGarrison} from './garrison.js';
+import {bannedOperators,bondBanBlockers,bondBanSummary,bondMembers,isOperatorBanned} from './native-bond-ban.js';
 
 // Preparation controller for the historical mode. Random pools remain an explicit
 // controller input until their selection rules are verified; absent draws fail atomically.
@@ -25,9 +26,27 @@ export class NativeEconomy extends PreparationState {
   if(shop&&request.maxTier!==undefined&&shop.chessLevel>request.maxTier)throw Error('Pool result exceeds requested tier');
   if(shop&&request.bond&&!this.data.season.charChessDataDict[id].bondIds.includes(request.bond))throw Error('Pool result violates requested bond');
   if(shop&&request.excludeCharId===shop.charId)throw Error('Pool result violates exclusion');
+  // 兜底门禁：候选池理论上已经过滤掉禁用盟约的成员，这里再挡一次，防新增抽取路径漏过滤。
+  if(request.kind!=='item'&&this.bondBanned(id))throw Error('Banned operator leaked into pool: '+id);
   return id;
  }
  bonds(){return activeBonds(this.data,this.s.units,this.s.modeId);}
+ // 盟约禁用（用户 2026-09-22 口径，第二版）：被禁盟约的成员里，只有在该盟约「不禁用名单」上的
+ // 干员还能用，其余一律拿不到——**不只是商店**：策略／道具的固定点名发放、卫戍 SERVER_GAIN_CHAR、
+ // 援军转让、晋升奖励候选都走这里挡。判定按 charId（精锐与初始是同一名干员），名单在编制台配置。
+ // `bondBanned` 在 `NativeEconomy` 上定义，所以独立使用 economy 的场合（没有 s.bondBan）恒为 false。
+ bondBanned(chessId){const ban=this.s?.bondBan;return !!ban&&isOperatorBanned(this.data,ban.bonds,ban.exempt,chessId);}
+ bondBanBlockers(chessId){const ban=this.s?.bondBan||{};return bondBanBlockers(this.data,ban.bonds||[],ban.exempt||{},chessId);}
+ bannedOperatorList(){const ban=this.s?.bondBan||{};return bannedOperators(this.data,ban.bonds||[],ban.exempt||{});}
+ bondBanSummary(){const ban=this.s?.bondBan||{};return bondBanSummary(this.data,ban.bonds||[],ban.exempt||{});}
+ // 「按盟约随机发人」的调用点必须先问这一句：被禁盟约在本局是缺席的，可能一个人都发不出来
+ // （不禁用名单为空、或名单上的人全在调度中心等级之外），而空候选池会让 drawFromPool 抛错、
+ // 把整个动作回滚——卫戍发放挂在 prep 上，抛错会连「进入下一回合」一起打回，等于卡死。
+ // 注意判定要用「该盟约还有没有能出场的成员」，不能只看「是否被禁」：被禁盟约里名单上的干员照常能发。
+ bondBannedIds(){return new Set(this.s?.bondBan?.bonds||[]);}
+ bondCandidates(id,maxTier){const tier=Number(maxTier)||6;return bondMembers(this.data,id).filter(row=>row.tier<=tier&&!this.bondBanned(row.chessIds[0]));}
+ bondHasCandidates(id,maxTier){return !!id&&this.bondCandidates(id,maxTier).length>0;}
+ gainableBonds(u,maxTier){return (this.ownBonds(u)||[]).filter(id=>this.bondHasCandidates(id,maxTier));}
  ownBonds(u){return u.bondIds||this.data.season.charChessDataDict[u.chessId].bondIds;}
  addLayers(id,amount,requireActive=true){
   const info=this.data.season.bondInfoDict[id];if(!info)throw Error('Unknown bond '+id);if(!Number.isFinite(amount)||amount<0)throw Error('Invalid bond increment');
@@ -65,7 +84,7 @@ export class NativeEconomy extends PreparationState {
  price(id){const def=this.data.season.charChessDataDict[id];if(!def)return purchasePrice(this.data,id);let value=purchasePrice(this.data,id);for(const gid of def.garrisonIds){const g=this.data.season.garrisonDataDict[gid];if(g.eventType==='SERVER_PRICE')value=runGarrison(this,null,g,'SERVER_PRICE');}if(this.s.permanentDiscount===2||(this.s.permanentDiscount===1&&def.bondIds.includes('visiShip')))value--;const special=runStrategyEvent(this,'price',{chessId:id});if(special.length)value=special.at(-1);return Math.max(0,value);}
  spend(amount){if(this.s.funds<amount)return false;this.addFunds(-amount);this.s.roundSpent+=amount;this.s.totalSpent+=amount;runStrategyEvent(this,'spent');return true;}
  buy(index){
-  if(this.s.phase!=='prep'||this.s.rewardPending)return {ok:false,code:'WRONG_PHASE'};const id=this.s.offers[index],shop=this.data.season.charShopChessDatas[id];if(!shop?.charId||shop.chessLevel>this.s.level)return {ok:false,code:'INVALID_OFFER'};
+  if(this.s.phase!=='prep'||this.s.rewardPending)return {ok:false,code:'WRONG_PHASE'};const id=this.s.offers[index],shop=this.data.season.charShopChessDatas[id];if(!shop?.charId||shop.chessLevel>this.s.level||this.bondBanned(id))return {ok:false,code:'INVALID_OFFER'};
   if(this.handFull()&&this.s.units.filter(u=>u.chessId===id).length<2)return {ok:false,code:'FULL_HAND'};if(!this.spend(this.price(id)))return {ok:false,code:'NO_FUNDS'};if(stockOf(this.data,this.s,id)<=0)return {ok:false,code:'NO_STOCK'};this.s.stock[id]-=1;this.s.offers[index]=null;const unit=this.gain(id);unit.purchases??={};unit.purchases[id]=(unit.purchases[id]||0)+1;runStrategyEvent(this,'bought',unit);for(const b of this.ownBonds(unit))this.s.roundBoughtBonds[b]=(this.s.roundBoughtBonds[b]||0)+1;return {ok:true};
  }
  deploy(...args){const result=super.deploy(...args);if(result)this.settleBondRewards();return result;}
@@ -77,10 +96,10 @@ export class NativeEconomy extends PreparationState {
   const requirements=runStrategyEvent(this,'refreshRequirements');for(const r of requirements){if(r.bond&&offers.filter(id=>this.data.season.charChessDataDict[id].bondIds.includes(r.bond)).length<r.minCount)return false;if(r.duplicateCount&&!offers.some(id=>offers.filter(x=>x===id).length>=r.duplicateCount))return false;if(r.freezeOne){if(!this.manualPreview)throw Error('Per-slot freeze still requires the shop controller');this.s.frozenSlots=[0];}}if(this.s.freeRefresh>0)this.s.freeRefresh--;else if(!this.spend(this.terms().refreshCost))return false;if(this.s.forcedRefresh)this.s.forcedRefresh=this.s.forcedRefresh.count>1?{...this.s.forcedRefresh,count:this.s.forcedRefresh.count-1}:null;
   this.s.offers=offers.slice();this.s.locked=false;this.s.roundRefreshCount++;this.s.refreshCountTotal=(this.s.refreshCountTotal||0)+1;for(const u of this.s.units.slice())this.triggerGarrisons('SERVER_REFRESH_SHOP',u);runStrategyEvent(this,'refreshed');if(this.bonds().miraShip.active&&this.s.freeRefresh===0){const effect=this.data.season.effectBuffInfoDataDict[this.data.season.bondInfoDict.miraShip.effectId].find(e=>e.key==='bond_refresh_shop_next_free'),p=blackboard(effect.blackboard);if(this.random()<Math.min(1,p.baseprob+p.prob*(this.s.bondLayers.miraShip||0)))this.s.freeRefresh++;}return true;
  }
- sell(uid){const unit=this.s.units.find(u=>u.uid===uid),owners=this.s.units.filter(u=>u.uid!==uid).flatMap(owner=>owner.equipment.map(item=>({owner,item,effects:this.data.season.effectBuffDataList?.[this.data.season.trapChessDataDict[item.chessId]?.effectId]||this.data.season.effectBuffInfoDataDict[this.data.season.trapChessDataDict[item.chessId]?.effectId]||[]})));if(!unit)return false;const vodfoxKey='vodfox:'+this.s.round;if(this.s.bandId==='band_vodfox'&&!this.data.season.charChessDataDict[unit.chessId]?.isGolden&&!this.s.strategyClaims[vodfoxKey]){const indices=this.s.offers.map((id,i)=>id?i:null).filter(i=>i!==null);if(indices.length){const index=this.pick(indices),replacement=this.s.offers[index];this.s.offers[index]=null;this.s.units=this.s.units.filter(x=>x!==unit);this.s.items.push(...(unit.equipment||[]));restoreStock(this.s,unit);this.s.strategyClaims[vodfoxKey]=1;this.gain(replacement);return true;}}if(!super.sell(uid))return false;this.settleBondRewards();this.triggerGarrisons('SERVER_CHESS_SOLD',unit);for(const {owner,item,effects} of owners)for(const effect of effects){if(effect.key!=='sell_char_count_gain_equip_owner_bond')continue;const p=blackboard(effect.blackboard),count=Number(p.count)||8,key='sell:'+item.uid;owner.strategySellCounts??={};owner.strategySellCounts[key]=(owner.strategySellCounts[key]||0)+1;if(owner.strategySellCounts[key]>=count){owner.strategySellCounts[key]-=count;const bond=this.pick(this.ownBonds(owner));this.gain(this.draw({kind:'operator',bond,maxTier:this.s.level}));}}return true;}
+ sell(uid){const unit=this.s.units.find(u=>u.uid===uid),owners=this.s.units.filter(u=>u.uid!==uid).flatMap(owner=>owner.equipment.map(item=>({owner,item,effects:this.data.season.effectBuffDataList?.[this.data.season.trapChessDataDict[item.chessId]?.effectId]||this.data.season.effectBuffInfoDataDict[this.data.season.trapChessDataDict[item.chessId]?.effectId]||[]})));if(!unit)return false;const vodfoxKey='vodfox:'+this.s.round;if(this.s.bandId==='band_vodfox'&&!this.data.season.charChessDataDict[unit.chessId]?.isGolden&&!this.s.strategyClaims[vodfoxKey]){const indices=this.s.offers.map((id,i)=>id?i:null).filter(i=>i!==null);if(indices.length){const index=this.pick(indices),replacement=this.s.offers[index];this.s.offers[index]=null;this.s.units=this.s.units.filter(x=>x!==unit);this.s.items.push(...(unit.equipment||[]));restoreStock(this.s,unit);this.s.strategyClaims[vodfoxKey]=1;this.gain(replacement);return true;}}if(!super.sell(uid))return false;this.settleBondRewards();this.triggerGarrisons('SERVER_CHESS_SOLD',unit);for(const {owner,item,effects} of owners)for(const effect of effects){if(effect.key!=='sell_char_count_gain_equip_owner_bond')continue;const p=blackboard(effect.blackboard),count=Number(p.count)||8,key='sell:'+item.uid;owner.strategySellCounts??={};owner.strategySellCounts[key]=(owner.strategySellCounts[key]||0)+1;if(owner.strategySellCounts[key]>=count){owner.strategySellCounts[key]-=count;const bonds=this.gainableBonds(owner,this.s.level);if(bonds.length)this.gain(this.draw({kind:'operator',bond:this.pick(bonds),maxTier:this.s.level}));}}return true;}
  rewardFromPool(pool,count,choice,kind='operator'){const offers=Array.from({length:count},()=>this.draw({kind,pool}));const reward={pool,offers,choice,kind};if(this.s.rewardPending)this.s.rewardQueue.push(reward);else this.s.rewardPending=reward;}
  takePromotion(id){
-  const reward=this.s.rewardPending;if(!reward)return false;if(reward.offers){if(!reward.offers.includes(id))return false;this.s.rewardPending=null;reward.kind==='item'?this.gainItem(id):this.gain(id);}else if(!super.takePromotion(id))return false;
+  const reward=this.s.rewardPending;if(!reward)return false;if(reward.offers){if(!reward.offers.includes(id)||(reward.kind!=='item'&&this.bondBanned(id)))return false;this.s.rewardPending=null;reward.kind==='item'?this.gainItem(id):this.gain(id);}else if(!super.takePromotion(id))return false;
   if(this.s.rewardQueue.length){if(this.s.rewardPending)this.s.rewardQueue.push(this.s.rewardPending);this.s.rewardPending=this.s.rewardQueue.shift();}return true;
  }
  startPreparation(){

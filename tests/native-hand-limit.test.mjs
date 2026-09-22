@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {HAND_LIMIT} from '../dist/protocol.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 function prep(session){session.s.phase='prep';session.s.rewardPending=null;session.s.rewardQueue=[];session.s.funds=9999;return session;}
 function handUnit(uid,chessId){const profile=NATIVE_DATA.profiles[chessId];return {uid,chessId,charId:profile.charId,rank:profile.rank,position:null,dir:0,equipment:[]};}
@@ -8,10 +9,10 @@ const sampleIds=Object.values(NATIVE_DATA.season.charShopChessDatas).filter(s=>s
 // 用互不相同、且不在货架上的干员填满整备区，避免误触「第三张同名卡」的三合一例外。
 function fillHand(g,count,{chessId=null,ownerUid=1}={}){const offers=new Set(g.s.offers.filter(Boolean));const pool=sampleIds.filter(id=>!offers.has(id));const pick=i=>chessId??pool[i%pool.length];g.s.units=Array.from({length:count},(_,i)=>handUnit(ownerUid+i,pick(i)));g.s.seq=ownerUid+count+100;g.s.items=[];return g;}
 function firstItemId(){return Object.keys(NATIVE_DATA.season.trapChessDataDict)[0];}
-function summonSession(){const g=prep(new NativeSession(NATIVE_DATA,{seed:1}));g.s.capacity=16;g.s.units=[];g.gain('chess_char_2_02_b');const owner=g.s.units[0];let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(g.canDeploy(owner.uid,x,y))placed=g.deploy(owner.uid,x,y,0);assert.ok(placed,'医疗无人机持有者需要落场');const card=g.s.summonCards?.find(c=>c.type==='silent-drone');assert.ok(card,'技能召唤卡应出现在整备区');return {g,card,ownerUid:owner.uid};}
+function summonSession(){const g=prep(new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:1}));g.s.capacity=16;g.s.units=[];g.gain('chess_char_2_02_b');const owner=g.s.units[0];let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(g.canDeploy(owner.uid,x,y))placed=g.deploy(owner.uid,x,y,0);assert.ok(placed,'医疗无人机持有者需要落场');const card=g.s.summonCards?.find(c=>c.type==='silent-drone');assert.ok(card,'技能召唤卡应出现在整备区');return {g,card,ownerUid:owner.uid};}
 
 test('整备区上限统计干员、装备与未放置的召唤物卡',()=>{
- const g=new NativeSession(NATIVE_DATA,{seed:1});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:1});
  assert.equal(g.handLength(),0);
  g.s.units=[handUnit(1,g.s.offers.find(Boolean))];
  g.s.items=[{uid:2,chessId:firstItemId()}];
@@ -36,7 +37,7 @@ test('整备区满时买不进干员和装备，召唤物卡也收不回整备�
 });
 
 test('第三张同名卡仍然可以三合一，但不会因此打开商店',()=>{
- const g=prep(new NativeSession(NATIVE_DATA,{seed:2}));
+ const g=prep(new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:2}));
  const offer=g.s.offers.find(Boolean);
  fillHand(g,HAND_LIMIT,{chessId:offer});
  assert.equal(g.handFull(),true);
@@ -47,7 +48,7 @@ test('第三张同名卡仍然可以三合一，但不会因此打开商店',()=
 });
 
 test('效果发放的卡牌可以临时超出上限，清出空余前禁止购入',()=>{
- const g=prep(new NativeSession(NATIVE_DATA,{seed:3}));
+ const g=prep(new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:3}));
  g.s.itemOffers=[firstItemId()];
  fillHand(g,HAND_LIMIT);
  assert.equal(g.perform('buy',g.s.offers.findIndex(Boolean)),false,'满手不能买入干员');

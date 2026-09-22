@@ -7,6 +7,7 @@ import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {dealDamage,enqueue,newAttackId,applyHeal,applyRegen,applyLoss,applyElementDamage,commitExit,reviveActor,dispatch,tickLogic,addEffect,addDamageRedirect,queueDelayedDamage,teleportActor,canRelocateTo,nearbySpots,operatorSkillConfig,BATTLE_SCHEMA_VERSION,validateBattle,migrateBattle,getActor,attackableAllies} from '../dist/native-effects.js';
 import {openBattle,deployNow,enemy,byId,talentBB,logOf,steps,reps} from './effects-harness.mjs';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 const source=JSON.parse(fs.readFileSync('data/modes/alliance-lower/source.json','utf8'));
 const scope=JSON.parse(fs.readFileSync('data/modes/alliance-lower/operator-scope.json','utf8'));
@@ -146,7 +147,7 @@ test('four summon skills resolve through the shared token lifecycle',()=>{
 });
 
 test('整备区召唤卡按范围放置并在开战时生成对应召唤物',()=>{
- const g=new NativeSession(NATIVE_DATA,{seed:1});g.s.funds=9999;g.s.capacity=16;g.s.rewardPending=null;g.s.rewardQueue=[];
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:1});g.s.funds=9999;g.s.capacity=16;g.s.rewardPending=null;g.s.rewardQueue=[];
  for(const id of ['chess_char_3_19_a','chess_char_4_11_b','chess_char_2_02_b','chess_char_6_04_b'])g.gain(id);
  for(const u of g.s.units){let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(!g.s.units.some(v=>v.uid!==u.uid&&v.position?.x===x&&v.position?.y===y)&&g.canDeploy(u.uid,x,y))placed=g.deploy(u.uid,x,y,0);assert.ok(placed,u.chessId);}
  const cards=g.s.summonCards;assert.equal(cards.filter(c=>c.type==='vigil-wolf').length,1);assert.equal(cards.filter(c=>c.type==='cathy-device').length,3);assert.equal(cards.filter(c=>c.type==='silent-drone').length,1);assert.equal(cards.filter(c=>c.type==='skadi2-seaborn').length,1);

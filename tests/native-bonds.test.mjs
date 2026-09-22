@@ -5,10 +5,11 @@ import {NativeSession} from '../dist/native-session.js';
 import {commitExit,dealDamage,dispatch,tickLogic,applyElementDamage,reviveActor,nearbySpots} from '../dist/native-effects.js';
 import {applyStatus} from '../dist/status.js';
 import {deployNow,enemy} from './effects-harness.mjs';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 const uniqueBond=(id,count)=>[...new Map(Object.values(NATIVE_DATA.season.charShopChessDatas).filter(s=>s.charId&&NATIVE_DATA.season.charChessDataDict[s.chessId].bondIds.includes(id)).map(s=>[s.charId,s.chessId])).values()].slice(0,count);
 function start(ids,layers={}){
- const g=new NativeSession(NATIVE_DATA,{seed:1});g.s.funds=9999;g.s.capacity=16;for(const id of ids)g.gain(id);g.s.rewardPending=null;g.s.rewardQueue=[];
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:1});g.s.funds=9999;g.s.capacity=16;for(const id of ids)g.gain(id);g.s.rewardPending=null;g.s.rewardQueue=[];
  for(const [id,n] of Object.entries(layers))g.s.bondLayers[id]=n;
  for(const u of g.s.units){let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++){if(g.s.units.some(v=>v.uid!==u.uid&&v.position?.x===x&&v.position?.y===y))continue;if(g.canDeploy(u.uid,x,y))placed=g.deploy(u.uid,x,y,0);}assert.ok(placed,'no tile for '+u.chessId);}
  assert.equal(g.perform('start'),true,g.lastError||'start failed');const b=g.battle;b.s.queue=[];b.s.limit=1e9;deployNow(b);return {g,b};

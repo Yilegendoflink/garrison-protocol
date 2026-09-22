@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {STOCK_BY_TIER} from '../dist/protocol.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 const data=NATIVE_DATA;
 const map=data.maps.find(m=>m.weight>0)?.stageId;
 const shopRows=Object.values(data.season.charShopChessDatas).filter(o=>o.charId&&!o.isHidden);
 const byTier={};
 for(const row of shopRows)(byTier[row.chessLevel]??=[]).push(row.chessId);
-const session=()=>{const s=new NativeSession(data,{modeId:'mode_single_normal',mapId:map,seed:21});s.s.level=6;s.s.funds=9999;return s;};
+const session=()=>{const s=new NativeSession(data,{bondBan:NO_BOND_BAN,modeId:'mode_single_normal',mapId:map,seed:21});s.s.level=6;s.s.funds=9999;return s;};
 const clearPending=s=>{s.s.rewardPending=null;};
 
 test('商店库存按阶级开满，购买扣减、出售回补',()=>{

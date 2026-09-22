@@ -9,6 +9,7 @@ import {garrisonText} from '../dist/protocol.js';
 import {openBattle,deployNow,enemy,byId} from './effects-harness.mjs';
 import {dispatch} from '../dist/native-effects.js';
 import {applyStatus} from '../dist/status.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 const s = NATIVE_DATA.season;
 // 把全部非 noStack 盟约按「已激活」上报，避免测试里为了激活盟约去摆一堆干员。
@@ -17,7 +18,7 @@ function activeBonds(g){
  return () => Object.fromEntries(Object.entries(real()).map(([id, row]) => [id, {...row, active: row.active || !s.bondInfoDict[id].noStack}]));
 }
 function prep(chessId, {layers = 0, round = 3} = {}){
- const g = new NativeSession(NATIVE_DATA, {seed: 7});
+ const g = new NativeSession(NATIVE_DATA, {bondBan:NO_BOND_BAN,seed: 7});
  g.s.funds = 999; g.s.rewardPending = null; g.s.rewardQueue = [];
  const u = g.gain(chessId);
  g.s.rewardPending = null; g.s.rewardQueue = [];

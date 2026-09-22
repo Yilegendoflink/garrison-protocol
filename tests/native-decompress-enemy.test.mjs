@@ -6,6 +6,7 @@ import {applyStatus} from '../dist/status.js';
 import {NativeBattle} from '../dist/native-battle.js';
 import {enemySprite,FORM_SPRITE_TINTS} from '../dist/protocol.js';
 import {FORM_TINT_STYLE,drawEnemyPhase,formTintedImage} from '../dist/native-fx.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 // 解压缩类敌人（频次词条）第三批：原表 DeadSpawn（死亡后生成碎片）与 Revive[Trigger]（再生），
 // 以及碎片依赖的「特殊生命值机制」（血条数值 = 需要击倒的伤害次数）。
@@ -13,7 +14,7 @@ import {FORM_TINT_STYLE,drawEnemyPhase,formTintedImage} from '../dist/native-fx.
 const profiles=id=>NATIVE_DATA.enemies[id].enemyBehavior;
 
 function liveSession({deploy=true}={}){
- const g=new NativeSession(NATIVE_DATA,{seed:17});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:17});
  g.s.funds=100;g.s.rewardPending=null;g.s.rewardQueue=[];
  const unit=g.gain(Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId&&!s.isHidden).chessId);
  g.s.rewardPending=null;g.s.rewardQueue=[];

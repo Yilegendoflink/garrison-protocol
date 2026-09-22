@@ -4,11 +4,12 @@ import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} fro
 import {enemyBehaviorProfile} from '../dist/native-combat.js';
 import {tickLogic,commitExit} from '../dist/native-effects.js';
 import {applyStatus} from '../dist/status.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 // 持续伤害范围第一批（DOT 词条）：集团军重型火炮、深溟巢涌者、萨卡兹枯朽（战士/战车）、
 // 逐腐兽、假想敌：蚀裂。数值全部来自原表 blackboard，测试只核对「原表写了的那些数」。
 function liveBattle(){
- const g=new NativeSession(NATIVE_DATA,{seed:11});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:11});
  g.s.funds=100;g.s.rewardPending=null;g.s.rewardQueue=[];
  const unit=g.gain(Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId&&!s.isHidden).chessId);
  g.s.rewardPending=null;g.s.rewardQueue=[];

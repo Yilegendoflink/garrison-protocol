@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { NativeSession } from '../dist/native-session.js';
 import { NATIVE_DATA } from '../dist/runtime-data.js';
 import { deployNow } from './effects-harness.mjs';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 // 三合一精锐的养成口径：应取「精英二 + 7 级技能 + 模组」。
 // 数据来自固定历史活动表的 charChessDataDict，这里同时校验原始 source.json 与运行时一致。
@@ -62,7 +63,7 @@ test('三合一产出精锐，且上场后按精锐口径解析技能与属性',
   const goldenChessId = NATIVE_DATA.season.charChessDataDict[normalChessId].upgradeChessId;
   assert.ok(goldenChessId, '初始棋子应有精锐升级目标');
 
-  const g = new NativeSession(NATIVE_DATA, { seed: 1 });
+  const g = new NativeSession(NATIVE_DATA, {bondBan:NO_BOND_BAN, seed: 1 });
   g.s.funds = 9999; g.s.capacity = 16; g.s.rewardPending = null; g.s.rewardQueue = [];
   g.gain(normalChessId); g.gain(normalChessId);
   const merged = g.gain(normalChessId);

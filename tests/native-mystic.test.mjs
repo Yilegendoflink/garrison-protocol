@@ -2,13 +2,14 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {NativeSession} from '../dist/native-session.js';import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {dispatch} from '../dist/native-effects.js';
 import {skillConfig} from '../dist/native-operator-effects.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 // 秘术师（本模式只有深靛）口径来自 PRTS 深靛页的分支信息：
 // 储存的能量弹道造成攻击力 100% 的法术普通伤害，且「技能的攻击倍率会实时作用在能量抛射物上」；
 // 天赋柔光缚目按每个攻击能量独立掷概率。
 const chessOf=charId=>Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId===charId&&!s.isHidden).chessId;
 function live(charId){
- const g=new NativeSession(NATIVE_DATA,{seed:11});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:11});
  g.s.funds=9999;g.s.rewardPending=null;g.s.rewardQueue=[];
  const unit=g.gain(chessOf(charId));g.s.rewardPending=null;g.s.rewardQueue=[];
  let placed=false;

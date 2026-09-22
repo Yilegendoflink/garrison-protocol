@@ -3,11 +3,12 @@ import {NativeSession} from '../dist/native-session.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {blackboard,resolveActiveTalents} from '../dist/protocol.js';
 import reps from './fixtures/effects/representatives.json' with {type:'json'};
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 export {reps,blackboard};
 
 export function openBattle(specs,{seed=reps.seed}={}){
- const g=new NativeSession(NATIVE_DATA,{seed});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed});
  g.s.funds=9999;g.s.capacity=16;g.s.rewardPending=null;g.s.rewardQueue=[];
  const list=Array.isArray(specs)?specs:[specs];
  for(const spec of list){

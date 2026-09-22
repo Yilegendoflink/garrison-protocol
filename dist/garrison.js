@@ -49,7 +49,7 @@ const handlers={
  SERVER_POOL_CHAR:(c,u,p)=>draw(c,{kind:'operator',pool:p.pool},p.count),
  SERVER_POOL_EQUIP:(c,u,p)=>draw(c,{kind:'item',pool:p.pool},p.count),
  SERVER_GAIN_RANDOM_EQUIP_CHESS_IN_POOL:(c,u,p)=>{if(split(p.round_list).map(Number).includes(c.s.round))draw(c,{kind:'item',pool:p.pool},p.count);},
- SERVER_MOST_BOND:(c,u)=>{const rows=Object.entries(c.bonds()),max=Math.max(...rows.map(([,b])=>b.count));const bonds=rows.filter(([,b])=>b.count===max&&max>0).map(([id])=>id);if(bonds.length)draw(c,{kind:'operator',bond:c.pick(bonds)},1);},
+ SERVER_MOST_BOND:(c,u)=>{const rows=Object.entries(c.bonds()),max=Math.max(...rows.map(([,b])=>b.count));const bonds=rows.filter(([,b])=>b.count===max&&max>0).map(([id])=>id).filter(id=>c.bondHasCandidates?.(id)??true);if(bonds.length)draw(c,{kind:'operator',bond:c.pick(bonds)},1);},
  SERVER_TRIGGER_ANOTHER:(c,u,p)=>{let target;if(p.scope==='front')target=at(c,front(u));else if(p.scope==='farright')target=board(c).filter(v=>c.hasGarrison(v,p.event)).sort((a,b)=>a.position.y-b.position.y||b.position.x-a.position.x)[0];else throw Error('Unsupported garrison scope '+p.scope);if(target)c.triggerGarrisons(p.event,target);},
  SERVER_TRIGGER_FRONT_COUNT:(c,u,p)=>{for(let i=1;i<=p.count;i++){const target=at(c,front(u,i));if(target)c.triggerGarrisons(p.event,target);}},
  SERVER_FRONT_SAME_EFFECT_PREP_START:(c,u)=>{const target=at(c,front(u));if(target)c.triggerGarrisons('SERVER_PREP_START',target,{effectOwner:u});},

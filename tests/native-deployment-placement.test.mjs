@@ -4,6 +4,7 @@ import {NativeSession} from '../dist/native-session.js';
 import {BRANCH_POLICIES,allowsHighlandPlacement} from '../dist/native-branches.js';
 import {canRelocateTo} from '../dist/native-effects.js';
 import {enemy} from './effects-harness.mjs';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 // 部署位口径：PRTS 分支特性写「可以放置于远程位」的分支（推击手／钩索师）既能下地面也能上高台。
 // 本模式的 HIGHLAND 地块分 HIGHLAND/RANGED（可部署的高台）与 HIGHLAND/NONE（不可部署）两类，
@@ -25,7 +26,7 @@ function tiles(map){
  return {high,low};
 }
 function session(charId){
- const g=new NativeSession(NATIVE_DATA,{seed:5,mapId:MAP});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:5,mapId:MAP});
  g.s.funds=9999;g.s.rewardPending=null;g.s.rewardQueue=[];
  const u=g.gain(profileOf(charId).chessId);
  g.s.rewardPending=null;g.s.rewardQueue=[];

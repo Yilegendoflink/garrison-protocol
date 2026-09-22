@@ -7,7 +7,7 @@ const effects={
  preparation_start_gain_chess_every_n_round:{event:'prep',run:(c,p)=>{if(c.s.round%p.round===0)fixedGain(c,p);}},
  give_coin_in_round:{event:'prep',run:(c,p)=>{if(c.s.round===p.round)c.addFunds(p.coin-(c.s.round+3));}},
  prep_start_gain_chess_from_pool_in_round:{event:'prep',run:(c,p)=>{if(c.s.round===p.round)randomGain(c,p);}},
- gain_bond_char_per_round:{event:'prep',run:(c,p)=>{if(c.s.round>=p.round&&(c.s.round-p.round)%p.preround===0)for(let i=0;i<p.count;i++)c.gain(c.draw({kind:'operator',bond:p.bond,maxTier:c.s.level}));}},
+ gain_bond_char_per_round:{event:'prep',run:(c,p)=>{if(!c.bondHasCandidates?.(p.bond,c.s.level))return;if(c.s.round>=p.round&&(c.s.round-p.round)%p.preround===0)for(let i=0;i<p.count;i++)c.gain(c.draw({kind:'operator',bond:p.bond,maxTier:c.s.level}));}},
  round_start_bond_check_gain_layer:{event:'prep',run:(c,p)=>{if(c.s.round!==p.round)return;const ids=Object.keys(c.bonds()).filter(id=>c.bonds()[id].active);for(const id of ids)c.addLayers(id,ids.length===p.factioncount?p.count1:p.count2);}},
  round_start_activate_char_chess_effect_in_board:{event:'prep',run:(c,p)=>{const units=c.s.units.filter(u=>u.position&&c.hasGarrison(u,p.event_type)).sort((a,b)=>b.position.x-a.position.x||b.position.y-a.position.y);for(const u of units.slice(0,p.count))c.triggerGarrisons(p.event_type,u);}},
  round_start_gain_char_chess_in_shop_every_n_round:{event:'prep',run:(c,p)=>{if(c.s.round%p.round===0)for(let i=0;i<p.count;i++){const indices=c.s.offers.map((id,i)=>c.data.season.charShopChessDatas[id]?.charId?i:null).filter(i=>i!==null);if(indices.length){const index=c.pick(indices),id=c.s.offers[index];c.s.offers[index]=null;c.gain(id);}}}},

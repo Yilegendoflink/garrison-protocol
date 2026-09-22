@@ -5,6 +5,7 @@ import {dealDamage} from '../dist/native-effects.js';
 import {applyStatus} from '../dist/status.js';
 import {enemy} from './effects-harness.mjs';
 import {equipRune,equipmentList} from '../dist/native-equipment.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 // 按 EQUIPMENT_EFFECT_AUDIT.md 补装的装备效果：概率触发、受击减伤、保命、部署期效果。
 const ITEM={
@@ -15,7 +16,7 @@ const ITEM={
  ration:'chess_item_3_05_e_a',solvent:'chess_item_1_05_e_a',
 };
 function setup(charId,items=[],{seed=5}={}){
- const g=new NativeSession(NATIVE_DATA,{seed,bandId:'band_bldsk'});
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed,bandId:'band_bldsk'});
  g.s.funds=9999;g.s.capacity=16;g.s.rewardPending=null;g.s.rewardQueue=[];
  const profile=Object.values(NATIVE_DATA.profiles).find(p=>p?.charId===charId);
  const unit=g.gain(profile.chessId);

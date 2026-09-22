@@ -5,9 +5,10 @@ import {NativeBattle} from '../dist/native-battle.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {dealDamage,commitExit,applyHeal,applyElementDamage,alliedActors,attackableAllies} from '../dist/native-effects.js';
 import {applyStatus,statusAttributeChanges,permissions} from '../dist/status.js';
+import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 function arena(positions=[]){
- const g=new NativeSession(NATIVE_DATA,{seed:42});g.s.funds=100;const shop=Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>!s.isHidden&&NATIVE_DATA.profiles[s.chessId]?.profession==='MEDIC');g.gain(shop.chessId);g.s.rewardPending=null;g.s.rewardQueue=[];const u=g.s.units[0];let placed=false;
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:42});g.s.funds=100;const shop=Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>!s.isHidden&&NATIVE_DATA.profiles[s.chessId]?.profession==='MEDIC');g.gain(shop.chessId);g.s.rewardPending=null;g.s.rewardQueue=[];const u=g.s.units[0];let placed=false;
  for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(g.canDeploy(u.uid,x,y))placed=g.deploy(u.uid,x,y,0);
  assert.ok(placed);assert.ok(g.perform('start'));const b=g.battle,template=b.s.units[0];b.s.queue=[];b.s.enemies=[];b.s.logicEffects=[];b.s.limit=1000;b.map=structuredClone(b.map);
  const stats=b.stats.bind(b);b.stats=a=>({...stats(a),maxHp:50000,def:1000,magicResistance:0,blockCnt:3});
