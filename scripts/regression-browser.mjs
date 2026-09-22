@@ -168,6 +168,22 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
 });
 
 // ── effects｜原 scripts/effects-browser.cjs ───────────────────────────────
+suite('egir-indom',async(browser)=>{
+ const {openBattle}=await import('../tests/effects-harness.mjs'),{applyLoss}=await import('../dist/native-effects.js');
+ const {g,b}=openBattle('chess_char_5_13_a'),u=b.s.units[0];applyLoss(b,{target:u,amount:u.hp});assert.ok(u.dollForm);
+ const snapshot=JSON.parse(JSON.stringify(g.snapshot())),page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+ page.on('pageerror',e=>errors.push(e.message));page.on('console',e=>{if(e.type()==='error'&&e.text().includes('Native runtime paused'))errors.push(e.text());});await page.goto(pathToFileURL(path.resolve('dist/index.html')).href);await page.waitForFunction(()=>window.__garrisonReady);
+ await page.evaluate(s=>{localStorage.removeItem('garrison-native-safe-v1');localStorage.setItem('garrison-native-manual-v1',JSON.stringify(s));},snapshot);
+ await page.reload();await page.waitForFunction(()=>window.__garrisonReady);await page.locator('[data-act=resume]').click();
+ const pause=page.locator('[data-act=pause]');if((await pause.innerText()).includes('暂停'))await pause.click();
+ const cv=page.locator('#native-canvas');await cv.scrollIntoViewIfNeeded();const r=await cv.boundingBox(),v=g.map.viewport,cols=v.right-v.left+1,rows=v.bottom-v.top+1,tw=Math.min((r.width-32)/cols,(r.height-44)/rows/.82),th=tw*.82,ox=(r.width-tw*cols)/2-v.left*tw,oy=(r.height-th*rows)/2-v.top*th;
+ await cv.click({position:{x:ox+(u.x+.5)*tw,y:oy+(u.y+.5)*th-10}});await page.waitForTimeout(450);assert.match(await page.locator('#native-dossier-live').innerText(),/阶段 替身/);
+ await fs.mkdir('artifacts/egir-indom',{recursive:true});await page.screenshot({path:'artifacts/egir-indom/substitute.png',fullPage:true});
+ await page.locator('[data-act=inspect-close]').click();await pause.click();assert.match(await pause.innerText(),/暂停/);await page.waitForTimeout(2200);await pause.click();
+ const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('garrison-native-manual-v1')));assert.deepEqual(errors,[]);assert.ok(after.battle.time>0);assert.ok(after.battle.units[0].dollForm);
+ const report={passed:true,checks:['restore substitute without redeployment','substitute dossier and countdown','resume simulation and persist form'],errors};await fs.writeFile('artifacts/egir-indom/browser.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));await page.close();
+});
+
 suite("effects",async(browser)=>{
 const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(pathToFileURL(path.resolve('dist/index.html')).href);await page.waitForFunction(()=>window.__garrisonReady);
@@ -237,6 +253,7 @@ const page=await browser.newPage({viewport:{width:1200,height:1250}}),errors=[];
 
 // ── mobile-bonds｜原 scripts/mobile-bonds-browser.mjs ─────────────────────────
 suite('mobile-bonds',async(browser)=>{
+ const results=[];
  const OUT='artifacts/mobile-bonds';await fs.mkdir(OUT,{recursive:true});
 const ANDROID='Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
 const IPHONE='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
@@ -260,6 +277,10 @@ async function measure(page,label,{rows=20}={}){
   const panel=document.querySelector('.native-bonds');
   panel.innerHTML=rows;
   const btns=[...panel.querySelectorAll('button')];
+  for(const b of btns){
+   const layer=b.querySelector('small');
+   if(!layer?.getClientRects().length||getComputedStyle(layer).display==='none')throw Error('盟约当前层数不可见');
+  }
   const axis=getComputedStyle(panel).flexDirection==='column'?'column':'row';
   const rects=btns.map(b=>({top:b.offsetTop,height:b.offsetHeight,left:b.offsetLeft,width:b.offsetWidth}));
   let overlap=0;
@@ -283,6 +304,14 @@ async function measure(page,label,{rows=20}={}){
 // ① 手机横屏：左侧盟约竖列（用户报的那一屏）
 {
  const {ctx,page}=await openGame({viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:2,userAgent:ANDROID});
+ const fullscreen=page.locator('[data-act=fullscreen]');
+ await page.evaluate(async()=>{if(document.fullscreenElement)await document.exitFullscreen();});
+ await fullscreen.waitFor({state:'visible'});
+ await fullscreen.click();
+ await page.waitForFunction(()=>!!document.fullscreenElement);
+ assert.equal(await fullscreen.isVisible(),false,'进入全屏后隐藏恢复按钮');
+ await page.evaluate(()=>document.exitFullscreen());
+ await fullscreen.waitFor({state:'visible'});
  const fixed=await measure(page,'横屏·当前CSS');
  await page.locator('.native-bonds').screenshot({path:OUT+'/panel-fixed.png'});
  await page.screenshot({path:OUT+'/landscape.png'});

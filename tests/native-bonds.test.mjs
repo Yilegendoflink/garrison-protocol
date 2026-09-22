@@ -31,7 +31,7 @@ test('炎佑模式乙持续施法、元素光环、元素免疫和沉默打断',
  const target=enemy(b,{x:g.x+2,y:g.y,hp:100000,threat:10,def:0,res:0}),splash=enemy(b,{x:g.x+2,y:g.y+1,hp:100000,threat:1,def:0,res:0}),aura=enemy(b,{x:g.x+1,y:g.y,hp:100000,threat:0,def:0,res:0}),outside=enemy(b,{x:g.x+2,y:g.y+2,hp:100000,threat:0,def:0,res:0});
  g.attackCooldown=999;tickLogic(b,0);assert.equal(g.yanSkillActive,true);const targetHp=target.hp,splashHp=splash.hp,outsideHp=outside.hp; b.s.time=1;tickLogic(b,1);
  assert.ok(target.hp<targetHp&&splash.hp<splashHp&&outside.hp===outsideHp);assert.equal(aura.yanElementDamageTakenBonus,.2);assert.equal(outside.yanElementDamageTakenBonus,0);
- const elemental=applyElementDamage(b,{source:g,target:aura,amount:100,type:'burn'});assert.equal(elemental.added,120);assert.equal(applyElementDamage(b,{source:target,target:g,amount:100,type:'burn'}).added,0);const guardianHp=g.hp;dealDamage(b,{source:target,target:g,amount:100,type:'true'});assert.equal(Math.round(guardianHp-g.hp),10);
+ const elemental=applyElementDamage(b,{source:g,target:aura,amount:100,type:'burn'});assert.equal(elemental.added,120);assert.equal(applyElementDamage(b,{source:target,target:g,amount:100,type:'burn'}).added,0);const guardianHp=g.hp;dealDamage(b,{source:target,target:g,amount:100,type:'true'});assert.equal(Math.round(guardianHp-g.hp),100);
  applyStatus(g,'silence',1,{source:target.uid});b.s.time+=1/30;tickLogic(b,1/30);assert.equal(g.yanSkillActive,false);
 });
 
@@ -68,8 +68,8 @@ test('坚守分摊非坚守伤害并对伤害来源反击施加脆弱',()=>{
  const ids=[...uniqueBond('steadShip',3),...uniqueBond('swiftShip',1)],{b}=start(ids);const target=b.s.units[3],guard=b.s.units[0],e=enemy(b,{x:target.x,y:target.y,hp:10000,def:0,res:0});const hp=target.hp,hg=guard.hp;dealDamage(b,{source:e,target,amount:100,type:'true'});assert.equal(Math.round(hp-target.hp),60);assert.ok(hg-guard.hp>0);const eh=e.hp;dealDamage(b,{source:e,target:guard,amount:10,type:'true'});assert.ok(eh-e.hp>800);assert.equal(e.fragile,1.4);b.s.time=1;tickLogic(b,1);assert.equal(e.fragile,1.4);
 });
 
-test('阿戈尔战斗开始吞噬身前干员并支持前三名首次复活',()=>{
- const {b}=start(uniqueBond('egirShip',5),{egirShip:0});assert.ok(b.s.units.some(u=>u.egirConsumedUid));b.s.bondEgirReviveCount=0;for(const u of b.s.units)u.egirRevived=false;const u=b.s.units.at(-1),e=enemy(b,{x:u.x,y:u.y});dealDamage(b,{source:e,target:u,amount:1e9,type:'true'});assert.ok(u.hp>0&&u.deployed&&u.egirRevived);
+test('阿戈尔战斗开始吞噬身前干员并支持前三名免费重部署',()=>{
+ const {b}=start(uniqueBond('egirShip',5),{egirShip:0});assert.ok(b.s.units.some(u=>u.egirConsumedUid));b.s.bondEgirReviveCount=0;for(const u of b.s.units)u.egirRevived=false;const u=b.s.units.find(v=>v.deployed&&v.hp>0),e=enemy(b,{x:u.x,y:u.y});dealDamage(b,{source:e,target:u,amount:1e9,type:'true'});assert.ok(u.hp===0&&!u.deployed&&u.egirRevived&&u.down===0&&b.deploymentCost(u)===0);
 });
 
 test('阿戈尔复活判定不把敌方目标传入干员盟约读取',()=>{

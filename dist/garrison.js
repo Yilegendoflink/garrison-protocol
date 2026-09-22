@@ -4,7 +4,7 @@ const split=v=>String(v??'').split(',').filter(Boolean);
 const front=(u,n=1)=>{if(!u.position)return null;const [x,y]=[[1,0],[0,1],[-1,0],[0,-1]][u.dir];return{x:u.position.x+x*n,y:u.position.y+y*n};};
 const at=(c,p)=>p?c.s.units.find(u=>u.position?.x===p.x&&u.position?.y===p.y):null;
 const board=c=>c.s.units.filter(u=>u.position!=null);
-const active=c=>Object.keys(c.bonds()).filter(id=>c.bonds()[id].active&&!c.data.season.bondInfoDict[id].noStack);
+const active=c=>Object.keys(c.bonds()).filter(id=>c.bonds()[id].active);
 const add=(c,ids,count,check=true)=>{for(const id of ids)c.addLayers(id,Number(count),check);};
 const own=(c,u)=>u.bondIds||c.data.season.charChessDataDict[u.chessId].bondIds;
 const mostLayers=c=>{const ids=active(c);if(!ids.length)return null;const max=Math.max(...ids.map(id=>c.s.bondLayers[id]||0));return c.pick(ids.filter(id=>(c.s.bondLayers[id]||0)===max));};

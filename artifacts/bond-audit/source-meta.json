@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-09-22",
+  "page": "卫戍协议：盟约 下半/PRTS盟约记录",
+  "revision": 427617,
+  "wikitextSha256": "00d86bc87479e88f1914a0fce5febf71d183a6a8fcd78c3b856aadde2da100a0",
+  "bonds": [
+    "炎",
+    "萨尔贡",
+    "维多利亚",
+    "谢拉格",
+    "拉特兰",
+    "阿戈尔",
+    "叙拉古",
+    "卡西米尔",
+    "精准",
+    "迅捷",
+    "灵巧",
+    "奥术",
+    "坚守",
+    "助力",
+    "远见",
+    "奇迹",
+    "投资人",
+    "突袭",
+    "不屈",
+    "调和",
+    "协防干员",
+    "独行",
+    "绝技"
+  ],
+  "head": "3ccd081",
+  "includesUncommittedEgirIndomChanges": true,
+  "relatedTests": {
+    "passed": 1055,
+    "total": 1055
+  },
+  "probeCount": 23
+}
