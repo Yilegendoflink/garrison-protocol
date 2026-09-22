@@ -606,3 +606,5 @@ html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px
  .native-bench-label #native-drop-hint{display:none}
  .native-facing .native-facing-tip{display:none}
 }
+
+.native-wave-bounty-note{margin:6px 0 0;color:#f0d18a;font-size:11px;line-height:1.5}

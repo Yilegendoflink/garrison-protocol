@@ -10550,7 +10550,7 @@ class NativeBattle {
 return {NativeBattle};
 },
 "native-session.js": function(load) {
-const {bountyOffers,bountyOption} = load("native-bounty.js");
+const {bountyOffers,bountyOption,bountyRoundActive} = load("native-bounty.js");
 const {NativeEconomy} = load("native-economy.js");
 const {NativeBattle} = load("native-battle.js");
 const {buildPhasePlan,blackboard,ensureStock,restoreStock,stockOf,INFINITE_FUNDS,ROUND_LEAK_CAP} = load("protocol.js");
@@ -10607,6 +10607,8 @@ class NativeSession extends NativeEconomy {
  ensureRoundBounty(){
   const turn=buildPhasePlan(this.data,this.s.modeId).find(t=>t.round===this.s.round);
   if(!turn||turn.isBossTurn||!['prep','decision'].includes(this.s.phase))return null;
+  // 悬赏每两回合一次（第 2、4、6… 回合）：非悬赏回合不生成，也不改写上一轮的记录。
+  if(!bountyRoundActive(this.s.round))return null;
   if(this.s.roundBounty?.round===this.s.round)return this.s.roundBounty;
   const seed=this.s.waveRoster?.rounds?.[this.s.round]?.waveSeed??this.s.round;
   this.s.roundBounty={round:this.s.round,offers:bountyOffers(this.data,seed),selected:null};return this.s.roundBounty;
@@ -12780,7 +12782,7 @@ function renderLobby({data,state,avatar,esc=escDefault}){
 return {renderLobby};
 },
 "native-play.js": function(load) {
-const {bountyOption} = load("native-bounty.js");
+const {bountyOption,BOUNTY_FIRST_ROUND,BOUNTY_INTERVAL} = load("native-bounty.js");
 const {renderBountyChoice,renderDecisionChoice} = load("native-choices.js");
 const {nativeWavePlan} = load("native-waves.js");
 const {TRAINING_TYPES,loadWaveTable,normalizeWaveTable,saveWaveTable} = load("native-wave-fill.js");
@@ -12919,7 +12921,10 @@ function waveIntel(){
  const tags=(g.s.waveRoster?.types||[]).map(id=>trainingType(id)||TRAINING_TYPES.find(t=>t.id===id)).filter(Boolean);
  const contract=g.s.roundBounty?.round===g.s.round?bountyOption(data,g.s.roundBounty.selected):null;
  const faces=[...(p.pack?.ids||[]),...(contract?[contract.enemyId]:[])].map(id=>avatar(id)||'<span class="native-wave-miss">?</span>').join('');
- const body=p.benchmark?`<p>木桩阶段</p>`:`<p>${esc(trainingType(p.assignment?.type)?.name||'未指定')} ${roman(p.assignment?.tier)}${contract?` · 悬赏 ${esc(contract.name)} / ${contract.coin}◆`:''}</p><div class="native-wave-faces">${faces}</div>`;
+ // 悬赏不是每回合都有：把节奏写在敌情面板里，免得玩家以为漏弹了一次。
+ const bountyRounds=[BOUNTY_FIRST_ROUND,BOUNTY_FIRST_ROUND+BOUNTY_INTERVAL,BOUNTY_FIRST_ROUND+BOUNTY_INTERVAL*2].join('、')+'…';
+ const bountyNote=`<p class="native-wave-bounty-note">${contract?`本轮悬赏 ${esc(contract.name)} · ${contract.coin}◆`:g.s.roundBounty?.round===g.s.round&&!g.s.roundBounty.selected?'本轮悬赏待选择（点「准备完毕」时弹出，可稍后）':`悬赏每 ${BOUNTY_INTERVAL} 回合一次（第 ${bountyRounds} 回合）`}</p>`;
+ const body=p.benchmark?`<p>木桩阶段</p>`:`<p>${esc(trainingType(p.assignment?.type)?.name||'未指定')} ${roman(p.assignment?.tier)}${contract?` · 悬赏 ${esc(contract.name)} / ${contract.coin}◆`:''}</p><div class="native-wave-faces">${faces}</div>${bountyNote}`;
  return `<section class="native-wave-preview"><h3>本波敌情</h3><p class="native-wave-tags">本局特训 ${tags.map(t=>esc(t.name)).join(' / ')||'尚未抽取'}</p>${body}</section>`;
 }
 function fitWaveFaces(){
@@ -13582,7 +13587,17 @@ function bountyOffers(data,seed){
  return offers;
 }
 
-return {BOUNTY_SLUG,bountyOption,bountyOffers};
+// 回合悬赏的出现节奏（用户 2026-09-22 口径）：从第 2 回合开始每隔一个回合出现一次（2 / 4 / 6 …），
+// 不是每回合都弹。第 1 回合与最终木桩阶段没有回合悬赏；道具悬赏（教鞭／神秘顾客的 pendingBounty）
+// 是另一条路径，不受这个节奏限制。
+const BOUNTY_FIRST_ROUND=2;
+const BOUNTY_INTERVAL=2;
+function bountyRoundActive(round){
+ const n=Number(round);
+ return Number.isInteger(n)&&n>=BOUNTY_FIRST_ROUND&&(n-BOUNTY_FIRST_ROUND)%BOUNTY_INTERVAL===0;
+}
+
+return {BOUNTY_SLUG,bountyOption,bountyOffers,BOUNTY_FIRST_ROUND,BOUNTY_INTERVAL,bountyRoundActive};
 },
 "native-choices.js": function(load) {
 const {bountyOption} = load("native-bounty.js");

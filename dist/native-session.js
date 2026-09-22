@@ -1,4 +1,4 @@
-import {bountyOffers,bountyOption} from './native-bounty.js';
+import {bountyOffers,bountyOption,bountyRoundActive} from './native-bounty.js';
 import {NativeEconomy} from './native-economy.js';
 import {NativeBattle} from './native-battle.js';
 import {buildPhasePlan,blackboard,ensureStock,restoreStock,stockOf,INFINITE_FUNDS,ROUND_LEAK_CAP} from './protocol.js';
@@ -56,6 +56,8 @@ export class NativeSession extends NativeEconomy {
  ensureRoundBounty(){
   const turn=buildPhasePlan(this.data,this.s.modeId).find(t=>t.round===this.s.round);
   if(!turn||turn.isBossTurn||!['prep','decision'].includes(this.s.phase))return null;
+  // 悬赏每两回合一次（第 2、4、6… 回合）：非悬赏回合不生成，也不改写上一轮的记录。
+  if(!bountyRoundActive(this.s.round))return null;
   if(this.s.roundBounty?.round===this.s.round)return this.s.roundBounty;
   const seed=this.s.waveRoster?.rounds?.[this.s.round]?.waveSeed??this.s.round;
   this.s.roundBounty={round:this.s.round,offers:bountyOffers(this.data,seed),selected:null};return this.s.roundBounty;

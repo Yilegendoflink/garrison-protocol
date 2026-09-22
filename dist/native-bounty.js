@@ -29,3 +29,13 @@ export function bountyOffers(data,seed){
  for(let i=offers.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[offers[i],offers[j]]=[offers[j],offers[i]];}
  return offers;
 }
+
+// 回合悬赏的出现节奏（用户 2026-09-22 口径）：从第 2 回合开始每隔一个回合出现一次（2 / 4 / 6 …），
+// 不是每回合都弹。第 1 回合与最终木桩阶段没有回合悬赏；道具悬赏（教鞭／神秘顾客的 pendingBounty）
+// 是另一条路径，不受这个节奏限制。
+export const BOUNTY_FIRST_ROUND=2;
+export const BOUNTY_INTERVAL=2;
+export function bountyRoundActive(round){
+ const n=Number(round);
+ return Number.isInteger(n)&&n>=BOUNTY_FIRST_ROUND&&(n-BOUNTY_FIRST_ROUND)%BOUNTY_INTERVAL===0;
+}

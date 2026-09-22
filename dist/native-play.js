@@ -1,4 +1,4 @@
-import {bountyOption} from './native-bounty.js';
+import {bountyOption,BOUNTY_FIRST_ROUND,BOUNTY_INTERVAL} from './native-bounty.js';
 import {renderBountyChoice,renderDecisionChoice} from './native-choices.js';
 import {nativeWavePlan} from './native-waves.js';
 import {TRAINING_TYPES,loadWaveTable,normalizeWaveTable,saveWaveTable} from './native-wave-fill.js';
@@ -138,7 +138,10 @@ function waveIntel(){
  const tags=(g.s.waveRoster?.types||[]).map(id=>trainingType(id)||TRAINING_TYPES.find(t=>t.id===id)).filter(Boolean);
  const contract=g.s.roundBounty?.round===g.s.round?bountyOption(data,g.s.roundBounty.selected):null;
  const faces=[...(p.pack?.ids||[]),...(contract?[contract.enemyId]:[])].map(id=>avatar(id)||'<span class="native-wave-miss">?</span>').join('');
- const body=p.benchmark?`<p>木桩阶段</p>`:`<p>${esc(trainingType(p.assignment?.type)?.name||'未指定')} ${roman(p.assignment?.tier)}${contract?` · 悬赏 ${esc(contract.name)} / ${contract.coin}◆`:''}</p><div class="native-wave-faces">${faces}</div>`;
+ // 悬赏不是每回合都有：把节奏写在敌情面板里，免得玩家以为漏弹了一次。
+ const bountyRounds=[BOUNTY_FIRST_ROUND,BOUNTY_FIRST_ROUND+BOUNTY_INTERVAL,BOUNTY_FIRST_ROUND+BOUNTY_INTERVAL*2].join('、')+'…';
+ const bountyNote=`<p class="native-wave-bounty-note">${contract?`本轮悬赏 ${esc(contract.name)} · ${contract.coin}◆`:g.s.roundBounty?.round===g.s.round&&!g.s.roundBounty.selected?'本轮悬赏待选择（点「准备完毕」时弹出，可稍后）':`悬赏每 ${BOUNTY_INTERVAL} 回合一次（第 ${bountyRounds} 回合）`}</p>`;
+ const body=p.benchmark?`<p>木桩阶段</p>`:`<p>${esc(trainingType(p.assignment?.type)?.name||'未指定')} ${roman(p.assignment?.tier)}${contract?` · 悬赏 ${esc(contract.name)} / ${contract.coin}◆`:''}</p><div class="native-wave-faces">${faces}</div>${bountyNote}`;
  return `<section class="native-wave-preview"><h3>本波敌情</h3><p class="native-wave-tags">本局特训 ${tags.map(t=>esc(t.name)).join(' / ')||'尚未抽取'}</p>${body}</section>`;
 }
 function fitWaveFaces(){
