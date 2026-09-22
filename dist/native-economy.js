@@ -31,7 +31,7 @@ export class NativeEconomy extends PreparationState {
  ownBonds(u){return u.bondIds||this.data.season.charChessDataDict[u.chessId].bondIds;}
  addLayers(id,amount,requireActive=true){
   const info=this.data.season.bondInfoDict[id];if(!info)throw Error('Unknown bond '+id);if(!Number.isFinite(amount)||amount<0)throw Error('Invalid bond increment');
-  if(info.noStack||(requireActive&&!this.bonds()[id].active))return;
+  if(requireActive&&!this.bonds()[id].active)return;
   this.s.bondLayers[id]=(this.s.bondLayers[id]||0)+amount;this.s.events.push({type:'bond-layer',id,amount,total:this.s.bondLayers[id]});this.settleBondRewards();
  }
  settleBondRewards(){

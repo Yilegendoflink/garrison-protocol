@@ -39,7 +39,9 @@ function rowsOf(battle,chessId){
 }
 export function equipmentList(u){
  if(!u||u.kind==='summon')return [];
- return [...(u.source?.equipment||[]),...(u.equipment||[])];
+ const list=[...(u.source?.equipment||[]),...(u.equipment||[])];
+ if(Number.isFinite(Number(u.sargonSharedMaxTrapLevel)))return list.filter(item=>Number(String(item.chessId||'').match(/^chess_item_(\d+)_/)?.[1]||99)<=Number(u.sargonSharedMaxTrapLevel));
+ return list;
 }
 // 取该单位身上第一个带此符文的装备行（含精锐）
 function rawRune(battle,u,rune){

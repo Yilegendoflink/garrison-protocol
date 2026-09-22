@@ -154,10 +154,10 @@ test('整备区召唤卡按范围放置并在开战时生成对应召唤物',()=
  assert.equal(g.perform('start'),true,g.lastError||'start failed');const types=new Set(g.battle.s.summons.map(s=>s.type));assert.ok(types.has('vigil-wolf')&&types.has('silent-drone')&&types.has('skadi2-seaborn'));assert.ok(g.battle.s.summons.filter(s=>s.type==='cathy-device').length>=1);
 });
 
-test('归溟幽灵鲨 S1 locks lethal damage and exits exactly once at skill end',()=>{
+test('归溟幽灵鲨 S2 不死保护结束后视为击倒，切换替身而非强制撤退',()=>{
  const {b}=openBattle({chessId:'chess_char_5_13_b',skillIndex:1});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,def:0});u.sp=b.spCost(u);b.activate(u);
  dealDamage(b,{source:e,target:u,amount:u.maxHp+100,type:'true'});assert.equal(u.hp,1);assert.equal(u.deployed,true);assert.equal(u.lockHp.min,1);
- dispatch(b,'skill-end',{target:u});assert.equal(u.deployed,false);assert.equal(logOf(b,'exit').filter(x=>x.uid===u.uid).length,1);
+ dispatch(b,'skill-end',{target:u});assert.equal(u.deployed,true);assert.ok(u.dollForm);assert.equal(logOf(b,'knockdown').filter(x=>x.uid===u.uid).length,1);assert.equal(logOf(b,'exit').filter(x=>x.uid===u.uid).length,0);
 });
 
 test('新约能天使 ammo event heals the owner and can trigger an in-range bombardment',()=>{
@@ -452,8 +452,12 @@ test('缪尔赛思技能复制待部署干员属性并保存 copyOf 关系',()=>
  const {b}=openBattle([{chessId:'chess_char_6_11_b',skillIndex:2},reps.operators.yak]);deployNow(b);const mlyss=b.s.units.find(u=>u.id==='char_249_mlyss'),copy=b.s.units.find(u=>u.id==='char_199_yak');copy.deployed=false;mlyss.sp=b.spCost(mlyss);b.activate(mlyss);const token=b.s.summons.find(s=>s.type==='mlyss-fluid');assert.ok(token);assert.equal(token.copyOf,copy.uid);assert.equal(token.maxHp,b.profile(copy).attributes.maxHp);assert.equal(token.atk,b.profile(copy).attributes.atk);assert.equal(token.blockCnt,b.profile(copy).attributes.blockCnt);
 });
 
-test('归溟幽灵鲨替身固定实体提供范围减速与周期法伤',()=>{
- const {b}=openBattle({chessId:'chess_char_5_13_b',skillIndex:1});deployNow(b);const u=b.s.units[0],sub=b.s.summons.find(s=>s.type==='ghost2-substitute');assert.ok(sub);const e=enemy(b,{x:sub.x+1,y:sub.y,hp:5000,def:0});b.s.time=1;tickLogic(b,1);assert.ok(e.hp<5000);assert.ok(e.statuses.some(s=>s.kind==='sluggish'));
+test('归溟幽灵鲨只在替身形态提供范围减速与周期法伤，真实step到时恢复本体',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_13_b',skillIndex:1}),u=b.s.units[0];
+ const e=enemy(b,{x:u.x+1,y:u.y,hp:100000,def:0,invulnerable:true});
+ assert.equal(u.dollForm,null);applyLoss(b,{target:u,amount:u.hp});assert.ok(u.dollForm);e.invulnerable=false;
+ steps(b,31);assert.ok(e.hp<100000);assert.ok(e.statuses.some(s=>s.kind==='sluggish'));assert.equal(u.sp,0);
+ steps(b,570);assert.equal(u.dollForm,null);assert.ok(b.stats(u).blockCnt>0);
 });
 
 test('深靛 S2 只对束缚目标按黑板间隔造成周期法伤',()=>{

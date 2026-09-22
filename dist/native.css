@@ -87,7 +87,7 @@ html.native-landscape-ui{
  /* 盟约多起来时不能压扁卡片：卡片保持自然高度，装不下就整体上下滚动。
     少了 flex:0 0 auto 时 flex 会把 20 多条盟约压进可视高度，名字和层数会叠在一起。 */
  .native-bonds button{flex:0 0 auto;min-width:0;min-height:34px;padding:5px 3px;line-height:1.3}
- .native-bonds small{display:none}.native-bonds span{margin-top:2px}
+ .native-bonds small{display:block;margin-top:2px;font-size:12px;font-weight:700;color:#e0c98c;font-variant-numeric:tabular-nums}.native-bonds small:empty{display:none}.native-bonds span{margin-top:2px;font-size:10px}
  .native-detail,.native-field>.native-terrain-legend{display:none}
  .native-field{position:absolute;inset:0;display:block;min-height:0}
  .native-field-caption{position:absolute;z-index:2;top:40px;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));padding:0;font-size:10px}.native-field-caption b{font-size:12px}

@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "checks": [
+    "restore substitute without redeployment",
+    "substitute dossier and countdown",
+    "resume simulation and persist form"
+  ],
+  "errors": []
+}

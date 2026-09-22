@@ -1,0 +1,172 @@
+[
+  {
+    "id": "swift-nonmember",
+    "expected": {
+      "selfSp": 15,
+      "otherSp": 0
+    },
+    "actual": {
+      "selfSp": 0,
+      "otherSp": 0
+    }
+  },
+  {
+    "id": "swift-recipients",
+    "expected": {
+      "selfSp": 27,
+      "otherSp": 0
+    },
+    "actual": {
+      "selfSp": 27,
+      "otherSp": 15
+    }
+  },
+  {
+    "id": "laterano-nonmember",
+    "expected": 0,
+    "actual": 1
+  },
+  {
+    "id": "damage-path-victoriaShip",
+    "expected": {
+      "sameApplicableDamage": true
+    },
+    "actual": {
+      "viaHit": 125,
+      "direct": 100
+    }
+  },
+  {
+    "id": "damage-path-kjeragShip",
+    "expected": {
+      "sameApplicableDamage": true
+    },
+    "actual": {
+      "viaHit": 125,
+      "direct": 100
+    }
+  },
+  {
+    "id": "damage-path-emptyShip",
+    "expected": {
+      "sameApplicableDamage": true
+    },
+    "actual": {
+      "viaHit": 120,
+      "direct": 100
+    }
+  },
+  {
+    "id": "damage-path-preciShip",
+    "expected": {
+      "sameApplicableDamage": true
+    },
+    "actual": {
+      "viaHit": 130,
+      "direct": 100
+    }
+  },
+  {
+    "id": "assist-true-damage",
+    "expected": 100,
+    "actual": 80
+  },
+  {
+    "id": "assist-direct-damage",
+    "expected": 80,
+    "actual": 100
+  },
+  {
+    "id": "arcane-source-ledger",
+    "expected": "two independently expiring source effects",
+    "actual": {
+      "value": 0.2,
+      "until": 3
+    }
+  },
+  {
+    "id": "arcane-direct-consumer",
+    "expected": "must include active arts vulnerability",
+    "actual": 100
+  },
+  {
+    "id": "stead-shared-retaliation",
+    "expected": "attacker takes retaliation",
+    "actual": {
+      "enemyLost": 0,
+      "guardLost": 40
+    }
+  },
+  {
+    "id": "stead-sourceless-cooldown",
+    "expected": "cooldown consumed",
+    "actual": null
+  },
+  {
+    "id": "kazimierz-blocked-cleave",
+    "expected": 100,
+    "actual": 130
+  },
+  {
+    "id": "victoria-two-items",
+    "expected": 2,
+    "actual": 2.25
+  },
+  {
+    "id": "sargon-narant-base-duration",
+    "expected": 5,
+    "actual": 60
+  },
+  {
+    "id": "sargon-narant-attack-replacement",
+    "expected": 100,
+    "actual": 112.00000000000001
+  },
+  {
+    "id": "egir-retreat-revival",
+    "expected": {
+      "time": 0,
+      "cost": 0,
+      "used": 1
+    },
+    "actual": {
+      "time": 80,
+      "cost": 22,
+      "used": 0
+    }
+  },
+  {
+    "id": "hidden-layer-ledger",
+    "expected": 5,
+    "actual": 0
+  },
+  {
+    "id": "yan-six-reduction",
+    "expected": 0,
+    "actual": 0.9
+  },
+  {
+    "id": "yan-nine-extra-hp",
+    "expected": 1,
+    "actual": 1.5
+  },
+  {
+    "id": "yan-skill-cycle",
+    "expected": "initial cooldown 15 seconds, repeats after 15 seconds cooldown",
+    "actual": [
+      {
+        "time": 0,
+        "name": "祛恶之焰"
+      }
+    ]
+  },
+  {
+    "id": "kjerag-duration-snapshot",
+    "expected": "requires timing confirmation",
+    "actual": {
+      "before": 21.8,
+      "after": 21.8,
+      "livePreview": 31.8
+    }
+  }
+]

@@ -152,6 +152,13 @@ test('M3茧甲：战斗阶段被击倒时立刻复活，次数用尽后正常退
  assert.equal(u.hp,0,'次数用尽后正常退场');
 });
 
+test('M3茧甲与不屈同时触发仍消耗复活次数，免费重新部署不补回次数',()=>{
+ const {b,u}=setup('char_143_ghost',[ITEM.m3]);b.on=id=>id==='indomShip';b.rows.indomShip={count:3};b.economy.random=()=>0;
+ const e=enemy(b,{x:u.x+1,y:u.y,hp:100000});dealDamage(b,{source:e,target:u,amount:u.maxHp*10,type:'true'});
+ assert.equal(u.m3Revives,1);assert.equal(u.down,0);assert.ok(b.deploymentCost(u)>0);b.deploy(u,{reentry:true});assert.equal(u.m3Revives,1);
+ b.economy.random=()=>1;dealDamage(b,{source:e,target:u,amount:u.maxHp*10,type:'true'});assert.equal(u.deployed,false);
+});
+
 test('浓缩嗅盐：生命值高于阈值时免疫特殊状态，掉到阈值以下失效',()=>{
  const {b,u}=setup('char_143_ghost',[ITEM.salt]);
  u.hp=u.maxHp;

@@ -268,7 +268,7 @@ PRTS 在隐现、哈洛德、泡泡、锡人、水月、信仰搅拌机、乌尔
 
 **11. 计数口径：写了「单位」或「我方干员」的没有算我方。**
 斯卡蒂「每击倒2名**单位**时」、海霓「首次击倒敌人**或我方干员**时」都只在敌方死亡分支触发（`native-effects.js:139-141`）。
-归溟幽灵鲨「自身被击倒**或替身与本体进行切换**时」的替身切换没有触发点（`reason==='knockdown'` 才发 `selfdead`）。
+归溟幽灵鲨的历史缺口已于 2026-09-22 补齐：击倒（含阿戈尔复活拦截）由公共 `notifyKnockdown` 发一次 `selfdead`，本体切换替身不再重复发，替身回到本体由 `tickDoll` 再发一次。与不屈的免费重新部署联动见 `COMBAT_RULES.md`。
 
 **12. 属性来源 UI 看不到卫戍。**
 `native-battle.js:181` 的 `as+=`、`base.respawnTime*=`、`base.spRecoveryPerSec+=` 都没走 `note()`，干员档案的「属性来源」只显示 `char_attribute_mul` 那一项。
