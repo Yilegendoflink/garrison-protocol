@@ -164,7 +164,15 @@ export function commitExit(battle,{target,reason='knockdown',killer=null,event=n
   if(target.exitLife===lifeKey(target))return false;
   target.exitLife=lifeKey(target);target.hp=0;target.deployed=false;
   log(battle,'exit',{uid:target.uid,reason,kind:'summon',eventId:event?.eventId});
-   if(target.type==='vigil-wolf'&&reason==='knockdown'){target.lives=0;target.blockCnt=0;target.targetable=false;}else{if(target.type==='skadi2-seaborn'){const owner=getActor(battle.s,target.ownerUid);if(owner)owner.summonRespawnAt=battle.s.time+25;}battle.s.summons=battle.s.summons.filter(x=>x.uid!==target.uid);}
+   if(target.type==='vigil-wolf'&&reason==='knockdown'){target.lives=0;target.blockCnt=0;target.targetable=false;}
+  else{
+   // 布局卡召唤物退场后按「自己的再部署时间」排队复现（用户 2026-09-22 口径）。只有战斗型召唤物
+   // （能攻击或阻挡）且召唤者手上还有对应的召唤物卡时才排队：装置类（支援装置／医疗无人机）由技能
+   // 库存管理，技能临时生成的召唤物（没有卡）也不排队；召唤者已经不在场上了就不再复现。
+   const card=(battle.economy?.s?.summonCards||[]).find(c=>c.ownerUid===target.ownerUid&&c.type===target.type),owner=card?getActor(battle.s,target.ownerUid):null;
+   if(owner&&!target.device&&(target.canAttack||target.canBlock)){const life=summonLifecycle(battle,owner,target.type);if(life.redeploy>0)(owner.summonRespawns??={})[target.type]={at:battle.s.time+life.redeploy,cardUid:card.uid,spec:target.spawnSpec||null};}
+   battle.s.summons=battle.s.summons.filter(x=>x.uid!==target.uid);
+  }
   return true;
  }
  const isEnemy=!!battle.s.enemies.find(e=>e.uid===target.uid);
@@ -1133,7 +1141,7 @@ function onOperatorDeploy(battle,u){
  // 归溟幽灵鲨的替身只在本体切换后存在，不能在每次部署时常驻。
  if(u.id==='char_4134_cetsyr'){const dust=battle.s.summons.filter(s=>s.ownerUid===u.uid&&s.type==='cetsyr-dust'&&s.deployed);for(const extra of dust.slice(3))commitExit(battle,{target:extra,reason:'refresh'});u.cetsyrDust=3;for(let n=Math.min(3,dust.length);n<3;n++)spawnSummon(battle,u,{type:'cetsyr-dust',name:'微尘',synthetic:true,targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:true});}
  if(u.id==='char_4087_ines'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'ines-shadow',x:u.x,y:u.y,radius:2,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+25,trackArea:true,trackSide:'enemy',values:{sluggish:true,reveal:true},snapshot:{},refKind:'live',persistAfterSourceGone:true});commitExit(battle,{target:u,reason:'skill'});}
-  if(u.id==='char_1012_skadi2'&&!battle.s.summons.some(s=>s.ownerUid===u.uid&&s.type==='skadi2-seaborn'&&s.deployed)&&!battle.economy?.s.summonCards?.some(card=>card.ownerUid===u.uid&&card.type==='skadi2-seaborn'&&card.position)){const talent=activeTalentsOf(battle,u).find(t=>t.name==='远古血亲');if(talent){spawnSummon(battle,u,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:Number((talent.description||'').match(/持续(\d+)秒/)?.[1])||30,persistAfterSourceGone:false});u.summonRespawnAt=null;}}
+  if(u.id==='char_1012_skadi2'&&!battle.s.summons.some(s=>s.ownerUid===u.uid&&s.type==='skadi2-seaborn'&&s.deployed)&&!battle.economy?.s.summonCards?.some(card=>card.ownerUid===u.uid&&card.type==='skadi2-seaborn'&&card.position)){const talent=activeTalentsOf(battle,u).find(t=>t.name==='远古血亲');if(talent){spawnSummon(battle,u,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:summonLifecycle(battle,u,'skadi2-seaborn').duration||30,persistAfterSourceGone:false});if(u.summonRespawns)delete u.summonRespawns['skadi2-seaborn'];}}
  if(u.id==='char_103_angel'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='天使的祝福');if(talent){const values=talent.values||{},candidates=battle.s.units.filter(v=>v.uid!==u.uid&&v.deployed&&v.hp>0);if(candidates.length){const target=candidates[Math.floor(battle.economy.random()*candidates.length)];target.angelBlessing={atk:Number(values.atk)||.06,maxHp:Number(values.max_hp)||.1,sourceUid:u.uid};}}}
  if(u.id==='char_332_archet'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='铁弦');if(talent)grantShield(battle,u,{amount:Number(talent.values?.shield_value)||500,sourceUid:u.uid,id:'archet-deploy-shield'});}
  if(u.id==='char_4148_philae'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='神河谕使');u.elementDamageResistance=Number(talent?.values?.damage_resistance)||.1;}
@@ -1250,7 +1258,7 @@ function onOperatorExit(battle,u,reason){
  }
 }
 
-const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
+const TOKEN_IDS={'skadi2-seaborn':'token_10017_skadi2_dedant','silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
 // 荒芜拉普兰德「终幕·浩劫」的特种浮游单元（自由飞行实体，走 battle.s.whitwEyes）。
 // 注意：它和凛御银灰待部署区里的「风雪之眼」不是同一种东西——后者本期不实现（见 onOperatorDeploy 的注释）。
 // 完整流程见 PRTS：散开 1.3s（初速0.1/加速1.9/上限2.0）→ 索敌飞向（初速2.0/加速1.0/上限4.0/转向1/6每帧）
@@ -1366,9 +1374,23 @@ export function spawnSummon(battle,owner,spec){
  const position=candidates.find(([x,y])=>{const tile=battle.map.grid[y]?.[x];return tile&&tile.buildableType!=='NONE'&&!tile.obstacle&&(!spec.canBlock||tile.heightType!=='HIGHLAND')&&(spec.occupiesTile===false||!occupied.has(x+','+y))&&(spec.type!=='vigil-wolf'||battle.inside(owner,{x,y}));});
  if(!position)return null;
  const [x,y]=position,a=nativeAttributes(entity,battle.profile(owner).status).attributes,uid=battle.s.nextId++,canBlock=spec.canBlock??a.blockCnt>0,canAttack=spec.canAttack??(a.baseAttackTime>0&&entity.skillRefs?.some(r=>r.skillId));
- const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type||tokenId,name:spec.name||entity.name,kind:'summon',allied:true,x,y,dir:owner.dir,hp:spec.maxHp??a.maxHp,maxHp:spec.maxHp??a.maxHp,atk:spec.atk??a.atk,def:a.def,res:a.magicResistance,damageResistance:spec.damageResistance||0,elementalImmune:!!spec.elementalImmune,isolated:!!spec.isolated,cost:tokenCostFor(battle.profile(owner),tokenId,a.cost),interval:spec.interval??a.baseAttackTime,attackSpeed:spec.attackSpeed??a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],immunities:{...(spec.immunities||{})},shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,canBlock,canAttack,canHeal:spec.canHeal??false,flying:!!spec.flying,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime,nextAuraAt:spec.type==='ghost2-substitute'?battle.s.time+1:null};
+ const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type||tokenId,name:spec.name||entity.name,kind:'summon',allied:true,x,y,dir:owner.dir,hp:spec.maxHp??a.maxHp,maxHp:spec.maxHp??a.maxHp,atk:spec.atk??a.atk,def:a.def,res:a.magicResistance,damageResistance:spec.damageResistance||0,elementalImmune:!!spec.elementalImmune,isolated:!!spec.isolated,cost:tokenCostFor(battle.profile(owner),tokenId,a.cost),interval:spec.interval??a.baseAttackTime,attackSpeed:spec.attackSpeed??a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],immunities:{...(spec.immunities||{})},shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,device:!!spec.device,canBlock,canAttack,canHeal:spec.canHeal??false,flying:!!spec.flying,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime,nextAuraAt:spec.type==='ghost2-substitute'?battle.s.time+1:null,spawnSpec:{...spec}};
   battle.s.summons.push(row);if(ctrl&&!spec.preparedCard)ctrl.stock--;
  log(battle,'summon',{uid,ownerUid:owner.uid,type:spec.type,x,y});return row;
+}
+// 召唤物的「持续时长 / 自身再部署时间」（用户 2026-09-22 口径：布局放置 → 开战自动召唤 → 时长结束退场 →
+// 自己的再部署 CD 转好后按布局位置再次出现）：
+//  * 时长取自召唤者天赋文案（浊心斯卡蒂「可以使用一个持续25秒的海嗣」）；没写时长的（狼群、流形）不自动退场。
+//  * 再部署时间优先取天赋里写明的刷新秒数（缪尔赛思「被击败后会在25秒后自动刷新」），
+//    否则取原表 token 的 respawnTime——那正是这只召唤物自己的再部署时间（海嗣 30 秒、狼群／流形 10 秒）。
+export function summonLifecycle(battle,owner,type){
+ const token=TOKEN_IDS[type]&&battle?.data?.tokens?.[TOKEN_IDS[type]];
+ const attrs=token?.phases?.[0]?.attributesKeyFrames?.[0]?.data;
+ const texts=(owner?activeTalentsOf(battle,owner):[]).map(t=>String(t.description||'')).join('\n').replace(/<[^>]+>/g,'');
+ const duration=Number(texts.match(/持续(\d+(?:\.\d+)?)秒/)?.[1])||0;
+ const refresh=Number(texts.match(/(?:被击败|击倒|退场|消失)后(?:会)?在?(\d+(?:\.\d+)?)秒后(?:自动刷新|刷新|重新出现|再次出现)/)?.[1])||0;
+ const redeploy=refresh||Number(attrs?.respawnTime)||0;
+ return {duration,redeploy};
 }
 
 function tickSummons(battle,dt){
@@ -1416,10 +1438,18 @@ function tickSummons(battle,dt){
   }
   if(s.canAttack&&s.deployed&&s.hp>0){s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){const e=enemyActors(battle.s).filter(x=>!x.hidden).sort((a,b)=>chebyshev(s,a)-chebyshev(s,b)||a.uid-b.uid)[0];if(e&&chebyshev(s,e)<=(s.range||1.1)){const buff=s.vigilBuff;for(let i=0;i<(s.lives??1);i++)dealDamage(battle,{source:s,target:e,amount:s.atk*(buff?.scale||1),type:s.damageType||'physical',cause:'attack'});if(buff){const owner=getActor(battle.s,s.ownerUid);if(owner)applyHeal(battle,{source:owner,target:owner,amount:owner.maxHp*buff.heal});s.vigilBuff=null;}s.attackCooldown=s.interval||1;}}}
   }
-  for(const owner of battle.s.units.filter(u=>u.id==='char_1012_skadi2'&&u.deployed&&u.hp>0&&u.summonRespawnAt!=null&&battle.s.time>=u.summonRespawnAt)){
-   if(battle.s.summons.some(s=>s.ownerUid===owner.uid&&s.type==='skadi2-seaborn'&&s.deployed))continue;
-   const talent=activeTalentsOf(battle,owner).find(t=>t.name==='远古血亲');
-   if(talent){const token=spawnSummon(battle,owner,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:Number((talent.description||'').match(/持续(\d+)秒/)?.[1])||30,persistAfterSourceGone:false});if(token)owner.summonRespawnAt=null;}
+  // 召唤物复现：布局位置还在就放回原位（用户 2026-09-22 口径），卡被撤回才退回召唤者身边那一格。
+  for(const owner of battle.s.units){
+   if(owner.hp<=0||!owner.deployed||!owner.summonRespawns)continue;
+   for(const [type,row] of Object.entries(owner.summonRespawns)){
+    if(!row||battle.s.time+1e-9<row.at)continue;
+    if(battle.s.summons.some(s=>s.ownerUid===owner.uid&&s.type===type&&s.deployed))continue;
+    const card=battle.economy?.s?.summonCards?.find(c=>c.uid===row.cardUid&&c.position);
+    const spec=row.spec||{type,tokenId:TOKEN_IDS[type],name:type,targetable:true,canBlock:true,canAttack:true,occupiesTile:true};
+    const life=summonLifecycle(battle,owner,type);
+    const token=spawnSummon(battle,owner,{...spec,type,...(card?{x:card.position.x,y:card.position.y}:{}),duration:life.duration||spec.duration||undefined,preparedCard:true});
+    if(token){token.tacticalCardUid=row.cardUid;delete owner.summonRespawns[type];}
+   }
   }
   for(const owner of battle.s.units.filter(u=>u.id==='char_4162_cathy'&&u.deployed&&u.hp>0)){
   const ctrl=owner.summonCtrl;if(!ctrl)continue;const devices=battle.s.summons.filter(s=>s.ownerUid===owner.uid&&s.type==='cathy-device');

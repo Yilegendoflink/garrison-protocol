@@ -6246,7 +6246,7 @@ function operatorSkillStart(battle,u,ctx){
   u.floatUnits=total;u.floatTarget=battle.targets(u)[0]?.uid??null;u.floatStartedAt=battle.s.time;u.floatOverdrive=has(text,/过载/);if(profile.charId==='char_1038_whitw2'){u.whitwEyeCount=u.floatUnits;u.whitwEyeScatter=Number(bb['attack@projectile_move_speed'])||1;u.whitwEyeRadius=Number(bb['attack@range_radius'])||.9;u.whitwEyeSlow=Math.abs(Number(bb['attack@move_speed'])||.3);u.whitwEyeMagic=Number(bb['attack@magic_atk_scale'])||1;u.whitwEyeTimes=Number(bb['attack@times'])||1;u.whitwEyeFear=Number(bb['attack@fear'])||2;battle.s.whitwEyes=(battle.s.whitwEyes||[]).filter(e=>e.ownerUid!==u.uid||e.skillCount===(u.skillCount??0));}}
  const cost=costValueForText(config,text,'immediate'),immediateText=has(text,/立即获得|技能开启时立即获得/),genericGain=has(text,/获得.*费用|获得.*部署费用/);if(Number.isFinite(cost)&&(immediateText||genericGain)&&(!has(text,/下次攻击|每次|持续|逐渐|击杀|击倒|攻击时/ )||immediateText))battle.gainCost?.(cost);if(Number.isFinite(cost)&&has(text,/获得.*金币/))grantCoins(u,cost,config.coinCap);
  if(profile.charId==='char_1045_svash2'&&battle.adjustReserveCost){const eligible=v=>['WARRIOR','CASTER','SNIPER'].includes(battle.profile(v)?.profession);if(profile.skillIndex===0){const amount=Number(bb['svash2_s_1[deck].cost']);if(amount>0)battle.adjustReserveCost(-amount,{predicate:eligible});}else if(profile.skillIndex===1){const amount=Number(bb.cost);if(amount>0)battle.adjustReserveCost(-amount,{predicate:eligible});}else if(profile.skillIndex===2&&!u.svashCostSwapped){battle.swapReserveBaseCosts(eligible);u.svashCostSwapped=true;}}
- if(Number.isFinite(bb.hp_ratio)&&has(text,/生命/)&&has(text,/流失|损失/)){const base=/当前生命/.test(text)?u.hp:u.maxHp;ctx.applyLoss(battle,{target:u,source:u,amount:base*Math.abs(bb.hp_ratio),minHp:1,cause:'loss'});}
+ if(Number.isFinite(bb.hp_ratio)&&has(text,/生命/)&&has(text,/流失|损失/)&&!has(text,/每秒|逐渐|持续/)){const base=/当前生命/.test(text)?u.hp:u.maxHp;ctx.applyLoss(battle,{target:u,source:u,amount:base*Math.abs(bb.hp_ratio),minHp:1,cause:'loss'});}
  const status=directStatus(text,config),statusAtStart=status&&!has(text,/技能结束|每次攻击|攻击时|受到攻击/)&&has(text,/立即|技能开启时|释放|对周围|对敌人造成/);if(statusAtStart)for(const e of allTargets(battle,u,true))if(applyStatus(e,status.kind,status.duration,{source:u.uid,resistible:false}))ctx.log?.(battle,'status',{uid:e.uid,kind:status.kind,sourceUid:u.uid});
  if(profile.charId==='char_213_mostma'&&profile.skillIndex===1)for(const e of allTargets(battle,u,true))applyStatus(e,'stun',1,{source:u.uid,resistible:false});
  if(has(text,/解除.*异常|清除.*异常/))for(const a of allAllies(battle,u,true))a.statuses=(a.statuses||[]).filter(s=>!['stun','frozen','sleep','fear','terror','tremble','root','silence','levitate'].includes(s.kind));
@@ -6278,7 +6278,12 @@ function operatorSkillStart(battle,u,ctx){
   if(has(text,/下次攻击/)&&has(text,/额外造成|每秒受到|流失/)&&!has(text,/攻击力提高至|攻击力提升至/)){const extraScale=Number(bb.extra_damage_ratio??bb['bleed_atk_scale']??bb['attack@atk_scale']??bb.atk_scale);u.pendingNextAttack={skillCount:u.skillCount,extraScale:Number.isFinite(extraScale)?extraScale:null,extraType:config.damageType||has(text,/法术/)||has(text,/流失/) ? 'arts':'physical',bleedDuration:Number(bb.bleed_duration)||0};suppressDefault=true;}
   if(has(text,/下次攻击.*攻击力(?:提高|提升)至/)&&Number(bb.atkScale)>0)u.pendingAttackScale={skillCount:u.skillCount,scale:Number(bb.atkScale),lossRatio:has(text,/流失/) ? Number(bb.hp_ratio)||0:0};
   if(has(text,/下次攻击.*(?:回复|恢复)自身/)&&(Number(bb.value)>0||Number(bb.hp_ratio)>0))u.pendingAttackSelfHeal={skillCount:u.skillCount,amount:Number(bb.value)>0?Number(bb.value):u.maxHp*Number(bb.hp_ratio)};
- if(has(text,/每[^，。；]*秒.*(?:受到|造成|伤害|损伤)|持续.*(?:受到|造成|伤害|损伤)|周期.*(?:受到|造成|伤害|损伤)/)&&Number.isFinite(periodicScale)&&has(text,/伤害|法术|攻击/)){const requiresStatus=has(text,/处于.*束缚|束缚状态/)?'root':null;ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:Number(bb.projectile_range)|| (config.multiTarget===Infinity?2:1),interval:Math.max(.1,periodicInterval),nextAt:battle.s.time+Math.max(.1,periodicInterval),endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),trackArea:has(text,/区域|影响范围|火墙/),trackSide:has(text,/友方单位|友方干员/)?'all':'enemy',values:{dot:true,atk_scale:periodicScale,type:config.damageType||'arts',requiresStatus},snapshot:{damage:battle.stats(u).atk*periodicScale},refKind:'owner',persistAfterSourceGone:false});}
+ // 通用周期伤害圈的作用对象按「分句」判定，不能只看整段文案里出现过「友方」二字：塞雷娅 S3 是
+ // 「友军每秒回复生命／敌军受到的法术伤害提升」两句拼在一段，浊心斯卡蒂 S3 是同一句里「敌人每秒受到
+ // 真实伤害」与「友方单位获得鼓舞」，流明 S1 的「友方每秒受到治疗效果」根本不是伤害。所以只有
+ // 「同一分句既提到友方又确实是伤害（不含回复／恢复／治疗）」才算打友军；两侧都没有真正的伤害分句
+ // （纯治疗文案）时不建圈，免得给治疗技挂上一个打敌人的持续伤害。
+ if(has(text,/每[^，。；]*秒.*(?:受到|造成|伤害|损伤)|持续.*(?:受到|造成|伤害|损伤)|周期.*(?:受到|造成|伤害|损伤)/)&&Number.isFinite(periodicScale)&&has(text,/伤害|法术|攻击/)){const requiresStatus=has(text,/处于.*束缚|束缚状态/)?'root':null,zoneClauses=String(text).split(/[；;\n]/),zoneAllyDamage=zoneClauses.some(c=>has(c,/友方单位|友方干员|友军|我方单位/)&&has(c,/受到|造成|伤害|损伤/)&&!has(c,/回复|恢复|治疗/)),zoneEnemyDamage=zoneClauses.some(c=>has(c,/敌人|敌方|敌军/)&&has(c,/受到|造成|伤害|损伤/));if(zoneAllyDamage||zoneEnemyDamage)ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:Number(bb.projectile_range)|| (config.multiTarget===Infinity?2:1),interval:Math.max(.1,periodicInterval),nextAt:battle.s.time+Math.max(.1,periodicInterval),endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),trackArea:has(text,/区域|影响范围|火墙/),trackSide:zoneAllyDamage&&!zoneEnemyDamage?'all':'enemy',values:{dot:true,atk_scale:periodicScale,type:has(text,/真实伤害/)?'true':config.damageType||'arts',requiresStatus},snapshot:{damage:battle.stats(u).atk*periodicScale},refKind:'owner',persistAfterSourceGone:false});}
  if(profile.charId==='char_213_mostma'&&profile.skillIndex===1){const radius=Math.max(1,...(battle.range(u,true)||[]).map(p=>Math.max(Math.abs(p.x-u.x),Math.abs(p.y-u.y))));ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'mostma-s2',x:u.x,y:u.y,radius,interval:.5,nextAt:battle.s.time+.5,endsAt:battle.s.time+(duration>0?duration:5),values:{dot:true,stun:1.1,type:'arts',atk_scale:Number(bb.atk_scale)||1.2},snapshot:{damage:battle.stats(u).atk*(Number(bb.atk_scale)||1.2)},refKind:'owner',persistAfterSourceGone:false});return true;}
  if(profile.charId==='char_474_glady'&&profile.skillIndex===2){const target=battle.targets(u)[0]||u,center={x:target.x,y:target.y};u.gladyVortex=center;const hitDuration=Number(bb.hit_duration)||9;if(target!==u)applyStatus(target,'root',hitDuration,{source:u.uid,resistible:false});ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'glady-s3',x:center.x,y:center.y,radius:1.5,interval:Number(bb.interval)||1.5,nextAt:battle.s.time+(Number(bb.interval)||1.5),endsAt:battle.s.time+(duration>0?duration:9),values:{dot:true,sluggish:true,pull:true,type:'arts',atk_scale:Number(bb.atk_scale)||1},snapshot:{damage:battle.stats(u).atk*(Number(bb.atk_scale)||1)},refKind:'owner',persistAfterSourceGone:false});return true;}
  if(profile.charId==='char_171_bldsk'&&profile.skillIndex===1){const candidates=allAllies(battle,u,true).filter(a=>a.uid!==u.uid),target=candidates.length?candidates[Math.floor(battle.economy.random()*candidates.length)]:null;if(target){u.warfarinTargetUid=target.uid;target.warfarinBuff={atk:Number(bb.atk)||0,endsAt:battle.s.time+(Number(bb.duration)||15),sourceUid:u.uid};ctx.addEffect(battle,{kind:'loss',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:target.uid,talentOrSkillId:'warfarin-s2-ally',interval:Number(bb.interval)||1,nextAt:battle.s.time+(Number(bb.interval)||1),endsAt:battle.s.time+(Number(bb.duration)||15),values:{amount:target.maxHp*(Number(bb.hp_ratio)||0)},refKind:'owner',persistAfterSourceGone:false});} }
@@ -6682,7 +6687,15 @@ function commitExit(battle,{target,reason='knockdown',killer=null,event=null}){
   if(target.exitLife===lifeKey(target))return false;
   target.exitLife=lifeKey(target);target.hp=0;target.deployed=false;
   log(battle,'exit',{uid:target.uid,reason,kind:'summon',eventId:event?.eventId});
-   if(target.type==='vigil-wolf'&&reason==='knockdown'){target.lives=0;target.blockCnt=0;target.targetable=false;}else{if(target.type==='skadi2-seaborn'){const owner=getActor(battle.s,target.ownerUid);if(owner)owner.summonRespawnAt=battle.s.time+25;}battle.s.summons=battle.s.summons.filter(x=>x.uid!==target.uid);}
+   if(target.type==='vigil-wolf'&&reason==='knockdown'){target.lives=0;target.blockCnt=0;target.targetable=false;}
+  else{
+   // 布局卡召唤物退场后按「自己的再部署时间」排队复现（用户 2026-09-22 口径）。只有战斗型召唤物
+   // （能攻击或阻挡）且召唤者手上还有对应的召唤物卡时才排队：装置类（支援装置／医疗无人机）由技能
+   // 库存管理，技能临时生成的召唤物（没有卡）也不排队；召唤者已经不在场上了就不再复现。
+   const card=(battle.economy?.s?.summonCards||[]).find(c=>c.ownerUid===target.ownerUid&&c.type===target.type),owner=card?getActor(battle.s,target.ownerUid):null;
+   if(owner&&!target.device&&(target.canAttack||target.canBlock)){const life=summonLifecycle(battle,owner,target.type);if(life.redeploy>0)(owner.summonRespawns??={})[target.type]={at:battle.s.time+life.redeploy,cardUid:card.uid,spec:target.spawnSpec||null};}
+   battle.s.summons=battle.s.summons.filter(x=>x.uid!==target.uid);
+  }
   return true;
  }
  const isEnemy=!!battle.s.enemies.find(e=>e.uid===target.uid);
@@ -7651,7 +7664,7 @@ function onOperatorDeploy(battle,u){
  // 归溟幽灵鲨的替身只在本体切换后存在，不能在每次部署时常驻。
  if(u.id==='char_4134_cetsyr'){const dust=battle.s.summons.filter(s=>s.ownerUid===u.uid&&s.type==='cetsyr-dust'&&s.deployed);for(const extra of dust.slice(3))commitExit(battle,{target:extra,reason:'refresh'});u.cetsyrDust=3;for(let n=Math.min(3,dust.length);n<3;n++)spawnSummon(battle,u,{type:'cetsyr-dust',name:'微尘',synthetic:true,targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:true});}
  if(u.id==='char_4087_ines'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'ines-shadow',x:u.x,y:u.y,radius:2,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+25,trackArea:true,trackSide:'enemy',values:{sluggish:true,reveal:true},snapshot:{},refKind:'live',persistAfterSourceGone:true});commitExit(battle,{target:u,reason:'skill'});}
-  if(u.id==='char_1012_skadi2'&&!battle.s.summons.some(s=>s.ownerUid===u.uid&&s.type==='skadi2-seaborn'&&s.deployed)&&!battle.economy?.s.summonCards?.some(card=>card.ownerUid===u.uid&&card.type==='skadi2-seaborn'&&card.position)){const talent=activeTalentsOf(battle,u).find(t=>t.name==='远古血亲');if(talent){spawnSummon(battle,u,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:Number((talent.description||'').match(/持续(\d+)秒/)?.[1])||30,persistAfterSourceGone:false});u.summonRespawnAt=null;}}
+  if(u.id==='char_1012_skadi2'&&!battle.s.summons.some(s=>s.ownerUid===u.uid&&s.type==='skadi2-seaborn'&&s.deployed)&&!battle.economy?.s.summonCards?.some(card=>card.ownerUid===u.uid&&card.type==='skadi2-seaborn'&&card.position)){const talent=activeTalentsOf(battle,u).find(t=>t.name==='远古血亲');if(talent){spawnSummon(battle,u,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:summonLifecycle(battle,u,'skadi2-seaborn').duration||30,persistAfterSourceGone:false});if(u.summonRespawns)delete u.summonRespawns['skadi2-seaborn'];}}
  if(u.id==='char_103_angel'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='天使的祝福');if(talent){const values=talent.values||{},candidates=battle.s.units.filter(v=>v.uid!==u.uid&&v.deployed&&v.hp>0);if(candidates.length){const target=candidates[Math.floor(battle.economy.random()*candidates.length)];target.angelBlessing={atk:Number(values.atk)||.06,maxHp:Number(values.max_hp)||.1,sourceUid:u.uid};}}}
  if(u.id==='char_332_archet'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='铁弦');if(talent)grantShield(battle,u,{amount:Number(talent.values?.shield_value)||500,sourceUid:u.uid,id:'archet-deploy-shield'});}
  if(u.id==='char_4148_philae'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='神河谕使');u.elementDamageResistance=Number(talent?.values?.damage_resistance)||.1;}
@@ -7768,7 +7781,7 @@ function onOperatorExit(battle,u,reason){
  }
 }
 
-const TOKEN_IDS={'silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
+const TOKEN_IDS={'skadi2-seaborn':'token_10017_skadi2_dedant','silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
 // 荒芜拉普兰德「终幕·浩劫」的特种浮游单元（自由飞行实体，走 battle.s.whitwEyes）。
 // 注意：它和凛御银灰待部署区里的「风雪之眼」不是同一种东西——后者本期不实现（见 onOperatorDeploy 的注释）。
 // 完整流程见 PRTS：散开 1.3s（初速0.1/加速1.9/上限2.0）→ 索敌飞向（初速2.0/加速1.0/上限4.0/转向1/6每帧）
@@ -7884,9 +7897,23 @@ function spawnSummon(battle,owner,spec){
  const position=candidates.find(([x,y])=>{const tile=battle.map.grid[y]?.[x];return tile&&tile.buildableType!=='NONE'&&!tile.obstacle&&(!spec.canBlock||tile.heightType!=='HIGHLAND')&&(spec.occupiesTile===false||!occupied.has(x+','+y))&&(spec.type!=='vigil-wolf'||battle.inside(owner,{x,y}));});
  if(!position)return null;
  const [x,y]=position,a=nativeAttributes(entity,battle.profile(owner).status).attributes,uid=battle.s.nextId++,canBlock=spec.canBlock??a.blockCnt>0,canAttack=spec.canAttack??(a.baseAttackTime>0&&entity.skillRefs?.some(r=>r.skillId));
- const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type||tokenId,name:spec.name||entity.name,kind:'summon',allied:true,x,y,dir:owner.dir,hp:spec.maxHp??a.maxHp,maxHp:spec.maxHp??a.maxHp,atk:spec.atk??a.atk,def:a.def,res:a.magicResistance,damageResistance:spec.damageResistance||0,elementalImmune:!!spec.elementalImmune,isolated:!!spec.isolated,cost:tokenCostFor(battle.profile(owner),tokenId,a.cost),interval:spec.interval??a.baseAttackTime,attackSpeed:spec.attackSpeed??a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],immunities:{...(spec.immunities||{})},shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,canBlock,canAttack,canHeal:spec.canHeal??false,flying:!!spec.flying,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime,nextAuraAt:spec.type==='ghost2-substitute'?battle.s.time+1:null};
+ const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type||tokenId,name:spec.name||entity.name,kind:'summon',allied:true,x,y,dir:owner.dir,hp:spec.maxHp??a.maxHp,maxHp:spec.maxHp??a.maxHp,atk:spec.atk??a.atk,def:a.def,res:a.magicResistance,damageResistance:spec.damageResistance||0,elementalImmune:!!spec.elementalImmune,isolated:!!spec.isolated,cost:tokenCostFor(battle.profile(owner),tokenId,a.cost),interval:spec.interval??a.baseAttackTime,attackSpeed:spec.attackSpeed??a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],immunities:{...(spec.immunities||{})},shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,device:!!spec.device,canBlock,canAttack,canHeal:spec.canHeal??false,flying:!!spec.flying,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime,nextAuraAt:spec.type==='ghost2-substitute'?battle.s.time+1:null,spawnSpec:{...spec}};
   battle.s.summons.push(row);if(ctrl&&!spec.preparedCard)ctrl.stock--;
  log(battle,'summon',{uid,ownerUid:owner.uid,type:spec.type,x,y});return row;
+}
+// 召唤物的「持续时长 / 自身再部署时间」（用户 2026-09-22 口径：布局放置 → 开战自动召唤 → 时长结束退场 →
+// 自己的再部署 CD 转好后按布局位置再次出现）：
+//  * 时长取自召唤者天赋文案（浊心斯卡蒂「可以使用一个持续25秒的海嗣」）；没写时长的（狼群、流形）不自动退场。
+//  * 再部署时间优先取天赋里写明的刷新秒数（缪尔赛思「被击败后会在25秒后自动刷新」），
+//    否则取原表 token 的 respawnTime——那正是这只召唤物自己的再部署时间（海嗣 30 秒、狼群／流形 10 秒）。
+function summonLifecycle(battle,owner,type){
+ const token=TOKEN_IDS[type]&&battle?.data?.tokens?.[TOKEN_IDS[type]];
+ const attrs=token?.phases?.[0]?.attributesKeyFrames?.[0]?.data;
+ const texts=(owner?activeTalentsOf(battle,owner):[]).map(t=>String(t.description||'')).join('\n').replace(/<[^>]+>/g,'');
+ const duration=Number(texts.match(/持续(\d+(?:\.\d+)?)秒/)?.[1])||0;
+ const refresh=Number(texts.match(/(?:被击败|击倒|退场|消失)后(?:会)?在?(\d+(?:\.\d+)?)秒后(?:自动刷新|刷新|重新出现|再次出现)/)?.[1])||0;
+ const redeploy=refresh||Number(attrs?.respawnTime)||0;
+ return {duration,redeploy};
 }
 
 function tickSummons(battle,dt){
@@ -7934,10 +7961,18 @@ function tickSummons(battle,dt){
   }
   if(s.canAttack&&s.deployed&&s.hp>0){s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){const e=enemyActors(battle.s).filter(x=>!x.hidden).sort((a,b)=>chebyshev(s,a)-chebyshev(s,b)||a.uid-b.uid)[0];if(e&&chebyshev(s,e)<=(s.range||1.1)){const buff=s.vigilBuff;for(let i=0;i<(s.lives??1);i++)dealDamage(battle,{source:s,target:e,amount:s.atk*(buff?.scale||1),type:s.damageType||'physical',cause:'attack'});if(buff){const owner=getActor(battle.s,s.ownerUid);if(owner)applyHeal(battle,{source:owner,target:owner,amount:owner.maxHp*buff.heal});s.vigilBuff=null;}s.attackCooldown=s.interval||1;}}}
   }
-  for(const owner of battle.s.units.filter(u=>u.id==='char_1012_skadi2'&&u.deployed&&u.hp>0&&u.summonRespawnAt!=null&&battle.s.time>=u.summonRespawnAt)){
-   if(battle.s.summons.some(s=>s.ownerUid===owner.uid&&s.type==='skadi2-seaborn'&&s.deployed))continue;
-   const talent=activeTalentsOf(battle,owner).find(t=>t.name==='远古血亲');
-   if(talent){const token=spawnSummon(battle,owner,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:Number((talent.description||'').match(/持续(\d+)秒/)?.[1])||30,persistAfterSourceGone:false});if(token)owner.summonRespawnAt=null;}
+  // 召唤物复现：布局位置还在就放回原位（用户 2026-09-22 口径），卡被撤回才退回召唤者身边那一格。
+  for(const owner of battle.s.units){
+   if(owner.hp<=0||!owner.deployed||!owner.summonRespawns)continue;
+   for(const [type,row] of Object.entries(owner.summonRespawns)){
+    if(!row||battle.s.time+1e-9<row.at)continue;
+    if(battle.s.summons.some(s=>s.ownerUid===owner.uid&&s.type===type&&s.deployed))continue;
+    const card=battle.economy?.s?.summonCards?.find(c=>c.uid===row.cardUid&&c.position);
+    const spec=row.spec||{type,tokenId:TOKEN_IDS[type],name:type,targetable:true,canBlock:true,canAttack:true,occupiesTile:true};
+    const life=summonLifecycle(battle,owner,type);
+    const token=spawnSummon(battle,owner,{...spec,type,...(card?{x:card.position.x,y:card.position.y}:{}),duration:life.duration||spec.duration||undefined,preparedCard:true});
+    if(token){token.tacticalCardUid=row.cardUid;delete owner.summonRespawns[type];}
+   }
   }
   for(const owner of battle.s.units.filter(u=>u.id==='char_4162_cathy'&&u.deployed&&u.hp>0)){
   const ctrl=owner.summonCtrl;if(!ctrl)continue;const devices=battle.s.summons.filter(s=>s.ownerUid===owner.uid&&s.type==='cathy-device');
@@ -7952,7 +7987,7 @@ function blockingActors(battle){
  return attackableAllies(battle.s).filter(u=>u.canBlock!==false&&(u.kind!=='summon'||u.canBlock));
 }
 
-return {BATTLE_SCHEMA_VERSION,EFFECT_KINDS,ELEMENT_TYPES,emptySettle,ensureBattleShape,migrateBattle,validateBattle,getActor,enemyWineBuffs,operators,alliedActors,enemyActors,enemyOpponents,attackableAllies,lifeKey,chebyshev,activeTalentsOf,operatorSkillConfig,enqueue,drainQueue,commitExit,reviveActor,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addDamageRedirect,queueDelayedDamage,addEffect,tickLogic,revealEnemy,settleEgirSwallow,tickDoll,effectStatMods,teleportActor,moveActor,canRelocateTo,nearbySpots,projectSpot,dispatch,grantShield,grantGuard,spawnWhitwEyes,tickWhitwEyes,spawnSummon,newAttackId,blockingActors};
+return {BATTLE_SCHEMA_VERSION,EFFECT_KINDS,ELEMENT_TYPES,emptySettle,ensureBattleShape,migrateBattle,validateBattle,getActor,enemyWineBuffs,operators,alliedActors,enemyActors,enemyOpponents,attackableAllies,lifeKey,chebyshev,activeTalentsOf,operatorSkillConfig,enqueue,drainQueue,commitExit,reviveActor,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addDamageRedirect,queueDelayedDamage,addEffect,tickLogic,revealEnemy,settleEgirSwallow,tickDoll,effectStatMods,teleportActor,moveActor,canRelocateTo,nearbySpots,projectSpot,dispatch,grantShield,grantGuard,spawnWhitwEyes,tickWhitwEyes,spawnSummon,summonLifecycle,newAttackId,blockingActors};
 },
 "native-environment.js": function(load) {
 const {dealDamage,alliedActors} = load("native-effects.js");
@@ -9839,7 +9874,7 @@ const {containsTarget} = load("targeting.js");
 const {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds,TENTATIVE_PROJECTILE_SPEED,enemyBehaviorProfile,enemyTargetValid,enemyTargetInRange,enemyShouldHoldPosition,enemySpecialTraitId,enemyBleedingTraitId,ENEMY_MOVEMENT_POLICIES} = load("native-combat.js");
 const {skillWidensRange,rangeGeometry} = load("protocol.js");
 const {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,tokenCostFor} = load("native-operator-effects.js");
-const {settleEgirSwallow,tickDoll,enemyOpponents,enemyWineBuffs,ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,canRelocateTo,nearbySpots,spawnSummon,grantGuard,chebyshev} = load("native-effects.js");
+const {settleEgirSwallow,tickDoll,enemyOpponents,enemyWineBuffs,ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,summonLifecycle,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,canRelocateTo,nearbySpots,spawnSummon,grantGuard,chebyshev} = load("native-effects.js");
 class NativeBattle {
  constructor(data,economy,map,turn,{restore=false}={}){
   this.data=data;this.economy=economy;this.map=map;this.turn=turn;this.operatorRegistry=operatorRegistry(data);
@@ -9865,7 +9900,7 @@ class NativeBattle {
    if(card.type==='vigil-wolf')token=spawnSummon(this,owner,{type:'vigil-wolf',name:'狼群',x:card.position.x,y:card.position.y,targetable:true,canBlock:true,canAttack:true,blockCnt:2,lives:2,nextLifeAt:this.s.time+25,occupiesTile:true,preparedCard:true});
    if(card.type==='mlyss-fluid')token=spawnSummon(this,owner,{type:'mlyss-fluid',name:'流形',x:card.position.x,y:card.position.y,synthetic:true,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,persistAfterSourceGone:true,preparedCard:true});
    if(card.type==='silent-drone')token=spawnSummon(this,owner,{type:'silent-drone',name:'医疗无人机',x:card.position.x,y:card.position.y,targetable:false,healable:false,canBlock:false,canAttack:false,canHeal:true,device:true,maxHp:1,atk:this.stats(owner).atk,duration:10,persistAfterSourceGone:true,healScale:.5,preparedCard:true});
-   if(card.type==='skadi2-seaborn')token=spawnSummon(this,owner,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',x:card.position.x,y:card.position.y,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:30,persistAfterSourceGone:false,preparedCard:true});
+   if(card.type==='skadi2-seaborn')token=spawnSummon(this,owner,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',x:card.position.x,y:card.position.y,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:summonLifecycle(this,owner,'skadi2-seaborn').duration||25,persistAfterSourceGone:false,preparedCard:true});
    if(card.type==='cathy-device'){const anchor=this.s.units.filter(v=>v.uid!==owner.uid).sort((a,b)=>Math.hypot(a.x-card.position.x,a.y-card.position.y)-Math.hypot(b.x-card.position.x,b.y-card.position.y))[0];token=spawnSummon(this,owner,{type:'cathy-device',name:'支援装置',x:card.position.x,y:card.position.y,targetable:false,healable:false,canBlock:false,anchorUid:anchor?.uid,occupiesTile:false,device:true,preparedCard:true});if(token&&anchor){token.nextShieldAt=this.s.time;token.shieldId='cathy-'+token.uid;token.shieldCap=this.stats(owner).maxHp*.2;}}
    if(token){token.tacticalCardUid=card.uid;token.dir=card.dir??owner.dir;}
   }
@@ -11629,6 +11664,36 @@ const FORM_TINT_STYLE={
  ember:{fill:'rgba(88,40,20,0.45)'},
  puppet:{fill:'rgba(58,46,78,0.45)'}
 };
+// 傀儡师（归溟幽灵鲨等）进入替身状态时，给头像盖一层**动态紫色特效**：紫色罩色 + 两条反向旋转的
+// 弧环 + 一条上下扫过的高光带，让「这是替身、不是本体」一眼看得出来。reduceFx 时只留静止的一圈紫罩。
+// 判定只看 actor.dollForm（native-effects 的 tickDoll 维护），与其它 overlay 一样不参与任何规则结算。
+function drawDollOverlay(c,actor,box,opts={}){
+ if(!actor||!actor.dollForm||!box||!(box.w>0)||!(box.h>0))return false;
+ const reduce=!!opts.reduceFx,time=Number(opts.time)||0,cx=box.x+box.w/2,cy=box.y+box.h/2;
+ c.save();
+ const wash=c.createLinearGradient?c.createLinearGradient(box.x,box.y,box.x,box.y+box.h):null;
+ if(wash){wash.addColorStop(0,'rgba(158,96,226,0.46)');wash.addColorStop(.55,'rgba(122,72,198,0.22)');wash.addColorStop(1,'rgba(92,52,172,0.5)');c.fillStyle=wash;}
+ else c.fillStyle='rgba(132,84,206,0.36)';
+ c.fillRect(box.x,box.y,box.w,box.h);
+ c.save();
+ c.globalCompositeOperation='lighter';
+ const r=Math.max(box.w,box.h)*.44;
+ for(const [dir,alpha] of [[1,.52],[-1,.34]]){
+  c.strokeStyle='rgba(200,156,255,'+alpha+')';c.lineWidth=Math.max(1.5,box.w*.07);
+  c.beginPath();
+  if(reduce)c.arc(cx,cy,r,0,Math.PI*2);
+  else c.arc(cx,cy,r*(1+.04*Math.sin(time*3.4)),time*2.4*dir,time*2.4*dir+Math.PI*1.15);
+  c.stroke();
+ }
+ if(!reduce){
+  // 上下扫过的一条紫色光带：与隐匿马赛克的灰带同一手法，但换成紫色且更亮。
+  const sweep=(time*.8)%1.35-.15,y=box.y+box.h*(1-sweep),band=c.createLinearGradient?c.createLinearGradient(0,y-box.h*.12,0,y+box.h*.12):null;
+  if(band){band.addColorStop(0,'rgba(196,148,255,0)');band.addColorStop(.5,'rgba(226,196,255,.55)');band.addColorStop(1,'rgba(196,148,255,0)');c.fillStyle=band;c.fillRect(box.x,y-box.h*.12,box.w,box.h*.24);}
+ }
+ c.restore();
+ c.restore();
+ return true;
+}
 const formTintCache=new Map();
 // 返回的对象被刻意补上 complete/naturalWidth/naturalHeight，好让它顶替 Image 传给
 // drawImage 与 drawConcealOverlay（隐匿马赛克因此取的是同一张图）。立绘没解码完时不缓存，下一帧重试。
@@ -11733,7 +11798,7 @@ function drawDominion(c,point,z,battle){
  c.restore();return true;
 }
 
-return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawWhitwEyes,drawWideSweep,drawSelfBurst,drawAuraField,drawZones,drawSkillFan,drawDisplace,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing,concealActive,drawConcealOverlay,FORM_TINT_STYLE,formTintedImage,drawEnemyProjectiles,drawEnemyPhase,drawDominion};
+return {resetFxClock,unlockAudio,playBattleEvents,recent,attackVisual,actorOffset,drawIceWind,drawWhitwEyes,drawWideSweep,drawSelfBurst,drawAuraField,drawZones,drawSkillFan,drawDisplace,drawFx,drawStatuses,drawElementRing,frostKindOf,drawFrostOverlay,drawDownRing,concealActive,drawConcealOverlay,FORM_TINT_STYLE,drawDollOverlay,formTintedImage,drawEnemyProjectiles,drawEnemyPhase,drawDominion};
 },
 "native-flight.js": function(load) {
 // 自由飞行移动原语（连续坐标，不做格子吸附、不走路网）。
@@ -12929,7 +12994,7 @@ const {renderLobby} = load("native-lobby.js");
 const {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText,battleBoardVisible,bondCurrentPreviewHtml,isolatedPlatform,tileLiftAmount,ROUND_LEAK_CAP,enemySprite} = load("protocol.js");
 const {strategyCoverage} = load("strategy.js");
 const {spBarFill} = load("native-sp.js");
-const {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay,drawConcealOverlay,drawWhitwEyes,formTintedImage} = load("native-fx.js");
+const {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay,drawConcealOverlay,drawDollOverlay,drawWhitwEyes,formTintedImage} = load("native-fx.js");
 const {renderSkillDescription} = load("native-skill-text.js");
 const {zoneVisual} = load("native-operator-effects.js");
 const {EGG_BASE_MODE,EGG_MODE_ID,apply325Display,egg325Active,format325,rewrite325Text} = load("native-325.js");
@@ -13357,6 +13422,8 @@ function draw(){
   drawElementRing(c,p.x,p.y,u,size);
   drawFrostOverlay(c,u,{x:p.x-size/2,y:p.y-size*.75,w:size,h:size},{reduceFx:state.reduceFx});
   drawConcealOverlay(c,u,{x:p.x-size/2,y:p.y-size*.75,w:size,h:size},{reduceFx:state.reduceFx,time:g.battle?.s.time||0,image:im});
+  // 傀儡师替身形态：头像上盖一层动态紫色特效（用户 2026-09-22 口径），和「替身 Ns」文字一起用。
+  drawDollOverlay(c,u,{x:p.x-size/2,y:p.y-size*.75,w:size,h:size},{reduceFx:state.reduceFx,time:g.battle?.s.time||0});
   if(u.hp!==undefined&&u.deployed){c.fillStyle='#122022';c.fillRect(p.x-size/2,p.y+size*.35,size,4);c.fillStyle='#75d9aa';c.fillRect(p.x-size/2,p.y+size*.35,size*Math.max(0,u.hp/u.maxHp),4);}
   const sk=profile(u)?.skill,cost=g.battle&&u.sp!==undefined?g.battle.spCost(u):sk?.spData?.spCost||0,fill=spBarFill(u,sk,cost);if(fill&&u.deployed){const bx=p.x-size/2,by=p.y+size*.35+(u.hp!==undefined?6:0);if(fill.kind==='ammo'){const n=fill.cells,gap=1,cw=Math.max(1,(size-(n-1)*gap)/n);for(let i=0;i<n;i++){c.fillStyle='#122022';c.fillRect(bx+i*(cw+gap),by,cw,4);if(i<fill.filled){c.fillStyle='#f4d38b';c.fillRect(bx+i*(cw+gap),by,cw,4);}}}else{c.fillStyle='#122022';c.fillRect(bx,by,size,3);c.fillStyle=fill.on?'#f4d38b':fill.ready?'#f0d18a':'#7bbaf3';c.fillRect(bx,by,size*fill.ratio,3);}}
   if(u.dollForm){c.fillStyle='#d6b5ff';c.font='bold 11px sans-serif';c.textAlign='center';c.fillText('替身 '+Math.max(0,Math.ceil(u.dollForm.until-(g.battle?.s.time||0)))+'s',p.x,p.y-size*.86);}

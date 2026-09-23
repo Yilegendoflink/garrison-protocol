@@ -656,6 +656,36 @@ export const FORM_TINT_STYLE={
  ember:{fill:'rgba(88,40,20,0.45)'},
  puppet:{fill:'rgba(58,46,78,0.45)'}
 };
+// 傀儡师（归溟幽灵鲨等）进入替身状态时，给头像盖一层**动态紫色特效**：紫色罩色 + 两条反向旋转的
+// 弧环 + 一条上下扫过的高光带，让「这是替身、不是本体」一眼看得出来。reduceFx 时只留静止的一圈紫罩。
+// 判定只看 actor.dollForm（native-effects 的 tickDoll 维护），与其它 overlay 一样不参与任何规则结算。
+export function drawDollOverlay(c,actor,box,opts={}){
+ if(!actor||!actor.dollForm||!box||!(box.w>0)||!(box.h>0))return false;
+ const reduce=!!opts.reduceFx,time=Number(opts.time)||0,cx=box.x+box.w/2,cy=box.y+box.h/2;
+ c.save();
+ const wash=c.createLinearGradient?c.createLinearGradient(box.x,box.y,box.x,box.y+box.h):null;
+ if(wash){wash.addColorStop(0,'rgba(158,96,226,0.46)');wash.addColorStop(.55,'rgba(122,72,198,0.22)');wash.addColorStop(1,'rgba(92,52,172,0.5)');c.fillStyle=wash;}
+ else c.fillStyle='rgba(132,84,206,0.36)';
+ c.fillRect(box.x,box.y,box.w,box.h);
+ c.save();
+ c.globalCompositeOperation='lighter';
+ const r=Math.max(box.w,box.h)*.44;
+ for(const [dir,alpha] of [[1,.52],[-1,.34]]){
+  c.strokeStyle='rgba(200,156,255,'+alpha+')';c.lineWidth=Math.max(1.5,box.w*.07);
+  c.beginPath();
+  if(reduce)c.arc(cx,cy,r,0,Math.PI*2);
+  else c.arc(cx,cy,r*(1+.04*Math.sin(time*3.4)),time*2.4*dir,time*2.4*dir+Math.PI*1.15);
+  c.stroke();
+ }
+ if(!reduce){
+  // 上下扫过的一条紫色光带：与隐匿马赛克的灰带同一手法，但换成紫色且更亮。
+  const sweep=(time*.8)%1.35-.15,y=box.y+box.h*(1-sweep),band=c.createLinearGradient?c.createLinearGradient(0,y-box.h*.12,0,y+box.h*.12):null;
+  if(band){band.addColorStop(0,'rgba(196,148,255,0)');band.addColorStop(.5,'rgba(226,196,255,.55)');band.addColorStop(1,'rgba(196,148,255,0)');c.fillStyle=band;c.fillRect(box.x,y-box.h*.12,box.w,box.h*.24);}
+ }
+ c.restore();
+ c.restore();
+ return true;
+}
 const formTintCache=new Map();
 // 返回的对象被刻意补上 complete/naturalWidth/naturalHeight，好让它顶替 Image 传给
 // drawImage 与 drawConcealOverlay（隐匿马赛克因此取的是同一张图）。立绘没解码完时不缓存，下一帧重试。

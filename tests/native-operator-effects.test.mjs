@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {operatorRegistry,skillConfig,statMods} from '../dist/native-operator-effects.js';
-import {openBattle,deployNow,enemy,byId} from './effects-harness.mjs';
+import {openBattle,deployNow,enemy,byId,reps} from './effects-harness.mjs';
 import {dealDamage,applyElementDamage,operatorSkillConfig,tickLogic} from '../dist/native-effects.js';
 import {moveActor} from '../dist/native-effects.js';
 import {applyStatus,tickStatuses} from '../dist/status.js';
@@ -88,6 +88,24 @@ test('runtime contains the pinned summon token catalogue for later per-operator 
 test('area skill adapters retain both enemy damage and ally regeneration channels',()=>{
  const {b}=openBattle({chessId:'chess_char_5_15_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);
  const zones=b.s.logicEffects.filter(f=>f.sourceUid===u.uid);assert.ok(zones.some(f=>f.values?.dot&&f.trackArea));assert.ok(zones.some(f=>f.values?.hot&&f.trackArea));assert.ok(zones.every(f=>f.endsAt===null));
+});
+
+test('generic periodic zone picks its side per clause and never fires on pure healing text',()=>{
+ // 塞雷娅 S3 的文案是「附近所有友军每秒回复…／附近所有敌军受到的法术伤害+…」两句拼在一段：
+ // 圈只能打敌人，友军只回血（把「敌军」也算成友方就会自己人打自己人）。
+ const saria=openBattle([{chessId:'chess_char_5_11_b',skillIndex:2},{chessId:'chess_char_1_20_b',skillIndex:1}]);deployNow(saria.b);
+ const su=byId(saria.b,'char_202_demkni'),ally=byId(saria.b,'char_107_liskam');
+ ally.hp=ally.maxHp-300;su.sp=saria.b.spCost(su);saria.b.activate(su);
+ const zone=saria.b.s.logicEffects.find(f=>String(f.talentOrSkillId||'').startsWith('skill-zone:char_202_demkni'));
+ assert.ok(zone,'塞雷娅 S3 仍按「敌军受到的法术伤害」建圈');assert.equal(zone.trackSide,'enemy');
+ const allyHp=ally.hp;for(let i=0;i<35;i++)saria.b.step();assert.ok(ally.hp>=allyHp,'友军不会被自己的周期圈打到');
+ // 流明 S1 写的是「友方每秒受到…治疗效果」，压根不是伤害：不该给治疗技挂一个打敌人的周期圈。
+ const lumen=openBattle([{...reps.operators.lumen,skillIndex:0},reps.operators.yak]);deployNow(lumen.b);
+ const lu=byId(lumen.b,'char_4042_lumen'),luAlly=byId(lumen.b,'char_199_yak');
+ luAlly.x=lu.x+1;luAlly.y=lu.y;luAlly.hp=luAlly.maxHp-60;lu.sp=lumen.b.spCost(lu)+2;lumen.b.activate(lu);lumen.b.heal(lu,luAlly,8);
+ assert.ok(!lumen.b.s.logicEffects.some(f=>String(f.talentOrSkillId||'').startsWith('skill-zone:')),'纯治疗文案不建周期伤害圈');
+ assert.ok(lumen.b.s.logicEffects.some(f=>f.kind==='hot'),'治疗通道照旧');
+ const luHp=luAlly.hp;for(let i=0;i<35;i++)lumen.b.step();assert.ok(luAlly.hp>=luHp);
 });
 
 test('timed ammo talents grant their bonus once and feed the next activation',()=>{

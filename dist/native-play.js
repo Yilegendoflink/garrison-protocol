@@ -12,7 +12,7 @@ import {renderLobby} from './native-lobby.js';
 import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText,battleBoardVisible,bondCurrentPreviewHtml,isolatedPlatform,tileLiftAmount,ROUND_LEAK_CAP,enemySprite} from './protocol.js';
 import {strategyCoverage} from './strategy.js';
 import {spBarFill} from './native-sp.js';
-import {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay,drawConcealOverlay,drawWhitwEyes,formTintedImage} from './native-fx.js';
+import {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay,drawConcealOverlay,drawDollOverlay,drawWhitwEyes,formTintedImage} from './native-fx.js';
 import {renderSkillDescription} from './native-skill-text.js';
 import {zoneVisual} from './native-operator-effects.js';
 import {EGG_BASE_MODE,EGG_MODE_ID,apply325Display,egg325Active,format325,rewrite325Text} from './native-325.js';
@@ -441,6 +441,8 @@ function draw(){
   drawElementRing(c,p.x,p.y,u,size);
   drawFrostOverlay(c,u,{x:p.x-size/2,y:p.y-size*.75,w:size,h:size},{reduceFx:state.reduceFx});
   drawConcealOverlay(c,u,{x:p.x-size/2,y:p.y-size*.75,w:size,h:size},{reduceFx:state.reduceFx,time:g.battle?.s.time||0,image:im});
+  // 傀儡师替身形态：头像上盖一层动态紫色特效（用户 2026-09-22 口径），和「替身 Ns」文字一起用。
+  drawDollOverlay(c,u,{x:p.x-size/2,y:p.y-size*.75,w:size,h:size},{reduceFx:state.reduceFx,time:g.battle?.s.time||0});
   if(u.hp!==undefined&&u.deployed){c.fillStyle='#122022';c.fillRect(p.x-size/2,p.y+size*.35,size,4);c.fillStyle='#75d9aa';c.fillRect(p.x-size/2,p.y+size*.35,size*Math.max(0,u.hp/u.maxHp),4);}
   const sk=profile(u)?.skill,cost=g.battle&&u.sp!==undefined?g.battle.spCost(u):sk?.spData?.spCost||0,fill=spBarFill(u,sk,cost);if(fill&&u.deployed){const bx=p.x-size/2,by=p.y+size*.35+(u.hp!==undefined?6:0);if(fill.kind==='ammo'){const n=fill.cells,gap=1,cw=Math.max(1,(size-(n-1)*gap)/n);for(let i=0;i<n;i++){c.fillStyle='#122022';c.fillRect(bx+i*(cw+gap),by,cw,4);if(i<fill.filled){c.fillStyle='#f4d38b';c.fillRect(bx+i*(cw+gap),by,cw,4);}}}else{c.fillStyle='#122022';c.fillRect(bx,by,size,3);c.fillStyle=fill.on?'#f4d38b':fill.ready?'#f0d18a':'#7bbaf3';c.fillRect(bx,by,size*fill.ratio,3);}}
   if(u.dollForm){c.fillStyle='#d6b5ff';c.font='bold 11px sans-serif';c.textAlign='center';c.fillText('替身 '+Math.max(0,Math.ceil(u.dollForm.until-(g.battle?.s.time||0)))+'s',p.x,p.y-size*.86);}
