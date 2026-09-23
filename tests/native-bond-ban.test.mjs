@@ -4,10 +4,10 @@ import {NATIVE_DATA as data} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {runGarrison} from '../dist/garrison.js';
 import {
- BAN_CORE_COUNT,BAN_EXTRA_COUNT,BOND_BAN_EXCLUDED,BOND_BAN_KEY,BOND_BAN_VERSION,BOND_EXEMPT_TABLE,
- banPool,bondBanBlockers,bondBanIds,bondBanSummary,bondIds,bondIsBanExcluded,bondIsCore,
+ BAN_CORE_COUNT,BAN_EXTRA_COUNT,BOND_BAN_DEFAULT_NEVER,BOND_BAN_EXCLUDED,BOND_BAN_KEY,BOND_BAN_VERSION,BOND_EXEMPT_TABLE,
+ banModeOf,banPool,banRules,bondBanBlockers,bondBanIds,bondBanSummary,bondIds,bondIsBanExcluded,bondIsCore,
  bondBanBriefingHtml,bannedOperatorsHtml,activeBondBan,
- bondMembers,bondName,bondRoster,charIdOf,defaultBondExempt,isOperatorBanned,loadBondBan,normalizeBondBan,
+ bondMembers,bondName,bondRoster,charIdOf,defaultBanRules,defaultBondExempt,isOperatorBanned,loadBondBan,normalizeBondBan,
  resolveBondExempt,saveBondBan,
 } from '../dist/native-bond-ban.js';
 import {editorState,renderWaveEditor,applyEditorAction} from '../dist/native-wave-editor.js';
@@ -24,16 +24,21 @@ const sessionWith=(bonds,exempt,options={})=>new NativeSession(data,{seed:7,bond
 const firstMember=bond=>bondMembers(data,bond)[0];
 const multiBondRow=()=>{for(const bond of bondIds(data))for(const row of bondMembers(data,bond))if(row.bonds.length>1)return row;return null;};
 
-test('每局随机禁 3 个核心 + 4 个附加盟约，协防干员／绝技／调和／独行不入池，同一 seed 结果固定',()=>{
+test('每局随机禁 3 个核心 + 4 个附加盟约，默认方案里投资人也不入池，同一 seed 结果固定',()=>{
  const {core,extra}=banPool(data);
  assert.equal(BAN_CORE_COUNT,3);assert.equal(BAN_EXTRA_COUNT,4);
  assert.equal(bondIds(data).length,23);
  assert.equal(core.length,8,'8 个核心盟约全部可被禁');
- assert.equal(extra.length,11,'15 个附加盟约里除去固定豁免的 4 个，剩 11 个可被禁');
+ assert.equal(extra.length,10,'15 个附加盟约里除去 5 个默认不被随机禁的，剩 10 个可被禁');
  assert.deepEqual(core.filter(bondIsBanExcluded),[]);
  assert.deepEqual(extra.filter(bondIsBanExcluded),[]);
  for(const id of BOND_BAN_EXCLUDED)assert.equal(bondIsBanExcluded(id),true);
  assert.deepEqual([...BOND_BAN_EXCLUDED].sort(),['emptyShip','maniShip','soloShip','suntShip'],'固定不被禁的是协防干员／绝技／调和／独行');
+ // 用户 2026-09-22 补充口径：默认方案里投资人也固定不被随机禁用（仍可在「禁用方案」页改回去）。
+ assert.deepEqual([...BOND_BAN_DEFAULT_NEVER],['emptyShip','suntShip','maniShip','soloShip','investShip'],'默认不被随机禁用的名单＝四个固定豁免 ＋ 投资人');
+ assert.equal(bondName(data,'investShip'),'投资人');
+ assert.equal(banModeOf(banRules(null,data),'investShip'),'never','默认方案里投资人是「固定不被禁」');
+ assert.equal(extra.includes('investShip'),false,'投资人不进随机池');
  for(const seed of [1,2,3,7,42,999]){
   const ids=bondBanIds(data,seed);
   assert.equal(ids.length,7);
@@ -41,17 +46,69 @@ test('每局随机禁 3 个核心 + 4 个附加盟约，协防干员／绝技／
   assert.equal(ids.filter(id=>bondIsCore(data,id)).length,3,'核心盟约固定 3 个');
   assert.equal(ids.filter(id=>!bondIsCore(data,id)).length,4,'附加盟约固定 4 个');
   assert.deepEqual(ids.filter(bondIsBanExcluded),[],'固定豁免的盟约不许被抽中');
+  assert.equal(ids.includes('investShip'),false,'投资人默认不会被随机禁到');
   assert.deepEqual(bondBanIds(data,seed),ids,'同一 seed 必须抽到同一批');
  }
  // 不受模式表影响：模式表声明过的盟约（只要在可禁池里）同样会被抽中，说明抽取范围不是模式表。
  const declared=new Set(Object.values(data.season.modeDataDict).flatMap(m=>m.inactiveBondIdList||[]));
  assert.ok(declared.size>0,'模式表本身应当声明禁用盟约，用于确认我们没在读它');
  const drawn=new Set(Array.from({length:400},(_,i)=>bondBanIds(data,i)).flat());
- const declaredDrawable=[...declared].filter(id=>!bondIsBanExcluded(id));
+ const declaredDrawable=[...declared].filter(id=>!bondIsBanExcluded(id)&&id!=='investShip');
  assert.ok(declaredDrawable.length>0,'模式表里应当有可被禁的盟约');
  assert.ok(declaredDrawable.every(id=>drawn.has(id)),'模式表声明过的盟约同样会被抽中（说明没按模式表过滤）');
- assert.deepEqual([...drawn].sort(),[...core,...extra].sort(),'可禁的 19 个盟约都会出现在抽取范围里');
- for(const id of BOND_BAN_EXCLUDED)assert.equal(drawn.has(id),false,'固定豁免的盟约永远不进抽取范围');
+ assert.deepEqual([...drawn].sort(),[...core,...extra].sort(),'可禁的 18 个盟约都会出现在抽取范围里');
+ for(const id of BOND_BAN_DEFAULT_NEVER)assert.equal(drawn.has(id),false,'默认不被随机禁的盟约永远不进抽取范围');
+});
+
+test('禁用方案：固定禁用每局必缺席且不占随机名额，固定不被禁的永不入池',()=>{
+ // 用户 2026-09-22 追加口径：核心盟约与附加盟约各自可选「固定禁用／参与随机／不被禁」。
+ const config={always:['yanShip','investShip'],never:['emptyShip','kjeragShip']};
+ const rules=banRules(config,data);
+ assert.deepEqual(rules.fixed,['yanShip','investShip']);
+ assert.deepEqual(rules.never,['emptyShip','kjeragShip']);
+ assert.equal(banModeOf(rules,'yanShip'),'fixed');
+ assert.equal(banModeOf(rules,'kjeragShip'),'never');
+ assert.equal(banModeOf(rules,'victoriaShip'),'random','没写进两个数组的就是随机候选');
+ // 池子：固定禁用与固定不被禁都不参与随机；谢拉格（核心）与投资人（附加）都被移出池子。
+ const {core,extra}=banPool(data,config);
+ assert.equal(core.length,6);assert.equal(extra.includes('investShip'),false);assert.equal(extra.length,13);
+ for(const seed of [0,1,2,3,4,5,6,7,8,9]){
+  const ids=bondBanIds(data,seed,config);
+  assert.ok(ids.includes('yanShip')&&ids.includes('investShip'),'固定禁用的每局必缺席');
+  assert.equal(ids.includes('emptyShip')||ids.includes('kjeragShip'),false,'固定不被禁的不进池');
+  assert.equal(ids.filter(id=>bondIsCore(data,id)&&id!=='yanShip').length,3,'固定禁用不占随机的 3 个核心名额');
+  assert.equal(ids.filter(id=>!bondIsCore(data,id)&&id!=='investShip').length,4,'也不占附加的 4 个名额');
+  assert.equal(new Set(ids).size,ids.length,'不能重复');
+ }
+ // 同名的两个数组冲突时以「固定禁用」为准，避免状态自相矛盾。
+ const conflict=banRules({always:['yanShip'],never:['yanShip']},data);
+ assert.deepEqual(conflict.fixed,['yanShip']);assert.deepEqual(conflict.never,[]);
+ // 池子被抽干时按池子大小截断，不抛错（把除了 2 个核心以外的全设成固定禁用）。
+ const starved={always:bondIds(data).filter(id=>bondIsCore(data,id)&&!['yanShip','egirShip'].includes(id)),never:['emptyShip','suntShip','maniShip','soloShip','investShip']};
+ const few=bondBanIds(data,4,starved);
+ assert.equal(few.filter(id=>bondIsCore(data,id)).length,2+starved.always.filter(id=>bondIsCore(data,id)).length,'核心候选只剩 2 个时按池子大小抽');
+ assert.equal(new Set(few).size,few.length);
+});
+
+test('禁用方案配置：旧配置补默认方案（投资人依旧不入池），显式清空才是全部参与随机',()=>{
+ const legacy=normalizeBondBan({exempt:{yanShip:[]}},data);
+ assert.deepEqual(legacy.always,[],'旧配置没有 always 字段 → 默认不固定禁用');
+ assert.deepEqual(legacy.never,[...BOND_BAN_DEFAULT_NEVER],'旧配置没有 never 字段 → 补默认方案（含投资人）');
+ const r=banRules({exempt:{}},data);
+ assert.equal(banModeOf(r,'investShip'),'never','默认方案里投资人固定不被随机禁用');
+ // 显式清空 never（「全部参与随机」）才是 23 个全入池。
+ const allRandom=normalizeBondBan({exempt:{},always:[],never:[]},data);
+ assert.deepEqual(allRandom.never,[]);
+ assert.equal(banPool(data,allRandom).core.length+banPool(data,allRandom).extra.length,23,'全部参与随机时 23 个盟约都在池里');
+ const redrawn=new Set(Array.from({length:400},(_,i)=>bondBanIds(data,i,allRandom)).flat());
+ assert.equal(redrawn.has('investShip'),true,'清掉「不被禁」之后投资人能重新被抽中');
+ // 未知盟约／重复项会被清掉。
+ const dirty=normalizeBondBan({exempt:{},always:['yanShip','nope','yanShip'],never:['investShip','nope']},data);
+ assert.deepEqual(dirty.always,['yanShip']);assert.deepEqual(dirty.never,['investShip']);
+ // 默认配置本身就是「内置名单 ＋ 默认禁用方案」。
+ const def=defaultBondExempt(data);
+ assert.deepEqual(def.never,[...BOND_BAN_DEFAULT_NEVER]);
+ assert.deepEqual(def.always,[]);
 });
 
 test('禁用判定＝「挂在被禁盟约名下且不在该盟约的不禁用名单里」，与是否还有其他盟约无关',()=>{
@@ -225,8 +282,8 @@ test('内置不禁用名单：十九条逐条解析到真实干员，口径与�
  // 门禁：名单里每一条「名＋阶」都必须解析成名册上的干员，不允许静默丢掉（写错名字／阶就会挂在这里）。
  const {exempt,unresolved}=resolveBondExempt(data);
  assert.deepEqual(unresolved,[],'内置名单有解析不出来的条目：'+JSON.stringify(unresolved));
- const drawable=[...banPool(data).core,...banPool(data).extra];
- assert.deepEqual(Object.keys(BOND_EXEMPT_TABLE).sort(),drawable.slice().sort(),'内置名单要覆盖全部可被禁的 19 个盟约');
+ const drawable=[...banPool(data).core,...banPool(data).extra,'investShip'];
+ assert.deepEqual(Object.keys(BOND_EXEMPT_TABLE).sort(),[...new Set(drawable)].sort(),'内置名单要覆盖全部可被禁的 18 个盟约 ＋ 默认不被随机禁的投资人');
  for(const id of Object.keys(BOND_EXEMPT_TABLE)){
   for(const charId of exempt[id])assert.ok(bondMembers(data,id).some(row=>row.charId===charId),`${bondName(data,id)} 名单上的 ${charId} 必须是该盟约成员`);
   assert.ok(exempt[id].length<=bondMembers(data,id).length);
@@ -304,15 +361,65 @@ test('编制台的盟约禁用页：逐条勾选、整盟约开关、导出/导�
  assert.ok(renderWaveEditor(data,table,ui).includes('wave-ed-layout'));
 });
 
+test('协议自定义的「禁用方案」页：逐盟约三选一（固定禁用／参与随机／不被禁）',()=>{
+ const ui=editorState(),table=defaultWaveTable();
+ // 页面入口与标题（用户 2026-09-22）：编制台改名为「协议自定义」，新增「禁用方案」页。
+ assert.equal(renderWaveEditor(data,table,editorState()).includes('<h1>协议自定义</h1>'),true,'默认页标题是协议自定义');
+ assert.equal(applyEditorAction('ed-page',{page:'rules'},table,ui,data),'render');
+ assert.equal(ui.page,'rules');
+ const page=renderWaveEditor(data,table,ui);
+ assert.ok(page.includes('<h1>盟约禁用方案</h1>'));
+ assert.equal(page.includes('wave-ed-layout'),false,'方案页不画敌人编制布局');
+ assert.equal((page.match(/data-act="ed-br-mode"/g)||[]).length,bondIds(data).length*3,'每个盟约三个状态按钮');
+ for(const label of ['固定禁用','参与随机','不被禁'])assert.ok(page.includes(`>${label}</button>`),label+' 按钮要在');
+ // 默认方案：投资人标成「不被禁」，且它不在参与随机的那一档。
+ assert.match(page,/data-bond="investShip" data-mode="never" aria-pressed="true"/,'默认方案里投资人是「不被禁」');
+ assert.match(page,/data-bond="yanShip" data-mode="random" aria-pressed="true"/,'核心盟约默认参与随机');
+ // 切到固定禁用：进 always，并被带进每一局的禁用名单（`never` 保持默认方案那 5 个）。
+ assert.equal(applyEditorAction('ed-br-mode',{bond:'yanShip',mode:'fixed'},table,ui,data),'render');
+ assert.deepEqual(ui.bondBan.always,['yanShip']);
+ assert.deepEqual(ui.bondBan.never,[...BOND_BAN_DEFAULT_NEVER]);
+ assert.match(renderWaveEditor(data,table,ui),/data-bond="yanShip" data-mode="fixed" aria-pressed="true"/);
+ assert.ok(bondBanIds(data,3,ui.bondBan).includes('yanShip'),'固定禁用必须出现在每一局的名单里');
+ assert.equal(banPool(data,ui.bondBan).core.includes('yanShip'),false,'固定禁用的不占随机名额');
+ // 再切成不被禁：两边都不固定，也不入池。
+ applyEditorAction('ed-br-mode',{bond:'yanShip',mode:'never'},table,ui,data);
+ assert.deepEqual(ui.bondBan.always,[]);
+ assert.deepEqual(ui.bondBan.never,[...BOND_BAN_DEFAULT_NEVER,'yanShip'],'新加的不被禁排在后面');
+ assert.equal(bondBanIds(data,3,ui.bondBan).includes('yanShip'),false);
+ assert.equal(banPool(data,ui.bondBan).core.includes('yanShip'),false);
+ // 改回参与随机：两个数组里都不再出现，池子里回来。
+ applyEditorAction('ed-br-mode',{bond:'yanShip',mode:'random'},table,ui,data);
+ assert.deepEqual(ui.bondBan.always,[]);assert.deepEqual(ui.bondBan.never,[...BOND_BAN_DEFAULT_NEVER]);
+ assert.equal(banPool(data,ui.bondBan).core.includes('yanShip'),true);
+ // 把投资人从「不被禁」改成参与随机后，它才可能被抽到。
+ applyEditorAction('ed-br-mode',{bond:'investShip',mode:'random'},table,ui,data);
+ assert.deepEqual(ui.bondBan.never,['emptyShip','suntShip','maniShip','soloShip']);
+ assert.equal(banPool(data,ui.bondBan).extra.includes('investShip'),true);
+ // 「恢复默认方案」＝清空固定禁用＋回到默认不被随机禁用的名单（含投资人）。
+ applyEditorAction('ed-br-mode',{bond:'yanShip',mode:'fixed'},table,ui,data);
+ assert.equal(applyEditorAction('ed-br-defaults',{},table,ui,data),'bond-rules-defaults');
+ assert.deepEqual(ui.bondBan.always,[]);assert.deepEqual(ui.bondBan.never,[...BOND_BAN_DEFAULT_NEVER]);
+ assert.equal(banPool(data,ui.bondBan).extra.includes('investShip'),false,'恢复默认方案后投资人重新不入池');
+ // 「全部参与随机」＝两个数组都清空。
+ assert.equal(applyEditorAction('ed-br-random-all',{},table,ui,data),'bond-rules-random');
+ assert.deepEqual(ui.bondBan.always,[]);assert.deepEqual(ui.bondBan.never,[]);
+ assert.equal(banPool(data,ui.bondBan).core.length+banPool(data,ui.bondBan).extra.length,23);
+ // 非法输入不炸也不改配置。
+ applyEditorAction('ed-br-mode',{bond:'nope',mode:'fixed'},table,ui,data);
+ applyEditorAction('ed-br-mode',{bond:'yanShip',mode:'nope'},table,ui,data);
+ assert.deepEqual(ui.bondBan.always,[]);assert.deepEqual(ui.bondBan.never,[]);
+});
+
 test('简报渲染：全部核心盟约都列出（被禁的灰掉划掉），附加盟约只列被禁的，干员进单独弹窗',()=>{
  const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
  const avatar=charId=>`<img alt="" src="./${data.assets[charId]||''}">`;
- const ban={bonds:bondBanIds(data,1),exempt:defaultBondExempt(data).exempt};
+ const ban={bonds:bondBanIds(data,1),exempt:defaultBondExempt(data).exempt,...defaultBanRules()};
  const {core,extra}=banPool(data),banned=new Set(ban.bonds);
  const brief=bondBanBriefingHtml(data,ban,{esc});
  // 把卡片解析成结构化列表再断言（别整段字符串 includes，说明文字里也会出现盟约名）。
  const cards=[...brief.matchAll(/class="native-ban-bond ([a-z ]+)"><b>([^<]+)<\/b><small>([^<]+)<\/small><span>([^<]+)<\/span>/g)]
-  .map(m=>({classes:m[1].split(' '),name:m[2],kind:m[3],status:m[4]}));
+  .map(m=>({classes:m[1].split(' '),name:m[2],kind:m[3].split(' · ')[0],why:m[3].split(' · ')[1],status:m[4]}));
  const coreCards=cards.filter(c=>c.classes.includes('core')),extraCards=cards.filter(c=>c.classes.includes('extra'));
 
  // 核心盟约：8 个全部出现，被禁的 3 个带 banned、其余带 available。
@@ -321,6 +428,8 @@ test('简报渲染：全部核心盟约都列出（被禁的灰掉划掉），�
  assert.equal(coreCards.filter(c=>c.classes.includes('banned')).length,BAN_CORE_COUNT,'核心盟约里被禁的正好 3 个');
  assert.equal(coreCards.filter(c=>c.classes.includes('available')).length,core.length-BAN_CORE_COUNT);
  for(const c of coreCards)assert.equal(c.kind,'核心');
+ assert.ok(coreCards.filter(c=>c.classes.includes('banned')).every(c=>c.why==='随机禁用'),'默认方案下被禁的核心盟约是随机抽中的');
+ assert.ok(coreCards.filter(c=>c.classes.includes('available')).every(c=>['随机候选','固定不禁用'].includes(c.why)),'没被禁的核心要标出是随机候选还是固定不禁用');
  // 附加盟约：只列被禁的那 4 个，而且都是灰掉划掉的。
  const bannedExtra=extra.filter(id=>banned.has(id));
  assert.equal(bannedExtra.length,BAN_EXTRA_COUNT);
@@ -328,15 +437,15 @@ test('简报渲染：全部核心盟约都列出（被禁的灰掉划掉），�
  assert.deepEqual(extraCards.map(c=>c.name).sort(),bannedExtra.map(id=>bondName(data,id)).sort());
  assert.ok(extraCards.every(c=>c.classes.includes('banned')),'列出来的附加盟约都必须是灰掉划掉的');
  for(const c of extraCards)assert.equal(c.kind,'附加');
- // 不在抽取池里的四个固定豁免盟约不许出现在缺席名单里（说明文字里提到它们不算）。
+ // 不在抽取池里的固定豁免盟约不许出现在缺席名单里（说明文字里提到它们不算）。
  const cardNames=new Set(cards.map(c=>c.name));
- for(const id of BOND_BAN_EXCLUDED)assert.equal(cardNames.has(bondName(data,id)),false,`${bondName(data,id)} 固定不被禁，不该出现在缺席名单里`);
+ for(const id of BOND_BAN_DEFAULT_NEVER)assert.equal(cardNames.has(bondName(data,id)),false,`${bondName(data,id)} 固定不被随机禁，不该出现在缺席名单里`);
 
  // 被禁干员进单独弹窗：一人一个头像块，带名字、阶与被哪个缺席盟约挡下。
  const summary=bondBanSummary(data,ban.bonds,ban.exempt);
  const popup=bannedOperatorsHtml(data,ban,{esc,avatar});
- // 对局里没有简报页，所以弹窗自己也要列缺席盟约（核心几个／附加几个，各自是谁）。
- assert.match(popup,new RegExp(`缺席盟约：核心 ${core.filter(id=>banned.has(id)).length} 个`));
+ // 对局里没有简报页，所以弹窗自己也要列缺席盟约（固定禁用几个／随机禁用核心几个／附加几个，各自是谁）。
+ assert.match(popup,new RegExp(`随机禁用：核心 ${core.filter(id=>banned.has(id)).length} 个`));
  assert.match(popup,new RegExp(`附加 ${extra.filter(id=>banned.has(id)).length} 个`));
  for(const id of ban.bonds)assert.ok(popup.includes(bondName(data,id)),`弹窗要列出缺席盟约 ${bondName(data,id)}`);
  assert.equal((popup.match(/<figure/g)||[]).length,summary.operators.length,'每个被禁干员一个头像块');
@@ -356,6 +465,14 @@ test('简报渲染：全部核心盟约都列出（被禁的灰掉划掉），�
  // 没有被禁盟约时不渲染简报，弹窗给出空状态。
  assert.equal(bondBanBriefingHtml(data,{bonds:[],exempt:{}},{esc}),'');
  assert.match(bannedOperatorsHtml(data,{bonds:[],exempt:{}},{esc,avatar}),/本局没有被禁用的干员/);
+ // 固定禁用与随机抽中在简报／弹窗里要能区分（用户 2026-09-22 追加口径）。
+ const fixedBan={bonds:bondBanIds(data,1,{always:['yanShip'],never:['investShip']}),exempt:defaultBondExempt(data).exempt,always:['yanShip'],never:['investShip']};
+ const fixedBrief=bondBanBriefingHtml(data,fixedBan,{esc});
+ const yanCard=[...fixedBrief.matchAll(/class="native-ban-bond ([a-z ]+)"><b>([^<]+)<\/b><small>([^<]+)<\/small>/g)].map(m=>({classes:m[1],name:m[2],kind:m[3]})).find(c=>c.name===bondName(data,'yanShip'));
+ assert.ok(yanCard,'固定禁用的核心盟约也要列出来');
+ assert.ok(yanCard.classes.includes('banned')&&yanCard.kind.includes('固定禁用'),'炎固定禁用 → 灰掉＋划掉＋标「固定禁用」');
+ assert.match(fixedBrief,/固定禁用 1 个盟约（炎）/, '简报要说明固定禁用了哪几个');
+ assert.match(bannedOperatorsHtml(data,fixedBan,{esc,avatar}),/固定禁用 1 个（炎）/, '弹窗首行同样标出固定禁用');
 });
 
 test('弹窗与简报必须取同一份禁用记录：draft 优先，不能被上一局／旧存档留下的空记录顶掉',()=>{

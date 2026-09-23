@@ -639,6 +639,15 @@ html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px
 .wave-ed-bond-member small{color:var(--we-muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wave-ed-bond-member.exempt{background:var(--we-raised)}
 .wave-ed-bond-member.exempt b{color:var(--we-accent)}
+/* 禁用方案页：每张盟约卡三个状态按钮（固定禁用／参与随机／不被禁）。 */
+.wave-ed-rule{gap:0}
+.wave-ed-rule>header>span.wave-ed-rule-mode{margin-left:auto;padding:2px 8px;border:1px solid var(--we-line);border-radius:999px;color:var(--we-muted);font-size:11px;letter-spacing:.06em}
+.wave-ed-rule.is-fixed{border-left:3px solid var(--we-warning)}
+.wave-ed-rule.is-fixed>header>span.wave-ed-rule-mode{border-color:var(--we-warning);color:var(--we-warning)}
+.wave-ed-rule.is-never{border-left:3px solid var(--we-muted)}
+.wave-ed-rule-modes{padding:8px 10px 10px}
+.wave-ed-rule-modes button.chosen{outline:0;border-color:var(--we-accent);color:var(--we-accent);background:var(--we-raised);font-weight:700}
+.wave-ed-rule.is-fixed .wave-ed-rule-modes button.chosen{border-color:var(--we-warning);color:var(--we-warning)}
 .wave-ed-bond .wave-ed-empty{padding:16px 8px!important}
 /* 作战前简报的「盟约缺席情况」：沿用大厅那份深色卡片语言。
    核心盟约全列出来，被禁的灰掉＋划掉；附加盟约只列被禁的，同样灰掉＋划掉。

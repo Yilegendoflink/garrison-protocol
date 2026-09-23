@@ -14,16 +14,20 @@ const play=await readFile(path.join(root,'dist/native-play.js'),'utf8');
 const session=await readFile(path.join(root,'dist/native-session.js'),'utf8');
 const economy=await readFile(path.join(root,'dist/native-economy.js'),'utf8');
 const editor=await readFile(path.join(root,'dist/native-wave-editor.js'),'utf8');
+const lobby=await readFile(path.join(root,'dist/native-lobby.js'),'utf8');
 const build=await readFile(path.join(root,'scripts/build-browser.mjs'),'utf8');
 const banModule=await readFile(path.join(root,'dist/native-bond-ban.js'),'utf8');
 const css=await readFile(path.join(root,'dist/native.css'),'utf8');
 
 test('对局按种子定死本局禁用的盟约，并原样交给 NativeSession',()=>{
- assert.match(play,/bondBan:\{bonds:bondBanIds\(data,seed\),exempt:loadBondBan\(data\)\.exempt\}/,'简报阶段就要算好这批禁用盟约，玩家看到的就是对局真正用的那份');
+ assert.match(play,/const banConfig=loadBondBan\(data\);state\.draft=\{/,'简报阶段先读一次配置（名单＋禁用方案）');
+ assert.match(play,/bondBan:\{bonds:bondBanIds\(data,seed,banConfig\),exempt:banConfig\.exempt,always:banConfig\.always,never:banConfig\.never\}/,'禁用方案要一起带进本局记录，玩家看到的就是对局真正用的那份');
  assert.match(play,/bondBan:state\.draft\.bondBan/,'begin 必须把简报那份禁用记录传进 NativeSession');
  assert.match(play,/function newSandbox\(\)\{const economy=new NativeSession\(data,\{[^}]*bondBan:\{bonds:\[\],exempt:\{\}\}/,'沙盒是技能测试场，要显式关掉禁用（否则点名干员会随种子时有时无）');
  assert.match(session,/this\.s\.bondBan=banOption/,'显式传入优先');
- assert.match(session,/\{bonds:bondBanIds\(this\.data,seed\),exempt:loadBondBan\(this\.data\)\.exempt\}/,'没传也要按种子＋编制台名单算一份，不能静默不启用');
+ assert.match(session,/const normalized=normalizeBondBan\(banOption\|\|loadBondBan\(this\.data\),this\.data\)/,'配置统一走 normalizeBondBan，缺字段时按默认方案补齐');
+ assert.match(session,/bondBanIds\(this\.data,seed,normalized\)/,'没传也要按种子＋配置页方案算一份，不能静默不启用');
+ assert.match(session,/always:normalized\.always,never:normalized\.never/,'会话里留一份禁用方案，供简报／弹窗标出固定禁用还是随机抽中');
 });
 
 test('调配池过滤只有一个入口，商店以外的渠道各自挡住',()=>{
@@ -37,24 +41,35 @@ test('调配池过滤只有一个入口，商店以外的渠道各自挡住',()=
  assert.match(economy,/if\(request\.kind!=='item'&&this\.bondBanned\(id\)\)throw Error/,'抽取结果再兜一道门禁，防止新增抽取路径漏过滤');
 });
 
-test('编制台单独一页配置每个盟约的不禁用名单',()=>{
- assert.match(editor,/data-act="ed-page" data-page="bonds"/,'编制台要有独立页面入口');
+test('协议自定义单独两页：盟约禁用名单 + 禁用方案（固定禁用／随机／不被禁）',()=>{
+ assert.match(editor,/data-act="ed-page" data-page="bonds"/,'名单页入口');
+ assert.match(editor,/data-act="ed-page" data-page="rules"/,'禁用方案页入口');
  assert.match(editor,/function renderBondBanPage\(data,ui\)/,'名单页渲染入口');
+ assert.match(editor,/function renderBondRulePage\(data,ui\)/,'禁用方案页渲染入口');
  assert.match(editor,/data-act="ed-bb-toggle"/,'逐条勾选');
  assert.match(editor,/data-act="ed-bb-all" data-bond="\$\{esc\(id\)\}" data-mode="all"/,'整盟约开关');
+ assert.match(editor,/data-act="ed-br-mode" data-bond="\$\{esc\(id\)\}" data-mode="\$\{value\}"/,'禁用方案页逐盟约三选一');
+ assert.match(editor,/data-act="ed-br-defaults"/,'恢复默认方案');
  assert.match(editor,/saveBondBan\(ui\.bondBan,data\)/,'每次改动都要落盘（localStorage）');
  assert.match(editor,/loadBondBan\(data\)/,'打开页面时读配置');
- assert.match(play,/garrison-bond-ban\.json/,'名单要能单独导出');
+ assert.match(play,/garrison-bond-ban\.json/,'名单／方案要能单独导出');
  assert.match(build,/'native-bond-ban\.js'/,'新模块必须登记进构建脚本');
+ // 编制台改名成「协议自定义」（用户 2026-09-22），大厅入口与页面标题一起改。
+ assert.match(lobby,/data-act="editor"><span class="native-tool-icon">▦<\/span><span><b>协议自定义<\/b>/,'大厅入口叫协议自定义');
+ assert.match(editor,/const title=page==='bonds'\?'盟约禁用名单':page==='rules'\?'盟约禁用方案':'协议自定义'/,'页面标题随 tab 切换');
+ assert.doesNotMatch(editor,/敌人编制台/,'旧的「敌人编制台」字样要清掉');
+ assert.doesNotMatch(lobby,/敌人波次编制台/,'大厅也不该再写旧名');
 });
 
- test('固定不被禁的四个盟约与内置名单都在界面上说清楚',()=>{
+test('默认不被随机禁用的盟约（含投资人）与内置名单都在界面上说清楚',()=>{
  assert.match(banModule,/BOND_BAN_EXCLUDED=Object\.freeze\(\['emptyShip','suntShip','maniShip','soloShip'\]\)/,'协防干员／绝技／调和／独行要显式登记为固定不被禁');
- assert.match(banModule,/bondIsBanExcluded\(id\)\)continue/,'抽取池要跳过固定不被禁的盟约');
+ assert.match(banModule,/BOND_BAN_DEFAULT_NEVER=Object\.freeze\(\[\.\.\.BOND_BAN_EXCLUDED,'investShip'\]\)/,'默认方案要额外把投资人排除出随机池');
+ assert.match(banModule,/const fixed=clean\(Array\.isArray\(config\?\.always\)/,'固定禁用／不被禁由配置决定，不是写死的名单');
+ assert.match(banModule,/if\(skip\.has\(id\)\)continue/,'抽取池要跳过固定禁用与固定不被禁的盟约');
  assert.match(banModule,/BOND_EXEMPT_TABLE=\{/,'内置的真实不禁用名单要在模块里');
- assert.match(editor,/固定不被禁用/,'编制台要把固定不被禁的四个盟约单独分组');
+ assert.match(editor,/BAN_MODE_LABEL=\{fixed:'固定禁用',random:'随机候选',never:'固定不被禁'\}/,'三种状态要有人话标签');
  assert.match(editor,/恢复内置名单/,'「恢复默认」恢复的是内置真实名单');
- assert.match(banModule,/协防干员／绝技／调和／独行固定不参与/,'简报要说明哪四个盟约不参与抽取');
+ assert.match(banModule,/BOND_BAN_DEFAULT_NEVER/,'简报要说明默认哪些盟约不参与随机');
 });
 
 test('战前预览：核心盟约全列＋被禁的灰掉划掉，附加盟约单列，被禁干员进弹窗',()=>{

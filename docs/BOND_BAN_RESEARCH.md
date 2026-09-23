@@ -4,15 +4,16 @@
 
 ## 零、用户口径（2026-09-22 最终确认，实现以此为准）
 
-* **每局随机禁用 3 个核心盟约 + 4 个附加（小）盟约**，从**可被禁的 19 个盟约**里抽（**不看** `modeDataDict[].inactiveBondIdList` 与 `constData.trBannedBondIds`）。
-* **协防干员（`emptyShip`）／绝技（`suntShip`）／调和（`maniShip`）／独行（`soloShip`）固定不被禁用**，不进入随机抽取（`BOND_BAN_EXCLUDED`／`banPool()`）。注意这四个的中文名与 id 的对应关系：**助力＝`deputShip`、远见＝`visiShip`、协防干员＝`emptyShip`**，不要按字面猜。
+* **每局随机禁用 3 个核心盟约 + 4 个附加（小）盟约**，从**处于「参与随机」状态的盟约**里抽（默认 8 核心 + 10 附加共 18 个；**不看** `modeDataDict[].inactiveBondIdList` 与 `constData.trBannedBondIds`）。
+* **每个盟约在「协议自定义 → 禁用方案」页三选一**（用户 2026-09-22 追加）：**固定禁用**（每局必缺席，不占 3＋4 的随机名额）／**参与随机**／**固定不被禁**。配置存在 `always`／`never` 两个数组里，`banRules` 解析、`banPool` 排除。
+* **默认方案里固定不被禁的是协防干员（`emptyShip`）／绝技（`suntShip`）／调和（`maniShip`）／独行（`soloShip`）＋投资人（`investShip`）**（`BOND_BAN_EXCLUDED` ＋ `BOND_BAN_DEFAULT_NEVER`；投资人是用户 2026-09-22 追加）。注意中文名与 id 的对应关系：**助力＝`deputShip`、远见＝`visiShip`、协防干员＝`emptyShip`、投资人＝`investShip`**，不要按字面猜。
 * **每个盟约各有一份「不禁用名单」（第二版口径，2026-09-22 更正）**：某个盟约被本局禁用时，挂在它名下的干员**只有出现在它的不禁用名单上**才能出场；名单之外的一律禁用——**哪怕这名干员还挂着别的没被禁的盟约**。
   * 第一版理解的「名下所有盟约都被禁才禁用」是**错的**，不要再退回去。
   * 干员身份按 `charId` 归并：精锐与初始形态共用一条名单登记。
 * **限制覆盖所有获取渠道**（用户 2026-09-22 追加）：商店抽取之外，策略／道具／卫戍点名发放、晋升奖励候选、援军转让同样拿不到被禁干员。
 * **道具相关的盟约不受影响**（用户 2026-09-22 追加）：装备自身的 `giveBondId` 归属照旧用于商店／具名池取货，变形同构体照旧把另一件装备的盟约借给携带者——被禁的是**干员的获取**，不是盟约本身。
 * 逐盟约的 ban 影响表与"3+4 有多大杀伤"的抽样见 `BOND_BAN_RESEARCH_TABLES.md` 的附录 D／E。
-* **19 个盟约的真实不禁用名单已由用户逐条给出**，落在代码的 `BOND_EXEMPT_TABLE`（按「游戏内显示名＋阶」登记，解析见 `resolveBondExempt`）；本文件第七节是原始名单与本项目的解析结果。
+* **19 个盟约的真实不禁用名单已由用户逐条给出**，落在代码的 `BOND_EXEMPT_TABLE`（按「游戏内显示名＋阶」登记，解析见 `resolveBondExempt`）；这 19 条＝18 个参与随机的盟约 ＋ 默认不被随机禁的投资人，本文件第七节是原始名单与本项目的解析结果。
 
 下面第一～三节是这次上网调查的原始结论（官方文本证据与数据映射），第四～六节是落地实现、边界与名单原表。
 
@@ -91,17 +92,17 @@
 
 ## 四、本项目实现（2026-09-22 落地）
 
-* 模块：`dist/native-bond-ban.js`（已在 `scripts/build-browser.mjs` 登记）。导出 `banPool(data)`／`bondBanIds(data,seed)`（可禁池里 3 核心 + 4 附加）、`BOND_BAN_EXCLUDED`（固定不被禁的四个盟约）、`BOND_EXEMPT_TABLE`（用户给的 19 条名单）／`resolveBondExempt`、`bondMembers` / `bondRoster` / `charIdOf`、`isOperatorBanned` / `bondBanBlockers` / `bannedOperators`、`bondBanSummary`、`loadBondBan` / `saveBondBan` / `normalizeBondBan` / `defaultBondExempt`。
+* 模块：`dist/native-bond-ban.js`（已在 `scripts/build-browser.mjs` 登记）。导出 `banRules(config,data)` / `banPool(data,config)` / `bondBanIds(data,seed,config)`（固定禁用的全部计入，其余从「参与随机」池里抽 3 核心 + 4 附加）、`BOND_BAN_EXCLUDED`（内置固定不被禁的四个盟约）与 `BOND_BAN_DEFAULT_NEVER`（默认方案：那四个 ＋ 投资人）、`BOND_EXEMPT_TABLE`（用户给的 19 条名单）／`resolveBondExempt`、`bondMembers` / `bondRoster` / `charIdOf`、`isOperatorBanned` / `bondBanBlockers` / `bannedOperators`、`bondBanSummary`、`loadBondBan` / `saveBondBan` / `normalizeBondBan` / `defaultBondExempt`。**每个盟约三种状态**（`fixed` 固定禁用／`random` 参与随机／`never` 固定不被禁）存在配置的 `always`／`never` 两个数组里，`banRules` 解析、`banModeOf` 查询；固定禁用不占随机名额。
 * 判定：`NativeEconomy.bondBanned(chessId)` 是唯一判定（按 `charId` 归并，精锐形态也命中）。商店／具名池／`later` 池走 `NativeSession.eligible()`；**商店之外的渠道**由 `NativeSession.gain()` 统一返回 `null` 拦下（策略点名发放、卫戍 `SERVER_GAIN_CHAR`、援军转让、道具），晋升奖励候选与 `buy` 再挡一次，`NativeEconomy.draw()` 末尾还有兜底门禁。
 * **按盟约随机发人**（策略 `gain_bond_char_per_round`、卫戍 `SERVER_MOST_BOND`、`rewardFromBond`、装备「同盟约干员」、出售计数发放）先问 `bondHasCandidates(id,maxTier)`／`gainableBonds(u,maxTier)`：被禁盟约可能一个人都发不出来，而空候选池会让 `drawFromPool` 抛错、把挂在 prep 上的发放连同「进入下一回合」一起回滚（卡死）。**偏好型**的 `drawFromPool({bond})`（佩佩的特殊刷新、`refreshRequirements`）在没有候选时忽略该盟约偏好、退化成普通抽取。
-* 本局禁用在开局定死（`bondBanIds(data,seed)`，与商店／波次随机流分开）并随存档保存；旧存档没有 `bondBan` 字段按「本局不额外禁用」补齐；读档时 `sanitizeBannedOffers()` 清掉残留的被禁候选。
-* 配置页：敌人编制台 →「盟约禁用」（`native-wave-editor.js` 的 `renderBondBanPage`，动作 `ed-page` / `ed-bb-*`），逐盟约勾选不禁用名单，改动即时写入 `localStorage` 键 `garrison-bond-ban-v1`（**带 `version:2`：临时数据时期没有版本号的旧配置会被忽略并回落到内置名单**），可单独导出／导入 `garrison-bond-ban.json`。页面上固定不被禁的四个盟约单独分组，`ed-bb-defaults`（「恢复内置名单」）恢复的就是 `BOND_EXEMPT_TABLE`。
+* 本局禁用在开局定死（`bondBanIds(data,seed,config)`，与商店／波次随机流分开）并随存档保存；旧存档没有 `bondBan` 字段按「本局不额外禁用」补齐；读档时 `sanitizeBannedOffers()` 清掉残留的被禁候选。
+* 配置页：「协议自定义」（原「敌人编制台」，用户 2026-09-22 改名）下三个页面，其中两个管盟约禁用——「盟约禁用」页（`native-wave-editor.js` 的 `renderBondBanPage`，动作 `ed-page` / `ed-bb-*`）逐盟约勾选不禁用名单、「禁用方案」页（`renderBondRulePage`，动作 `ed-br-mode` / `ed-br-defaults` / `ed-br-random-all`）逐盟约三选一（固定禁用／参与随机／不被禁）。改动即时写入 `localStorage` 键 `garrison-bond-ban-v1`（**带 `version:2`：临时数据时期没有版本号的旧配置会被忽略并回落到内置名单；同版本但缺 `always`／`never` 的配置按默认方案补齐**），可单独导出／导入 `garrison-bond-ban.json`。`ed-bb-defaults`（「恢复内置名单」）恢复的是 `BOND_EXEMPT_TABLE`，`ed-br-defaults`（「恢复默认方案」）恢复的是「固定禁用为空 ＋ 协防干员／绝技／调和／独行／投资人不被随机禁」。
 * 简报：战前准备页新增「本局缺席盟约」卡组与「本局拿不到的干员」清单（`native-play.js` 的 `bondBanBriefing`），与对局实际使用的记录是同一份。
 * 回归：`tests/native-bond-ban.test.mjs`（判定、抽取、charId 归并、非商店渠道、读档、配置读写、编制台页面）、`tests/native-bond-ban-ui.test.mjs`（接线门禁）。单测需要完整名册时显式传 `bondBan:NO_BOND_BAN`（`tests/no-bond-ban.mjs`），`tests/effects-harness.mjs` 的 `openBattle` 已默认关掉。
 
 ## 五、边界问题（全部已拍板）
 
-1. **0 成员／低成员盟约是否参与随机抽取？** **已拍板：协防干员／绝技／调和／独行固定不被禁，不进抽取池**（用户 2026-09-22）。剩下 19 个（8 核心 + 11 附加）等概率入池；`banPool(data)` 是唯一入口。注意 `investShip`（投资人，4 人，`weight=0`）**仍在池里**——用户只点了那四个。
+1. **0 成员／低成员盟约是否参与随机抽取？** **已拍板：协防干员／绝技／调和／独行固定不被禁，不进抽取池**（用户 2026-09-22）；同日追加：**默认方案里投资人（`investShip`，4 人，`weight=0`）也不被随机禁用**（`BOND_BAN_DEFAULT_NEVER`），所以默认池是 8 核心 + 10 附加共 18 个。三种状态在「协议自定义 → 禁用方案」页可改，`banPool(data,config)` 是唯一入口。
 2. **效果点名发放的干员要不要也拦？** **用户 2026-09-22 追加口径：要拦**——策略／道具／卫戍等非商店渠道同样受禁用限制，实现见第四节。
 3. **被禁盟约能不能被装备"借"到？** **用户 2026-09-22 口径：道具发放的盟约不受影响**。当前实现：装备自身的 `giveBondId` 归属照旧用于商店／具名池取货，变形同构体照旧把另一件装备的盟约借给携带者；受限的只有干员的获取。
 4. **沙盒（技能测试）是否禁用盟约？** 测试工具需要全库。**当前实现：不禁用**（`native-play.newSandbox` 显式传 `bondBan:{bonds:[],exempt:{}}`）。
@@ -145,7 +146,7 @@
 
 3 核心 + 4 附加的抽样强度（2000 个 seed）：**出局 41～56 人，中位数 48 / 112**（此前临时数据下约 19，真实名单的杀伤明显更大，属于预期）。理论上限是 19 个可禁盟约全被抽中，但每局只抽 7 个；把 19 个全禁掉（对照用）是 105 / 112。
 
-维护方式：改 `BOND_EXEMPT_TABLE`（源码即事实），或在「敌人编制台 → 盟约禁用」页勾选覆盖（`localStorage` 带 `version:2`，旧配置会被忽略）。
+维护方式：改 `BOND_EXEMPT_TABLE`（源码即事实），或在「协议自定义 → 盟约禁用」页勾选名单、「禁用方案」页改三种状态（`localStorage` 带 `version:2`，旧配置会被忽略；同版本缺 `always`／`never` 的按默认方案补齐）。
 
 ### 名单条目的实际效力（按已确认的语义）
 

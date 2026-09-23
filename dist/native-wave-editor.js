@@ -1,6 +1,6 @@
 import {TRAINING_TYPES,saveWaveTable,emptyWaveTable,defaultWaveTable,enemyCost,tierPack,currentTemplate,emptyTemplate,templateLabel,enemyActivity,enemyActivitySource,enemyPoolEligible} from './native-wave-fill.js';
 import {fillBudgetWave,waveRng,filterRandomPoolTable} from './native-wave-random.js';
-import {BAN_CORE_COUNT,BAN_EXTRA_COUNT,bondIds,bondIsCore,bondIsBanExcluded,bondName,bondMembers,defaultBondExempt,loadBondBan,saveBondBan} from './native-bond-ban.js';
+import {BAN_CORE_COUNT,BAN_EXTRA_COUNT,BAN_MODES,BOND_BAN_DEFAULT_NEVER,bondIds,bondIsCore,bondName,bondMembers,banRules,banModeOf,defaultBanRules,defaultBondExempt,loadBondBan,saveBondBan} from './native-bond-ban.js';
 
 const KIND_LABEL={ 'random-pool':'常规池','mode-effect':'策略／悬赏','template':'生成模板' };
 const SORTS=[['name','名称'],['hp','生命'],['atk','攻击'],['cost','难度'],['id','ID']];
@@ -68,7 +68,8 @@ function drawTestDialog(data,table,sample,byId){
 }
 
 export function renderWaveEditor(data,table,ui){
- const page=ui.page==='bonds'?'bonds':'enemies';
+ const page=ui.page==='bonds'?'bonds':ui.page==='rules'?'rules':'enemies';
+ const title=page==='bonds'?'盟约禁用名单':page==='rules'?'盟约禁用方案':'协议自定义';
  clampTemplate(table,ui);
  const type=TRAINING_TYPES.find(t=>t.id===ui.type)||TRAINING_TYPES[0],pack=tierPack(table,type.id,ui.tier),slot=pack.templates[ui.template],rows=enemyRows(data);
  const byId=Object.fromEntries(rows.map(e=>[e.id,e])),pool=slot.pool.map(id=>byId[id]||{id,name:id,motion:'WALK',hp:0,atk:0,kinds:[]});
@@ -76,9 +77,9 @@ export function renderWaveEditor(data,table,ui){
  const activities=[...new Set(rows.map(e=>enemyActivity(e.id)))].sort((a,b)=>a.localeCompare(b,'zh'));
  const options=(values,current)=>values.map(([id,name])=>`<option value="${esc(id)}" ${current===id?'selected':''}>${esc(name)}</option>`).join('');
  return `<main class="wave-ed">
-  <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>WAVE EDITOR</small><h1>${page==='bonds'?'盟约禁用名单':'敌人编制台'}</h1></div><span class="wave-ed-autosave">编辑自动保存</span><nav class="wave-ed-pages" aria-label="编制台页面"><button data-act="ed-page" data-page="enemies" aria-pressed="${page==='enemies'}" class="${page==='enemies'?'chosen':''}">敌人编制</button><button data-act="ed-page" data-page="bonds" aria-pressed="${page==='bonds'}" class="${page==='bonds'?'chosen':''}">盟约禁用</button></nav>${page==='enemies'?`<button data-act="ed-tools" aria-expanded="${!!ui.tools}">配置管理</button>`:''}</header>
+  <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>PROTOCOL CUSTOM</small><h1>${title}</h1></div><span class="wave-ed-autosave">编辑自动保存</span><nav class="wave-ed-pages" aria-label="协议自定义页面"><button data-act="ed-page" data-page="enemies" aria-pressed="${page==='enemies'}" class="${page==='enemies'?'chosen':''}">敌人波次</button><button data-act="ed-page" data-page="bonds" aria-pressed="${page==='bonds'}" class="${page==='bonds'?'chosen':''}">盟约禁用</button><button data-act="ed-page" data-page="rules" aria-pressed="${page==='rules'}" class="${page==='rules'?'chosen':''}">禁用方案</button></nav>${page==='enemies'?`<button data-act="ed-tools" aria-expanded="${!!ui.tools}">配置管理</button>`:''}</header>
   ${page==='enemies'&&ui.tools?`<section class="wave-ed-management" aria-label="配置管理"><p>活动仅作为初始主题，可自由混编已准入敌人。默认中高压模板至少包含4种敌人。实战随机选模板；抽取测试仅使用当前模板。恢复默认或清空会覆盖整张表。</p><div><button data-act="ed-export">导出 JSON</button><button data-act="ed-import">导入 JSON</button><button data-act="ed-defaults">恢复默认配置</button><button data-act="ed-reset">清空本表</button><label>缺省难度 <input data-act="ed-default" type="number" min="1" value="${table.defaultCost}"></label></div></section>`:''}
-  ${page==='bonds'?renderBondBanPage(data,ui):`<div class="wave-ed-layout">
+  ${page==='bonds'?renderBondBanPage(data,ui):page==='rules'?renderBondRulePage(data,ui):`<div class="wave-ed-layout">
    <aside class="wave-ed-sidebar">
     <label class="wave-ed-field">特训词条<select data-act="ed-type-select" aria-label="选择特训词条">${options(TRAINING_TYPES.map(t=>[t.id,t.name]),type.id)}</select></label>
     <div class="wave-ed-tiers" aria-label="压力档">${[1,2,3].map(n=>`<button data-act="ed-tier" data-tier="${n}" aria-pressed="${ui.tier===n}" class="${ui.tier===n?'chosen':''}">${['低压','中压','高压'][n-1]}</button>`).join('')}</div>
@@ -129,40 +130,69 @@ export function renderWaveEditor(data,table,ui){
     </div>
    </section>
   </div>`}
-  ${page==='bonds'?'':drawTestDialog(data,table,ui.sample,byId)}
+  ${page==='enemies'?drawTestDialog(data,table,ui.sample,byId):''}
  </main>`;
 }
 
 // ── 盟约禁用页 ────────────────────────────────────────────────────────────────
 // 每个盟约一张卡：勾选的就是该盟约的「不禁用名单」（本局该盟约被禁时，名单上的干员仍然出场）。
 // 干员按 charId 登记（精锐与初始是同一名），所以列表里一人只出现一次，标注它同时挂着的其他盟约，
-// 方便看清「禁掉这个盟约还会顺带影响谁」。
+// 方便看清「禁掉这个盟约还会顺带影响谁」。卡片标题右侧标出该盟约在「禁用方案」里的状态。
+const BAN_MODE_LABEL={fixed:'固定禁用',random:'随机候选',never:'固定不被禁'};
 function renderBondBanPage(data,ui){
  if(!ui.bondBan)ui.bondBan=loadBondBan(data);
+ const rules=banRules(ui.bondBan,data);
  const exemptOf=id=>Array.isArray(ui.bondBan.exempt?.[id])?ui.bondBan.exempt[id]:[];
  const query=String(ui.bondQuery||'').trim().toLowerCase();
  const card=id=>{
-  const members=bondMembers(data,id),exempt=new Set(exemptOf(id));
+  const members=bondMembers(data,id),exempt=new Set(exemptOf(id)),mode=banModeOf(rules,id);
   const shown=query?members.filter(row=>row.name.toLowerCase().includes(query)||row.charId.toLowerCase().includes(query)):members;
   return `<article class="wave-ed-bond${bondIsCore(data,id)?' core':' extra'}" data-bond="${esc(id)}">
-   <header><div><b>${esc(bondName(data,id))}</b><small>${bondIsBanExcluded(id)?'固定不被禁':bondIsCore(data,id)?'核心盟约':'附加盟约'}</small></div><span>不禁用 ${members.filter(row=>exempt.has(row.charId)).length} / ${members.length}</span><div class="wave-ed-bond-actions"><button data-act="ed-bb-all" data-bond="${esc(id)}" data-mode="all">全不禁用</button><button data-act="ed-bb-all" data-bond="${esc(id)}" data-mode="none">全禁用</button></div></header>
+   <header><div><b>${esc(bondName(data,id))}</b><small>${bondIsCore(data,id)?'核心盟约':'附加盟约'} · ${BAN_MODE_LABEL[mode]}</small></div><span>不禁用 ${members.filter(row=>exempt.has(row.charId)).length} / ${members.length}</span><div class="wave-ed-bond-actions"><button data-act="ed-bb-all" data-bond="${esc(id)}" data-mode="all">全不禁用</button><button data-act="ed-bb-all" data-bond="${esc(id)}" data-mode="none">全禁用</button></div></header>
    <div class="wave-ed-bond-members">${shown.map(row=>`<label class="wave-ed-bond-member${exempt.has(row.charId)?' exempt':''}"><input type="checkbox" data-act="ed-bb-toggle" data-bond="${esc(id)}" data-char="${esc(row.charId)}" ${exempt.has(row.charId)?'checked':''}><span><b>${esc(row.name)}</b><small>${row.tier} 阶${row.bonds.filter(b=>b!==id).map(b=>' · 兼 '+bondName(data,b)).join('')}</small></span></label>`).join('')||'<p class="wave-ed-empty">该盟约没有可售干员。</p>'}
    </div>
   </article>`;
  };
- const ids=bondIds(data),core=ids.filter(id=>bondIsCore(data,id)),extra=ids.filter(id=>!bondIsCore(data,id)&&!bondIsBanExcluded(id)),fixed=ids.filter(id=>!bondIsCore(data,id)&&bondIsBanExcluded(id));
+ const ids=bondIds(data),core=ids.filter(id=>bondIsCore(data,id)),extra=ids.filter(id=>!bondIsCore(data,id));
+ const never=rules.never,countBy=(list,mode)=>list.filter(id=>banModeOf(rules,id)===mode).length;
  return `<section class="wave-ed-bonds">
   <header class="wave-ed-current"><div><small>BOND BAN LIST</small><h2>每个盟约的「不禁用名单」</h2></div><span class="wave-ed-bond-rule">每局随机禁 ${BAN_CORE_COUNT} 个核心 ＋ ${BAN_EXTRA_COUNT} 个附加盟约</span></header>
   <p class="wave-ed-hint">某个盟约被本局禁用时，挂在它名下的干员只有<b>出现在这份名单上</b>才能出场；名单之外的一律禁用——哪怕这名干员还挂着别的没被禁的盟约。名单按干员登记（精锐与初始形态共用一条），商店抽取和策略／道具／卫戍等所有获取渠道都受限制。</p>
-  <p class="wave-ed-hint wave-ed-bond-temp">名单是<b>内置的真实数据</b>（逐盟约核对过），在这里改动会立即生效并覆盖内置值。<b>协防干员／绝技／调和／独行</b>固定不参与随机禁用，所以不在抽取池里；其余 ${core.length + extra.length} 个盟约里每局抽 ${BAN_CORE_COUNT} 个核心 ＋ ${BAN_EXTRA_COUNT} 个附加。</p>
+  <p class="wave-ed-hint wave-ed-bond-temp">名单是<b>内置的真实数据</b>（逐盟约核对过），在这里改动会立即生效并覆盖内置值。哪些盟约固定禁用、哪些参与随机，去<b>「禁用方案」</b>页调；默认方案里 <b>${never.map(id=>esc(bondName(data,id))).join('／')}</b> 不参与随机。</p>
   <div class="wave-ed-bonds-tools"><input id="bb-search" data-act="ed-bb-search" type="search" value="${esc(ui.bondQuery||'')}" placeholder="搜索干员名称或 ID" aria-label="搜索干员"><button data-act="ed-bb-export">导出名单 JSON</button><button data-act="ed-bb-import">导入名单 JSON</button><button data-act="ed-bb-defaults">恢复内置名单</button><button data-act="ed-bb-clear">清空全部名单</button></div>
-  <h3 class="wave-ed-bonds-group">核心盟约 <small>${core.length} 个</small></h3>
+  <h3 class="wave-ed-bonds-group">核心盟约 <small>${core.length} 个 · 参与随机 ${countBy(core,'random')} 个</small></h3>
   <div class="wave-ed-bonds-grid">${core.map(card).join('')}</div>
-  <h3 class="wave-ed-bonds-group">附加盟约 <small>${extra.length} 个可被禁</small></h3>
+  <h3 class="wave-ed-bonds-group">附加盟约 <small>${extra.length} 个 · 参与随机 ${countBy(extra,'random')} 个</small></h3>
   <div class="wave-ed-bonds-grid">${extra.map(card).join('')}</div>
-  <h3 class="wave-ed-bonds-group">固定不被禁用 <small>${fixed.length} 个</small></h3>
-  <p class="wave-ed-hint">协防干员／绝技／调和／独行不进入随机抽取（固定不被禁）。名单仍可编辑，留给规则变化时用，对本局没有影响。</p>
-  <div class="wave-ed-bonds-grid">${fixed.map(card).join('')}</div>
+ </section>`;
+}
+
+// ── 禁用方案页（用户 2026-09-22 追加）────────────────────────────────────────
+// 控制每个盟约处在三种状态之一：固定禁用（每局必禁，不占随机名额）／参与随机（每局抽 3 核心 + 4 附加）
+// ／固定不被禁（不进池也不固定禁）。默认方案里 协防干员／绝技／调和／独行 ＋**投资人**是「固定不被禁」。
+function renderBondRulePage(data,ui){
+ if(!ui.bondBan)ui.bondBan=loadBondBan(data);
+ const rules=banRules(ui.bondBan,data);
+ const ids=bondIds(data),core=ids.filter(id=>bondIsCore(data,id)),extra=ids.filter(id=>!bondIsCore(data,id));
+ const card=id=>{
+  const mode=banModeOf(rules,id),members=bondMembers(data,id).length;
+  const btn=(value,label)=>`<button data-act="ed-br-mode" data-bond="${esc(id)}" data-mode="${value}" aria-pressed="${mode===value}" class="${mode===value?'chosen':''}">${label}</button>`;
+  return `<article class="wave-ed-bond wave-ed-rule${bondIsCore(data,id)?' core':' extra'}${mode==='fixed'?' is-fixed':mode==='never'?' is-never':''}" data-bond="${esc(id)}">
+   <header><div><b>${esc(bondName(data,id))}</b><small>${bondIsCore(data,id)?'核心盟约':'附加盟约'} · ${members} 名成员</small></div><span class="wave-ed-rule-mode">${BAN_MODE_LABEL[mode]}</span></header>
+   <div class="wave-ed-bond-actions wave-ed-rule-modes" role="group" aria-label="${esc(bondName(data,id))}禁用状态">${btn('fixed','固定禁用')}${btn('random','参与随机')}${btn('never','不被禁')}</div>
+  </article>`;
+ };
+ const count=(list,mode)=>list.filter(id=>banModeOf(rules,id)===mode).length;
+ const total=ids.length;
+ return `<section class="wave-ed-bonds">
+  <header class="wave-ed-current"><div><small>BOND BAN PLAN</small><h2>禁用方案</h2></div><span class="wave-ed-bond-rule">每局抽 ${BAN_CORE_COUNT} 核心 ＋ ${BAN_EXTRA_COUNT} 附加</span></header>
+  <p class="wave-ed-hint"><b>固定禁用</b>＝本局必定缺席，且<b>不占</b>随机名额；<b>参与随机</b>＝进抽取池，每局等概率抽 ${BAN_CORE_COUNT} 个核心 ＋ ${BAN_EXTRA_COUNT} 个附加（同一开局种子结果固定）；<b>不被禁</b>＝既不进池也不会被固定禁。被禁盟约的干员只有在该盟约的「不禁用名单」上才能出场，名单在「盟约禁用」页调。</p>
+  <p class="wave-ed-hint wave-ed-bond-temp">当前方案：固定禁用 <b>${rules.fixed.length}</b> 个 · 参与随机 <b>${total-rules.fixed.length-rules.never.length}</b> 个（核心 ${count(core,'random')} / 附加 ${count(extra,'random')}） · 不被禁 <b>${rules.never.length}</b> 个。</p>
+  <div class="wave-ed-bonds-tools"><button data-act="ed-br-defaults">恢复默认方案</button><button data-act="ed-br-random-all">全部参与随机</button><button data-act="ed-bb-export">导出配置 JSON</button><button data-act="ed-bb-import">导入配置 JSON</button></div>
+  <h3 class="wave-ed-bonds-group">核心盟约 <small>${core.length} 个 · 固定禁用 ${count(core,'fixed')} · 不被禁 ${count(core,'never')}</small></h3>
+  <div class="wave-ed-bonds-grid">${core.map(card).join('')}</div>
+  <h3 class="wave-ed-bonds-group">附加盟约 <small>${extra.length} 个 · 固定禁用 ${count(extra,'fixed')} · 不被禁 ${count(extra,'never')}</small></h3>
+  <div class="wave-ed-bonds-grid">${extra.map(card).join('')}</div>
  </section>`;
 }
 
@@ -192,13 +222,29 @@ export function applyEditorAction(act,dataset,table,ui,data){
  if(act==='ed-import'){return 'import';}
  // ── 盟约禁用页的动作：勾选／整盟约开关／导出导入／恢复临时默认。每次改动立即落盘
  //（localStorage `garrison-bond-ban-v1`），对局开始时读的就是这一份。
- if(act==='ed-page'){ui.page=dataset.page==='bonds'?'bonds':'enemies';ui.sample=null;return 'render';}
+ if(act==='ed-page'){ui.page=dataset.page==='bonds'?'bonds':dataset.page==='rules'?'rules':'enemies';ui.sample=null;return 'render';}
  if(act==='ed-bb-toggle'){ui.bondBan=ui.bondBan||loadBondBan(data);const id=dataset.bond,charId=dataset.char;if(!data.season.bondInfoDict[id]||!charId)return 'render';const list=new Set(Array.isArray(ui.bondBan.exempt?.[id])?ui.bondBan.exempt[id]:[]);list.has(charId)?list.delete(charId):list.add(charId);ui.bondBan.exempt[id]=[...list];ui.bondBan=saveBondBan(ui.bondBan,data);return 'render';}
  if(act==='ed-bb-all'){ui.bondBan=ui.bondBan||loadBondBan(data);const id=dataset.bond;if(!data.season.bondInfoDict[id])return 'render';ui.bondBan.exempt[id]=dataset.mode==='none'?[]:bondMembers(data,id).map(row=>row.charId);ui.bondBan=saveBondBan(ui.bondBan,data);return 'render';}
  if(act==='ed-bb-defaults'){ui.bondBan=saveBondBan(defaultBondExempt(data),data);return 'bond-defaults';}
  if(act==='ed-bb-clear'){ui.bondBan=saveBondBan({exempt:{}},data);return 'bond-clear';}
  if(act==='ed-bb-export')return 'bond-export';
  if(act==='ed-bb-import')return 'bond-import';
+ // ── 禁用方案页（`page:'rules'`）：改每个盟约是固定禁用／参与随机／固定不被禁。
+ // 固定禁用的进 `always`，固定不被禁的进 `never`，其余是随机候选（两个数组里都不出现）。
+ if(act==='ed-br-mode'){
+  ui.bondBan=ui.bondBan||loadBondBan(data);
+  const id=dataset.bond,mode=dataset.mode;
+  if(!data.season.bondInfoDict[id]||!BAN_MODES.includes(mode))return 'render';
+  const rules=banRules(ui.bondBan,data);
+  const always=new Set(rules.fixed),never=new Set(rules.never);
+  if(mode==='fixed'){always.add(id);never.delete(id);}
+  else if(mode==='never'){never.add(id);always.delete(id);}
+  else{always.delete(id);never.delete(id);}
+  ui.bondBan=saveBondBan({...ui.bondBan,always:[...always],never:[...never]},data);
+  return 'render';
+ }
+ if(act==='ed-br-defaults'){ui.bondBan=saveBondBan({...ui.bondBan,...defaultBanRules()},data);return 'bond-rules-defaults';}
+ if(act==='ed-br-random-all'){ui.bondBan=saveBondBan({...ui.bondBan,always:[],never:[]},data);return 'bond-rules-random';}
  return null;
 }
 
