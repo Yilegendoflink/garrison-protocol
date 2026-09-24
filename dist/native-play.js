@@ -422,7 +422,15 @@ function draw(){
  const selected=g.s.units.find(u=>u.uid===(state.preview?.uid||state.selected)),live=selected&&g.battle?g.battle.s.units.find(u=>u.uid===selected.uid):null;
  if(selected&&(selected.position||state.preview)){
   const p=state.preview||{...selected.position,dir:selected.dir};
-  const cells=g.s.phase==='battle'&&!state.preview&&g.battle&&live?g.battle.range(live,g.battle.skillActive(live)):((profile(selected).range?.grids||[]).concat(profile(selected).branch==='fortress'?[{row:0,col:0}]:[]).map(cell=>{let x=cell.col,y=-cell.row;for(let i=0;i<(p.dir??0);i++)[x,y]=[-y,x];return{x:p.x+x,y:p.y+y};}));
+  // 备战期／拖动预览也按**所选技能**的范围画（用户口径：技能范围要和描述一致）。
+  // 战斗期取实时范围（含开技中的技能范围）；「攻击范围扩大至整个战场」的高亮整张图。
+  const sp=profile(selected),skillText=String(sp.skill?.description||'');
+  const wholeField=/整个战场|全场/.test(skillText);
+  const prepGrids=data.ranges?.[sp.skill?.rangeId||sp.rangeId]?.grids||sp.range?.grids||[];
+  const cells=wholeField
+   ?Array.from({length:g.map.rows},(_,y)=>Array.from({length:g.map.cols},(_,x)=>({x,y}))).flat()
+   :g.s.phase==='battle'&&!state.preview&&g.battle&&live?g.battle.range(live,g.battle.skillActive(live))
+   :prepGrids.map(cell=>{let x=cell.col,y=-cell.row;for(let i=0;i<(p.dir??0);i++)[x,y]=[-y,x];return{x:p.x+x,y:p.y+y};});
   for(const cell of cells)c.fillStyle='#63d8b738',c.fillRect(z.ox+cell.x*z.tw+2,z.oy+cell.y*z.th+2,z.tw-4,z.th-4);
  }
  const statusOverlays=[];

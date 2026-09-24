@@ -1,4 +1,5 @@
 import {advanceEnemy} from './native-combat.js';
+import {directionOf} from './protocol.js';
 
 // PRTS推与拉、失衡位移机制：质量1，g=9.81，默认动摩擦系数0.5。
 const SPEEDS=[0,1,2,4,4.5,5.3,5.8];
@@ -7,7 +8,7 @@ const actor=(battle,uid)=>[...battle.s.units,...battle.s.enemies,...(battle.s.su
 export function startEnemyPush(battle,target,source,{forceLevel,directional=false,fixedDirection=false,projectile=false,reverse=false}={}){
  if(!battle.s.enemies.includes(target)||target.hp<=0||target.hidden||target.shiftImmune||target.levitated||target.statuses?.some(s=>s.kind==='levitate')||!Number.isFinite(forceLevel))return false;
  let dx=target.x-source.x,dy=target.y-source.y,length=Math.hypot(dx,dy),level=forceLevel-(target.weight||0);
- const forward=[[1,0],[0,-1],[-1,0],[0,1]][source.dir??0];
+ const forward=directionOf(source.dir??0);
  if(directional){if(!fixedDirection&&(length<.25||(dx*forward[0]+dy*forward[1])/length<Math.SQRT1_2))level-=2;else{dx=forward[0];dy=forward[1];length=1;}}
  if(length<1e-9){dx=forward[0];dy=forward[1];length=1;}
  if(reverse){dx=-dx;dy=-dy;}
@@ -22,7 +23,7 @@ export function startEnemyPull(battle,target,source,{forceLevel,anchorOffset=.5,
  if(!battle.s.enemies.includes(target)||target.hp<=0||target.hidden||target.shiftImmune||target.levitated||target.statuses?.some(s=>s.kind==='levitate')||!Number.isFinite(forceLevel))return false;
  const owner=source.uid==null?null:actor(battle,source.uid);if(source.uid!=null&&(!owner||owner.hp<=0||owner.deployed===false))return false;
  const level=forceLevel-(target.weight||0),force=PULL_FORCES[Math.max(0,Math.min(6,Math.floor(level)+3))];if(!(force>0))return false;
- const [dx,dy]=[[1,0],[0,-1],[-1,0],[0,1]][source.dir??owner?.dir??0],x=source.x+dx*anchorOffset,y=source.y+dy*anchorOffset,initialDistance=Math.hypot(target.x-x,target.y-y);if(initialDistance<1e-9)return false;
+ const [dx,dy]=directionOf(source.dir??owner?.dir??0),x=source.x+dx*anchorOffset,y=source.y+dy*anchorOffset,initialDistance=Math.hypot(target.x-x,target.y-y);if(initialDistance<1e-9)return false;
  const previous=target.shift;target.shift??={vx:0,vy:0,hardUntil:battle.s.time+.1,startedAt:battle.s.time,sourceUid:source.uid??null,projectile:false,fresh:false,nextDamageAt:battle.s.time+Number(target.enemyTalent?.['unbalanced_bleed.interval']||1)};
  if(target.staticRigid)target.shift.vx=target.shift.vy=0;
  target.shift.pulls??=[];target.shift.pulls.push({sourceUid:source.uid??null,sourceDeployGen:owner?.deployGen??null,x:source.x,y:source.y,dx,dy,anchorOffset,initialDistance,force,endsAt:battle.s.time+(level < -1 ? .5 : 1),stopRadius,stopImmediately});

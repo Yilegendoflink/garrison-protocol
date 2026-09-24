@@ -2,9 +2,9 @@
 
 结论：**范围形状数据本身是可信的**（与 PRTS 快照逐格比对 62/71 完全一致，基础范围 131/131 一致），
 玩家看到的「过大、圆形变方形」几乎全部来自**客户端怎么用这份数据**：手工圈的包围方格半径、
-瞬时/被动技能的范围不参与判定、召唤物统一 3×3、要塞多补自身格、以及 4 处方向表镜像。
+瞬时/被动技能的范围不参与判定、召唤物统一 3×3、要塞多补自身格、以及方向表镜像。
 
-本文件只列缺口，不动代码。要动手时按第五节 1–8 的顺序改，并补对应回归。
+**状态：第二节 8 类缺口已全部修复（见第六节修复记录），回归在 `tests/native-skill-range.test.mjs`。**
 
 ---
 
@@ -137,13 +137,32 @@
 * 「技能范围」= `skill_table[skillId].levels[skillLevel-1].rangeId`，为空表示沿用基础范围（本期 7718 个等级为空，2620 个非空）。
 * PRTS wiki 的范围来自 `微件:Range/<rangeId>`，本地快照 `data/prts/snapshots/2026-09-12-prts/ranges.json` 的 `displayCells` 是展示网格（`kind: origin|outline`）。
 
-## 五、建议的修法顺序（未实施）
+## 五、修法顺序（已全部实施，见第六节）
 
 1. **给圈加形状**：`zoneActors` 支持 `shape:'circle'`（`Math.hypot`），`drawZones` 按同一形状画（圆盘／圆环，不铺方格）；`kind:'zone'` 与 `kind:'field'` 共用一套。
 2. **「攻击范围内」类圈直接取 `battle.range(u, skill)` 的 `cells`**，不要用包围半径（莫斯提马 S2、塞雷娅 S3 及同类）。
-3. **瞬时／被动技能的范围**：`activate` 的瞬时块在该帧强制 `skill=true`；`pendingAttackHeal`／`siege2Next` 之类挂到「下一次攻击」的效果要带上 `rangeId`；PASSIVE 技能在 `skillActive` 里按常驻处理。
-4. **召唤物写 `range`**：`spawnSummon` 读 token 的 `rangeId` 网格，`tickSummons` 改用 `battle.inside`。
-5. **要塞自身格**：确认口径后删除（或登记为模式差异）。
-6. **统一方向表**为一个常量，替换 F 的 4 处用法。
-7. **备战预览**改用所选技能的 `rangeId`（若原作如此）。
-8. 顺手修 `native-effects.js:1142` 的干员名注释；需要完整 PRTS 交叉核对时重抓那 9 条空范围。
+3. **瞬时／被动技能的范围**：开技那一帧挂住技能范围；`pendingAttackHeal`／`siege2Next` 之类挂到「下一次攻击」的效果要带上 `rangeId`；PASSIVE 技能与「被动效果：攻击范围扩大」的技能范围常驻生效。
+4. **召唤物写 `rangeId`**：`spawnSummon` 读 token 的 `rangeId` 网格，`tickSummons` 用 `summonInRange` 判定。
+5. **要塞自身格**：删除客户端补格。
+6. **统一方向表**为一个常量（`protocol.DIRECTIONS`），替换全部镜像用法。
+7. **备战预览**改用所选技能的 `rangeId`。
+8. 顺手修 `native-effects.js` 的干员名注释。
+
+---
+
+## 六、修复记录（2026-09-22，commit 见仓库历史）
+
+| 缺口 | 修法 | 位置 |
+| --- | --- | --- |
+| A 圆形圈判成方格 | `zoneContains()` 支持 `shape:'circle'`（`Math.hypot`）；`drawZones` 对圆形圈画圆盘／圆环；半径 ≥2 的领域（异客 S3、锏 S3、伊内丝 S3、圣聆初雪 S2／积雪、魔王微尘、哥蕾蒂娅 S3、烛煌 S1、锡人炼金单元、号角照明弹）显式声明 `shape:'circle'` | `native-effects.js`、`native-fx.js`、`native-operator-effects.js` |
+| B 「攻击范围内」用包围半径 | 新增 `rangeUid`：圈挂到施法者的**当前攻击范围**（塞雷娅 S3 的 x-3、莫斯提马 S2 的 3-6、纯烬艾雅法拉 S1 的 3-17 光环）；判定与绘制都按范围格 | `native-effects.js`（`zoneContains`）、`native-fx.js`、`native-operator-effects.js` |
+| C 瞬时／被动技能范围不生效 | `activate()` 开技帧写 `u.skillRangeHold`（`NativeBattle.skillRangeId` 优先读它）；PASSIVE 与文案含「被动效果」的技能范围常驻；`pendingAttackHeal`／`siege2Next`／`blkkgtNext`／`mudrokS1` 带 `rangeId`，下一击按该范围选目标（塞雷娅 S1 现在能治到 3×3 内的残血友军） | `native-battle.js`、`native-operator-effects.js` |
+| D 召唤物统一 3×3 | `spawnSummon` 取 token 的 `rangeId`；`summonInRange()` 按网格判定（被自己阻挡的目标照旧可打） | `native-effects.js` |
+| E 要塞多补自身格 | 删除 `rangeWithSkill` 里的 `fortress` 补格；备战预览同步 | `native-battle.js`、`native-play.js` |
+| F 方向表镜像 | `protocol.DIRECTIONS`／`directionOf()` 成为唯一朝向表，替换 7 处（推拉 forward 与锚点、远牙 S3 前方、乌尔比安船锚、锡人投掷、两件装备的方向判定） | `protocol.js`、`native-shift.js`、`native-battle.js`、`native-operator-effects.js`、`native-equipment.js` |
+| G 备战预览只画常态范围 | 预览按 `skillChoices[skillIndex].skill.rangeId` 取网格；「攻击范围扩大至整个战场」整图高亮 | `native-play.js` |
+| H 其它简化 | 隐德来希 S2 自身＋1 名地面单位**两处**血镰；寒檀 S2 冰凌每次结算挪到攻击范围内的随机格（并带 `cold`）；引星棘刺 S1 的炼金单元半径 2→1（落点周围 8 格）；魔王注释纠错 | `native-operator-effects.js`、`native-effects.js` |
+
+回归：`tests/native-skill-range.test.mjs`（9 条，含「范围表与 PRTS 快照逐格一致」「基础范围 131/131」「方向表唯一」「预览按技能范围」四条门禁）。
+未做：重抓 PRTS 快照里 `displayCells` 为空的 9 条（本期只用 4-5／4-6；这两条与**当期游戏表** `data/gamedata/current/range_table.json` 完全一致，
+所以要塞口径按自家范围表判定，不需要 wiki 二次确认）。

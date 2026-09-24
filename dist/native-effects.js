@@ -768,15 +768,31 @@ function bondAfterDamage(battle,payload){
 function bondPeriodic(battle,u){
  if(!u||u.kind==='summon'||!battle.on?.('kazimierzShip')||battle.rows?.kazimierzShip?.count<6||!battle.owns(u,'kazimierzShip')||!u.deployed||u.hp<=0)return;const b=bondParam(battle,'kazimierzShip'),interval=Math.max(.1,Number(b.damage_interval)||2);u.kazimierzNextAt??=battle.s.time+interval;while(battle.s.time+1e-9>=u.kazimierzNextAt){const blocked=battle.s.enemies.filter(e=>e.hp>0&&e.block===u.uid);if(blocked.length)for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&Math.hypot(e.x-u.x,e.y-u.y)<=Number(b.range_radius||.8))) {dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(b.damage_atk_scale)||1.2),type:'true',cause:'extra',skipHooks:true});applyStatus(e,'stun',Number(b.stun)||.1,{source:u.uid,resistible:false});}u.kazimierzNextAt+=interval;}}
 
+// 圈内的目标判定（唯一入口）：
+//  * `rangeUid`：这个圈就是某名干员的**攻击范围**（塞雷娅 S3「钙质化」、莫斯提马 S2「荒时之锁」、
+//    纯烬艾雅法拉 S1 光环等），直接取它当前的技能范围格，别再用包围半径近似（那会把 9 格变 25 格）。
+//  * `shape:'circle'`：原作给的是半径（黑板的 `*_radius`、手写的圆形领域），用欧氏距离；
+//    默认切比雪夫＝「周围 N 格」的方格。见 docs/SKILL_RANGE_AUDIT_2026-09-22.md。
+export function zoneContains(battle,fx,a){
+ if(!fx||!a)return false;
+ if(fx.rangeUid){const owner=getActor(battle.s,fx.rangeUid);if(owner&&owner.deployed&&owner.hp>0){const cells=battle.range?.(owner,true);if(cells?.length)return cells.some(c=>c.x===a.x&&c.y===a.y);}}
+ const r=Number.isFinite(fx.radius)?fx.radius:1,shape=fx.shape||fx.values?.shape;
+ return shape==='circle'?Math.hypot((fx.x??0)-a.x,(fx.y??0)-a.y)<=r+1e-9:chebyshev({x:fx.x??0,y:fx.y??0},a)<=r;
+}
 function zoneActors(battle,fx,side){
- const cx=fx.x,cy=fx.y,r=fx.radius??1;
  const pool=side==='enemy'?enemyActors(battle.s):side==='all'?[...enemyActors(battle.s),...alliedActors(battle.s).filter(u=>u.deployed&&u.hp>0)]:alliedActors(battle.s).filter(u=>u.deployed&&u.hp>0);
- const inside=pool.filter(a=>chebyshev({x:cx,y:cy},a)<=r);
+ const inside=pool.filter(a=>zoneContains(battle,fx,a));
  // groundOnly：原表写「地面敌人」的圈不吃飞行单位（友方一侧不受这个开关影响）。
  return side==='ally'||!fx.values?.groundOnly?inside:inside.filter(a=>!a.flying);
 }
 function settlePeriodic(battle,fx){
  const source=getActor(battle.s,fx.sourceUid);
+ // 「向攻击范围内随机地块召唤冰凌」（寒檀 S2）：每次结算前把圈挪到持有者当前范围内的随机一格。
+ if(fx.randomTileUid){
+  const owner=getActor(battle.s,fx.randomTileUid);
+  const cells=owner&&owner.deployed&&owner.hp>0?battle.range?.(owner,true):null;
+  if(cells?.length){const pick=cells[Math.floor((battle.economy?.random?.()??Math.random())*cells.length)]||cells[0];fx.x=pick.x;fx.y=pick.y;}
+ }
  if(fx.kind==='delayed'){
   if(fx.values?.knightBomb){
    const t=getActor(battle.s,fx.targetUid);
@@ -1138,14 +1154,15 @@ function onOperatorDeploy(battle,u){
   if(u.id==='char_108_silent')u.summonCtrl={stock:0,cap:1,type:'drone'};
  if(u.id==='char_427_vigil')u.summonCtrl={stock:0,cap:1,type:'wolf',manualSummonCards:true};
  if(u.id==='char_4162_cathy'){const t=activeTalentsOf(battle,u).find(t=>t.name==='定向支援信号');u.summonCtrl={stock:0,cap:2,type:'device',manualSummonCards:true,maxStock:t?.values.cnt??3};}
- // 归溟幽灵鲨的替身只在本体切换后存在，不能在每次部署时常驻。
+ // 魔王（char_4134_cetsyr，不是归溟幽灵鲨——归溟幽灵鲨是 char_1023_ghost2）的「微尘」上限 3 枚，
+ // 每次部署按现有数量补齐，不能在每次部署时常驻。
  if(u.id==='char_4134_cetsyr'){const dust=battle.s.summons.filter(s=>s.ownerUid===u.uid&&s.type==='cetsyr-dust'&&s.deployed);for(const extra of dust.slice(3))commitExit(battle,{target:extra,reason:'refresh'});u.cetsyrDust=3;for(let n=Math.min(3,dust.length);n<3;n++)spawnSummon(battle,u,{type:'cetsyr-dust',name:'微尘',synthetic:true,targetable:false,healable:false,canBlock:false,canAttack:false,occupiesTile:false,persistAfterSourceGone:true});}
- if(u.id==='char_4087_ines'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'ines-shadow',x:u.x,y:u.y,radius:2,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+25,trackArea:true,trackSide:'enemy',values:{sluggish:true,reveal:true},snapshot:{},refKind:'live',persistAfterSourceGone:true});commitExit(battle,{target:u,reason:'skill'});}
+ if(u.id==='char_4087_ines'&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'ines-shadow',x:u.x,y:u.y,radius:2,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+25,trackArea:true,trackSide:'enemy',values:{sluggish:true,reveal:true,shape:'circle'},snapshot:{},refKind:'live',persistAfterSourceGone:true});commitExit(battle,{target:u,reason:'skill'});}
   if(u.id==='char_1012_skadi2'&&!battle.s.summons.some(s=>s.ownerUid===u.uid&&s.type==='skadi2-seaborn'&&s.deployed)&&!battle.economy?.s.summonCards?.some(card=>card.ownerUid===u.uid&&card.type==='skadi2-seaborn'&&card.position)){const talent=activeTalentsOf(battle,u).find(t=>t.name==='远古血亲');if(talent){spawnSummon(battle,u,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:summonLifecycle(battle,u,'skadi2-seaborn').duration||30,persistAfterSourceGone:false});if(u.summonRespawns)delete u.summonRespawns['skadi2-seaborn'];}}
  if(u.id==='char_103_angel'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='天使的祝福');if(talent){const values=talent.values||{},candidates=battle.s.units.filter(v=>v.uid!==u.uid&&v.deployed&&v.hp>0);if(candidates.length){const target=candidates[Math.floor(battle.economy.random()*candidates.length)];target.angelBlessing={atk:Number(values.atk)||.06,maxHp:Number(values.max_hp)||.1,sourceUid:u.uid};}}}
  if(u.id==='char_332_archet'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='铁弦');if(talent)grantShield(battle,u,{amount:Number(talent.values?.shield_value)||500,sourceUid:u.uid,id:'archet-deploy-shield'});}
  if(u.id==='char_4148_philae'){const talent=activeTalentsOf(battle,u).find(t=>t.name==='神河谕使');u.elementDamageResistance=Number(talent?.values?.damage_resistance)||.1;}
- if(u.id==='char_1046_sbell2'){const t=activeTalentsOf(battle,u).find(x=>x.name==='无垠的雪景'),bb=t&&t.values;if(t)addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'sbell2-snow',x:u.x,y:u.y,radius:2,interval:Number(bb.interval)||5,nextAt:battle.s.time+(Number(bb.interval)||5),endsAt:null,trackArea:true,trackSide:'enemy',values:{dot:true,sluggish:true,cold:Number(bb.cold)||5,elementScale:Number(bb.talent_magic_scale)||.75,type:'arts',elementType:'elemental'},snapshot:{damage:battle.stats(u).atk*(Number(bb.talent_magic_scale)||.75)},refKind:'live',persistAfterSourceGone:false});}
+ if(u.id==='char_1046_sbell2'){const t=activeTalentsOf(battle,u).find(x=>x.name==='无垠的雪景'),bb=t&&t.values;if(t)addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'sbell2-snow',x:u.x,y:u.y,radius:2,interval:Number(bb.interval)||5,nextAt:battle.s.time+(Number(bb.interval)||5),endsAt:null,trackArea:true,trackSide:'enemy',values:{dot:true,sluggish:true,shape:'circle',cold:Number(bb.cold)||5,elementScale:Number(bb.talent_magic_scale)||.75,type:'arts',elementType:'elemental'},snapshot:{damage:battle.stats(u).atk*(Number(bb.talent_magic_scale)||.75)},refKind:'live',persistAfterSourceGone:false});}
  // 凛御银灰【开放性开局】的「风雪之眼」是**待部署区**里的一张卡（技能三期间才变为可部署），
  // 不是场上的召唤物；按用户口径（2026-09-19）本期不实现，所以这里不生成任何实体。
  // 她其余的效果照旧：技能一的范围寒冷／反隐、技能三的部署费用与待部署区费用互换、雪境先驱的谢拉格增益。
@@ -1373,8 +1390,11 @@ export function spawnSummon(battle,owner,spec){
  const candidates=spec.x!=null?[[spec.x,spec.y]]:[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>[owner.x+dx,owner.y+dy]);
  const position=candidates.find(([x,y])=>{const tile=battle.map.grid[y]?.[x];return tile&&tile.buildableType!=='NONE'&&!tile.obstacle&&(!spec.canBlock||tile.heightType!=='HIGHLAND')&&(spec.occupiesTile===false||!occupied.has(x+','+y))&&(spec.type!=='vigil-wolf'||battle.inside(owner,{x,y}));});
  if(!position)return null;
- const [x,y]=position,a=nativeAttributes(entity,battle.profile(owner).status).attributes,uid=battle.s.nextId++,canBlock=spec.canBlock??a.blockCnt>0,canAttack=spec.canAttack??(a.baseAttackTime>0&&entity.skillRefs?.some(r=>r.skillId));
- const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type||tokenId,name:spec.name||entity.name,kind:'summon',allied:true,x,y,dir:owner.dir,hp:spec.maxHp??a.maxHp,maxHp:spec.maxHp??a.maxHp,atk:spec.atk??a.atk,def:a.def,res:a.magicResistance,damageResistance:spec.damageResistance||0,elementalImmune:!!spec.elementalImmune,isolated:!!spec.isolated,cost:tokenCostFor(battle.profile(owner),tokenId,a.cost),interval:spec.interval??a.baseAttackTime,attackSpeed:spec.attackSpeed??a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],immunities:{...(spec.immunities||{})},shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,device:!!spec.device,canBlock,canAttack,canHeal:spec.canHeal??false,flying:!!spec.flying,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime,nextAuraAt:spec.type==='ghost2-substitute'?battle.s.time+1:null,spawnSpec:{...spec}};
+ const [x,y]=position,attrs=nativeAttributes(entity,battle.profile(owner).status),a=attrs.attributes,uid=battle.s.nextId++,canBlock=spec.canBlock??a.blockCnt>0,canAttack=spec.canAttack??(a.baseAttackTime>0&&entity.skillRefs?.some(r=>r.skillId));
+ // 召唤物的攻击范围取它自己 token 的 rangeId（海嗣／医疗探机 = x-4 3×3、狼群／流形 = 0-1 自身格、
+ // 「小自在」= x-5）。此前 tickSummons 写死 `chebyshev<=range||1.1`，所有召唤物都成了 3×3。
+ const rangeId=spec.rangeId??attrs.rangeId??null;
+ const row={uid,id:tokenId,ownerUid:owner.uid,ownerDeployGen:owner.deployGen,type:spec.type||tokenId,name:spec.name||entity.name,kind:'summon',allied:true,x,y,dir:owner.dir,rangeId,hp:spec.maxHp??a.maxHp,maxHp:spec.maxHp??a.maxHp,atk:spec.atk??a.atk,def:a.def,res:a.magicResistance,damageResistance:spec.damageResistance||0,elementalImmune:!!spec.elementalImmune,isolated:!!spec.isolated,cost:tokenCostFor(battle.profile(owner),tokenId,a.cost),interval:spec.interval??a.baseAttackTime,attackSpeed:spec.attackSpeed??a.attackSpeed,attackCooldown:0,action:null,deployed:true,deployGen:1,statuses:[],immunities:{...(spec.immunities||{})},shield:0,barriers:[],shieldLayers:[],targetable:spec.targetable!==false,healable:spec.healable!==false,device:!!spec.device,canBlock,canAttack,canHeal:spec.canHeal??false,flying:!!spec.flying,blockCnt:spec.blockCnt??a.blockCnt,blockCost:1,persistAfterSourceGone:!!spec.persistAfterSourceGone,endsAt:spec.duration?battle.s.time+spec.duration:null,occupiesTile:spec.occupiesTile??canBlock,lives:spec.lives,nextLifeAt:spec.nextLifeAt,anchorUid:spec.anchorUid,nextHealAt:battle.s.time+a.baseAttackTime,nextAuraAt:spec.type==='ghost2-substitute'?battle.s.time+1:null,spawnSpec:{...spec}};
   battle.s.summons.push(row);if(ctrl&&!spec.preparedCard)ctrl.stock--;
  log(battle,'summon',{uid,ownerUid:owner.uid,type:spec.type,x,y});return row;
 }
@@ -1393,11 +1413,24 @@ export function summonLifecycle(battle,owner,type){
  return {duration,redeploy};
 }
 
+// 召唤物的攻击／治疗范围：取它自己 token 的 `rangeId` 网格（随召唤物朝向旋转）。
+// 旧数据没有 rangeId 时退回原来的 1.1 半径（3×3 方格）。见 docs/SKILL_RANGE_AUDIT_2026-09-22.md D 项。
+export function summonInRange(battle,s,target){
+ if(!s||!target)return false;
+ // 被自己阻挡的敌人一定打得到（近战召唤物的 rangeId 是 `0-1` 自身格，目标实际站在相邻格）。
+ if(target.block!=null&&target.block===s.uid)return true;
+ const grids=s.rangeId?battle?.data?.ranges?.[s.rangeId]?.grids:null;
+ if(!grids?.length)return chebyshev(s,target)<=1.1;
+ const cells=battle.cellsForGrids?battle.cellsForGrids(s,grids):null;
+ if(cells)return cells.some(c=>c.x===target.x&&c.y===target.y);
+ // 没有 battle 方法时的退化路径（单测直接造对象）：这里自行旋转
+ return grids.some(g=>{let x=g.col,y=-g.row;for(let i=0;i<(s.dir||0);i++)[x,y]=[-y,x];return s.x+x===target.x&&s.y+y===target.y;});
+}
 function tickSummons(battle,dt){
  for(const s of battle.s.summons.slice()){
   if(s.neutral)continue;
   if(s.endsAt!=null&&battle.s.time>=s.endsAt){commitExit(battle,{target:s,reason:'forced'});continue;}
-  if(s.canHeal&&battle.s.time+1e-9>=s.nextHealAt){for(const a of alliedActors(battle.s).filter(v=>v.deployed&&v.hp>0&&chebyshev(s,v)<=1&&v.healable!==false))applyHeal(battle,{source:s,target:a,amount:s.atk,origin:s});s.nextHealAt+=s.interval;}
+  if(s.canHeal&&battle.s.time+1e-9>=s.nextHealAt){for(const a of alliedActors(battle.s).filter(v=>v.deployed&&v.hp>0&&v.healable!==false&&summonInRange(battle,s,v)))applyHeal(battle,{source:s,target:a,amount:s.atk,origin:s});s.nextHealAt+=s.interval;}
   if(s.type==='ghost2-substitute'&&s.deployed&&s.hp>0){const owner=getActor(battle.s,s.ownerUid),talent=owner&&activeTalentsOf(battle,owner).find(t=>t.name==='拥抱自我'),bb=talent?.values||{};s.nextAuraAt??=battle.s.time+1;if(battle.s.time+1e-9>=s.nextAuraAt){s.nextAuraAt+=1;for(const e of enemyActors(battle.s).filter(e=>chebyshev(s,e)<=1)){applyStatus(e,'sluggish',1.1,{source:s.uid,resistible:false});dealDamage(battle,{source:owner||s,target:e,amount:(owner?battle.stats(owner).atk:s.atk)*(Number(bb.atk_scale)||.4),type:'arts',cause:'skill'});}}}
   if(s.type==='cetsyr-dust'&&s.deployed&&s.hp>0){const owner=getActor(battle.s,s.ownerUid);if(owner&&battle.skillActive(owner)){s.nextAuraAt??=battle.s.time+1;if(battle.s.time+1e-9>=s.nextAuraAt){s.nextAuraAt+=1;for(const e of enemyActors(battle.s).filter(e=>chebyshev(owner,e)<=2)){dealDamage(battle,{source:owner,target:e,amount:battle.stats(owner).atk*(Number(skillBB(battle,owner).atkScale)||2.2),type:'true',cause:'skill'});applyStatus(e,'root',Number(skillBB(battle,owner).unmoveable_duration)||3,{source:owner.uid,resistible:false});}}}}
   if(s.type==='swire2-trap'&&s.deployed&&s.hp>0){
@@ -1436,7 +1469,7 @@ function tickSummons(battle,dt){
    if(s.yanSkillSp>=s.yanSkillCost&&inAttackRange&&(battle.s.time<=1e-9||battle.s.time>=Number(s.yanSkillNextAt||0)))startYanSkill(battle,s);
    continue;
   }
-  if(s.canAttack&&s.deployed&&s.hp>0){s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){const e=enemyActors(battle.s).filter(x=>!x.hidden).sort((a,b)=>chebyshev(s,a)-chebyshev(s,b)||a.uid-b.uid)[0];if(e&&chebyshev(s,e)<=(s.range||1.1)){const buff=s.vigilBuff;for(let i=0;i<(s.lives??1);i++)dealDamage(battle,{source:s,target:e,amount:s.atk*(buff?.scale||1),type:s.damageType||'physical',cause:'attack'});if(buff){const owner=getActor(battle.s,s.ownerUid);if(owner)applyHeal(battle,{source:owner,target:owner,amount:owner.maxHp*buff.heal});s.vigilBuff=null;}s.attackCooldown=s.interval||1;}}}
+  if(s.canAttack&&s.deployed&&s.hp>0){s.attackCooldown=Math.max(0,(s.attackCooldown||0)-dt);if(s.attackCooldown<=0){const e=enemyActors(battle.s).filter(x=>!x.hidden&&summonInRange(battle,s,x)).sort((a,b)=>chebyshev(s,a)-chebyshev(s,b)||a.uid-b.uid)[0];if(e){const buff=s.vigilBuff;for(let i=0;i<(s.lives??1);i++)dealDamage(battle,{source:s,target:e,amount:s.atk*(buff?.scale||1),type:s.damageType||'physical',cause:'attack'});if(buff){const owner=getActor(battle.s,s.ownerUid);if(owner)applyHeal(battle,{source:owner,target:owner,amount:owner.maxHp*buff.heal});s.vigilBuff=null;}s.attackCooldown=s.interval||1;}}}
   }
   // 召唤物复现：布局位置还在就放回原位（用户 2026-09-22 口径），卡被撤回才退回召唤者身边那一格。
   for(const owner of battle.s.units){

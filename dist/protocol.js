@@ -36,6 +36,11 @@ export function skillWidensRange(profile,skillIndex=null){
  return skill.rangeId!==profile.rangeId;
 }
 export function baseFunding(round){if(!Number.isInteger(round)||round<1)throw Error('Invalid round');return round+3;}
+// 唯一的朝向表：0=右、1=下、2=左、3=上（与 `session.js` 的 aim、native-play 的「→↓←↑」一致）。
+// 范围旋转（`rangeWithSkill` 的 `[x,y]=[-y,x]`）、推拉 forward、技能落点方向都读这一份，
+// 不要再各写一张（历史上出现过 1/3 颠倒的镜像表，上下朝向会打到反方向）。
+export const DIRECTIONS=Object.freeze([[1,0],[0,1],[-1,0],[0,-1]]);
+export function directionOf(dir){return DIRECTIONS[((Number(dir)||0)%4+4)%4];}
 // Versioned native data helpers. No missing rule is guessed or silently simulated.
 export function blackboard(entries=[]){return Object.fromEntries((entries||[]).map(e=>[e.key,e.valueStr??e.value]));}
 // 棋盘上该画「上一场战斗的单位」还是「备战期的我方单位」：战斗、结算与休整期都沿用战斗棋盘，

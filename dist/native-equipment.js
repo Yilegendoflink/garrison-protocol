@@ -11,6 +11,7 @@
 // equipmentTick（逐帧效果）、native-battle.stats()（统计类修正）＋ hit()（弱点伤害／法抗穿透）。
 
 import {skillKind} from './native-sp.js';
+import {directionOf} from './protocol.js';
 
 const ROW_KEY='key';
 function runeOf(row){
@@ -185,7 +186,7 @@ export function equipmentStatMods(battle,u,api){
   if(v===u||!v.deployed||v.hp<=0||v.kind==='summon')continue;
   const suit=dynamicRune(battle,v,'act2autochess_equip_acarm121_ability');
   if(!suit)continue;
-  const dir=[[1,0],[0,-1],[-1,0],[0,1]][v.dir||0]||[1,0];
+  const dir=directionOf(v.dir||0);
   if((u.x===v.x-dir[1]&&u.y===v.y+dir[0])||(u.x===v.x+dir[1]&&u.y===v.y-dir[0]))api.addAttackSpeed(num(suit.bb,'attack_speed'));
  }
 }
@@ -199,7 +200,7 @@ export function equipmentDeploy(battle,u,ctx){
  // 歌利亚头盔：生命值 +init_max_hp；身前一格没有其他干员再 +ex_max_hp（部署时判定）
  const helmet=rawRune(battle,u,'act1autochess_equip_acarm049_global_buff');
  if(helmet){
-  const dir=[[1,0],[0,-1],[-1,0],[0,1]][u.dir||0]||[1,0];
+  const dir=directionOf(u.dir||0);
   const front=battle.s.units.some(v=>v.uid!==u.uid&&v.deployed&&v.hp>0&&v.x===u.x+dir[0]&&v.y===u.y+dir[1]);
   u.helmetMaxHpBonus=num(helmet.bb,'init_max_hp')+(front?0:num(helmet.bb,'ex_max_hp'));
  }

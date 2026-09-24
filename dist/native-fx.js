@@ -374,6 +374,8 @@ const ZONE_TONE={thunder:['#bcd8ff','#7fb2ff'],blade:['#ffe9c2','#ffb877'],gold:
 // 敌方持续伤害区域的配色：原作的污染是发暗的紫绿，不是亮粉。压暗后按 source-over 叠在地块上，
 // 不再像此前用加成混合那样把整片地照成粉色。
 const FIELD_TINT={fill:'#4a4160',edge:'#8f86b8'};
+// `rangeUid` 圈（= 某名干员的攻击范围）在绘制时按它的当前范围格走；这里取持有者。
+function getZoneRangeOwner(s,fx){return (s.units||[]).find(u=>u.uid===fx.rangeUid)||null;}
 export function drawZones(c,point,z,battle,{reduceFx=false}={}){
  const s=battle?.s;if(!s)return false;
  // 敌方留下的持续伤害区域（kind:'field'：污染秽蚀、燃烧区域、毒雾）和我方技能区域共用这套绘制。
@@ -392,9 +394,13 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
   const pulse=reduceFx?0:(.5+.5*Math.sin(s.time*2.4));
   const alpha=(.1+.07*pulse)*blink*(reduceFx?.6:1);
   const cells=[];
-  if(visual.shape==='self'){
+  // 「这个圈就是某名干员的攻击范围」（rangeUid）：直接画它当前的技能范围格，别用半径近似。
+  const rangeOwner=fx.rangeUid?battle.range?.(getZoneRangeOwner(s,fx),true):null;
+  const circle=fx.shape==='circle'||fx.values?.shape==='circle';
+  if(rangeOwner?.length){for(const cell of rangeOwner)cells.push({x:cell.x,y:cell.y});}
+  else if(visual.shape==='self'){
    for(const u of s.units||[])if(u.uid===fx.sourceUid&&u.deployed)cells.push({x:u.x,y:u.y});
-  }else{
+  }else if(!circle){
    for(let dy=-Math.ceil(radius);dy<=Math.ceil(radius);dy++)for(let dx=-Math.ceil(radius);dx<=Math.ceil(radius);dx++){
     if(visual.shape==='line'){
      // 斜线扫过的形状：沿对角线方向铺开，宽度 1 格
@@ -425,6 +431,20 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
    continue;
   }
   c.save();c.globalCompositeOperation='lighter';
+  // 圆形领域（原作给的是半径，如烛煌 S1 的 `range_radius`、魔王的 `outside_radius`）：画圆盘＋圆环，
+  // 不铺方格——否则就会出现「原作是圆、这里是方块」。
+  if(circle){
+   const cx=point(fx.x??0,fx.y??0),rx=radius*z.tw,ry=radius*z.th;
+   c.fillStyle=`${light}${Math.round(alpha*255).toString(16).padStart(2,'0')}`;
+   c.beginPath();c.ellipse(cx.x,cx.y,rx,ry,0,0,Math.PI*2);c.fill();
+   c.strokeStyle=`${deep}${Math.round(Math.min(1,alpha*2.4)*255).toString(16).padStart(2,'0')}`;
+   c.lineWidth=1.6;c.beginPath();c.ellipse(cx.x,cx.y,rx,ry,0,0,Math.PI*2);c.stroke();
+   const circleInterval=Number(fx.interval)||0;
+   if(circleInterval>0&&!reduceFx&&fx.nextAt!=null&&fx.nextAt-s.time<=.25){const k=1-Math.max(0,fx.nextAt-s.time)/.25;
+    c.strokeStyle=`${deep}${Math.round(.5*(1-k)*255).toString(16).padStart(2,'0')}`;c.lineWidth=2.2;
+    c.beginPath();c.ellipse(cx.x,cx.y,rx*(1+k*.12),ry*(1+k*.12),0,0,Math.PI*2);c.stroke();}
+   c.restore();continue;
+  }
   for(const cell of cells){
    const p=point(cell.x,cell.y);
    c.fillStyle=`${light}${Math.round(alpha*255).toString(16).padStart(2,'0')}`;
