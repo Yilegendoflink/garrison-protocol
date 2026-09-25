@@ -465,7 +465,7 @@ export function applyElementDamage(battle,{source,target,amount,type='elemental'
  if(immune&&added<=0)return {added:0,burst:false,immune:true};
  const event=nextEvent(battle,{cause,parentEventId,type:'element',sourceUid:source?.uid,targetUid:target.uid});log(battle,'element',{eventId:event.eventId,sourceUid:source?.uid,targetUid:target.uid,element:target.elementalType,amount:added,current:target.elemental[target.elementalType]||0,max:limit});
  if(target.id==='char_4148_philae'&&type==='necrosis'){gainSp(target,battle.profile(target).skill,2,battle.spCost(target));if(battle.skillActive?.(target)&&(target.source?.skillIndex??battle.profile(target).skillIndex)===1)target.philaeElementBoost=true;}
- let burst=false;if((target.elemental[target.elementalType]||0)>=limit){const burstType=target.elementalType;target.elemental={};target.elementalType=null;target.elementalStartedAt=null;target.elementalBatch=null;target.elementBurst=(target.elementBurst||0)+1;target.elementBurstUntil=battle.s.time+({neural:10,burn:10,corrosion:battle.s.enemies.includes(target)?8:10,necrosis:15}[burstType]||3);burst=true;battle.onElementBurst?.({source,target,element:burstType,event});dispatch(battle,'element-burst',{source,target,element:burstType,event});settleElementBurst(battle,source,target,burstType,event);}
+ let burst=false;if((target.elemental[target.elementalType]||0)>=limit){const burstType=target.elementalType;target.elemental={};target.elementalType=null;target.elementalStartedAt=null;target.elementalBatch=null;target.elementBurst=(target.elementBurst||0)+1;target.elementBurstType=burstType;target.elementBurstUntil=battle.s.time+({neural:10,burn:10,corrosion:battle.s.enemies.includes(target)?8:10,necrosis:15}[burstType]||3);burst=true;battle.onElementBurst?.({source,target,element:burstType,event});dispatch(battle,'element-burst',{source,target,element:burstType,event});settleElementBurst(battle,source,target,burstType,event);}
  return {added,burst,immune};
 }
 
@@ -834,7 +834,9 @@ function settlePeriodic(battle,fx){
    }
    return;
   }
-  if(fx.values?.dot)for(const e of zoneActors(battle,fx,fx.trackSide||'enemy'))if(!fx.values.requiresStatus||(e.statuses||[]).some(s=>s.kind===fx.values.requiresStatus)){dealDamage(battle,{source,target:e,amount:fx.snapshot?.damage??(source?battle.stats(source).atk:0)*(fx.values.atk_scale||1),type:fx.values?.type||'arts',cause:'dot',effectId:fx.id});if(fx.values.elementScale&&source)applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot',parentEventId:null});}
+  if(fx.values?.dot)for(const e of zoneActors(battle,fx,fx.trackSide||'enemy'))if(!fx.values.requiresStatus||(e.statuses||[]).some(s=>s.kind===fx.values.requiresStatus)){const tickDamage=fx.snapshot?.damage??(source?battle.stats(source).atk:0)*(fx.values.atk_scale||1);dealDamage(battle,{source,target:e,amount:tickDamage,type:fx.values?.type||'arts',cause:'dot',effectId:fx.id});
+   // `elementOffDamage`：元素损伤量取「**这一次**伤害的比例」而不是攻击力的比例（烛煌 S1/S2 的 PRTS 文案都写「相当于法术伤害的 30%」）。
+   if(fx.values.elementScale&&source)applyElementDamage(battle,{source,target:e,amount:(fx.values.elementOffDamage?tickDamage:battle.stats(source).atk)*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot',parentEventId:null});}
   if(fx.values?.elementScale&&!fx.values?.dot&&source)for(const e of zoneActors(battle,fx,'enemy'))applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot'});
   if(fx.values?.sluggish)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'sluggish',Number(fx.values?.sluggishTime)||fx.interval||1,{source:source?.uid,resistible:false});
   if(fx.talentOrSkillId==='bond-kjerag-storm')fx.values.cold=Number(fx.values.baseTime??fx.values.cold??20)+Number(fx.values.timePerStack??0.1)*(battle.layers.kjeragShip||0);
