@@ -77,3 +77,12 @@ for(const [label,Class] of [['NativeSession',NativeSession],['NativeEconomy',Nat
   assert.ok(g.s.items.includes(merged),'合成结果必须在整备区');
  });
 }
+
+test('商店买进第二件（buyItem → gainItem）同样走合成，进阶装备出现在整备区',()=>{
+ const g=session(NativeSession),u=addUnit(g,'char_143_ghost');
+ wear(g,u,BASE);                                 // 干员身上穿着未进阶装备
+ g.s.itemOffers=[BASE];
+ assert.equal(g.perform('buyItem',0),true,g.lastError||'购买应当成功');
+ assert.deepEqual(hand(g),[ELITE],'合成出的进阶装备在整备区');
+ assert.deepEqual(worn(u),[],'干员身上那件被当作材料收走');
+});
