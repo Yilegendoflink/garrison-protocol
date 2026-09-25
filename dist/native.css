@@ -737,3 +737,59 @@ html.native-landscape-ui #native-modal .native-ban-entry{display:block;width:100
 @media (orientation:landscape) and (max-height:430px){
  html.native-landscape-ui .native-bb-cap{display:none}
 }
+
+/* 战前准备（大厅 → 资料与工具）：全干员／全装备效果资料页 ＋ 干员默认技能设置。
+   配色沿用大厅；筛选条吸在视口底部，所以长列表滚到哪都能改筛选（用户要求筛选放在界面下方）。 */
+.native-prep>*{max-width:1320px;margin-left:auto;margin-right:auto}
+.native-prep-top{display:flex;align-items:center;gap:18px;padding:0 0 18px;border-bottom:1px solid #2b5553}
+.native-prep-top h1{margin:4px 0 0;font-size:26px;letter-spacing:.06em}
+.native-prep-top .native-eyebrow{display:block;font-size:10px;letter-spacing:.24em;color:#6ad9c3}
+.native-prep-top button{padding:9px 13px;color:#d9efe7;background:#0b1c20;border:1px solid #315a58;font-size:12px}
+.native-prep-count{margin-left:auto;color:#8fb8ab;font-size:11px;letter-spacing:.08em}
+.native-prep-lead{margin:18px 0 0;color:#a9c9c0;font-size:12px;line-height:1.8}
+.native-prep-lead b{color:#eaf7f1}
+.native-prep-tabs{display:flex;gap:8px;margin:18px 0 14px;border-bottom:1px solid #23484a}
+.native-prep-tabs button{padding:11px 16px;color:#9cc5ba;background:transparent;border:1px solid transparent;border-bottom:2px solid transparent;font-size:13px}
+.native-prep-tabs button small{margin-left:6px;color:#6f9c92;font-size:10px}
+.native-prep-tabs button.chosen{color:#eafaf3;background:#10272a;border-color:#2b5754;border-bottom-color:#77e3c4}
+.native-prep-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;padding-bottom:14px}
+.native-prep-card{display:flex;gap:12px;min-width:0;padding:13px;background:#0d2023d9;border:1px solid #2c5352}
+.native-prep-card.is-custom{border-color:#77e3c4;box-shadow:0 0 0 1px #77e3c433}
+.native-prep-art{flex:0 0 auto}
+.native-prep-art img{width:52px;height:52px;object-fit:contain}
+.native-prep-body{display:flex;flex:1;flex-direction:column;gap:7px;min-width:0}
+.native-prep-title{display:flex;align-items:baseline;gap:8px;min-width:0}
+.native-prep-title b{font-size:14px;color:#eafaf3}
+.native-prep-title small{color:#7fb0a4;font-size:10px;letter-spacing:.08em}
+.native-prep-bonds{display:flex;flex-wrap:wrap;gap:4px}
+.native-prep-bond{padding:2px 6px;color:#a9d8ca;background:#122e2c;border:1px solid #2f5c56;font-size:10px}
+.native-prep-bond.core{color:#f0d18a;background:#2a2517;border-color:#5c5230}
+.native-prep-bond.none{color:#7c9a92;border-style:dashed}
+.native-prep-skill{display:flex;flex-direction:column;gap:5px;color:#91b6ad;font-size:10px;letter-spacing:.05em}
+.native-prep-skill select{width:100%;padding:8px 9px;color:#e5f7ef;background:#0a191d;border:1px solid #315e5a;border-radius:0;font-size:12px}
+.native-prep-skill select:focus{border-color:#71e1c3;outline:2px solid #71e1c333;outline-offset:1px}
+.native-prep-note{color:#7fb0a4;font-size:10px}
+.native-prep-card.is-custom .native-prep-note{color:#8fd8c0}
+.native-prep-item p{display:flex;gap:7px;margin:0;color:#d5e8df;font-size:11px;line-height:1.7;white-space:pre-line}
+.native-prep-form{flex:0 0 auto;padding:1px 5px;color:#f0d18a;background:#241f10;border:1px solid #4d4429;font-size:10px;font-weight:500}
+.native-prep-empty{margin:0;padding:24px;color:#8fb8ab;background:#0d2023d9;border:1px dashed #2c5352;font-size:12px}
+.native-prep-filters{position:sticky;bottom:0;z-index:3;display:flex;flex-direction:column;gap:10px;margin-top:6px;padding:12px 14px;background:#08181be6;border:1px solid #2b5754;backdrop-filter:blur(6px)}
+.native-prep-tier-row{display:flex;align-items:center;gap:6px;color:#91b6ad;font-size:10px;letter-spacing:.05em}
+.native-prep-tier-row small{margin-left:6px;color:#6f9c92}
+.native-prep-tier-row button{width:38px;padding:7px 0;color:#cfe8df;background:#0f2427;border:1px solid #315e5a;font-size:13px}
+.native-prep-tier-row button.chosen{color:#102b20;background:#79dcb7;border-color:#79dcb7;font-weight:700}
+.native-prep-bond-row{display:flex;flex-wrap:wrap;gap:12px}
+.native-prep-field{display:flex;flex-direction:column;gap:5px;color:#91b6ad;font-size:10px;letter-spacing:.05em}
+.native-prep-field select{min-width:170px;padding:8px 9px;color:#e5f7ef;background:#0a191d;border:1px solid #315e5a;border-radius:0;font-size:12px}
+.native-prep-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.native-prep-actions>span{color:#8fb8ab;font-size:11px}
+#prep-dirty.is-dirty{color:#f0d18a}
+.native-prep-actions button{padding:9px 14px;color:#d9efe7;background:#10272a;border:1px solid #2b5754;font-size:12px}
+.native-prep-actions button.native-primary{color:#102b20;background:#79dcb7;border-color:#79dcb7;font-weight:700}
+@media(max-width:560px){
+ .native-prep-list{grid-template-columns:minmax(0,1fr)}
+ .native-prep-field select{min-width:120px}
+ .native-prep-lead{font-size:11px}
+ .native-prep-count{display:none}
+ .native-prep-tier-row button{width:32px}
+}

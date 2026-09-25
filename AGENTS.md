@@ -44,6 +44,7 @@
 - `native-environment.js`：地图显式控制器的战斗效果及敌人生成的国度；当前接入深水、沙尘暴与现有土石结构遮挡。全局控制器可能在裁切外，构建时按原始地图的启用状态、技能索引/等级与历史黑板保留配置，不可只遍历可见 `map.devices`。沙尘暴不等于活性源石风暴，不能触发后者专属的敌人能力。国度格子保存在 `battle.s.dominionCells`，不改写共享地图；绘制只能读取它。
 - `native-waves.js` / `native-wave-random.js` / `native-wave-editor.js`：词条预算抽怪与「协议自定义」（两个页面：敌人波次／禁用方案）
 - `native-bond-ban.js`：盟约禁用（每局随机 3 核心 + 4 附加、逐盟约三态「固定禁用／参与随机／不被禁」、干员「所属盟约全被禁才禁用」的判定、配置读写与简报／分组弹窗）
+- `native-prep.js`：大厅「战前准备」页（全干员／全装备效果资料、阶级与盟约筛选、干员默认技能的配置读写与 `applyPrepSkills` 局内接线）
 - `native-branches.js`：职业分支基础层
 - `native-fx.js`：**只画特效**。`s.events` 会裁剪过期，禁止当规则执行依据
 - `scripts/build-native.mjs`：把固定历史库编进客户端
@@ -74,6 +75,8 @@
 - **详情（干员档案／商店干员／道具）点外部关闭**：统一走 `native-play` 的 `dismissInspectOnOutsidePress(e)`（pointerdown 里调用）。可关闭的 kind 是 `unit／shop／shopItem／pack／equip／summon`；商店卡片（`buy`／`buyItem`）、奖励候选（`reward`）与「已选好装备再点干员」不吞这一次按压，落在棋盘上的按压才吞掉（否则关详情的同时会把干员挪过去）。干员档案的名字旁边直接内联所属盟约（`native-dossier-name-bonds`，取 `bondIds`＋原表名字），不要再让玩家翻到「所属盟约」一节才看得到。
 
 - **同名干员的技能是共用的**（用户 2026-09-22 口径）：`perform('skill',uid,index)`（`native-session.js` 里 `type==='skill'` 那一条）会把技能档位写到**同一名干员的全部副本**上——按 `charId` 归并（精锐与初始算同一名，与盟约禁用／名册同一套身份口径），并且只在副本自己的 `profiles[chessId].skillChoices` 真有这一档时才写（形态之间档数可能不同）。于是**场上所有同名干员的技能始终一致**，改整备区那张也会同步到场上的那张，反之亦然；`u.skillIndex` 初始是 `undefined`（跟随档案默认档），所以同步要显式写值。不同干员互不影响，越界档位整组都不动，战斗中仍不允许改。档案的技能下拉下面会提示「同名干员共 N 张，技能会一起切换」。回归：`tests/native-skill-sync.test.mjs`。
+
+- **大厅「战前准备」页（`native-prep.js`，用户 2026-09-22 口径）**：大厅「资料与工具」第一项 `data-act="prepare"` → 独立页面 `state.view='prepare'`（`renderPreparePage`，HTML 在模块里、`native-play` 只注入 `esc`／`avatar`）。两个页签：**全干员**（112 名，按 `charId` 归并，直接用 `bondRoster`，不要另建名册）与**全装备效果**（`data.items` 里未隐藏的 56 件；每件分别列 `effectInfoDataDict[normal.effectId].effectDesc` 与 `[elite.effectId].effectDesc` 两份文案，隐藏的 3 件悬赏道具不列）。**页面下方**是筛选条（`position:sticky;bottom:0`，长列表滚到哪都能改）：阶级 **1–6 六个数字选项**（`PREP_TIERS`，再点一次取消，不额外加「全部」）＋「核心盟约」「附加盟约」两个下拉（核心＝原表 `isPower` 的 8 个、附加 15 个；两个下拉是**同时满足**的收窄条件；干员按自己的盟约并集匹配，装备按它自己的 `giveBondId` 归属匹配）。页面上能直接改干员的**默认技能**：配置在 `localStorage` 键 `garrison-prep-default-skill-v1`（`version:1`，只存玩家改过的 `{charId:档位}`，读配置时按名册与档位数校验、非法条目丢弃），点「保存默认技能」才落盘（下拉选回「跟随档案默认」＝删掉这条覆盖）——**初始状态就是当前的默认配置**，没有条目的干员继续跟随档案里的 `skillIndex`。局内接线只有一处：`NativeSession.gain` 里 `applyPrepSkills(this.data,this.s.units.filter(v=>v.charId===u.charId))`，取值顺序是**已有的同名副本显式写下的档位 → 玩家配置的默认技能 → 保持 `undefined`（跟随档案默认）**，所以局内改过技能不会被配置覆盖、同名干员的全部副本仍然共用一个技能，而「没有任何配置」时一个字段都不写（行为与以前完全一致）；`NativeSession.restore` 也会跑一次 `applyPrepSkills(data,c.s.units)` 给旧存档补齐／对齐（显式档位优先）。门禁：精锐形态与初始形态的技能档必须逐项一致（页面用初始形态的档位代表整名干员，`tests/native-prep.test.mjs` 有全表断言）。回归：`tests/native-prep.test.mjs`。
 
 ## 敌人能力口径
 

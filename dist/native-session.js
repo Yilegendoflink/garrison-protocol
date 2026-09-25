@@ -6,6 +6,8 @@ import {allowsHighlandPlacement} from './native-branches.js';
 import {runStrategyEvent} from './strategy.js';
 import {createWaveRoster} from './native-wave-random.js';
 import {bondBanIds,loadBondBan,normalizeBondBan} from './native-bond-ban.js';
+// 干员默认技能（「战前准备」页保存的配置）：购买时按它决定新干员携带哪一档，读档时用来补齐/对齐副本。
+import {applyPrepSkills} from './native-prep.js';
 
 // 商店阶级概率（项目规定口径）：最高阶 30% / 次高阶 40% / 更低阶合计 30%。
 // 抽卡顺序必须是「先掷阶级，再从该阶级的库存里抽」；掷到的阶级没库存时才回落到整池随机抽。
@@ -274,6 +276,9 @@ export class NativeSession extends NativeEconomy {
     return null;
    }
    const u=super.gain(chessId);
+   // 「战前准备」里设置的默认技能：新买的干员默认携带指定档位。只对齐**这名干员自己的**同名副本
+   // （同名共用一个技能），局内已经显式改过技能的就沿用那个值；没有任何配置时不写字段、行为与以前一致。
+   if(u)applyPrepSkills(this.data,this.s.units.filter(v=>v.charId===u.charId));
    if(this.s.roundGainedChars?.round!==this.s.round)this.s.roundGainedChars={round:this.s.round,count:0};
    this.s.roundGainedChars.count++;
    this.gainCharEquipEffects();
@@ -357,6 +362,9 @@ export class NativeSession extends NativeEconomy {
    ?{bonds:s.bondBan.bonds.slice(),always:restoredBan.always,never:restoredBan.never}
    :{bonds:[],always:restoredBan.always,never:restoredBan.never};c.sanitizeBannedOffers();if(!c.s.waveRoster?.version)c.s.waveRoster=createWaveRoster({random:()=>c.random(),data,modeId:c.s.modeId});let migrated=false;for(const u of c.s.units)if(u.position&&c.map.grid[u.position.y][u.position.x].buildableType==='NONE'){u.position=null;migrated=true;}
   // 旧存档里装备曾把 giveBondId 直接叠进 u.bondIds（「装了不融冰就算谢拉格」那类误判），读档时按新口径重算一次。
-  for(const u of c.s.units)c.refreshEquipmentBonds(u);if(migrated&&record.battle){const deployed=new Set(c.s.units.filter(u=>u.position).map(u=>u.uid));record.battle.units=record.battle.units.filter(u=>deployed.has(u.uid));}if(record.battle){const turn=buildPhasePlan(data,c.s.modeId).find(t=>t.round===c.s.round);c.battle=NativeBattle.restore(data,c,c.map,turn,record.battle);if(!c.battle)return null;}c.ensureRoundBounty();return c;
+  for(const u of c.s.units)c.refreshEquipmentBonds(u);
+  // 读档时按「战前准备」的默认技能补齐没写过档位的副本、并把同名干员对齐到同一个技能
+  // （存档里显式写下的档位优先，不会被配置覆盖）。
+  applyPrepSkills(data,c.s.units);if(migrated&&record.battle){const deployed=new Set(c.s.units.filter(u=>u.position).map(u=>u.uid));record.battle.units=record.battle.units.filter(u=>deployed.has(u.uid));}if(record.battle){const turn=buildPhasePlan(data,c.s.modeId).find(t=>t.round===c.s.round);c.battle=NativeBattle.restore(data,c,c.map,turn,record.battle);if(!c.battle)return null;}c.ensureRoundBounty();return c;
  }
 }
