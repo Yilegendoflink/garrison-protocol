@@ -19,23 +19,20 @@
 .native-status{display:flex;gap:36px;align-items:flex-end;margin:16px 0 0;padding:14px 20px;background:#101f1b;border:1px solid #577b6c;font-variant-numeric:tabular-nums}.native-status small{display:block;margin-bottom:4px;font-size:11px;letter-spacing:.14em;color:#8eb4a7}.native-status b{font-size:36px;line-height:1;font-weight:700;color:#e9fff7}.native-status b i{font-style:normal;font-size:.52em;font-weight:600;opacity:.72}.native-status .hp{color:#57cfaa}.native-status .funds{color:#f0d18a}.native-wave-preview{height:212px;overflow:hidden}.native-wave-preview>.native-wave-faces{display:flex;flex-wrap:wrap;align-content:flex-start;width:100%;height:140px;margin-top:6px;padding:0;overflow:hidden;background:#0f1e1a;border:1px solid #375447}.native-wave-faces img,.native-wave-faces .native-wave-miss{width:var(--face,36px);height:var(--face,36px);flex:0 0 var(--face,36px);object-fit:contain}.native-wave-faces .native-wave-miss{display:grid;place-content:center;color:#8eb4a7}
 .native-game{position:relative}
 .native-top,.native-status,.native-shop{position:relative;z-index:9}
-/* 战斗中顶栏：左=当前回合，中=击杀敌人/剩余敌人（衍生敌人不计击杀数），右=剩余生命值。
-   样式对齐作战终端（原作同一块 UI）：深色斜切面板 + 橙色核心胶囊；数值由 updateHud 刷新，口径走 protocol.battleTally。 */
-.native-battle-bar{position:relative;z-index:9;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;align-items:center;margin:10px 0 0;padding:6px 10px;border:1px solid #33544e;border-top-color:#4c7a70;background:linear-gradient(90deg,#081416f2,#0e2426f0,#081416f2),repeating-linear-gradient(90deg,transparent 0 39px,#77e8d012 39px 40px);box-shadow:0 6px 20px #0006,inset 0 0 26px #77e8d00d;color:#dff3ec}
-.native-bb-seg{display:flex;flex-direction:column;gap:3px;min-width:0;padding:5px 14px;border:1px solid #33544e;background:#0c1e1dcc;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
-.native-bb-side-right{align-items:flex-end;text-align:right}
-.native-bb-cap{font:9px/1 var(--mono,monospace);letter-spacing:.16em;color:#7ea79b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.native-bb-row{display:flex;align-items:center;gap:7px;font:700 22px/1 var(--mono,monospace);font-variant-numeric:tabular-nums}
-.native-bb-row em{font:500 11px/1 var(--mono,monospace);font-style:normal;letter-spacing:.18em;color:#a9c8bd}
-.native-bb-seg>.native-bb-row>#native-bb-round{padding:1px 9px;background:#d9e8e2;color:#0a1a18;font-size:18px}
-.native-bb-core{align-items:center;padding:4px 26px;border-color:#d0743c;background:linear-gradient(180deg,#3d230bee,#5a3210d9);box-shadow:0 0 20px #ff8a3d2e,inset 0 0 20px #ff8a3d1f;clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,14px 100%,0 50%)}
-.native-bb-core .native-bb-cap{color:#f0b78c;letter-spacing:.22em}
-.native-bb-core .native-bb-row{color:#fff2e4;text-shadow:0 0 14px #ff8a3d55}
-.native-bb-slash{font-style:normal;margin:0 -2px;font-size:18px;color:#ff8a3d99}
+/* 战斗中计数器：贴在场景窗体（.native-field）的标题行里，紧凑一行、靠右，不再占页面顶部一整条。
+   左=当前回合，中=击杀敌人/当轮敌人总数（衍生敌人不计击杀数），右=剩余生命值；数值由 updateHud 刷新，口径走 protocol.battleTally。 */
+.native-field-caption{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.native-battle-bar{margin-left:auto;display:flex;align-items:center;gap:6px;padding:2px 4px;border:1px solid #33544e;background:linear-gradient(90deg,#081416f2,#0e2426f0,#081416f2);color:#dff3ec}
+.native-bb-seg{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border:1px solid #33544e;background:#0c1e1dcc;clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);font:700 15px/1.1 var(--mono,monospace);font-variant-numeric:tabular-nums}
+.native-bb-seg em{font:500 10px/1 var(--mono,monospace);font-style:normal;letter-spacing:.08em;color:#a9c8bd}
+#native-bb-round{padding:0 5px;background:#d9e8e2;color:#0a1a18;font-size:13px}
+.native-bb-core{border-color:#d0743c;background:linear-gradient(180deg,#3d230bee,#5a3210d9);box-shadow:0 0 10px #ff8a3d26;color:#fff2e4}
+.native-bb-slash{font-style:normal;color:#ff8a3d99}
 .native-bb-accent{color:#ffa254}
-.native-bb-icon{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:#ffb072;stroke-width:1.6;stroke-linejoin:round}
-.native-bb-icon-hp{width:18px;height:18px;stroke:#57cfaa}
+.native-bb-icon{width:14px;height:14px;flex:0 0 auto;fill:none;stroke:#ffb072;stroke-width:1.8;stroke-linejoin:round}
+.native-bb-icon-hp{width:13px;height:13px;stroke:#57cfaa}
 #native-bb-hp{color:#7fe7c4}
+@media (max-width:600px){.native-bb-seg{padding:1px 5px;font-size:13px}.native-bb-seg em{display:none}}
  .native-shop-cards .chosen{outline:2px solid #69dbae}.native-shop-cards .native-shop-frozen{border:2px solid #e4fbff!important;outline:1px solid #55cfff;box-shadow:inset 0 0 0 1px #3aa8e8,0 0 8px #55cfff,0 0 16px #d8fbff;animation:native-shop-frozen-pulse 1.4s ease-in-out infinite alternate}
  @keyframes native-shop-frozen-pulse{from{box-shadow:inset 0 0 0 1px #3aa8e8,0 0 5px #55cfff,0 0 10px #d8fbff}to{box-shadow:inset 0 0 0 1px #e4fbff,0 0 10px #55cfff,0 0 20px #d8fbff}}
 .native-dossier{position:absolute;z-index:8;inset:64px auto 0 0;width:min(540px,64%);pointer-events:none;background:linear-gradient(90deg,#061014f7 0%,#061014ee 34%,#06101488 62%,#06101400 100%)}
@@ -105,6 +102,8 @@ html.native-landscape-ui{
  .native-game.is-battle{--dock-height:44px}
  .native-top{position:absolute;z-index:10;top:max(6px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));border:0;padding:0;gap:5px;justify-content:flex-start;flex-wrap:nowrap}
  .native-top strong{display:none}
+ /* 手机横屏的顶部已经被状态条（生命/时间/资金/波次）和操作按钮占满，计数器不在这里显示，避免遮挡。 */
+ html.native-landscape-ui .native-battle-bar{display:none}
  .native-top>button:not([data-act=home]):not(.native-mobile-info){display:none}
  .native-mobile-info{display:inline-block}
  .native-game button{font-size:11px;min-height:30px;padding:4px 8px}
@@ -317,15 +316,6 @@ html.native-need-rotate .native-lobby,html.native-need-rotate .native-briefing{
 /* Keep the entry flow usable on short mobile landscape screens. */
 @media (orientation:landscape) and (max-height:600px) and (max-width:1100px){
  html.native-landscape-ui .native-lobby{height:100vh;height:100dvh;min-height:0;max-height:100vh;max-height:100dvh;padding:10px max(12px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-bottom));overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
- html.native-landscape-ui .native-battle-bar{gap:6px;margin-top:6px;padding:4px 6px}
- html.native-landscape-ui .native-bb-seg{gap:2px;padding:3px 9px;clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
- html.native-landscape-ui .native-bb-core{padding:3px 18px;clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,10px 100%,0 50%)}
- html.native-landscape-ui .native-bb-cap{font-size:8px;letter-spacing:.1em}
- html.native-landscape-ui .native-bb-row{gap:5px;font-size:17px}
- html.native-landscape-ui .native-bb-row em{font-size:10px}
- html.native-landscape-ui .native-bb-seg>.native-bb-row>#native-bb-round{padding:0 6px;font-size:14px}
- html.native-landscape-ui .native-bb-icon{width:16px;height:16px}
- html.native-landscape-ui .native-bb-icon-hp{width:15px;height:15px}
  html.native-landscape-ui .native-lobby-topbar{gap:10px;padding-bottom:10px}
  html.native-landscape-ui .native-brand{gap:8px}
  html.native-landscape-ui .native-brand-mark{width:28px;height:28px;font-size:16px}
@@ -744,10 +734,6 @@ html.native-landscape-ui #native-modal .native-ban-entry{display:block;width:100
  .native-ban-operators{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}
 }
 
-/* 极矮屏（手机横屏 430px 以下）只留数值，去掉顶栏两侧的英文说明，避免挤掉棋盘高度。 */
-@media (orientation:landscape) and (max-height:430px){
- html.native-landscape-ui .native-bb-cap{display:none}
-}
 
 /* 战前准备（大厅 → 资料与工具）：全干员／全装备效果资料页 ＋ 干员默认技能设置。
    配色沿用大厅；筛选条吸在视口底部，所以长列表滚到哪都能改筛选（用户要求筛选放在界面下方）。 */

@@ -35,37 +35,34 @@ function spawnEnemy(b,id,x,y){
  return b.s.enemies.at(-1);
 }
 
-test('顶栏计数口径：衍生敌人不计击杀，剩余＝队列＋待生成＋场上存活',()=>{
- assert.deepEqual(
-  battleTally({kills:3,derivedKills:1,total:10,queue:[{id:'a'},{id:'b'}],pendingEnemySpawns:[{q:{id:'c'}}],enemies:[{hp:5},{hp:0},{hp:2}]}),
-  {kills:2,alive:2,pending:3,remaining:5,total:10});
- assert.deepEqual(battleTally(null),{kills:0,alive:0,pending:0,remaining:0,total:0},'没有战斗状态时全 0，不能抛错');
+test('计数器口径：衍生敌人不计击杀，分母是当轮敌人总数',()=>{
+ assert.deepEqual(battleTally({kills:3,derivedKills:1,total:10}),{kills:2,derived:1,total:10});
+ assert.deepEqual(battleTally(null),{kills:0,derived:0,total:0},'没有战斗状态时全 0，不能抛错');
  assert.equal(battleTally({kills:4}).kills,4,'没有衍生击杀时就是原始击倒数');
  assert.equal(battleTally({kills:1,derivedKills:5}).kills,0,'衍生击杀多于总击倒时不会出现负数');
 });
 
 test('真实战斗：编制敌人算击杀，解压缩碎片不算',()=>{
  const b=liveBattle(),u=b.s.units[0];
+ b.s.total=1;
  const parent=spawnEnemy(b,'enemy_1195_sfyin',u.x+1,u.y);
- assert.equal(battleTally(b.s).kills,0);
- const before=battleTally(b.s).remaining;
+ assert.deepEqual(battleTally(b.s),{kills:0,derived:0,total:1});
  b.hit(u,parent,999999,'physical');
  b.step();
  assert.equal(b.s.kills,1);
- assert.equal(battleTally(b.s).kills,1,'本波编制敌人的击倒要计入顶栏');
- assert.ok(battleTally(b.s).remaining>=before-1,'父体退场后剩余数不增加（碎片还没落地）');
+ assert.equal(battleTally(b.s).kills,1,'本波编制敌人的击倒要计入计数器');
+ assert.equal(battleTally(b.s).total,1,'分母是当轮总数，不随击杀/漏怪变化');
  b.flushEnemySpawns();
  flushFragments(b);
  const fragments=b.s.enemies.filter(e=>e.id==='enemy_1196_msfyin');
  assert.equal(fragments.length,2,'磨砻被击倒后生成 2 个木制瑞印');
  assert.ok(fragments.every(e=>e.derived===true),'解压缩碎片必须带上 derived 标记');
- assert.equal(battleTally(b.s).remaining,b.s.enemies.filter(e=>e.hp>0).length+b.s.queue.length,'碎片仍算「剩余敌人」（它们不处理完战斗不结束）');
  b.hit(u,fragments[0],99999,'physical');b.hit(u,fragments[0],99999,'physical');
  b.step();
  assert.equal(fragments[0].hp,0);
  assert.equal(b.s.kills,2,'s.kills 保持原语义（碎片照旧计入）');
  assert.equal(b.s.derivedKills,1);
- assert.equal(battleTally(b.s).kills,1,'碎片不计入顶栏击杀数');
+ assert.deepEqual(battleTally(b.s),{kills:1,derived:1,total:1},'碎片不计入计数器，总数也不因衍生敌人变大');
 });
 
 test('所有战斗中生成的敌人都标了 derived（漏一个就会虚增击杀数）',async()=>{
@@ -79,21 +76,25 @@ test('所有战斗中生成的敌人都标了 derived（漏一个就会虚增击
  assert.match(await read('native-battle.js'),/leaks:0,kills:0,derivedKills:0/,'战斗状态要初始化 derivedKills');
 });
 
-test('顶栏只在战斗中渲染，三个数值都由 updateHud 刷新',async()=>{
+test('计数器在场景窗体的标题行里，三个数值都由 updateHud 刷新',async()=>{
  const play=await read('native-play.js');
- assert.match(play,/\$\{s\.phase==='battle'&&!state\.sandbox\?battleBar\(\):''\}/,'顶栏只在正式战斗里插进 DOM（技能测试场不显示）');
- for(const id of ['native-bb-round','native-bb-kills','native-bb-remaining','native-bb-hp'])assert.match(play,new RegExp(`id="${id}"`),id+' 要有落点');
+ assert.match(play,/<span id="native-wave-progress">\$\{s\.units\.filter\(u=>u\.position\)\.length\} \/ \$\{s\.capacity\} 部署<\/span>\$\{s\.phase==='battle'&&!state\.sandbox\?battleBar\(\):''\}/,'计数器要接在场景窗体标题行（.native-field-caption）末尾，不能放页面顶部那一条');
+ assert.doesNotMatch(play,/<\/header>\$\{s\.phase==='battle'/,'不要再把它插在页头和工作区之间');
+ for(const id of ['native-bb-round','native-bb-kills','native-bb-total','native-bb-hp'])assert.match(play,new RegExp(`id="${id}"`),id+' 要有落点');
  assert.match(play,/set\('native-bb-round',g\.s\.round\)/,'左＝当前回合');
  assert.match(play,/set\('native-bb-kills',tally\?tally\.kills:0\)/,'中＝击杀敌人');
- assert.match(play,/set\('native-bb-remaining',tally\?tally\.remaining:0\)/,'中＝剩余敌人');
+ assert.match(play,/set\('native-bb-total',tally\?tally\.total:0\)/,'中＝当轮敌人总数');
  assert.match(play,/set\('native-bb-hp',g\.s\.hp\)/,'右＝剩余生命值');
- assert.match(play,/,tally=b\?battleTally\(b\):null/,'顶栏与侧栏共用同一份计数（不要各写一套）');
+ assert.match(play,/,tally=b\?battleTally\(b\):null/,'与侧栏共用同一份计数（不要各写一套）');
+ assert.match(play,/漏失 \$\{b\.leaks\}/,'标题行原有的进度文字改成只报漏失，别再重复击杀数');
 });
 
-test('顶栏样式与手机横屏适配都在样式表里',async()=>{
+test('计数器样式：一行紧凑、靠右贴在场景窗体里，手机横屏不显示',async()=>{
  const css=await read('native.css');
- assert.match(css,/\.native-battle-bar\{[^}]*grid-template-columns:minmax\(0,1fr\) auto minmax\(0,1fr\)/,'三段式布局');
+ assert.match(css,/\.native-field-caption\{[^}]*display:flex[^}]*flex-wrap:wrap/,'标题行改成可换行的 flex，窄屏时计数器换行而不是压住别人');
+ assert.match(css,/\.native-battle-bar\{margin-left:auto[^}]*display:flex/,'计数器靠右且是一行内的紧凑块');
+ assert.doesNotMatch(css,/\.native-battle-bar\{[^}]*grid-template-columns/,'不要再做成占满一整行的三段式');
  assert.match(css,/\.native-bb-core\{[^}]*#d0743c/,'中间那块是橙色核心胶囊');
- assert.match(css,/html\.native-landscape-ui \.native-battle-bar\{/,'手机横屏要单独收窄');
- assert.match(css,/@media \(orientation:landscape\) and \(max-height:430px\)\{[\s\S]*native-bb-cap\{display:none\}/,'极矮屏去掉英文说明，别挤掉棋盘');
+ assert.match(css,/html\.native-landscape-ui \.native-battle-bar\{display:none\}/,'手机横屏顶部已被状态条与按钮占满，计数器必须让位');
+ assert.doesNotMatch(css,/native-bb-cap/,'紧凑版不再保留顶栏那两条英文说明');
 });
