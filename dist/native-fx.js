@@ -430,6 +430,13 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
    c.restore();
    continue;
   }
+  // 余 S3「灶里乾坤」的火墙：一条横贯战场的线（垂直于余的部署朝向）。
+  if(fx.values?.firewall){
+   const w=fx.values.firewall,x0=z.ox+(w.axis==='x'?w.at:0)*z.tw,y0=z.oy+(w.axis==='y'?w.at:0)*z.th;
+   c.strokeStyle=`${deep}${Math.round(Math.min(.8,.4+.3*pulse)*blink*255).toString(16).padStart(2,'0')}`;c.lineWidth=Math.max(3,.3*z.tw);
+   c.beginPath();if(w.axis==='x'){c.moveTo(x0,z.oy);c.lineTo(x0,z.oy+z.r.height);}else{c.moveTo(z.ox,y0);c.lineTo(z.ox+z.r.width,y0);}c.stroke();
+   c.restore();continue;
+  }
   c.save();c.globalCompositeOperation='lighter';
   // 引星棘刺 S3「我的海疆」：判定区域是几个炼金单元落点围成的多边形（连成直线／只有一个点时也算），直接画路径。
   const areaPts=fx.values?.thorn2Area?.points;

@@ -1202,7 +1202,8 @@ test('remaining operator adapters expose element, link, summon and shield lifecy
  const n=openBattle({chessId:'chess_char_5_22_a',skillIndex:1}).b;deployNow(n);const nu=n.s.units[0],ne=enemy(n,{x:nu.x+1,y:nu.y,hp:20000});nu.sp=n.spCost(nu);n.activate(nu);assert.ok(ne.elemental?.necrosis>0||ne.elementBurst>0);assert.ok(ne.statuses.some(s=>s.kind==='fear'));
  const c=openBattle({chessId:'chess_char_4_25_a',skillIndex:1}).b;deployNow(c);assert.ok(c.s.summons.filter(s=>s.type==='cetsyr-dust').length>=1);
  const h=openBattle({chessId:'chess_char_6_16_a',skillIndex:1}).b;deployNow(h);const hu=h.s.units[0],he=enemy(h,{x:hu.x+1,y:hu.y,hp:20000});hu.sp=h.spCost(hu);h.activate(hu);assert.ok(he.statuses.some(s=>s.kind==='sluggish')||he.hp<20000);
- const a=openBattle({chessId:'chess_char_6_20_a',skillIndex:1}).b;deployNow(a);const au=a.s.units[0];au.sp=a.spCost(au);a.activate(au);assert.ok(au.shieldLayers.length>0);
+ // 纯烬 S2 给的是**损伤屏障**（吸收元素损伤的独立池），不是普通护盾层（PRTS：「损伤屏障」）。
+ const a=openBattle({chessId:'chess_char_6_20_a',skillIndex:1}).b;deployNow(a);const au=a.s.units[0];au.sp=a.spCost(au);a.activate(au);const abar=(a.s.elementBarriers||[]).find(x=>x.refUid===au.uid);assert.ok(abar&&abar.remaining>0,'纯烬 S2 的损伤屏障');
 });
 
 test('逐名适配覆盖被动撤回、狼影、心烛、雪山复起与链路状态',()=>{

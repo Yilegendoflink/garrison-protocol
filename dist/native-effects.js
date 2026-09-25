@@ -293,6 +293,14 @@ function runFatalProtection(battle,target,wouldDie,event){
  return false;
 }
 
+// 余 S3「灶里乾坤」火墙：伤害来源与目标分处火墙两侧、且是「友方 → 敌方」的**法术伤害**时，
+// 附带余攻击力 `ep_damage_ratio` 的灼燃损伤（PRTS：损伤来源为余自身；余自身造成的伤害与无来源伤害不触发）。
+function firewallElementBurn(battle,source,target){
+ if(!source||!target||target.hp<=0)return;
+ for(const fx of battle.s.logicEffects||[]){const w=fx.values?.firewall;if(!w)continue;if(fx.endsAt!=null&&battle.s.time>=fx.endsAt)continue;if(fx.sourceUid===source.uid)continue;const owner=getActor(battle.s,fx.sourceUid);if(!owner||!owner.deployed||owner.hp<=0)continue;
+  const ds=(w.axis==='x'?source.x:source.y)-w.at,dt=(w.axis==='x'?target.x:target.y)-w.at;if(ds*dt>=0)continue;
+  applyElementDamage(battle,{source:owner,target,amount:battle.stats(owner).atk*(Number(w.elementRatio)||.06),type:'burn',cause:'talent'});}
+}
 export function dealDamage(battle,opts){
  const source=opts.source||getActor(battle.s,opts.sourceUid);
  const target=opts.target||getActor(battle.s,opts.targetUid);
@@ -388,6 +396,7 @@ export function dealDamage(battle,opts){
  log(battle,'damage',{eventId:event.eventId,parentEventId:event.parentEventId,attackId:event.attackId,cause:event.cause,sourceUid:source?.uid,targetUid:target.uid,hp:result.hp,shield:result.shield,blocked:!!result.blocked});
  if(battle.s.enemies.includes(target))battle.enemyDamageReceived?.(target,opts,result);
  if(source&&battle.s.enemies.includes(source))battle.enemyDamageDealt?.(source,opts,result);
+ if(type==='arts'&&source&&target&&battle.s.enemies.includes(target)&&battle.s.units.includes(source)&&opts.cause!=='dot')firewallElementBurn(battle,source,target);
  if(target.hp<=0)commitExit(battle,{target,reason:opts.exitReason||'knockdown',killer:source,event});
  if(!opts.skipHooks)dispatch(battle,'after-damage',{source,target,result,type,event,cause:opts.cause||'attack',skill:!!opts.skill,effectId:opts.effectId});
  drainQueue(battle);
@@ -453,10 +462,21 @@ function elementalState(target){
  if(Number(raw)>0){target.elementalType='elemental';target.elemental={elemental:Number(raw)};return {type:'elemental',value:Number(raw)};}
  target.elemental??={};target.elementalType=null;return {type:null,value:0};
 }
+// 目标是否正处在**指定类型**的元素爆发期间（条件式元素技能的唯一判定入口：只看布尔 `elementBurst` 判不出类型）。
+export function elementBurstActive(target,type,now){return !!target&&(Number(target.elementBurstUntil)||0)>now&&target.elementBurstType===type;}
 export function applyElementDamage(battle,{source,target,amount,type='elemental',cause='element',parentEventId=null}={}){
  if(!target||target.hp<=0||target.hidden||target.invulnerable||target.elementBurstUntil>battle.s.time||!Number.isFinite(amount)||amount<=0||!ELEMENT_TYPES.has(type)||target.elementalImmune)return {added:0,burst:false};
  amount*=battle.enemyElementMultiplier?.(target)??1;
- amount*=1+Math.max(0,Number(target.elementDamageTakenBonus)||0)+Math.max(0,Number(target.yanElementDamageTakenBonus)||0);let resistance=Math.max(0,Math.min(1,Number(target.elementDamageResistance)||0));for(const sourceUnit of battle.s.units.filter(u=>u.deployed&&u.hp>0)){const talents=battle.activeTalentsOf?battle.activeTalentsOf(sourceUnit):(battle.profile(sourceUnit)?.activeTalents||[]);for(const talent of talents){const bb=talentValues(talent),text=talent.description||'';if(!Number.isFinite(Number(bb.ep_damage_resistance))||!/元素损伤.*降低/.test(text))continue;if(!battle.inside(sourceUnit,target))continue;if(battle.elementInjury?.(target)>(target.elementalMax??1000)*.5)resistance=Math.max(resistance,Number(bb.ep_damage_resistance));}}amount*=1-resistance;
+ amount*=1+Math.max(0,Number(target.elementDamageTakenBonus)||0)+Math.max(0,Number(target.elementDamageTakenBonusByType?.[type])||0)+Math.max(0,Number(target.yanElementDamageTakenBonus)||0);let resistance=Math.max(0,Math.min(1,Number(target.elementDamageResistance)||0));for(const sourceUnit of battle.s.units.filter(u=>u.deployed&&u.hp>0)){const talents=battle.activeTalentsOf?battle.activeTalentsOf(sourceUnit):(battle.profile(sourceUnit)?.activeTalents||[]);for(const talent of talents){const bb=talentValues(talent),text=talent.description||'';if(!Number.isFinite(Number(bb.ep_damage_resistance))||!/元素损伤.*降低/.test(text))continue;if(!battle.inside(sourceUnit,target))continue;if(!/超过一半|超过半数/.test(text)||battle.elementInjury?.(target)>(target.elementalMax??1000)*.5)resistance=Math.max(resistance,Number(bb.ep_damage_resistance));}}amount*=1-resistance;
+ // 元素损伤屏障（纯烬艾雅法拉 S2「云霭荫佑」）：先吸收本次元素损伤，剩下的才进损伤条。
+ // PRTS：范围内的我方单位**共享**吸收值、可对后续部署于范围内的目标生效、吸收值以释放技能时的攻击力为准。
+ if(battle.s.units.includes(target))for(const bar of battle.s.elementBarriers||[]){
+  if(!(Number(bar.remaining)>0))continue;if(bar.until!=null&&battle.s.time>=bar.until)continue;
+  const owner=getActor(battle.s,bar.sourceUid);if(!owner||!owner.deployed||owner.hp<=0)continue;if(!battle.inside(owner,target))continue;
+  const absorbed=Math.min(Number(bar.remaining),amount);bar.remaining=Number(bar.remaining)-absorbed;amount-=absorbed;
+  if(absorbed>0)battle.emit('element-barrier',{uid:target.uid,x:target.x,y:target.y,amount:absorbed});
+  if(amount<=0)return {added:0,burst:false,absorbed};
+ }
  const state=elementalState(target),limit=target.elementalMax??(target.elementalMax=(target.enemyRank==='BOSS'||target.trainingDummy?2000:1000)),sameFrame=state.type&&target.elementalStartedAt===battle.s.time;
  if(state.type&&state.type!==type&&!sameFrame)return {added:0,burst:false,immune:true};
  let before=state.value,added=0,immune=false;
@@ -922,7 +942,7 @@ function settlePeriodic(battle,fx){
   if(fx.values?.silence)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'silence',fx.interval||1,{source:source?.uid,resistible:false});
   if(fx.values?.reveal)for(const e of zoneActors(battle,fx,'enemy'))revealEnemy(battle,e,(fx.interval||1)+.2);
   if(fx.values?.hot)for(const a of zoneActors(battle,fx,'ally'))applyHeal(battle,{source,target:a,amount:fx.values.hot,effectId:fx.id});
-  if(fx.values?.elementRegen&&source)for(const a of zoneActors(battle,fx,'ally'))battle.healElements?.(source,a,fx.values.elementRegen);
+  if(fx.values?.elementRegen&&source)for(const a of zoneActors(battle,fx,'ally'))battle.healElements?.(source,a,fx.values.elementRegen,{ignoreHealingBlock:!!fx.values.elementRegenIgnoresHealBlock});
   // 引星棘刺 S1/S2 的「每秒回复」用通用的 `values.regen`（applyRegen）：炼金单元的分支口径是加**生命回复速度**（回复，不是治疗），
   // 所以不能走 `hot`（那会被治疗加成/禁疗影响，PRTS 明确写「不受治疗加成和禁疗影响」）。
   // 「治疗和回复效果降低」（S2）：PRTS 写同一目标的多个来源**乘算叠加**，所以挂状态、由 applyHeal/applyRegen 相乘。
@@ -963,6 +983,12 @@ function updateAreas(battle){
 function tickAuras(battle){
  for(const e of enemyActors(battle.s))e.fragile=Math.max(e.bondFragileUntil>battle.s.time?1.4:1,...(e.statuses||[]).filter(s=>s.kind==='fragile').map(s=>Number(s.value)||1));
  for(const e of enemyActors(battle.s))e.yanElementDamageTakenBonus=0;
+ // 塑心天赋「精神逆构」：使**攻击范围内**敌人受到的凋亡损伤提高 20%（黑板 `ep_damage_scale`，逐帧重算所以离开范围即失效）。
+ for(const e of enemyActors(battle.s))e.elementDamageTakenBonusByType=null;
+ // 纯烬艾雅法拉天赋「火山灰疗愈」：**攻击范围内**的友方单位生命上限 +6%（光环，逐帧重算，S3 期间按 talent_scale 提升）。
+ for(const a of battle.s.units)if(a.elementAuraMaxHp)a.elementAuraMaxHp=0;
+ for(const owner of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1016_agoat2')){const talent=activeTalentsOf(battle,owner).find(t=>t.name==='火山灰疗愈'),v=talent?Number(talent.values?.max_hp):NaN;if(Number.isFinite(v)&&v>0){const s3=battle.skillActive(owner)&&(owner.source?.skillIndex??battle.profile(owner).skillIndex)===2,scale=s3?(Number(blackboard(owner.skill?.blackboard).talent_scale)||1):1;for(const a of battle.s.units.filter(x=>x.deployed&&x.hp>0&&battle.inside(owner,x,true)))a.elementAuraMaxHp=Math.max(Number(a.elementAuraMaxHp)||0,v*scale);}}
+ for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_245_cello')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='精神逆构'),v=talent?Number(talent.values?.ep_damage_scale):NaN;if(Number.isFinite(v)&&v>1)for(const e of enemyActors(battle.s))if(battle.inside(source,e,true))e.elementDamageTakenBonusByType={necrosis:Math.max(Number(e.elementDamageTakenBonusByType?.necrosis)||0,v-1)};}
  for(const e of enemyActors(battle.s))e.operatorAttackSpeedMod=0;
  for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1039_thorn2')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='视界'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s))e.operatorAttackSpeedMod-=Number(bb.attack_speed_enemy)||5;}
  for(const fx of battle.s.logicEffects||[])if(fx.kind==='zone'&&fx.values?.fragile&&(fx.endsAt==null||battle.s.time<fx.endsAt))for(const e of zoneActors(battle,fx,'enemy'))e.fragile=Math.max(e.fragile||1,Number(fx.values.fragile));

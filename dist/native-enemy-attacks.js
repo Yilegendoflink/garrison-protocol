@@ -66,9 +66,19 @@ export function deliverEnemyAttack(battle,packet){
  if(packet.last&&enemy.enemyCast?.multiAttack)endEnemySkill(battle,enemy);
 }
 
+// 余 S3「灶里乾坤」火墙的消弹：宽 0.3 的碰撞，只对**可消除弹道**（速度 0<v≤9）按黑板 prob 判定（PRTS 备注）。
+function clearedByFirewall(battle,shot){
+ const walls=(battle.s.logicEffects||[]).filter(fx=>fx.values?.firewall&&(fx.endsAt==null||battle.s.time<fx.endsAt));
+ if(!walls.length)return false;
+ const life=Math.max(1e-6,Number(shot.impactAt)-Number(shot.startedAt)),dist=Math.hypot(shot.targetX-shot.startX,shot.targetY-shot.startY),speed=dist/life;
+ if(!(speed>0&&speed<=9))return false;
+ for(const fx of walls){const w=fx.values.firewall,a=(w.axis==='x'?shot.startX:shot.startY)-w.at,b=(w.axis==='x'?shot.targetX:shot.targetY)-w.at;if(a*b<0&&battle.economy.random()<(Number(w.prob)||.1))return true;}
+ return false;
+}
 export function tickEnemyProjectiles(battle){
  const keep=[];
  for(const shot of battle.s.enemyProjectiles||[]){
+  if(clearedByFirewall(battle,shot))continue;   // 火墙消弹
   if(battle.s.time+1e-9<shot.impactAt){keep.push(shot);continue;}
   // 已发射弹道不再依赖发射者和原目标；无来源伤害使用发射时缓存的攻击力。
   for(const target of attackableAllies(battle.s))if((!shot.groundOnly||!target.flying)&&Math.hypot(target.x-shot.targetX,target.y-shot.targetY)<=shot.radius+1e-9){

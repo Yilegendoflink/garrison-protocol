@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {resolveActiveTalents} from '../dist/protocol.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {operatorRegistry,skillConfig,statMods} from '../dist/native-operator-effects.js';
-import {openBattle,deployNow,enemy,byId,reps,blackboard} from './effects-harness.mjs';
+import {openBattle,deployNow,enemy,byId,steps,reps,blackboard} from './effects-harness.mjs';
 import {dealDamage,applyElementDamage,operatorSkillConfig,tickLogic} from '../dist/native-effects.js';
 import {moveActor} from '../dist/native-effects.js';
 import {applyStatus,tickStatuses} from '../dist/status.js';
@@ -135,19 +135,23 @@ test('天赋附带的元素损伤只认显式元素比例键：焰影苇草「�
  // 同一次排查里发现的同型错误：天赋版兜底把 `damage_scale`／`elementScale` 也当元素比例，
  // 焰影苇草「灼痕」的 damage_scale:1.15 因此被当成灼燃损伤，**每次攻击**都挂 115% 攻击力的灼燃。
  const source=readFileSync(new URL('../dist/native-operator-effects.js',import.meta.url),'utf8');
- assert.match(source,/const talentElement=Number\(bb\.ep_damage_ratio\?\?bb\.element_damage_scale\)/,'天赋元素比例只认 ep_damage_ratio／element_damage_scale');
+ assert.match(source,/const talentElement=TALENT_ELEMENT_DEDICATED\.has\(source\.id\)\?NaN:Number\(bb\.ep_damage_ratio\?\?bb\.element_damage_scale\)/,'天赋元素比例只认 ep_damage_ratio／element_damage_scale，且已有专属实现的干员要跳过');
  assert.ok(!/talentElement=Number\([^)\n]*\?\?bb\.damage_scale/.test(source),'不能把 damage_scale（法术脆弱倍率）当元素比例');
  assert.ok(!/talentElement=Number\([^)\n]*\?\?bb\.ep_damage_scale/.test(source),'烛煌的 ep_damage_scale 属于「熔点引爆」专属结算，不能进通用天赋表');
  const reed=openBattle([{chessId:'chess_char_6_08_a'}]);deployNow(reed.b);
  const ru=byId(reed.b,'char_1020_reed2'),re=enemy(reed.b,{x:ru.x+1,y:ru.y,hp:1e5});
- reed.b.hit(ru,re,10,'arts');
+ // 「造成伤害时 30% 概率」施加灼痕（PRTS）：多打几次，元素条始终为空，灼痕既不是每次都有、也不至于一次都不出。
+ let thorn=0;
+ for(let i=0;i<40;i++){re.statuses=[];re.fragile=1;reed.b.hit(ru,re,10,'arts');if((re.statuses||[]).some(s=>s.kind==='burn'))thorn+=1;}
+ assert.ok(thorn>0&&thorn<40,`灼痕是概率触发（40 次里 ${thorn} 次）`);
  assert.deepEqual(re.elemental||{},{} ,'灼痕不是元素损伤');
- assert.ok((re.statuses||[]).some(s=>s.kind==='burn'),'「灼痕」标记状态照旧');
- // 通用天赋元素通道的既有用户必须继续生效：塑心「无词哀歌」、盟约·辅助干员「迭代元素」
+ // 通用天赋元素通道的既有用户必须继续生效：塑心「无词哀歌」（现在是**每秒**）、盟约·辅助干员「迭代元素」（每次攻击）
  const cello=openBattle([{chessId:'chess_char_6_09_a'}]);deployNow(cello.b);
  const cu=byId(cello.b,'char_245_cello'),ce=enemy(cello.b,{x:cu.x+1,y:cu.y,hp:1e5});
  cello.b.hit(cu,ce,10,'arts');
- assert.ok((ce.elemental?.necrosis||0)>0,'塑心天赋仍按 ep_damage_ratio 挂凋亡损伤');
+ assert.deepEqual(ce.elemental||{},{} ,'塑心的天赋是每秒结算，不该在每次攻击时挂损伤');
+ steps(cello.b,35);
+ assert.ok((ce.elemental?.necrosis||0)>0,'塑心天赋每秒挂凋亡损伤');
  const pith=openBattle([{chessId:'chess_char_1_15_a'}]);deployNow(pith.b);
  const pu=byId(pith.b,'char_616_pithst');
  assert.ok(pu,'盟约·辅助干员在名册里');
