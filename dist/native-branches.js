@@ -23,7 +23,7 @@ export const BRANCH_POLICIES={
  tactician:{antiAir:true,pending:['战术点与援军']},summoner:{damageType:'arts',antiAir:true,pending:['召唤物生命周期']},soulcaster:{damageType:'arts',antiAir:true,pending:['击杀召唤与召唤物索敌']},
  duelist:{spRequiresBlock:true,pending:['模组解除阻回的例外']},dollkeeper:{pending:['各模组替身专属例外']},skywalker:{pending:['起飞与空中阻挡']},skybreaker:{antiAir:true,airOnlyIdle:true,pending:['起飞／降落']},
  ritualist:{damageType:'arts',antiAir:true,pending:['元素损伤']},underminer:{damageType:'arts',antiAir:true},
- merchant:{},charger:{pending:['击杀回费与撤退费用返还']},traper:{antiAir:true,pending:['陷阱单位与部署条件']},alchemist:{pending:['炼金单元']},counsellor:{pending:['待部署区支援']},mercenary:{pending:['部署费用强化']}
+ merchant:{},charger:{pending:['击杀回费与撤退费用返还']},traper:{antiAir:true,pending:['陷阱单位与部署条件']},alchemist:{pending:[]},counsellor:{pending:['待部署区支援']},mercenary:{pending:['部署费用强化']}
 };
 // 技能级的对空覆盖：分支特性只决定**常态**能否打空，个别技能会改变这一点。
 // 数据来源是 PRTS 干员页技能备注里的「※可对空」「※不可对空」「※攻击范围缩小时，不再攻击空中单位」

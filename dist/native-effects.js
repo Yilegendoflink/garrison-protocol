@@ -404,7 +404,10 @@ export function applyHeal(battle,opts){
  if(!source||(!opts.persistAfterSourceGone&&((!source.deployed&&!battle.s.enemies.includes(source))||source.hp<=0))||!healable||!Number.isFinite(opts.amount)||opts.amount<=0)return 0;
  if(target.healable===false&&!opts.ignoreHealable)return 0;
  const event=nextEvent(battle,{cause:'heal',parentEventId:opts.parentEventId??null,effectId:opts.effectId??null,type:'heal'});
- const attempted=opts.amount*(target.healingReceived??1)*(source.healingMultiplier??1);
+ // 引星棘刺 S2「解构涌潮」的 `heal_scale`：圈内地面敌人的「治疗和回复效果降低」——PRTS 写**乘算叠加**，
+ // 所以同名状态之间相乘，而不是取其中一个。
+ const healDown=(target.statuses||[]).filter(s=>s.kind==='healDown').reduce((n,s)=>n*Math.max(0,Math.min(1,Number(s.value)||1)),1);
+ const attempted=opts.amount*(target.healingReceived??1)*(source.healingMultiplier??1)*healDown;
  const real=recoverHP(target,attempted);
  source.healing=(source.healing||0)+real;
  const overflow=Math.max(0,attempted-real);
@@ -420,7 +423,9 @@ export function applyRegen(battle,opts){
  const source=opts.source||getActor(battle.s,opts.sourceUid);
  const target=opts.target||getActor(battle.s,opts.targetUid);
  if(!target||(!target.deployed&&!battle.s.enemies.includes(target))||target.hp<=0||!Number.isFinite(opts.amount)||opts.amount<=0)return 0;
- const real=recoverHP(target,opts.amount);
+ // 「回复」同样吃 `healDown`（引星棘刺 S2 的「治疗和回复效果降低」）。
+ const healDown=opts.ignoreHealDown?1:(target.statuses||[]).filter(s=>s.kind==='healDown').reduce((n,s)=>n*Math.max(0,Math.min(1,Number(s.value)||1)),1);
+ const real=recoverHP(target,opts.amount*healDown);
  if(source)source.regeneration=(source.regeneration||0)+real;
  log(battle,'regen',{sourceUid:source?.uid,targetUid:target.uid,amount:real});
  return real;
@@ -558,6 +563,16 @@ export function tickLogic(battle,dt){
   const dx=Number(c.toX)-fx.x,dy=Number(c.toY)-fx.y,dist=Math.hypot(dx,dy),step=Math.max(0,Number(c.speed)||1)*Math.max(0,Number(dt)||0);
   if(dist<=step||dist<1e-6){fx.x=Number(c.toX);fx.y=Number(c.toY);c.arrived=true;}
   else{fx.x+=dx/dist*step;fx.y+=dy/dist*step;}
+ }
+ // 引星棘刺的炼金单元：`drift`＝落地后沿投掷方向缓慢移动（S2，0.1 格/秒，方向为远离自己的方向）；
+ // `growth`＝影响半径每秒扩大多少（S2 从 projectile_range 起、按技能黑板的 value 每秒 +）。
+ // PRTS 备注：移动与扩大的时间**固定为技能所写数值**、不受天赋「心相」的延长影响，所以各自带 `time` 上限。
+ for(const fx of battle.s.logicEffects||[]){
+  const v=fx.values;if(!v)continue;
+  if(fx.carrier&&!fx.carrier.arrived)continue;
+  const elapsed=Math.max(0,battle.s.time-(fx.startedAt??battle.s.time)),dt2=Math.max(0,Number(dt)||0);
+  if(v.drift&&elapsed<=Number(v.drift.time??Infinity)){fx.x=(fx.x??0)+Number(v.drift.x||0)*Number(v.drift.speed||0)*dt2;fx.y=(fx.y??0)+Number(v.drift.y||0)*Number(v.drift.speed||0)*dt2;}
+  if(v.growth){const time=Number.isFinite(Number(v.growth.time))?Math.min(elapsed,Number(v.growth.time)):elapsed;fx.radius=(Number(v.growth.base)||Number(fx.radius)||1)+Number(v.growth.rate||0)*time;}
  }
  let scheduled=0;
  while(true){
@@ -781,14 +796,66 @@ function bondPeriodic(battle,u){
 export function zoneContains(battle,fx,a){
  if(!fx||!a)return false;
  if(fx.rangeUid){const owner=getActor(battle.s,fx.rangeUid);if(owner&&owner.deployed&&owner.hp>0){const cells=battle.range?.(owner,true);if(cells?.length)return cells.some(c=>c.x===a.x&&c.y===a.y);}}
+ // 引星棘刺 S3「我的海疆」：判定区域由 3 个炼金单元的落点围成（点／宽 0.65 的直线／各边外扩 0.325 的多边形）。
+ // PRTS 备注：处于区域中的**我方干员（不含装置）**阻挡敌人时，被阻挡的敌人视为处于区域内。
+ const area=fx.values?.thorn2Area;
+ if(area){
+  if(thorn2AreaContains(area,a.x,a.y))return true;
+  if(a.block!=null){const blocker=getActor(battle.s,a.block);if(blocker&&!blocker.device&&battle.s.units.includes(blocker)&&thorn2AreaContains(area,blocker.x,blocker.y))return true;}
+  return false;
+ }
  const r=Number.isFinite(fx.radius)?fx.radius:1,shape=fx.shape||fx.values?.shape;
  return shape==='circle'?Math.hypot((fx.x??0)-a.x,(fx.y??0)-a.y)<=r+1e-9:chebyshev({x:fx.x??0,y:fx.y??0},a)<=r;
+}
+// 引星棘刺 S3 的判定区域：`area={points:[{x,y}...],width}`（PRTS 备注的三种退化情形都在这里）。
+export function thorn2AreaContains(area,x,y){
+ const raw=(area?.points||[]).map(p=>({x:Number(p?.x),y:Number(p?.y)})).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
+ if(!raw.length)return false;
+ const width=Number(area?.width)>0?Number(area.width):.325;
+ const unique=raw.filter((p,i)=>raw.findIndex(q=>Math.abs(q.x-p.x)<1e-9&&Math.abs(q.y-p.y)<1e-9)===i);
+ if(unique.length===1)return Math.hypot(unique[0].x-x,unique[0].y-y)<=1e-9;
+ const hull=convexHull(unique);
+ if(hull.length===1)return Math.hypot(hull[0].x-x,hull[0].y-y)<=1e-9;
+ if(hull.length===2)return distanceToSegment(hull[0],hull[1],x,y)<=width;
+ // 凸包按逆时针排列：每条边的内法线方向到点距离都要 ≥ -width（等价于把各边向外平移 width）。
+ for(let i=0;i<hull.length;i++){
+  const a=hull[i],b=hull[(i+1)%hull.length],ex=b.x-a.x,ey=b.y-a.y,len=Math.hypot(ex,ey)||1;
+  if(((x-a.x)*(-ey/len)+(y-a.y)*(ex/len))< -width-1e-9)return false;
+ }
+ return true;
+}
+function distanceToSegment(a,b,x,y){
+ const ex=b.x-a.x,ey=b.y-a.y,len=ex*ex+ey*ey;
+ const t=len<=1e-12?0:Math.max(0,Math.min(1,((x-a.x)*ex+(y-a.y)*ey)/len));
+ return Math.hypot(x-(a.x+t*ex),y-(a.y+t*ey));
+}
+function convexHull(points){
+ const pts=points.slice().sort((a,b)=>a.x-b.x||a.y-b.y);
+ const cross=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x);
+ const build=list=>{const out=[];for(const p of list){while(out.length>=2&&cross(out[out.length-2],out[out.length-1],p)<=1e-12)out.pop();out.push(p);}return out;};
+ const lower=build(pts),upper=build(pts.slice().reverse());
+ const hull=[...lower.slice(0,-1),...upper.slice(0,-1)];
+ return hull.length?hull:[pts[0]];
 }
 function zoneActors(battle,fx,side){
  const pool=side==='enemy'?enemyActors(battle.s):side==='all'?[...enemyActors(battle.s),...alliedActors(battle.s).filter(u=>u.deployed&&u.hp>0)]:alliedActors(battle.s).filter(u=>u.deployed&&u.hp>0);
  const inside=pool.filter(a=>zoneContains(battle,fx,a));
  // groundOnly：原表写「地面敌人」的圈不吃飞行单位（友方一侧不受这个开关影响）。
  return side==='ally'||!fx.values?.groundOnly?inside:inside.filter(a=>!a.flying);
+}
+// 引星棘刺 S3「我的海疆」的区域结算。`values.thorn2Sap` 里存技能开启时缓存的攻击力与爬升参数：
+// PRTS 「效果逐渐提升（max_stack_cnt 秒后达到最大，攻击力 -max_atk，防御力 -max_def，法术抗性 -max_magic_resistance，每秒伤害 max_atk_scale）」，
+// 每秒的步长就是黑板里的 `*_per_interval`；削弱效果「叠加时取最高」（同名同来源走 pick:'strong'），伤害多次开启各自叠加。
+function settleThorn2Sap(battle,fx,source){
+ const sap=fx.values?.thorn2Sap||{},elapsed=Math.max(0,battle.s.time-(fx.startedAt??battle.s.time)),k=Math.max(0,Math.min(Number(sap.cap)||0,elapsed));
+ const step=(from,per,max)=>{const v=Number(from||0)+Number(per||0)*k,m=Number(max);return Number.isFinite(m)?(m<Number(from||0)?Math.max(m,v):Math.min(m,v)):v;};
+ const dps=step(sap.dps,sap.dpsPer,sap.dpsMax),atk=step(sap.atk,sap.atkPer,sap.atkMax),def=step(sap.def,sap.defPer,sap.defMax),res=step(sap.res,sap.resPer,sap.resMax);
+ for(const e of zoneActors(battle,fx,'enemy')){
+  if(dps>0)dealDamage(battle,{source,target:e,amount:Number(sap.atkValue||0)*dps,type:'arts',cause:'dot',effectId:fx.id});
+  if(atk<0)applyStatus(e,'attackDown',fx.interval||1,{source:source?.uid,value:atk,resistible:false,pick:'strong'});
+  if(def<0)applyStatus(e,'defDown',fx.interval||1,{source:source?.uid,value:def,resistible:false,pick:'strong'});
+  if(res<0)applyStatus(e,'resDown',fx.interval||1,{source:source?.uid,value:res,resistible:false,pick:'strong'});
+ }
 }
 function settlePeriodic(battle,fx){
  const source=getActor(battle.s,fx.sourceUid);
@@ -827,6 +894,8 @@ function settlePeriodic(battle,fx){
  }else if(fx.kind==='loss'){
   const t=getActor(battle.s,fx.targetUid);if(t)applyLoss(battle,{target:t,amount:fx.values?.amount||0,source,effectId:fx.id});
  }else if(fx.kind==='zone'){
+  // 还在飞行中的炼金单元不结算（引星棘刺的投掷物：PRTS 写「落点周围」，落地前不该有作用）。
+  if(fx.values?.holdUntilArrival&&fx.carrier&&!fx.carrier.arrived)return;
   if(fx.values?.mouseSand){
    for(const target of attackableAllies(battle.s))if(Math.max(Math.abs(Math.round(target.x)-fx.x),Math.abs(Math.round(target.y)-fx.y))<=1){
     dealDamage(battle,{source,target,amount:fx.values.damage,type:'arts',cause:'dot',effectId:fx.id});
@@ -854,7 +923,14 @@ function settlePeriodic(battle,fx){
   if(fx.values?.reveal)for(const e of zoneActors(battle,fx,'enemy'))revealEnemy(battle,e,(fx.interval||1)+.2);
   if(fx.values?.hot)for(const a of zoneActors(battle,fx,'ally'))applyHeal(battle,{source,target:a,amount:fx.values.hot,effectId:fx.id});
   if(fx.values?.elementRegen&&source)for(const a of zoneActors(battle,fx,'ally'))battle.healElements?.(source,a,fx.values.elementRegen);
-  if(fx.values?.defBuff)for(const a of zoneActors(battle,fx,'ally')){a.thornDefBuff=Number(fx.values.defBuff);a.thornDefBuffUntil=battle.s.time+1.1;}
+  // 引星棘刺 S1/S2 的「每秒回复」用通用的 `values.regen`（applyRegen）：炼金单元的分支口径是加**生命回复速度**（回复，不是治疗），
+  // 所以不能走 `hot`（那会被治疗加成/禁疗影响，PRTS 明确写「不受治疗加成和禁疗影响」）。
+  // 「治疗和回复效果降低」（S2）：PRTS 写同一目标的多个来源**乘算叠加**，所以挂状态、由 applyHeal/applyRegen 相乘。
+  if(fx.values?.healDown)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'healDown',fx.interval||1,{source:source?.uid,value:Number(fx.values.healDown)||1,resistible:false,pick:'strong'});
+  // 引星棘刺 S3：区域内敌人按秒递增的三围削弱 + 无来源法术持续伤害（削弱取最高、伤害叠加）。
+  if(fx.values?.thorn2Sap)settleThorn2Sap(battle,fx,source);
+  // 防御力加成（S1「度算浪波」）：PRTS 写 S1 效果可叠加，所以按效果 id 记账、`stats()` 里求和。
+  if(fx.values?.defBuff)for(const a of zoneActors(battle,fx,'ally')){a.thornDefSources??={};a.thornDefSources[fx.id]={value:Number(fx.values.defBuff)||0,until:battle.s.time+1.1};}
   if(fx.values?.regen)for(const a of zoneActors(battle,fx,'ally'))applyRegen(battle,{source,target:a,amount:fx.values.regen});
  }else if(fx.kind==='attached'){
   const anchor=getActor(battle.s,fx.anchorUid);if(!anchor?.deployed||anchor.hp<=0)return;

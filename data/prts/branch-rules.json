@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-09-25T06:15:52.302Z",
+  "recordedAt": "2026-09-25T06:25:39.211Z",
   "scope": "Historical branch definitions plus current PRTS clarifications. Base branch behavior is separate from operator skills, talents and module exceptions.",
   "sources": [
     {
@@ -4095,19 +4095,15 @@
       ],
       "wikiDetailSectionFound": true,
       "runtime": {
-        "pending": [
-          "炼金单元"
-        ],
+        "pending": [],
         "kind": "damage",
         "style": "single",
         "damageType": "physical",
         "antiAir": true,
         "attack": true,
-        "status": "partial"
+        "status": "base-implemented"
       },
-      "pending": [
-        "炼金单元"
-      ],
+      "pending": [],
       "traitVariants": [
         {
           "charId": "char_1039_thorn2",

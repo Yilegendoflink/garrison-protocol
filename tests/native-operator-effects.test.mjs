@@ -91,8 +91,10 @@ test('runtime contains the pinned summon token catalogue for later per-operator 
 });
 
 test('area skill adapters retain both enemy damage and ally regeneration channels',()=>{
+ // 引星棘刺 S2「解构涌潮」：炼金单元同时带「每秒法术伤害」与「友方每秒回复」两条通道，
+ // 回复走 `values.regen`（加生命回复速度，不受治疗加成/禁疗影响），并且时长有限（projectile_delay_time + 天赋延长）。
  const {b}=openBattle({chessId:'chess_char_5_15_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);
- const zones=b.s.logicEffects.filter(f=>f.sourceUid===u.uid);assert.ok(zones.some(f=>f.values?.dot&&f.trackArea));assert.ok(zones.some(f=>f.values?.hot&&f.trackArea));assert.ok(zones.every(f=>f.endsAt===null));
+ const zones=b.s.logicEffects.filter(f=>f.sourceUid===u.uid);assert.ok(zones.some(f=>f.values?.dot&&f.trackArea),'每秒伤害通道');assert.ok(zones.some(f=>f.values?.regen&&f.trackArea),'友方每秒回复通道');assert.ok(zones.every(f=>Number.isFinite(f.endsAt)),'炼金单元有存活时长，不是常驻圈');
 });
 
 test('generic periodic zone is allow-listed: 塞雷娅 S3/流明 S1 不再有兜底伤害圈，友军不会被打',()=>{

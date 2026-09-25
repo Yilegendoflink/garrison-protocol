@@ -11,6 +11,9 @@ function elementBurstActive(target,type,now){return !!target&&(Number(target.ele
 // becoming a normal attack.
 // 锡人「炼金单元」的表现常数（原表没有单元自身的范围与速度字段，口径见 operatorSkillStart 里的说明）。
 const ALCHEMY_UNIT_RADIUS=1.5,ALCHEMY_UNIT_SPEED=1;
+// 引星棘刺「炼金单元」的投掷段速度：PRTS 只写「投掷」，没有给飞行速度；S2 的「缓慢移动 0.1 格/秒」是**落地之后**的部分，
+// 所以投掷段用与普攻弹道同级的快速度（`TENTATIVE_PROJECTILE_SPEED` = 6 格/秒），落地即开始结算。
+const THORN2_THROW_SPEED=6;
 // 「停顿／失去特殊能力／寒冷」等状态挂在**投掷物／区域**上的技能：这些技能由专属圈（或专属实现）施加状态，
 // 不能再走通用兜底「开技时对攻击范围内所有敌人施加状态」——那会让状态漏到整个攻击范围（波登可的孢子群就是这样
 // 把「失去特殊能力」漏给了相邻格的敌人，2026-09-22 随瓶子一起修）。
@@ -298,7 +301,58 @@ export function operatorSkillStart(battle,u,ctx){
  if(profile.charId==='char_4056_titi'&&skillIndex===1){const ally=allAllies(battle,u,true).filter(a=>a.uid!==u.uid).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.uid-b.uid)[0]||u;u.titiSleepUid=ally.uid;applyStatus(u,'sleep',profile.skill.duration>0?profile.skill.duration:1e9,{source:u.uid,resistible:false});applyStatus(ally,'sleep',profile.skill.duration>0?profile.skill.duration:1e9,{source:u.uid,resistible:false});u.skillDisarmUntil=battle.s.time+(profile.skill.duration>0?profile.skill.duration:1e9);}
  if(profile.charId==='char_4056_titi'&&skillIndex===2)u.titiSleepState={};
  if(profile.charId==='char_1040_blaze2'&&skillIndex===0){const anchor=allAllies(battle,u,true).sort((a,b)=>b.maxHp-a.maxHp||a.uid-b.uid)[0]||u;u.blaze2AnchorUid=anchor.uid;ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'blaze2-s1',x:anchor.x,y:anchor.y,radius:Number(bb.range_radius)||1.5,interval:Number(bb.interval)||1,nextAt:battle.s.time+1,endsAt:battle.s.time+(Number(bb.max_duration)||20),trackArea:true,trackSide:'enemy',values:{dot:true,atk_scale:Number(bb.atkScale)||.46,type:'arts',shape:'circle',elementScale:Number(bb.element_multiplier)||.3,elementOffDamage:true,groundOnly:true},snapshot:{damage:battle.stats(u).atk*(Number(bb.atkScale)||.46)},refKind:'owner',persistAfterSourceGone:false});return true;}
- if(profile.charId==='char_1039_thorn2'){const duration=profile.skill.duration>0?profile.skill.duration:15;if(skillIndex===0||skillIndex===1||skillIndex===2){const ally=allAllies(battle,u,true).filter(a=>a.uid!==u.uid).sort((a,b)=>a.blockCnt-b.blockCnt||a.uid-b.uid)[0]||u;const radius=skillIndex===0?1:2;const dot=skillIndex===1||skillIndex===2;const thornFx={kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'thorn2-zone:'+u.skillCount,x:ally.x,y:ally.y,radius,interval:1,nextAt:battle.s.time+1,endsAt:skillIndex===1?null:battle.s.time+duration,trackArea:true,trackSide:skillIndex===0?'all':'enemy',values:skillIndex===0?{hot:battle.stats(u).atk*(Number(bb.hpRecoveryPerSecRatio)||.11),defBuff:Number(bb.def)||60}:skillIndex===1?{dot:true,hot:battle.stats(u).atk*(Number(bb.hp_recovery_per_sec_ratio_chr)||.15),atk_scale:Number(bb.atkScale)||1.2,type:'arts',attackDown:Number(bb.atk)||0}: {dot:true,atk_scale:Number(bb.atkScale)||1.2,type:'arts',attackDown:Number(bb.atk)||0,defDown:Number(bb.def)||0,resDown:Number(bb.magic_resistance)||0,fragile:1.2},snapshot:skillIndex===0?{}:{damage:battle.stats(u).atk*(Number(bb.atkScale)||1.2)},refKind:'owner',persistAfterSourceGone:false};ctx.addEffect(battle,thornFx);u.thornZones=[thornFx];return true;}}
+ // 引星棘刺「炼金单元」（`char_1039_thorn2`，炼金师）：投掷物 ＋ 独立结算的区域。规则照 PRTS 干员页 394044 的技能备注，
+ // 数值全部取技能黑板（本期技能等级 4：S1 def60/11%/6 秒、S2 heal50%/120%/12%/半径1.1+0.13每秒/移速0.1/12 秒、S3 -12%/-32%/-32%→-21%/-41%/-41% 与 120%→300%/15 秒）。
+ //  S1「度算浪波」：向**生命比例最低 > 最晚部署**的我方干员投掷；落点＋周围 8 格（3×3）友方防御力 +def、每秒回复 atk×hp_recovery_per_sec_ratio，效果可叠加。
+ //  S2「解构涌潮」：攻击范围内有可选敌人就投到该敌人所在格，否则投到正前方最远的地块；落点周围**地面敌人**治疗/回复效果降低 heal_scale（乘算叠加）、每秒受到 atk×atk_scale 法术伤害，友方每秒回复 atk×hp_recovery_per_sec_ratio_chr；
+ //      单元落地后以 projectile_move_speed 沿**远离自己**的方向缓慢移动、半径从 projectile_range 起每秒扩大 value（移动与扩大时间固定为技能所写数值，不受天赋影响）。
+ //  S3「我的海疆」：被动扩大攻击范围；主动向**阻挡数最低 > 最晚部署**的 max_target_token 名干员投掷，落点围成的区域（点／宽 0.65 的直线／各边外扩 0.325 的多边形）内敌人三围降低、每秒受到法术伤害，
+ //      并在 max_stack_cnt 秒内按 *_per_interval 线性提升到 max_*；区域独立于干员存在（persistAfterSourceGone），多次开启互不干涉：伤害叠加、削弱取最高。
+ // 天赋「心相」：攻击范围内存在其他干员时本次投掷的单元持续时间 +projectile_extend（PRTS 备注：只在投掷那一刻判定）。
+ if(profile.charId==='char_1039_thorn2'){
+  const atk=battle.stats(u).atk,mid=Math.round;
+  const talent=activeTalents(battle,u).find(t=>t.name==='心相'),tv=talent?talentValues(talent):{};
+  const hasOther=battle.s.units.some(v=>v.uid!==u.uid&&v.deployed&&v.hp>0&&v.kind!=='summon'&&!v.device&&battle.inside(u,v,true));
+  const extend=hasOther?Number(tv.projectile_extend)||3:0,life=(Number(bb.projectile_delay_time)||0)+extend,plainLife=Number(bb.projectile_delay_time)||0;
+  const dirOf=(from,to)=>{const dx=to.x-from.x,dy=to.y-from.y,len=Math.hypot(dx,dy);return len<1e-6?{x:0,y:0}:{x:dx/len,y:dy/len};};
+  if(skillIndex===0){
+   const target=allAllies(battle,u,true).filter(a=>a.uid!==u.uid&&a.kind!=='summon'&&!a.device).sort((a,b)=>(a.hp/a.maxHp)-(b.hp/b.maxHp)||(b.deployAt??0)-(a.deployAt??0)||b.uid-a.uid)[0]||u;
+   const spot={x:mid(target.x),y:mid(target.y)};
+   ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'thorn2-s1:'+u.skillCount,x:u.x,y:u.y,radius:1,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
+    trackArea:true,trackSide:'ally',shape:'square',refKind:'live',persistAfterSourceGone:false,values:{holdUntilArrival:true,regen:atk*(Number(bb.hpRecoveryPerSecRatio)||.11),defBuff:Number(bb.def)||60},
+    snapshot:{},carrier:{toX:spot.x,toY:spot.y,speed:THORN2_THROW_SPEED,arrived:false}});
+   return true;
+  }
+  if(skillIndex===1){
+   const enemy=battle.targets(u)[0]||null,d=directionOf(u.dir||0);
+   // 没有可选敌人时：PRTS 备注「选择攻击范围内的、自身正前方的、距离自身最远的地块」——用技能范围里的正前方格，
+   // 取不到再退回按朝向的最大射程（S2 黑板的 projectile_range 是**初始影响半径**，不是投掷距离，别拿它当射程）。
+   const cells=(battle.range?.(u,true)||[]).filter(c=>c.x!==u.x||c.y!==u.y);
+   const front=cells.filter(c=>d[0]?(c.y===u.y&&(c.x-u.x)*d[0]>0):(c.x===u.x&&(c.y-u.y)*d[1]>0))
+    .sort((a,b)=>(Math.abs(b.x-u.x)+Math.abs(b.y-u.y))-(Math.abs(a.x-u.x)+Math.abs(a.y-u.y)))[0];
+   const far=cells.reduce((n,c)=>Math.max(n,Math.abs(c.x-u.x)+Math.abs(c.y-u.y)),1);
+   const spot=enemy?{x:mid(enemy.x),y:mid(enemy.y)}:front?{x:front.x,y:front.y}:{x:u.x+d[0]*far,y:u.y+d[1]*far};
+   const throwDir=dirOf({x:u.x,y:u.y},spot),moving=throwDir.x!==0||throwDir.y!==0;
+   const radius=Number(bb.projectile_range)||1.1,grow=Number(bb.value)||.13,moveSpeed=Number(bb.projectile_move_speed)||.1,window=Number(bb.remaining_time)||plainLife;
+   ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'thorn2-s2:'+u.skillCount,x:u.x,y:u.y,radius,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
+    trackArea:true,trackSide:'enemy',shape:'circle',refKind:'live',persistAfterSourceGone:false,
+    values:{holdUntilArrival:true,dot:true,groundOnly:true,type:'arts',atk_scale:Number(bb.atk_scale)||1.2,healDown:Number(bb.heal_scale)||.5,regen:atk*(Number(bb.hp_recovery_per_sec_ratio_chr)||.12),
+     ...(moving?{drift:{x:throwDir.x,y:throwDir.y,speed:moveSpeed,time:window}}:{}),growth:{base:radius,rate:grow,time:window}},
+    snapshot:{damage:atk*(Number(bb.atk_scale)||1.2)},carrier:{toX:spot.x,toY:spot.y,speed:THORN2_THROW_SPEED,arrived:false}});
+   return true;
+  }
+  if(skillIndex===2){
+   const count=Math.max(1,Number(bb.max_target_token)||3);
+   const targets=allAllies(battle,u,true).filter(a=>a.uid!==u.uid&&a.kind!=='summon'&&!a.device).sort((a,b)=>(battle.stats(a).blockCnt??0)-(battle.stats(b).blockCnt??0)||(b.deployAt??0)-(a.deployAt??0)||b.uid-a.uid).slice(0,count);
+   const points=(targets.length?targets:[u]).map(a=>({x:a.x,y:a.y}));
+   const center=points.reduce((acc,p)=>({x:acc.x+p.x/points.length,y:acc.y+p.y/points.length}),{x:0,y:0});
+   ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'thorn2-s3:'+u.skillCount,x:center.x,y:center.y,radius:1,interval:Number(bb.interval)||1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
+    trackArea:true,trackSide:'enemy',refKind:'owner',persistAfterSourceGone:true,
+    values:{thorn2Area:{points,width:.325},thorn2Sap:{atkValue:atk,cap:Number(bb.max_stack_cnt)||15,dps:Number(bb.atk_scale)||1.2,dpsPer:Number(bb.atk_scale_per_interval)||.12,dpsMax:Number(bb.max_atk_scale)||3,atk:Number(bb.atk)||-.12,atkPer:Number(bb.atk_per_interval)||-.006,atkMax:Number(bb.max_atk)||-.21,def:Number(bb.def)||-.32,defPer:Number(bb.def_per_interval)||-.006,defMax:Number(bb.max_def)||-.41,res:Number(bb.magic_resistance)||-.32,resPer:Number(bb.magic_resistance_per_interval)||-.006,resMax:Number(bb.max_magic_resistance)||-.41}},
+    snapshot:{}});
+   return true;
+  }
+ }
  if(profile.charId==='char_4196_reckpr'&&skillIndex===1){u.reckprBuffUntil=battle.s.time+(Number(bb['attack@buff_duration'])||10);u.reckprHealValue=Number(bb['attack@fixed_heal_value'])||80;}
  if(profile.charId==='char_291_aglina'&&skillIndex===2){for(const e of battle.s.enemies.filter(e=>e.hp>0).filter(e=>e.hp>0&&!e.hidden))applyStatus(e,'levitate',profile.skill.duration>0?profile.skill.duration:5,{source:u.uid,resistible:false});}
  if(profile.charId==='char_341_sntlla'&&skillIndex===1){const spot=battle.targets(u)[0]||u;ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'sntlla-s2',x:spot.x,y:spot.y,radius:1,randomTileUid:u.uid,interval:Math.max(.1,Number(bb.base_attack_time)||1),nextAt:battle.s.time+1,endsAt:battle.s.time+(profile.skill.duration>0?profile.skill.duration:6),trackArea:true,trackSide:'enemy',values:{dot:true,sluggish:true,cold:Number(bb['attack@cold'])||1,elementScale:.2,type:'arts'},snapshot:{damage:battle.stats(u).atk*(Number(bb.atkScale)||.65)},refKind:'owner',persistAfterSourceGone:false});return true;}
@@ -645,7 +699,7 @@ export function periodicMods(battle,u,ctx){
  if(u.id==='char_2026_yu'){const t=activeTalents(battle,u).find(x=>x.name==='闲云隐市'),tb=t&&talentValues(t);if(t&&battle.s.units.filter(v=>v.deployed&&v.hp>0).length>=Number(tb.cnt||4)){ctx.applyRegen(battle,{source:u,target:u,amount:u.maxHp*(Number(tb.hp_recovery_per_sec_by_max_hp_ratio)||.015)/30});battle.healElements?.(u,u,u.maxHp*(Number(tb.ep_heal_ratio)||.015)/30);}}
  if(u.id==='char_311_mudrok'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2&&!u.mudrokAwake&&battle.s.time>=u.mudrokSleepUntil){u.mudrokAwake=true;u.invulnerableUntil=0;u.skillDisarmUntil=null;const bb=skillBB(battle,u);for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.flying&&chebyshev(e,u)<=1))applyStatus(e,'stun',Number(bb.stun)||3,{source:u.uid,resistible:false});}
  if(u.id==='char_1020_reed2'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){const bb=skillBB(battle,u);for(const e of battle.s.enemies.filter(e=>e.hp>0&&e.statuses?.some(s=>s.kind==='burn'&&s.source===u.uid)))ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(bb['talent@s3_atk_scale'])||.2)/30,type:'arts',cause:'dot'});}
- if(u.id==='char_1039_thorn2'&&battle.skillActive(u)&&(u.thornZones||[]).length){for(const fx of u.thornZones){if(fx.endsAt<=battle.s.time)continue;fx.x??=u.x;fx.y??=u.y;}}
+  // 引星棘刺的炼金单元不再是「贴在主人脚下」的圈，位置完全由投掷物自己推进（native-effects 的 carrier/drift）。
  if(u.id==='char_4056_titi'&&battle.skillActive(u)){const ally=battle.s.units.find(v=>v.uid===u.titiSleepUid);if(ally&&ally.hp>0)for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&Math.max(Math.abs(e.x-ally.x),Math.abs(e.y-ally.y))<=1.5))applyStatus(e,'sleep',1.1,{source:u.uid,resistible:false});}
  if(u.id==='char_4056_titi'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2){u.titiSleepState??={};const bb=skillBB(battle,u);for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden)){const sleeping=e.statuses?.find(s=>s.kind==='sleep'&&s.source===u.uid),prev=u.titiSleepState[e.uid];if(sleeping){u.titiSleepState[e.uid]=prev??battle.s.time;}else if(prev!=null){const scale=Math.min(Number(bb.max_atk_scale)||3.7,Math.max(Number(bb.min_atk_scale)||1,1+(battle.s.time-prev)));ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*scale,type:'arts',cause:'skill'});const next=battle.s.enemies.filter(x=>x.hp>0&&x.uid!==e.uid&&!x.hidden&&Math.max(Math.abs(x.x-e.x),Math.abs(x.y-e.y))<=(Number(bb.range_radius)||1))[0];if(next)applyStatus(next,'sleep',Number(bb.sleep)||5,{source:u.uid,resistible:false});delete u.titiSleepState[e.uid];}}}
  if(u.id==='char_4193_lemuen'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2&&u.ammo>0&&battle.s.time>=(u.lemuenNextAt||0)){const bb=skillBB(battle,u);u.lemuenNextAt=battle.s.time+(Number(bb['attack@aim_interval'])||.5);const target=battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.untargetable).sort((a,b)=>a.uid-b.uid)[0];if(target){u.lemuenTargets??=[];u.lemuenTargets.push(target.uid);u.ammo=Math.max(0,u.ammo-1);}}

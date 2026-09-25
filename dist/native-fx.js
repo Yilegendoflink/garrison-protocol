@@ -431,6 +431,18 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
    continue;
   }
   c.save();c.globalCompositeOperation='lighter';
+  // 引星棘刺 S3「我的海疆」：判定区域是几个炼金单元落点围成的多边形（连成直线／只有一个点时也算），直接画路径。
+  const areaPts=fx.values?.thorn2Area?.points;
+  if(Array.isArray(areaPts)&&areaPts.length>=2){
+   const pts=areaPts.map(p=>point(p.x,p.y));
+   c.fillStyle=`${light}${Math.round(alpha*255).toString(16).padStart(2,'0')}`;
+   c.strokeStyle=`${deep}${Math.round(Math.min(1,alpha*2.4)*255).toString(16).padStart(2,'0')}`;
+   if(pts.length===2){c.lineWidth=Math.max(3,.65*z.tw);c.beginPath();c.moveTo(pts[0].x,pts[0].y);c.lineTo(pts[1].x,pts[1].y);c.stroke();}
+   else{c.lineWidth=1.6;c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(const p of pts.slice(1))c.lineTo(p.x,p.y);c.closePath();c.fill();c.stroke();}
+   c.fillStyle=`${deep}${Math.round(Math.min(1,alpha*3)*255).toString(16).padStart(2,'0')}`;
+   for(const p of pts){c.beginPath();c.arc(p.x,p.y,Math.max(2,z.tw*.12),0,Math.PI*2);c.fill();}
+   c.restore();continue;
+  }
   // 圆形领域（原作给的是半径，如烛煌 S1 的 `range_radius`、魔王的 `outside_radius`）：画圆盘＋圆环，
   // 不铺方格——否则就会出现「原作是圆、这里是方块」。
   if(circle){

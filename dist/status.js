@@ -1,6 +1,6 @@
 // Common status semantics; durations are simulation seconds, never render time.
 const CONTROL={skillLock:['skill'],unableAct:['attack','move','block','skill'],stun:['attack','move','block','skill'],frozen:['attack','move','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:[],selfFear:[],terror:['attack','move','block','skill'],tremble:['attack','skill'],disarm:['attack'],forcedDisarm:['attack'],cannotRetreat:['retreat'],root:['move'],silence:[]};
-export function applyStatus(target,kind,duration,{source=null,value=1,resistible=true,frostSide='ally'}={}){
+export function applyStatus(target,kind,duration,{source=null,value=1,resistible=true,frostSide='ally',pick='max'}={}){
  if(!Number.isFinite(duration)||duration<=0||target.hp<=0)return false;if(target.immunities?.[kind])return false;if(['fear','selfFear'].includes(kind)&&target.chessId)return false;
  if(['sleep','levitate','fear','selfFear','terror'].includes(kind)&&Object.hasOwn(target,'block'))target.block=null;target.statuses??=[];
  const frost=kind==='cold'||kind==='frozen',sameFrost=s=>(s.frostSide||'ally')===frostSide;
@@ -17,7 +17,10 @@ export function applyStatus(target,kind,duration,{source=null,value=1,resistible
    return applyStatus(target,'frozen',frostSide==='ally'?Math.max(time,cold.remaining):time,{source,value,resistible:false,frostSide});
   }
  }
- if(existing){existing.remaining=Math.max(existing.remaining,time);existing.value=Math.max(existing.value,value);}else target.statuses.push({kind,remaining:time,source,value,...(frost?{frostSide}:{})});if(['invisible','camouflage'].includes(kind))target.invisible=target.formInvisible===true||!target.revealed;if(kind==='fragile')target.fragile=Math.max(target.fragile||1,value);return true;
+ // 同名同来源的状态只保留一条：默认取较大的 value（正增益口径）。
+ // `pick:'strong'` 用于**负值减益**（攻击力/防御力/法抗降低）：这时「更强」是绝对值更大的那个，
+ // 否则递减的 ramp（如引星棘刺 S3 从 -12% 逐秒到 -21%）会被 Math.max 卡死在首个较弱值上。
+ if(existing){existing.remaining=Math.max(existing.remaining,time);existing.value=pick==='strong'?(Math.abs(value)>Math.abs(existing.value??0)?value:existing.value):Math.max(existing.value,value);}else target.statuses.push({kind,remaining:time,source,value,...(frost?{frostSide}:{})});if(['invisible','camouflage'].includes(kind))target.invisible=target.formInvisible===true||!target.revealed;if(kind==='fragile')target.fragile=Math.max(target.fragile||1,value);return true;
 }
 // formInvisible：形态自带的常驻隐匿（例如深池逐火的「怨恨的余烬」），不是可驱散的状态，
 // 因此不能被 tickStatuses 按状态表覆盖掉。

@@ -300,7 +300,8 @@ export class NativeBattle {
   if(p.charId==='char_1020_reed2'&&this.skillActive(u)&&(p.skillIndex??u.source?.skillIndex)===2)ratio('atk',Number(blackboard(p.skill?.blackboard)['reed2_skil_3[switch_mode].atk'])||.25,'焰影苇草·灼痕模式');
   if(p.charId==='char_4039_horn'&&this.skillActive(u)&&(p.skillIndex??u.source?.skillIndex)===2)ratio('atk',Number(blackboard(p.skill?.blackboard)['horn_s_3[overload_start].atk'])||.5,'号角·过载');
   if(p.charId==='char_391_rosmon'&&u.rosmonPartner)ratio('atk',.08,'迷迭香·感知稳定');
-  if(u.thornDefBuffUntil>this.s.time)base.def+=Number(u.thornDefBuff)||0;
+  // 引星棘刺 S1「度算浪波」的防御力加成按**效果 id 记账**（PRTS 写 S1 效果可叠加），所以这里求和而不是取一条。
+  if(u.thornDefSources){let thorn=0;for(const row of Object.values(u.thornDefSources))if(Number(row?.until)>this.s.time)thorn+=Number(row?.value)||0;u.thornDefBuff=thorn;base.def+=thorn;}
   if(p.charId==='char_4148_philae'&&u.philaeElementBoost&&this.skillActive(u))ratio('atk',Number(blackboard(p.skill?.blackboard).atk)||.8,'菲莱·元素反击');
   if(p.charId==='char_4145_ulpia'&&u.ulpiaKills){const t=(p.activeTalents||[]).find(x=>x.name==='血脉的哺养'),bb=t&&blackboard(t.blackboard);if(t){base.maxHp+=u.ulpiaKills*(Number(bb.max_hp)||120);base.atk+=u.ulpiaKills*(Number(bb.atk)||30);}}
   if(p.charId==='char_437_mizuki'){const talent=(p.activeTalents||[]).find(t=>t.name==='反移情');if(talent&&this.s.enemies.some(e=>e.hp>0&&!e.hidden&&e.maxHp>0&&e.hp/e.maxHp<=(Number(blackboard(talent.blackboard).hp_ratio)||.5)&&this.inside(u,e,true)))ratio('atk',Number(blackboard(talent.blackboard).atk)||.1,'水月·反移情');}
