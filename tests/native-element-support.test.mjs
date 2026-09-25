@@ -122,3 +122,16 @@ test('哈洛德天赋「我即军营」：攻击范围内元素损伤**累计超
  applyElementDamage(b,{source:u,target:far,amount:600,type:'necrosis'});
  assert.ok(Math.abs(applyElementDamage(b,{source:null,target:far,amount:100,type:'necrosis'}).added-100)<1e-6,'攻击范围外不生效');
 });
+
+test('菲莱天赋「神河谕使」：自身受到的元素损伤按黑板的 damage_resistance 降低（精锐 12%）',()=>{
+ const PHILAE='chess_char_3_06_b';
+ const {b}=openBattle([{chessId:PHILAE,skillIndex:1}]);deployNow(b);
+ const u=byId(b,'char_4148_philae');
+ runTo(b,.2);                                   // 让逐帧的天赋扫描先跑一次
+ const talent=b.profile(u).activeTalents.find(t=>t.name==='神河谕使');
+ const resistance=Number(talent?.blackboard?.find(x=>x.key==='damage_resistance')?.value);
+ assert.ok(resistance>0,talent?.description);
+ const added=applyElementDamage(b,{source:null,target:u,amount:100,type:'necrosis'}).added;
+ assert.ok(Math.abs(added-100*(1-resistance))<1e-6,'100 → '+(added.toFixed(2))+'（-'+Math.round(resistance*100)+'%）');
+ assert.equal(u.elementDamageResistance,resistance,'数值只从当前档黑板取');
+});

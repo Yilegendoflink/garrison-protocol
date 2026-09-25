@@ -88,8 +88,8 @@
 
 - `tests/native-element-rules.test.mjs`（4 条）：妮芙损伤量／S1 爆发追加／S3 改元素类型、塑心每秒凋亡＋类型专属加成、
   焰影苇草 30% 门槛与 S3 清空、**妮芙模组 ALC-X 的 110% 倍率**（普攻与「失魂」两条路径）。
-- `tests/native-element-support.test.mjs`（6 条）：纯烬 S1/S2/S3 与「火山灰疗愈」、哈洛德 S2 与「我即军营」的
-  12%（含「文案写超过一半才过半」这条判定）。
+- `tests/native-element-support.test.mjs`（7 条）：纯烬 S1/S2/S3 与「火山灰疗愈」、哈洛德 S2 与「我即军营」的
+  12%（含「文案写超过一半才过半」这条判定）、菲莱「神河谕使」的自身元素损伤减免。
 - `tests/native-element-misc.test.mjs`（5 条）：视界、炼金单元模组技力、凯瑟琳 S2 停止攻击、烛煌绝处重燃、迭代元素类型。
 - `tests/native-thorn2-alchemy.test.mjs` / `tests/native-alchemy-unit.test.mjs`：引星棘刺与锡人的炼金单元口径
   （区域几何、无来源伤害、生命回复速度）。
