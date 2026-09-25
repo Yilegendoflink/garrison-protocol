@@ -30,15 +30,13 @@ const kinds = a => (a.statuses || []).map(s => s.kind);
 function setup(specs, {seed = 1} = {}) {
   const g = new NativeSession(data, {seed, bondBan: NO_BOND_BAN});
   g.s.funds = 9999; g.s.capacity = 16; g.s.rewardPending = null; g.s.rewardQueue = [];
+  const pending = [];
   const units = specs.map(raw => {
     const spec = typeof raw === 'string' ? {chessId: raw} : raw;
     const id = spec.chessId;
     const u = g.gain(id);
     assert.ok(u, '应当能获得 ' + id);
-    for (const itemId of spec.equip || []) {
-      const item = g.gainItem(itemId);
-      assert.equal(g.equip(item.uid, u.uid), true, `${id} 装备 ${itemId} 应当成功`);
-    }
+    if (spec.equip?.length) pending.push({u, id, items: spec.equip});
     if (spec.at) {
       assert.ok(g.canDeploy(u.uid, spec.at[0], spec.at[1]), `${id} 应当能部署到 ${spec.at}`);
       assert.ok(g.deploy(u.uid, spec.at[0], spec.at[1], spec.dir ?? 0));
@@ -52,6 +50,13 @@ function setup(specs, {seed = 1} = {}) {
     }
     return u;
   });
+  // 装备放在**全部干员都入场之后**才穿：入场本身可能通过卫戍再发一件同名装备（耶拉 → 不融冰），
+  // 若那时身上已经穿着同名未进阶装备，就会合成为进阶装备并进整备区（2026-09-23 口径），干员反而空了。
+  // 所以这里先用手牌里现成的那件，没有再新获得一件。
+  for (const {u, id, items} of pending) for (const itemId of items) {
+    const item = g.s.items.find(i => i.chessId === itemId) || g.gainItem(itemId);
+    assert.equal(g.equip(item.uid, u.uid), true, `${id} 装备 ${itemId} 应当成功`);
+  }
   g.s.rewardPending = null; g.s.rewardQueue = [];
   assert.equal(g.perform('start'), true, g.lastError || '开战失败');
   const b = g.battle; b.s.queue = []; b.s.enemies = []; b.s.limit = 1e9;

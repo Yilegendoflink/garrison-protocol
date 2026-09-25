@@ -194,21 +194,7 @@ export class NativeSession extends NativeEconomy {
   const cur=u.bondIds||base;
   if(next.length!==cur.length||next.some(id=>!cur.includes(id)))u.bondIds=next;
  }
-  // 获取装备时，若干员身上已有同名未进阶装备，则连身上那件一起收走，合成的进阶装备留在手牌（盟约页说明的口径）。
-  gainItem(chessId){
-   const def=this.data.season.trapChessDataDict[chessId];if(!def)throw Error('Unknown item '+chessId);const item={uid:++this.s.seq,chessId};this.s.items.push(item);
-   if(!def.upgradeChessId)return item;
-   const worn=[...this.s.units.flatMap(u=>u.equipment.map(i=>({i,owner:u})))].filter(x=>x.i.chessId===chessId);
-   if(worn.length&&this.s.items.filter(i=>i.chessId===chessId).length>=def.upgradeNum){
-    const take=this.s.items.filter(i=>i.chessId===chessId).slice(0,def.upgradeNum);
-    for(const it of take)this.s.items=this.s.items.filter(x=>x.uid!==it.uid);
-    for(const x of worn){x.owner.equipment=x.owner.equipment.filter(i=>i.uid!==x.i.uid);this.refreshEquipmentBonds(x.owner);}
-    const merged={uid:++this.s.seq,chessId:def.upgradeChessId};this.s.items.push(merged);return merged;
-   }
-   const copies=[...this.s.items.map(i=>({i,owner:null})),...this.s.units.flatMap(u=>u.equipment.map(i=>({i,owner:u})))].filter(x=>x.i.chessId===chessId);
-   if(copies.length>=def.upgradeNum){const chosen=copies.slice(0,def.upgradeNum),owner=chosen.find(x=>x.owner)?.owner;for(const x of chosen){if(x.owner)x.owner.equipment=x.owner.equipment.filter(i=>i.uid!==x.i.uid);else this.s.items=this.s.items.filter(i=>i.uid!==x.i.uid);}const merged={uid:++this.s.seq,chessId:def.upgradeChessId};if(owner)owner.equipment.push(merged);else this.s.items.push(merged);return merged;}
-   return item;
-  }
+  // 装备的合成（整备区优先取材料、合成结果进整备区）只在 NativeEconomy.gainItem 实现一份，这里不要再覆盖。
  perform(type,...args){
   const before=structuredClone(this.s);let result;
   try{

@@ -81,10 +81,30 @@ export class NativeEconomy extends PreparationState {
   if(previousReward&&previousReward!==this.s.rewardPending){this.s.rewardQueue.push(this.s.rewardPending);this.s.rewardPending=previousReward;}
   this.s.roundGainCount++;this.settleBondRewards();this.triggerGarrisons('SERVER_GAIN',unit);return unit;
  }
+ // 获取装备时的同名合成（唯一实现，别在子类里再抄一份）：
+ //  · 材料数取原表的 `upgradeNum`（50 件常规装备都是 2；6 件特殊道具是 100＝实际不合成）；
+ //  · 材料**优先从整备区（`s.items`）取**，整备区不够时才动干员身上那件——手牌够用时不该把干员的装备扒下来；
+ //  · **合成出的进阶装备一律进整备区，不会留在干员身上**（用户 2026-09-23 口径：
+ //    「未进阶装备在干员身上时再获得一件相同装备，合成的新装备要出现在手牌而不是在干员身上」）；
+ //  · 循环合成：一次获取可能让场上凑出两组以上材料（例：两名干员各带一件、整备区已有一件，再获得一件）。
+ //    进阶装备自己没有再合成，不会无限循环。
  gainItem(chessId){
-  const def=this.data.season.trapChessDataDict[chessId];if(!def)throw Error('Unknown item '+chessId);const item={uid:++this.s.seq,chessId};this.s.items.push(item);
-  if(def.upgradeChessId){const copies=[...this.s.items.map(i=>({i,owner:null})),...this.s.units.flatMap(u=>u.equipment.map(i=>({i,owner:u})))].filter(x=>x.i.chessId===chessId);if(copies.length>=def.upgradeNum){const chosen=copies.slice(0,def.upgradeNum),owner=chosen.find(x=>x.owner)?.owner;for(const x of chosen){if(x.owner)x.owner.equipment=x.owner.equipment.filter(i=>i.uid!==x.i.uid);else this.s.items=this.s.items.filter(i=>i.uid!==x.i.uid);}const merged={uid:++this.s.seq,chessId:def.upgradeChessId};if(owner)owner.equipment.push(merged);else this.s.items.push(merged);return merged;}}
-  return item;
+  const def=this.data.season.trapChessDataDict[chessId];if(!def)throw Error('Unknown item '+chessId);
+  const item={uid:++this.s.seq,chessId};this.s.items.push(item);
+  if(!def.upgradeChessId)return item;
+  const need=Math.max(1,Math.floor(Number(def.upgradeNum)||2));
+  let merged=null;
+  for(;;){
+   const hand=this.s.items.filter(i=>i.chessId===chessId);
+   const worn=this.s.units.flatMap(u=>u.equipment.filter(i=>i.chessId===chessId).map(i=>({item:i,owner:u})));
+   if(hand.length+worn.length<need)break;
+   const takeHand=hand.slice(0,need);
+   for(const it of takeHand)this.s.items=this.s.items.filter(x=>x.uid!==it.uid);
+   const takeWorn=worn.slice(0,Math.max(0,need-takeHand.length));
+   for(const x of takeWorn){x.owner.equipment=x.owner.equipment.filter(i=>i.uid!==x.item.uid);this.refreshEquipmentBonds?.(x.owner);}
+   merged={uid:++this.s.seq,chessId:def.upgradeChessId};this.s.items.push(merged);
+  }
+  return merged||item;
  }
  price(id){const def=this.data.season.charChessDataDict[id];if(!def)return purchasePrice(this.data,id);let value=purchasePrice(this.data,id);for(const gid of def.garrisonIds){const g=this.data.season.garrisonDataDict[gid];if(g.eventType==='SERVER_PRICE')value=runGarrison(this,null,g,'SERVER_PRICE');}const visiDiscount=bondValue(bondEffectBlackboard(this.data,'visiShip','bond_multi_layer_char_goods_price_bond_discount'),'discount',1);if(this.s.permanentDiscount&&(this.s.permanentDiscount===2||(this.s.permanentDiscount===1&&def.bondIds.includes('visiShip'))))value-=visiDiscount;const special=runStrategyEvent(this,'price',{chessId:id});if(special.length)value=special.at(-1);return Math.max(0,value);}
  spend(amount){if(this.s.funds<amount)return false;this.addFunds(-amount);this.s.roundSpent+=amount;this.s.totalSpent+=amount;runStrategyEvent(this,'spent');return true;}
