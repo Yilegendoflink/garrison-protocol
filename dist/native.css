@@ -703,6 +703,11 @@ html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px
    盟约那列**不放**入口（电脑、手机都不放）——那列只列当前盟约。 */
 .native-top .native-ban-entry{border-left:3px solid #c9836a}
 html.native-landscape-ui #native-modal .native-ban-entry{display:block;width:100%;min-height:34px;margin:6px 0;padding:10px;border-left:3px solid #c9836a;text-align:center}
+/* 被禁干员弹窗按被禁盟约分组：一组一个分区，同一名干员挂在多个被禁盟约下时会在多组里各出现一次。 */
+.native-ban-group{margin:14px 0 0;padding-top:10px;border-top:1px solid #2c4a45}
+.native-ban-group:first-of-type{border-top:0;padding-top:0}
+.native-ban-group .native-ban-heading{margin-top:0}
+.native-ban-group .native-ban-operators{max-height:none}
 .native-ban-note{color:#a7c5bd;font-size:12px;line-height:1.7}
 .native-ban-note+.native-ban-note{margin-top:-4px}
 .native-ban-operators{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px;margin:12px 0;max-height:52vh;overflow:auto}

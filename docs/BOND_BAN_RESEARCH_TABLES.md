@@ -1,3 +1,7 @@
+> **口径变更（用户 2026-09-22 二次修订，配置 v3）：** 本表是 v1／v2 时期的实算资料（含逐盟约「不禁用名单」的规模）。
+> 现行判定已改成「**干员所属盟约全部被禁时才禁用**」，名单机制整条删除；本文的「名单」列只作历史对照，
+> 不要再据此实现判定。现行口径见 `AGENTS.md` 的「盟约禁用」条目。
+
 # 附录：本期数据实算表（2026-09-22）
 
 数据取自 `dist/runtime-data.js` 的 `season`：`modeDataDict` / `constData` / `bondInfoDict` / `charShopChessDatas` / `charChessDataDict`。

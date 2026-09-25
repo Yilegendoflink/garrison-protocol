@@ -52,15 +52,16 @@ const namedPickList=(rows,weights,keyOf)=>rows.flatMap(row=>Array(Math.max(1,Mat
 export class NativeSession extends NativeEconomy {
  constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,bondBan=null,egg325=false,cat=false,playerId='local',teamPeers=[],teamTransport=null}={}){
   const map=data.maps.find(m=>m.stageId===mapId)||data.maps.find(m=>m.weight>0);super(data,modeId,{bandId,board:map,seed,manualPreview:true,playerId,teamPeers,cat});this.map=map;this.teamTransport=teamTransport;this.battle=null;this.s.mapId=map.stageId;this.s.itemOffers=[];this.s.summonCards=[];this.s.capacity=8;this.s.passiveIncome=0;this.s.history=[];this.s.runResult=null;this.s.frozenSlots=[];this.s.roundDecisions=[];this.s.enemyModifiers=[];this.s.operatorModifiers=[];this.s.commands=[];
-  // 本局禁用的盟约（固定禁用的全部 + 随机抽中的 3 核心 + 4 附加）与各盟约的「不禁用名单」在开局定死，随存档保存。
-  // 名单与禁用方案默认取协议自定义「盟约禁用／禁用方案」页配置的那份（localStorage，用户核对后填的真实数据，
-  // 未配置时是内置名单＋默认方案：投资人固定不被随机禁用）；简报／沙盒／测试可以显式传 bondBan 覆盖。
+  // 本局禁用的盟约（固定禁用的全部 + 随机抽中的 3 核心 + 4 附加）在开局定死，随存档保存；
+  // 干员只有在「所属盟约全部被禁」时才被禁用。
+  // 禁用方案默认取协议自定义「禁用方案」页配置的那份（localStorage；未配置时是默认方案：投资人固定不被随机禁用）；
+  // 简报／沙盒／测试可以显式传 bondBan 覆盖。v3 起配置里不再有逐盟约的「不禁用名单」。
   // 必须在 rollOffers() 之前设好——商店第一次抽卡就读 this.s.bondBan。
   const banOption=bondBan;
   const normalized=normalizeBondBan(banOption||loadBondBan(this.data),this.data);
   this.s.bondBan=banOption
-   ?{bonds:[...new Set((banOption.bonds||[]).filter(id=>this.data.season.bondInfoDict[id]))],exempt:normalized.exempt,always:normalized.always,never:normalized.never}
-   :{bonds:bondBanIds(this.data,seed,normalized),exempt:normalized.exempt,always:normalized.always,never:normalized.never};
+   ?{bonds:[...new Set((banOption.bonds||[]).filter(id=>this.data.season.bondInfoDict[id]))],always:normalized.always,never:normalized.never}
+   :{bonds:bondBanIds(this.data,seed,normalized),always:normalized.always,never:normalized.never};
   this.poolDraw=request=>this.drawFromPool(request);this.s.offers=this.rollOffers();this.fillItems();this.startPreparation();this.ensureRewards();this.s.waveRoster=waveRoster||createWaveRoster({random:()=>this.random(),data:this.data,modeId:this.s.modeId});if(egg325)this.s.egg325=true;this.ensureRoundBounty();
  }
  ensureRoundBounty(){
@@ -84,7 +85,7 @@ export class NativeSession extends NativeEconomy {
  canDeploySummonCard(cardUid,x,y){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid),cell=this.map.grid[y]?.[x];if(!card||!cell||cell.buildableType==='NONE'||cell.obstacle||!this.summonCardRange(card,x,y))return false;if(card.type==='cathy-device'&&this.s.summonCards.filter(c=>c.uid!==card.uid&&c.ownerUid===card.ownerUid&&c.type===card.type&&c.position).length>=2)return false;if(['vigil-wolf','skadi2-seaborn'].includes(card.type)&&cell.heightType==='HIGHLAND')return false;return card.type==='cathy-device'||(!this.s.units.some(u=>u.position?.x===x&&u.position?.y===y)&&!this.s.summonCards.some(c=>c.uid!==card.uid&&c.position?.x===x&&c.position?.y===y));}
  deploySummonCard(cardUid,x,y,dir=0){if(!this.canDeploySummonCard(cardUid,x,y))return false;const card=this.s.summonCards.find(c=>c.uid===cardUid);card.position={x,y};card.dir=dir;return true;}
  withdrawSummonCard(cardUid){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid&&c.position);if(!card||this.handFull())return false;card.position=null;return true;}
- // 被禁盟约的成员（不在该盟约「不禁用名单」里的）不进调配池。判定只有这一条：
+ // 所属盟约全部被禁的干员不进调配池。判定只有这一条：
  // 只要挂在某个被禁盟约名下又不在那份名单里，就禁用——哪怕它还挂着没被禁的盟约。
  // eligible() 是抽卡的唯一准入过滤点（商店、具名池、'later' 池都走它），所以过滤器只挂在这里；
  // 判定与名单本身在 NativeEconomy.bondBanned（商店以外还有固定点名发放要挡，见那边的注释）。
@@ -334,7 +335,7 @@ export class NativeSession extends NativeEconomy {
   if(!s||record.version!==data.version||!data.season.modeDataDict[s.modeId]||!data.season.bandDataListDict[s.bandId]||!data.maps.some(m=>m.stageId===s.mapId)||!integer(s.level,1,6)||!integer(s.round,1,15)||!integer(s.capacity,1,99)||!n(s.funds)||s.funds<0||!n(s.hp)||!n(s.maxHp)||s.hp<0||s.hp>s.maxHp||!['prep','battle','decision','intermission','finished'].includes(s.phase)||![undefined,true].includes(s.cat)||![undefined,true].includes(s.egg325)||!n(record.savedAt)||Date.now()>=(record.expiresAt??record.savedAt+86400000))return null;
   // 盟约禁用：必须是已知盟约、无重复、至多 23 个；缺省（旧存档）在下面按「本局不额外禁用」补齐。
   // `fixed`／`never`（禁用方案）只做类型校验，旧存档缺字段时读档时按当前方案补齐。
-  if(s.bondBan!==undefined){const b=s.bondBan;if(typeof b!=='object'||b===null||!Array.isArray(b.bonds)||b.bonds.length>23||new Set(b.bonds).size!==b.bonds.length||b.bonds.some(id=>typeof id!=='string'||!data.season.bondInfoDict[id])||typeof b.exempt!=='object'||b.exempt===null||(b.always!==undefined&&!Array.isArray(b.always))||(b.never!==undefined&&!Array.isArray(b.never)))return null;}
+  if(s.bondBan!==undefined){const b=s.bondBan;if(typeof b!=='object'||b===null||!Array.isArray(b.bonds)||b.bonds.length>23||new Set(b.bonds).size!==b.bonds.length||b.bonds.some(id=>typeof id!=='string'||!data.season.bondInfoDict[id])||(b.always!==undefined&&!Array.isArray(b.always))||(b.never!==undefined&&!Array.isArray(b.never)))return null;}
   if(s.roundBounty){const r=s.roundBounty;if(!integer(r.round,1,s.round)||!Array.isArray(r.offers)||r.offers.length!==4||new Set(r.offers).size!==4||r.offers.some(id=>typeof id!=='string'||!data.enemies[id]||!bountyOption(data,id))||r.selected!==null&&!r.offers.includes(r.selected))return null;const coins=r.offers.map(id=>bountyOption(data,id).coin);if(!coins.includes(1)||!coins.includes(4))return null;}
   const item=i=>i&&integer(i.uid,1,Number.MAX_SAFE_INTEGER)&&!!data.season.trapChessDataDict[i.chessId];
   if(!Array.isArray(s.units)||s.units.length>500||!Array.isArray(s.items)||s.items.length>1000||s.items.some(i=>!item(i))||(s.stock!==undefined&&(typeof s.stock!=='object'||s.stock===null||Object.values(s.stock).some(v=>!integer(v,0,99999))))||s.units.some(u=>!integer(u.uid,1,Number.MAX_SAFE_INTEGER)||!data.profiles[u.chessId]||u.charId!==data.profiles[u.chessId].charId||!integer(u.dir,0,3)||!Array.isArray(u.equipment)||u.equipment.length>2||u.equipment.some(i=>!item(i))||(u.purchases!==undefined&&(typeof u.purchases!=='object'||u.purchases===null||Object.values(u.purchases).some(v=>!integer(v,1,9999))))||(u.position!==null&&(!integer(u.position?.x,0,10)||!integer(u.position?.y,0,6)))))return null;
@@ -342,12 +343,12 @@ export class NativeSession extends NativeEconomy {
   if(record.battle&&(!Array.isArray(record.battle.units)||!Array.isArray(record.battle.enemies)||!n(record.battle.frame)||!n(record.battle.time)))return null;
   const c=Object.create(NativeSession.prototype);c.data=data;c.map=data.maps.find(m=>m.stageId===s.mapId);c.board=c.map;c.manualPreview=true;c.triggerChain=[];c.poolDraw=request=>c.drawFromPool(request);c.battle=null;c.s=s;if(c.s.cat)c.s.funds=INFINITE_FUNDS;ensureStock(data,c.s);c.s.playerId??='local';c.s.teamPeers??=[];c.s.transferInbox??=[];c.s.transferOutbox??=[];
   // 旧存档没有盟约禁用记录：按「本局不额外禁用」补齐（`bonds:[]`），不动玩家已经买到的干员。
-  // 名单与禁用方案仍按配置页那份归一化，免得存档里的历史名单把已下架的 charId 带回来；
   // 禁用方案（fixed／never）不参与判定，只用于简报／弹窗标注「固定禁用还是随机抽中」，缺字段时补当前方案。
-  const restoredBan=s.bondBan?normalizeBondBan(s.bondBan,data):normalizeBondBan({exempt:{}},data);
+  // 旧存档里的 `exempt`（v2 的不禁用名单）直接忽略：判定只看 bonds 与干员自己的盟约。
+  const restoredBan=s.bondBan?normalizeBondBan(s.bondBan,data):normalizeBondBan({},data);
   c.s.bondBan=s.bondBan
-   ?{bonds:s.bondBan.bonds.slice(),exempt:restoredBan.exempt,always:restoredBan.always,never:restoredBan.never}
-   :{bonds:[],exempt:restoredBan.exempt,always:restoredBan.always,never:restoredBan.never};c.sanitizeBannedOffers();if(!c.s.waveRoster?.version)c.s.waveRoster=createWaveRoster({random:()=>c.random(),data,modeId:c.s.modeId});let migrated=false;for(const u of c.s.units)if(u.position&&c.map.grid[u.position.y][u.position.x].buildableType==='NONE'){u.position=null;migrated=true;}
+   ?{bonds:s.bondBan.bonds.slice(),always:restoredBan.always,never:restoredBan.never}
+   :{bonds:[],always:restoredBan.always,never:restoredBan.never};c.sanitizeBannedOffers();if(!c.s.waveRoster?.version)c.s.waveRoster=createWaveRoster({random:()=>c.random(),data,modeId:c.s.modeId});let migrated=false;for(const u of c.s.units)if(u.position&&c.map.grid[u.position.y][u.position.x].buildableType==='NONE'){u.position=null;migrated=true;}
   // 旧存档里装备曾把 giveBondId 直接叠进 u.bondIds（「装了不融冰就算谢拉格」那类误判），读档时按新口径重算一次。
   for(const u of c.s.units)c.refreshEquipmentBonds(u);if(migrated&&record.battle){const deployed=new Set(c.s.units.filter(u=>u.position).map(u=>u.uid));record.battle.units=record.battle.units.filter(u=>deployed.has(u.uid));}if(record.battle){const turn=buildPhasePlan(data,c.s.modeId).find(t=>t.round===c.s.round);c.battle=NativeBattle.restore(data,c,c.map,turn,record.battle);if(!c.battle)return null;}c.ensureRoundBounty();return c;
  }

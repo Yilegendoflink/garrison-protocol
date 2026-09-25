@@ -32,16 +32,16 @@ export class NativeEconomy extends PreparationState {
   return id;
  }
  bonds(){return activeBonds(this.data,this.s.units,this.s.modeId);}
- // 盟约禁用（用户 2026-09-22 口径，第二版）：被禁盟约的成员里，只有在该盟约「不禁用名单」上的
+ // 盟约禁用（用户 2026-09-22 二次修订口径，v3）：干员所属盟约「全部」被禁时才禁用；
  // 干员还能用，其余一律拿不到——**不只是商店**：策略／道具的固定点名发放、卫戍 SERVER_GAIN_CHAR、
  // 援军转让、晋升奖励候选都走这里挡。判定按 charId（精锐与初始是同一名干员），名单在编制台配置。
  // `bondBanned` 在 `NativeEconomy` 上定义，所以独立使用 economy 的场合（没有 s.bondBan）恒为 false。
- bondBanned(chessId){const ban=this.s?.bondBan;return !!ban&&isOperatorBanned(this.data,ban.bonds,ban.exempt,chessId);}
- bondBanBlockers(chessId){const ban=this.s?.bondBan||{};return bondBanBlockers(this.data,ban.bonds||[],ban.exempt||{},chessId);}
- bannedOperatorList(){const ban=this.s?.bondBan||{};return bannedOperators(this.data,ban.bonds||[],ban.exempt||{});}
- bondBanSummary(){const ban=this.s?.bondBan||{};return bondBanSummary(this.data,ban.bonds||[],ban.exempt||{},ban);}
+ bondBanned(chessId){const ban=this.s?.bondBan;return !!ban&&isOperatorBanned(this.data,ban.bonds,chessId);} // v3：所属盟约全被禁才禁用
+ bondBanBlockers(chessId){const ban=this.s?.bondBan||{};return bondBanBlockers(this.data,ban.bonds||[],chessId);}
+ bannedOperatorList(){const ban=this.s?.bondBan||{};return bannedOperators(this.data,ban.bonds||[]);}
+ bondBanSummary(){const ban=this.s?.bondBan||{};return bondBanSummary(this.data,ban.bonds||[],ban);}
  // 「按盟约随机发人」的调用点必须先问这一句：被禁盟约在本局是缺席的，可能一个人都发不出来
- // （不禁用名单为空、或名单上的人全在调度中心等级之外），而空候选池会让 drawFromPool 抛错、
+ // （该盟约成员都还挂着别的盟约、或人都在调度中心等级之外），而空候选池会让 drawFromPool 抛错、
  // 把整个动作回滚——卫戍发放挂在 prep 上，抛错会连「进入下一回合」一起打回，等于卡死。
  // 注意判定要用「该盟约还有没有能出场的成员」，不能只看「是否被禁」：被禁盟约里名单上的干员照常能发。
  bondBannedIds(){return new Set(this.s?.bondBan?.bonds||[]);}

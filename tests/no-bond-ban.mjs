@@ -6,6 +6,6 @@
 //   new NativeSession(NATIVE_DATA,{seed:1,bondBan:NO_BOND_BAN})
 // 或者用 `tests/effects-harness.mjs` 的 `openBattle`（它已经默认关掉）。
 //
-// 禁用机制本身的回归在 `tests/native-bond-ban.test.mjs`，那里显式传 bonds／exempt，
+// 禁用机制本身的回归在 `tests/native-bond-ban.test.mjs`，那里显式传 bonds（v3 起没有 exempt），
 // 不要把这个常量当成「禁用不存在」的借口。
-export const NO_BOND_BAN={bonds:[],exempt:{}};
+export const NO_BOND_BAN={bonds:[]};

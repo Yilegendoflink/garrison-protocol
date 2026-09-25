@@ -1538,16 +1538,16 @@ class NativeEconomy extends PreparationState {
   return id;
  }
  bonds(){return activeBonds(this.data,this.s.units,this.s.modeId);}
- // 盟约禁用（用户 2026-09-22 口径，第二版）：被禁盟约的成员里，只有在该盟约「不禁用名单」上的
+ // 盟约禁用（用户 2026-09-22 二次修订口径，v3）：干员所属盟约「全部」被禁时才禁用；
  // 干员还能用，其余一律拿不到——**不只是商店**：策略／道具的固定点名发放、卫戍 SERVER_GAIN_CHAR、
  // 援军转让、晋升奖励候选都走这里挡。判定按 charId（精锐与初始是同一名干员），名单在编制台配置。
  // `bondBanned` 在 `NativeEconomy` 上定义，所以独立使用 economy 的场合（没有 s.bondBan）恒为 false。
- bondBanned(chessId){const ban=this.s?.bondBan;return !!ban&&isOperatorBanned(this.data,ban.bonds,ban.exempt,chessId);}
- bondBanBlockers(chessId){const ban=this.s?.bondBan||{};return bondBanBlockers(this.data,ban.bonds||[],ban.exempt||{},chessId);}
- bannedOperatorList(){const ban=this.s?.bondBan||{};return bannedOperators(this.data,ban.bonds||[],ban.exempt||{});}
- bondBanSummary(){const ban=this.s?.bondBan||{};return bondBanSummary(this.data,ban.bonds||[],ban.exempt||{},ban);}
+ bondBanned(chessId){const ban=this.s?.bondBan;return !!ban&&isOperatorBanned(this.data,ban.bonds,chessId);} // v3：所属盟约全被禁才禁用
+ bondBanBlockers(chessId){const ban=this.s?.bondBan||{};return bondBanBlockers(this.data,ban.bonds||[],chessId);}
+ bannedOperatorList(){const ban=this.s?.bondBan||{};return bannedOperators(this.data,ban.bonds||[]);}
+ bondBanSummary(){const ban=this.s?.bondBan||{};return bondBanSummary(this.data,ban.bonds||[],ban);}
  // 「按盟约随机发人」的调用点必须先问这一句：被禁盟约在本局是缺席的，可能一个人都发不出来
- // （不禁用名单为空、或名单上的人全在调度中心等级之外），而空候选池会让 drawFromPool 抛错、
+ // （该盟约成员都还挂着别的盟约、或人都在调度中心等级之外），而空候选池会让 drawFromPool 抛错、
  // 把整个动作回滚——卫戍发放挂在 prep 上，抛错会连「进入下一回合」一起打回，等于卡死。
  // 注意判定要用「该盟约还有没有能出场的成员」，不能只看「是否被禁」：被禁盟约里名单上的干员照常能发。
  bondBannedIds(){return new Set(this.s?.bondBan?.bonds||[]);}
@@ -5186,7 +5186,7 @@ return {nativeWavePlan};
 "native-wave-editor.js": function(load) {
 const {TRAINING_TYPES,saveWaveTable,emptyWaveTable,defaultWaveTable,enemyCost,tierPack,currentTemplate,emptyTemplate,templateLabel,enemyActivity,enemyActivitySource,enemyPoolEligible} = load("native-wave-fill.js");
 const {fillBudgetWave,waveRng,filterRandomPoolTable} = load("native-wave-random.js");
-const {BAN_CORE_COUNT,BAN_EXTRA_COUNT,BAN_MODES,BOND_BAN_DEFAULT_NEVER,bondIds,bondIsCore,bondName,bondMembers,banRules,banModeOf,defaultBanRules,defaultBondExempt,loadBondBan,saveBondBan} = load("native-bond-ban.js");
+const {BAN_CORE_COUNT,BAN_EXTRA_COUNT,BAN_MODES,bondIds,bondIsCore,bondName,bondMembers,banRules,banModeOf,defaultBanRules,loadBondBan,saveBondBan} = load("native-bond-ban.js");
 const KIND_LABEL={ 'random-pool':'常规池','mode-effect':'策略／悬赏','template':'生成模板' };
 const SORTS=[['name','名称'],['hp','生命'],['atk','攻击'],['cost','难度'],['id','ID']];
 
@@ -5195,9 +5195,9 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'
 const {richText} = load("protocol.js");
 const plain=s=>richText(s);
 
-// `page` 是编制台的两个页面：敌人编制（词条预算抽怪）／盟约禁用（每个盟约的「不禁用名单」）。
-// `bondBan` 是盟约禁用页的工作副本（localStorage 里那份，编辑即保存）；`bondQuery` 是它的搜索词。
-function editorState(){return {page:'enemies',type:'SPECIAL',tier:1,template:0,query:'',sort:'name',motion:'all',kind:'all',tag:'all',activity:'all',readiness:'ready',selected:null,sample:null,scroll:0,caret:0,bondBan:null,bondQuery:''};}
+// `page` 是两个页面：敌人波次（词条预算抽怪）／禁用方案（逐盟约固定禁用／参与随机／不被禁）。
+// `bondBan` 是禁用方案的工作副本（localStorage `garrison-bond-ban-v1` 里那份，编辑即保存）。
+function editorState(){return {page:'enemies',type:'SPECIAL',tier:1,template:0,query:'',sort:'name',motion:'all',kind:'all',tag:'all',activity:'all',readiness:'ready',selected:null,sample:null,scroll:0,caret:0,bondBan:null};}
 
 function enemyRows(data){
  if(data.enemyIndex)return data.enemyIndex.map(e=>({...e,desc:plain(e.desc)}));
@@ -5253,8 +5253,8 @@ function drawTestDialog(data,table,sample,byId){
 }
 
 function renderWaveEditor(data,table,ui){
- const page=ui.page==='bonds'?'bonds':ui.page==='rules'?'rules':'enemies';
- const title=page==='bonds'?'盟约禁用名单':page==='rules'?'盟约禁用方案':'协议自定义';
+ const page=ui.page==='rules'?'rules':'enemies';
+ const title=page==='rules'?'盟约禁用方案':'协议自定义';
  clampTemplate(table,ui);
  const type=TRAINING_TYPES.find(t=>t.id===ui.type)||TRAINING_TYPES[0],pack=tierPack(table,type.id,ui.tier),slot=pack.templates[ui.template],rows=enemyRows(data);
  const byId=Object.fromEntries(rows.map(e=>[e.id,e])),pool=slot.pool.map(id=>byId[id]||{id,name:id,motion:'WALK',hp:0,atk:0,kinds:[]});
@@ -5262,9 +5262,9 @@ function renderWaveEditor(data,table,ui){
  const activities=[...new Set(rows.map(e=>enemyActivity(e.id)))].sort((a,b)=>a.localeCompare(b,'zh'));
  const options=(values,current)=>values.map(([id,name])=>`<option value="${esc(id)}" ${current===id?'selected':''}>${esc(name)}</option>`).join('');
  return `<main class="wave-ed">
-  <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>PROTOCOL CUSTOM</small><h1>${title}</h1></div><span class="wave-ed-autosave">编辑自动保存</span><nav class="wave-ed-pages" aria-label="协议自定义页面"><button data-act="ed-page" data-page="enemies" aria-pressed="${page==='enemies'}" class="${page==='enemies'?'chosen':''}">敌人波次</button><button data-act="ed-page" data-page="bonds" aria-pressed="${page==='bonds'}" class="${page==='bonds'?'chosen':''}">盟约禁用</button><button data-act="ed-page" data-page="rules" aria-pressed="${page==='rules'}" class="${page==='rules'?'chosen':''}">禁用方案</button></nav>${page==='enemies'?`<button data-act="ed-tools" aria-expanded="${!!ui.tools}">配置管理</button>`:''}</header>
+  <header class="wave-ed-top"><button data-act="home">‹ 大厅</button><div><small>PROTOCOL CUSTOM</small><h1>${title}</h1></div><span class="wave-ed-autosave">编辑自动保存</span><nav class="wave-ed-pages" aria-label="协议自定义页面"><button data-act="ed-page" data-page="enemies" aria-pressed="${page==='enemies'}" class="${page==='enemies'?'chosen':''}">敌人波次</button><button data-act="ed-page" data-page="rules" aria-pressed="${page==='rules'}" class="${page==='rules'?'chosen':''}">禁用方案</button></nav>${page==='enemies'?`<button data-act="ed-tools" aria-expanded="${!!ui.tools}">配置管理</button>`:''}</header>
   ${page==='enemies'&&ui.tools?`<section class="wave-ed-management" aria-label="配置管理"><p>活动仅作为初始主题，可自由混编已准入敌人。默认中高压模板至少包含4种敌人。实战随机选模板；抽取测试仅使用当前模板。恢复默认或清空会覆盖整张表。</p><div><button data-act="ed-export">导出 JSON</button><button data-act="ed-import">导入 JSON</button><button data-act="ed-defaults">恢复默认配置</button><button data-act="ed-reset">清空本表</button><label>缺省难度 <input data-act="ed-default" type="number" min="1" value="${table.defaultCost}"></label></div></section>`:''}
-  ${page==='bonds'?renderBondBanPage(data,ui):page==='rules'?renderBondRulePage(data,ui):`<div class="wave-ed-layout">
+  ${page==='rules'?renderBondRulePage(data,ui):`<div class="wave-ed-layout">
    <aside class="wave-ed-sidebar">
     <label class="wave-ed-field">特训词条<select data-act="ed-type-select" aria-label="选择特训词条">${options(TRAINING_TYPES.map(t=>[t.id,t.name]),type.id)}</select></label>
     <div class="wave-ed-tiers" aria-label="压力档">${[1,2,3].map(n=>`<button data-act="ed-tier" data-tier="${n}" aria-pressed="${ui.tier===n}" class="${ui.tier===n?'chosen':''}">${['低压','中压','高压'][n-1]}</button>`).join('')}</div>
@@ -5319,42 +5319,11 @@ function renderWaveEditor(data,table,ui){
  </main>`;
 }
 
-// ── 盟约禁用页 ────────────────────────────────────────────────────────────────
-// 每个盟约一张卡：勾选的就是该盟约的「不禁用名单」（本局该盟约被禁时，名单上的干员仍然出场）。
-// 干员按 charId 登记（精锐与初始是同一名），所以列表里一人只出现一次，标注它同时挂着的其他盟约，
-// 方便看清「禁掉这个盟约还会顺带影响谁」。卡片标题右侧标出该盟约在「禁用方案」里的状态。
-const BAN_MODE_LABEL={fixed:'固定禁用',random:'随机候选',never:'固定不被禁'};
-function renderBondBanPage(data,ui){
- if(!ui.bondBan)ui.bondBan=loadBondBan(data);
- const rules=banRules(ui.bondBan,data);
- const exemptOf=id=>Array.isArray(ui.bondBan.exempt?.[id])?ui.bondBan.exempt[id]:[];
- const query=String(ui.bondQuery||'').trim().toLowerCase();
- const card=id=>{
-  const members=bondMembers(data,id),exempt=new Set(exemptOf(id)),mode=banModeOf(rules,id);
-  const shown=query?members.filter(row=>row.name.toLowerCase().includes(query)||row.charId.toLowerCase().includes(query)):members;
-  return `<article class="wave-ed-bond${bondIsCore(data,id)?' core':' extra'}" data-bond="${esc(id)}">
-   <header><div><b>${esc(bondName(data,id))}</b><small>${bondIsCore(data,id)?'核心盟约':'附加盟约'} · ${BAN_MODE_LABEL[mode]}</small></div><span>不禁用 ${members.filter(row=>exempt.has(row.charId)).length} / ${members.length}</span><div class="wave-ed-bond-actions"><button data-act="ed-bb-all" data-bond="${esc(id)}" data-mode="all">全不禁用</button><button data-act="ed-bb-all" data-bond="${esc(id)}" data-mode="none">全禁用</button></div></header>
-   <div class="wave-ed-bond-members">${shown.map(row=>`<label class="wave-ed-bond-member${exempt.has(row.charId)?' exempt':''}"><input type="checkbox" data-act="ed-bb-toggle" data-bond="${esc(id)}" data-char="${esc(row.charId)}" ${exempt.has(row.charId)?'checked':''}><span><b>${esc(row.name)}</b><small>${row.tier} 阶${row.bonds.filter(b=>b!==id).map(b=>' · 兼 '+bondName(data,b)).join('')}</small></span></label>`).join('')||'<p class="wave-ed-empty">该盟约没有可售干员。</p>'}
-   </div>
-  </article>`;
- };
- const ids=bondIds(data),core=ids.filter(id=>bondIsCore(data,id)),extra=ids.filter(id=>!bondIsCore(data,id));
- const never=rules.never,countBy=(list,mode)=>list.filter(id=>banModeOf(rules,id)===mode).length;
- return `<section class="wave-ed-bonds">
-  <header class="wave-ed-current"><div><small>BOND BAN LIST</small><h2>每个盟约的「不禁用名单」</h2></div><span class="wave-ed-bond-rule">每局随机禁 ${BAN_CORE_COUNT} 个核心 ＋ ${BAN_EXTRA_COUNT} 个附加盟约</span></header>
-  <p class="wave-ed-hint">某个盟约被本局禁用时，挂在它名下的干员只有<b>出现在这份名单上</b>才能出场；名单之外的一律禁用——哪怕这名干员还挂着别的没被禁的盟约。名单按干员登记（精锐与初始形态共用一条），商店抽取和策略／道具／卫戍等所有获取渠道都受限制。</p>
-  <p class="wave-ed-hint wave-ed-bond-temp">名单是<b>内置的真实数据</b>（逐盟约核对过），在这里改动会立即生效并覆盖内置值。哪些盟约固定禁用、哪些参与随机，去<b>「禁用方案」</b>页调；默认方案里 <b>${never.map(id=>esc(bondName(data,id))).join('／')}</b> 不参与随机。</p>
-  <div class="wave-ed-bonds-tools"><input id="bb-search" data-act="ed-bb-search" type="search" value="${esc(ui.bondQuery||'')}" placeholder="搜索干员名称或 ID" aria-label="搜索干员"><button data-act="ed-bb-export">导出名单 JSON</button><button data-act="ed-bb-import">导入名单 JSON</button><button data-act="ed-bb-defaults">恢复内置名单</button><button data-act="ed-bb-clear">清空全部名单</button></div>
-  <h3 class="wave-ed-bonds-group">核心盟约 <small>${core.length} 个 · 参与随机 ${countBy(core,'random')} 个</small></h3>
-  <div class="wave-ed-bonds-grid">${core.map(card).join('')}</div>
-  <h3 class="wave-ed-bonds-group">附加盟约 <small>${extra.length} 个 · 参与随机 ${countBy(extra,'random')} 个</small></h3>
-  <div class="wave-ed-bonds-grid">${extra.map(card).join('')}</div>
- </section>`;
-}
-
 // ── 禁用方案页（用户 2026-09-22 追加）────────────────────────────────────────
 // 控制每个盟约处在三种状态之一：固定禁用（每局必禁，不占随机名额）／参与随机（每局抽 3 核心 + 4 附加）
 // ／固定不被禁（不进池也不固定禁）。默认方案里 协防干员／绝技／调和／独行 ＋**投资人**是「固定不被禁」。
+// v3 起编制台只控制这三态，不再有逐盟约的「不禁用名单」。
+const BAN_MODE_LABEL={fixed:'固定禁用',random:'随机候选',never:'固定不被禁'};
 function renderBondRulePage(data,ui){
  if(!ui.bondBan)ui.bondBan=loadBondBan(data);
  const rules=banRules(ui.bondBan,data);
@@ -5371,7 +5340,7 @@ function renderBondRulePage(data,ui){
  const total=ids.length;
  return `<section class="wave-ed-bonds">
   <header class="wave-ed-current"><div><small>BOND BAN PLAN</small><h2>禁用方案</h2></div><span class="wave-ed-bond-rule">每局抽 ${BAN_CORE_COUNT} 核心 ＋ ${BAN_EXTRA_COUNT} 附加</span></header>
-  <p class="wave-ed-hint"><b>固定禁用</b>＝本局必定缺席，且<b>不占</b>随机名额；<b>参与随机</b>＝进抽取池，每局等概率抽 ${BAN_CORE_COUNT} 个核心 ＋ ${BAN_EXTRA_COUNT} 个附加（同一开局种子结果固定）；<b>不被禁</b>＝既不进池也不会被固定禁。被禁盟约的干员只有在该盟约的「不禁用名单」上才能出场，名单在「盟约禁用」页调。</p>
+  <p class="wave-ed-hint"><b>固定禁用</b>＝本局必定缺席，且<b>不占</b>随机名额；<b>参与随机</b>＝进抽取池，每局等概率抽 ${BAN_CORE_COUNT} 个核心 ＋ ${BAN_EXTRA_COUNT} 个附加（同一开局种子结果固定）；<b>不被禁</b>＝既不进池也不会被固定禁。一名干员只有在<b>所属盟约全部缺席</b>时才不可使用——只要还挂着未缺席的盟约就仍能出场；所有获取渠道（商店／策略／道具／卫戍／晋升候选）都受这条限制。</p>
   <p class="wave-ed-hint wave-ed-bond-temp">当前方案：固定禁用 <b>${rules.fixed.length}</b> 个 · 参与随机 <b>${total-rules.fixed.length-rules.never.length}</b> 个（核心 ${count(core,'random')} / 附加 ${count(extra,'random')}） · 不被禁 <b>${rules.never.length}</b> 个。</p>
   <div class="wave-ed-bonds-tools"><button data-act="ed-br-defaults">恢复默认方案</button><button data-act="ed-br-random-all">全部参与随机</button><button data-act="ed-bb-export">导出配置 JSON</button><button data-act="ed-bb-import">导入配置 JSON</button></div>
   <h3 class="wave-ed-bonds-group">核心盟约 <small>${core.length} 个 · 固定禁用 ${count(core,'fixed')} · 不被禁 ${count(core,'never')}</small></h3>
@@ -5405,13 +5374,9 @@ function applyEditorAction(act,dataset,table,ui,data){
  if(act==='ed-reset'){Object.assign(table,emptyWaveTable());ui.template=0;ui.sample=null;saveWaveTable(table);return 'reset';}
  if(act==='ed-export'){return 'export';}
  if(act==='ed-import'){return 'import';}
- // ── 盟约禁用页的动作：勾选／整盟约开关／导出导入／恢复临时默认。每次改动立即落盘
+ // ── 配置的导出／导入。每次改动立即落盘
  //（localStorage `garrison-bond-ban-v1`），对局开始时读的就是这一份。
- if(act==='ed-page'){ui.page=dataset.page==='bonds'?'bonds':dataset.page==='rules'?'rules':'enemies';ui.sample=null;return 'render';}
- if(act==='ed-bb-toggle'){ui.bondBan=ui.bondBan||loadBondBan(data);const id=dataset.bond,charId=dataset.char;if(!data.season.bondInfoDict[id]||!charId)return 'render';const list=new Set(Array.isArray(ui.bondBan.exempt?.[id])?ui.bondBan.exempt[id]:[]);list.has(charId)?list.delete(charId):list.add(charId);ui.bondBan.exempt[id]=[...list];ui.bondBan=saveBondBan(ui.bondBan,data);return 'render';}
- if(act==='ed-bb-all'){ui.bondBan=ui.bondBan||loadBondBan(data);const id=dataset.bond;if(!data.season.bondInfoDict[id])return 'render';ui.bondBan.exempt[id]=dataset.mode==='none'?[]:bondMembers(data,id).map(row=>row.charId);ui.bondBan=saveBondBan(ui.bondBan,data);return 'render';}
- if(act==='ed-bb-defaults'){ui.bondBan=saveBondBan(defaultBondExempt(data),data);return 'bond-defaults';}
- if(act==='ed-bb-clear'){ui.bondBan=saveBondBan({exempt:{}},data);return 'bond-clear';}
+ if(act==='ed-page'){ui.page=dataset.page==='rules'?'rules':'enemies';ui.sample=null;return 'render';}
  if(act==='ed-bb-export')return 'bond-export';
  if(act==='ed-bb-import')return 'bond-import';
  // ── 禁用方案页（`page:'rules'`）：改每个盟约是固定禁用／参与随机／固定不被禁。
@@ -10934,15 +10899,16 @@ const namedPickList=(rows,weights,keyOf)=>rows.flatMap(row=>Array(Math.max(1,Mat
 class NativeSession extends NativeEconomy {
  constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,bondBan=null,egg325=false,cat=false,playerId='local',teamPeers=[],teamTransport=null}={}){
   const map=data.maps.find(m=>m.stageId===mapId)||data.maps.find(m=>m.weight>0);super(data,modeId,{bandId,board:map,seed,manualPreview:true,playerId,teamPeers,cat});this.map=map;this.teamTransport=teamTransport;this.battle=null;this.s.mapId=map.stageId;this.s.itemOffers=[];this.s.summonCards=[];this.s.capacity=8;this.s.passiveIncome=0;this.s.history=[];this.s.runResult=null;this.s.frozenSlots=[];this.s.roundDecisions=[];this.s.enemyModifiers=[];this.s.operatorModifiers=[];this.s.commands=[];
-  // 本局禁用的盟约（固定禁用的全部 + 随机抽中的 3 核心 + 4 附加）与各盟约的「不禁用名单」在开局定死，随存档保存。
-  // 名单与禁用方案默认取协议自定义「盟约禁用／禁用方案」页配置的那份（localStorage，用户核对后填的真实数据，
-  // 未配置时是内置名单＋默认方案：投资人固定不被随机禁用）；简报／沙盒／测试可以显式传 bondBan 覆盖。
+  // 本局禁用的盟约（固定禁用的全部 + 随机抽中的 3 核心 + 4 附加）在开局定死，随存档保存；
+  // 干员只有在「所属盟约全部被禁」时才被禁用。
+  // 禁用方案默认取协议自定义「禁用方案」页配置的那份（localStorage；未配置时是默认方案：投资人固定不被随机禁用）；
+  // 简报／沙盒／测试可以显式传 bondBan 覆盖。v3 起配置里不再有逐盟约的「不禁用名单」。
   // 必须在 rollOffers() 之前设好——商店第一次抽卡就读 this.s.bondBan。
   const banOption=bondBan;
   const normalized=normalizeBondBan(banOption||loadBondBan(this.data),this.data);
   this.s.bondBan=banOption
-   ?{bonds:[...new Set((banOption.bonds||[]).filter(id=>this.data.season.bondInfoDict[id]))],exempt:normalized.exempt,always:normalized.always,never:normalized.never}
-   :{bonds:bondBanIds(this.data,seed,normalized),exempt:normalized.exempt,always:normalized.always,never:normalized.never};
+   ?{bonds:[...new Set((banOption.bonds||[]).filter(id=>this.data.season.bondInfoDict[id]))],always:normalized.always,never:normalized.never}
+   :{bonds:bondBanIds(this.data,seed,normalized),always:normalized.always,never:normalized.never};
   this.poolDraw=request=>this.drawFromPool(request);this.s.offers=this.rollOffers();this.fillItems();this.startPreparation();this.ensureRewards();this.s.waveRoster=waveRoster||createWaveRoster({random:()=>this.random(),data:this.data,modeId:this.s.modeId});if(egg325)this.s.egg325=true;this.ensureRoundBounty();
  }
  ensureRoundBounty(){
@@ -10966,7 +10932,7 @@ class NativeSession extends NativeEconomy {
  canDeploySummonCard(cardUid,x,y){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid),cell=this.map.grid[y]?.[x];if(!card||!cell||cell.buildableType==='NONE'||cell.obstacle||!this.summonCardRange(card,x,y))return false;if(card.type==='cathy-device'&&this.s.summonCards.filter(c=>c.uid!==card.uid&&c.ownerUid===card.ownerUid&&c.type===card.type&&c.position).length>=2)return false;if(['vigil-wolf','skadi2-seaborn'].includes(card.type)&&cell.heightType==='HIGHLAND')return false;return card.type==='cathy-device'||(!this.s.units.some(u=>u.position?.x===x&&u.position?.y===y)&&!this.s.summonCards.some(c=>c.uid!==card.uid&&c.position?.x===x&&c.position?.y===y));}
  deploySummonCard(cardUid,x,y,dir=0){if(!this.canDeploySummonCard(cardUid,x,y))return false;const card=this.s.summonCards.find(c=>c.uid===cardUid);card.position={x,y};card.dir=dir;return true;}
  withdrawSummonCard(cardUid){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid&&c.position);if(!card||this.handFull())return false;card.position=null;return true;}
- // 被禁盟约的成员（不在该盟约「不禁用名单」里的）不进调配池。判定只有这一条：
+ // 所属盟约全部被禁的干员不进调配池。判定只有这一条：
  // 只要挂在某个被禁盟约名下又不在那份名单里，就禁用——哪怕它还挂着没被禁的盟约。
  // eligible() 是抽卡的唯一准入过滤点（商店、具名池、'later' 池都走它），所以过滤器只挂在这里；
  // 判定与名单本身在 NativeEconomy.bondBanned（商店以外还有固定点名发放要挡，见那边的注释）。
@@ -11216,7 +11182,7 @@ class NativeSession extends NativeEconomy {
   if(!s||record.version!==data.version||!data.season.modeDataDict[s.modeId]||!data.season.bandDataListDict[s.bandId]||!data.maps.some(m=>m.stageId===s.mapId)||!integer(s.level,1,6)||!integer(s.round,1,15)||!integer(s.capacity,1,99)||!n(s.funds)||s.funds<0||!n(s.hp)||!n(s.maxHp)||s.hp<0||s.hp>s.maxHp||!['prep','battle','decision','intermission','finished'].includes(s.phase)||![undefined,true].includes(s.cat)||![undefined,true].includes(s.egg325)||!n(record.savedAt)||Date.now()>=(record.expiresAt??record.savedAt+86400000))return null;
   // 盟约禁用：必须是已知盟约、无重复、至多 23 个；缺省（旧存档）在下面按「本局不额外禁用」补齐。
   // `fixed`／`never`（禁用方案）只做类型校验，旧存档缺字段时读档时按当前方案补齐。
-  if(s.bondBan!==undefined){const b=s.bondBan;if(typeof b!=='object'||b===null||!Array.isArray(b.bonds)||b.bonds.length>23||new Set(b.bonds).size!==b.bonds.length||b.bonds.some(id=>typeof id!=='string'||!data.season.bondInfoDict[id])||typeof b.exempt!=='object'||b.exempt===null||(b.always!==undefined&&!Array.isArray(b.always))||(b.never!==undefined&&!Array.isArray(b.never)))return null;}
+  if(s.bondBan!==undefined){const b=s.bondBan;if(typeof b!=='object'||b===null||!Array.isArray(b.bonds)||b.bonds.length>23||new Set(b.bonds).size!==b.bonds.length||b.bonds.some(id=>typeof id!=='string'||!data.season.bondInfoDict[id])||(b.always!==undefined&&!Array.isArray(b.always))||(b.never!==undefined&&!Array.isArray(b.never)))return null;}
   if(s.roundBounty){const r=s.roundBounty;if(!integer(r.round,1,s.round)||!Array.isArray(r.offers)||r.offers.length!==4||new Set(r.offers).size!==4||r.offers.some(id=>typeof id!=='string'||!data.enemies[id]||!bountyOption(data,id))||r.selected!==null&&!r.offers.includes(r.selected))return null;const coins=r.offers.map(id=>bountyOption(data,id).coin);if(!coins.includes(1)||!coins.includes(4))return null;}
   const item=i=>i&&integer(i.uid,1,Number.MAX_SAFE_INTEGER)&&!!data.season.trapChessDataDict[i.chessId];
   if(!Array.isArray(s.units)||s.units.length>500||!Array.isArray(s.items)||s.items.length>1000||s.items.some(i=>!item(i))||(s.stock!==undefined&&(typeof s.stock!=='object'||s.stock===null||Object.values(s.stock).some(v=>!integer(v,0,99999))))||s.units.some(u=>!integer(u.uid,1,Number.MAX_SAFE_INTEGER)||!data.profiles[u.chessId]||u.charId!==data.profiles[u.chessId].charId||!integer(u.dir,0,3)||!Array.isArray(u.equipment)||u.equipment.length>2||u.equipment.some(i=>!item(i))||(u.purchases!==undefined&&(typeof u.purchases!=='object'||u.purchases===null||Object.values(u.purchases).some(v=>!integer(v,1,9999))))||(u.position!==null&&(!integer(u.position?.x,0,10)||!integer(u.position?.y,0,6)))))return null;
@@ -11224,12 +11190,12 @@ class NativeSession extends NativeEconomy {
   if(record.battle&&(!Array.isArray(record.battle.units)||!Array.isArray(record.battle.enemies)||!n(record.battle.frame)||!n(record.battle.time)))return null;
   const c=Object.create(NativeSession.prototype);c.data=data;c.map=data.maps.find(m=>m.stageId===s.mapId);c.board=c.map;c.manualPreview=true;c.triggerChain=[];c.poolDraw=request=>c.drawFromPool(request);c.battle=null;c.s=s;if(c.s.cat)c.s.funds=INFINITE_FUNDS;ensureStock(data,c.s);c.s.playerId??='local';c.s.teamPeers??=[];c.s.transferInbox??=[];c.s.transferOutbox??=[];
   // 旧存档没有盟约禁用记录：按「本局不额外禁用」补齐（`bonds:[]`），不动玩家已经买到的干员。
-  // 名单与禁用方案仍按配置页那份归一化，免得存档里的历史名单把已下架的 charId 带回来；
   // 禁用方案（fixed／never）不参与判定，只用于简报／弹窗标注「固定禁用还是随机抽中」，缺字段时补当前方案。
-  const restoredBan=s.bondBan?normalizeBondBan(s.bondBan,data):normalizeBondBan({exempt:{}},data);
+  // 旧存档里的 `exempt`（v2 的不禁用名单）直接忽略：判定只看 bonds 与干员自己的盟约。
+  const restoredBan=s.bondBan?normalizeBondBan(s.bondBan,data):normalizeBondBan({},data);
   c.s.bondBan=s.bondBan
-   ?{bonds:s.bondBan.bonds.slice(),exempt:restoredBan.exempt,always:restoredBan.always,never:restoredBan.never}
-   :{bonds:[],exempt:restoredBan.exempt,always:restoredBan.always,never:restoredBan.never};c.sanitizeBannedOffers();if(!c.s.waveRoster?.version)c.s.waveRoster=createWaveRoster({random:()=>c.random(),data,modeId:c.s.modeId});let migrated=false;for(const u of c.s.units)if(u.position&&c.map.grid[u.position.y][u.position.x].buildableType==='NONE'){u.position=null;migrated=true;}
+   ?{bonds:s.bondBan.bonds.slice(),always:restoredBan.always,never:restoredBan.never}
+   :{bonds:[],always:restoredBan.always,never:restoredBan.never};c.sanitizeBannedOffers();if(!c.s.waveRoster?.version)c.s.waveRoster=createWaveRoster({random:()=>c.random(),data,modeId:c.s.modeId});let migrated=false;for(const u of c.s.units)if(u.position&&c.map.grid[u.position.y][u.position.x].buildableType==='NONE'){u.position=null;migrated=true;}
   // 旧存档里装备曾把 giveBondId 直接叠进 u.bondIds（「装了不融冰就算谢拉格」那类误判），读档时按新口径重算一次。
   for(const u of c.s.units)c.refreshEquipmentBonds(u);if(migrated&&record.battle){const deployed=new Set(c.s.units.filter(u=>u.position).map(u=>u.uid));record.battle.units=record.battle.units.filter(u=>deployed.has(u.uid));}if(record.battle){const turn=buildPhasePlan(data,c.s.modeId).find(t=>t.round===c.s.round);c.battle=NativeBattle.restore(data,c,c.map,turn,record.battle);if(!c.battle)return null;}c.ensureRoundBounty();return c;
  }
@@ -13337,7 +13303,7 @@ function showBranches(id=null){
 function showLimitations(){modal(`<h2>手动验收版 · 已知差异</h2><p>主入口已使用下半期数据和新对局控制器。该版本不代表完全还原，未运行本轮自动或浏览器测试。</p><ul>${data.limitations.map(s=>`<li>${esc(s)}</li>`).join('')}</ul><p>请导出当前存档，连同复现步骤提交问题。</p><a href="https://github.com/Yilegendoflink/garrison-protocol/issues" target="_blank" rel="noreferrer">反馈问题 ↗</a>`);}
 const sandboxOperators=Object.values(data.profiles).filter(p=>p?.charId).map(p=>({id:p.chessId,charId:p.charId,name:p.name,rank:p.rank,isGolden:p.isGolden,position:p.position}));
 const sandboxEnemies=Object.entries(data.enemies).map(([id,e])=>({id,name:e.name,applyWay:e.applyWay,motion:e.motion}));
-function newSandbox(){const economy=new NativeSession(data,{modeId:'mode_single_normal',bandId:'band_bldsk',mapId:state.map,seed:1,bondBan:{bonds:[],exempt:{}},cat:!!state.draft?.cat});economy.s.units=[];economy.s.items=[];economy.s.offers=[];economy.s.itemOffers=[];economy.setFunds(9999);economy.s.phase='prep';economy.s.rewardPending=null;return {economy,battle:null,phase:'setup',opQuery:'',enemyQuery:'',selectedUid:null,enemyDrafts:[],nextUid:1,enemySeq:0};}
+function newSandbox(){const economy=new NativeSession(data,{modeId:'mode_single_normal',bandId:'band_bldsk',mapId:state.map,seed:1,bondBan:{bonds:[]},cat:!!state.draft?.cat});economy.s.units=[];economy.s.items=[];economy.s.offers=[];economy.s.itemOffers=[];economy.setFunds(9999);economy.s.phase='prep';economy.s.rewardPending=null;return {economy,battle:null,phase:'setup',opQuery:'',enemyQuery:'',selectedUid:null,enemyDrafts:[],nextUid:1,enemySeq:0};}
 function openSandbox(){if(!state.sandbox){state.sandbox=newSandbox();state.sandbox.previousGame=state.game;state.sandbox.previousView='lobby';}state.game=state.sandbox.economy;state.view='game';state.paused=true;state.modal=null;render();}
 function sandboxAddOperator(id){const sb=state.sandbox,p=data.profiles[id],shop=data.season.charShopChessDatas[id]||data.season.charShopChessDatas[data.season.chessNormalIdLookupDict[id]];if(!sb||sb.phase!=='setup'||!p||!shop)return;const u={uid:++sb.nextUid,chessId:id,charId:p.charId,rank:p.rank||shop.chessLevel,position:null,dir:0,equipment:[],bondIds:data.season.charChessDataDict[id]?.bondIds||[]};sb.economy.s.units.push(u);sb.selectedUid=u.uid;state.selected=u.uid;state.item=null;render();}
 function sandboxSpawnEnemy(id,dummy=false){const sb=state.sandbox;if(!sb)return;if(sb.phase==='setup'){sb.enemyDrafts.push({id,dummy,uid:++sb.enemySeq});render();return;}if(!sb.battle)return;const raw=data.enemies[id];if(!raw)return;const flying=raw.motion==='FLY',route=Math.max(0,sb.battle.level.routes.findIndex(r=>r.motionMode===(flying?'FLY':'WALK')));try{sb.battle.spawn({id,route});const e=sb.battle.s.enemies.at(-1),i=sb.enemySeq++;const spots=[[8,1],[8,2],[8,3],[7,1],[7,2],[7,3],[6,1],[6,2]];const spot=spots[i%spots.length];e.x=spot[0];e.y=spot[1];e.progress=0;e.cmd=0;if(dummy){e.trainingDummy=true;e.canAttack=false;e.ranged=false;e.speed=0;e.interval=999;e.route=[];e.leak=0;e.block=null;e.name='测试木桩';e.def=0;e.res=0;e.baseDef=0;e.baseRes=0;e.damageResistance=0;}sb.enemyDrafts.push({id,dummy,uid:e.uid});sb.battle.s.total=sb.battle.s.enemies.length;render();}catch(error){notice(error.message||'无法生成敌人');}}
@@ -13376,7 +13342,7 @@ function render(){
   if(state.view==='strategy-select'){root.innerHTML=renderStrategySelectScreen();decorateStrategyCatalog();renderModal();return;}
  if(state.view==='briefing'){root.innerHTML=renderBriefingScreen();renderModal();return;}
  if(state.view==='briefing'){const d=state.draft,mode=data.season.modeDataDict[d.modeId],mapName=data.maps.filter(m=>m.weight>0).findIndex(m=>m.stageId===d.mapId),tags=(d.roster.types||[]).map(id=>trainingType(id)).filter(Boolean),order=(d.roster.order||[]).map(id=>trainingType(id)?.name||id);root.innerHTML=`<main class="native-lobby native-briefing"><header><button data-act="home">‹ 大厅</button><span>战前准备</span></header><h1>战前准备</h1><p>${esc(d.cat?'海猫模式':d.egg325?'325模式':mode?.name||'')} · 阵地 ${mapName+1}</p><h2>本局特训</h2><p>抽中三种词条，战斗按 ${order.map(esc).join(' → ')} 轮换出怪。</p><div class="native-tags">${tags.map(t=>`<article><b>${esc(t.name)}</b><small>${esc(t.id)}</small><p>${esc(t.desc)}</p></article>`).join('')}</div><h2>初始策略</h2><div class="native-strategy-pane"><div class="native-strategies">${Object.values(data.season.bandDataListDict).map(b=>`<button data-act="band" data-id="${b.bandId}" class="${state.band===b.bandId?'chosen':''}">${avatar(b.bandId)}<span><b>${esc(data.common.bandDataDict[b.bandId].bandName)}</b><small>生命 ${b.totalHp}</small><p>${esc(plain(b.bandDesc))}</p></span></button>`).join('')}</div></div><button class="native-primary native-begin" data-act="begin">进入对局 →</button></main>`;renderModal();return;}
- if(state.view==='editor'){const oldNav=root.querySelector('.wave-ed-temps'),navTop=oldNav?.scrollTop||0,navLeft=oldNav?.scrollLeft||0;root.innerHTML=renderWaveEditor(data,state.waveTable,state.editor);const nav=root.querySelector('.wave-ed-temps');if(nav){nav.scrollTop=navTop;nav.scrollLeft=navLeft;}const search=document.getElementById('ed-search'),catalog=document.getElementById('ed-catalog');if(search&&state.editor.keepSearch){search.focus();try{search.setSelectionRange(state.editor.caret,state.editor.caret);}catch{}}state.editor.keepSearch=false;const bondSearch=document.getElementById('bb-search');if(bondSearch&&state.editor.bondKeep){bondSearch.focus();try{bondSearch.setSelectionRange(state.editor.bondCaret,state.editor.bondCaret);}catch{}}state.editor.bondKeep=false;if(catalog)catalog.scrollTop=state.editor.scroll||0;const dialog=root.querySelector('#wave-ed-test');if(dialog){dialog.showModal();const close=()=>{state.editor.sample=null;render();root.querySelector('.wave-ed-current [data-act=ed-roll]')?.focus();};dialog.addEventListener('cancel',e=>{e.preventDefault();close();});dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();}});}renderModal();return;}
+ if(state.view==='editor'){const oldNav=root.querySelector('.wave-ed-temps'),navTop=oldNav?.scrollTop||0,navLeft=oldNav?.scrollLeft||0;root.innerHTML=renderWaveEditor(data,state.waveTable,state.editor);const nav=root.querySelector('.wave-ed-temps');if(nav){nav.scrollTop=navTop;nav.scrollLeft=navLeft;}const search=document.getElementById('ed-search'),catalog=document.getElementById('ed-catalog');if(search&&state.editor.keepSearch){search.focus();try{search.setSelectionRange(state.editor.caret,state.editor.caret);}catch{}}state.editor.keepSearch=false;if(catalog)catalog.scrollTop=state.editor.scroll||0;const dialog=root.querySelector('#wave-ed-test');if(dialog){dialog.showModal();const close=()=>{state.editor.sample=null;render();root.querySelector('.wave-ed-current [data-act=ed-roll]')?.focus();};dialog.addEventListener('cancel',e=>{e.preventDefault();close();});dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();}});}renderModal();return;}
  const g=state.game,s=g.s,turn=currentTurn(),rows=g.bonds();root.innerHTML=`<main class="native-game${s.phase==='battle'?' is-battle':''}${state.supplyCollapsed?' is-supply-collapsed':''}${state.sandbox?' is-sandbox':''}">${dossier()}<header class="native-top"><button data-act="home">‹ 大厅</button><strong>卫戍协议 / 盟约下半</strong><button class="native-mobile-info" data-act="field-info">战况 / 设置</button><button data-act="limits">已知差异</button><button data-act="branches">分支规则</button><button class="native-ban-entry" data-act="ban-list">禁用名单</button><button data-act="export">导出存档</button></header>${s.phase==='battle'&&!state.sandbox?battleBar():''}<div class="native-workspace"><aside class="native-bonds">${sortedBondRows(rows,s.bondLayers).map(([id,b])=>`<button data-act="bond-info" data-id="${id}" class="${b.active?'active':''}"><b>${data.season.bondInfoDict[id].name}</b><span>${b.count} / ${data.season.bondInfoDict[id].activeCount}</span><small>${data.season.bondInfoDict[id].noStack?'':(s.bondLayers[id]||0)+' 层'}</small></button>`).join('')||'<p>部署干员以激活盟约</p>'}</aside><section class="native-field"><div class="native-field-caption"><b>${state.sandbox?(s.phase==='battle'?'技能测试':'测试配置'):s.phase==='battle'?(turn.isBossTurn?'木桩测试':'自动作战'):s.phase==='prep'?'阵地休整':s.phase==='finished'?'模拟结束':'回合结算'}</b><span id="native-wave-progress">${s.units.filter(u=>u.position).length} / ${s.capacity} 部署</span></div><div class="native-terrain-legend" aria-label="地块图例"><span><i class="terrain-high"></i>高台</span><span><i class="terrain-ground"></i>可部署地面</span><span><i class="terrain-isolated"></i>隔离平台</span><span><i class="terrain-corridor"></i>可通行通道</span><span><i class="terrain-blocked"></i>阻隔工事</span><span><i class="terrain-entry"></i>敌方入口</span><span><i class="terrain-goal"></i>防守目标</span></div><div class="native-board"><canvas id="native-canvas" tabindex="0" aria-label="战场棋盘，先选位置再拖动朝向确认"></canvas><span class="native-cost" title="战斗费用余额，与商店资金独立"><small>Cost 费用</small><output id="native-cost-balance" aria-label="战斗费用余额">—</output></span></div><div class="native-facing" ${state.preview?'':'hidden'}><span class="native-facing-tip">拖动选择朝向，松手确认；中心松手取消。</span>${[0,1,2,3].map((d)=>`<button data-act="aim" data-dir="${d}">${['→','↓','←','↑'][d]}</button>`).join('')}<button data-act="place-confirm">确认放置</button><button data-act="cancel">取消</button></div><div class="native-controls"><button data-act="fullscreen" hidden>打开全屏</button><button data-act="pause" ${s.phase!=='battle'?'disabled':''}>${state.paused?'继续':'暂停'}</button>${[1,2,4].map(n=>`<button data-act="speed" data-speed="${n}" class="${state.speed===n?'chosen':''}">${n}×</button>`).join('')}<button data-act="mute">${state.muted?'声音关':'声音开'}</button><label>音量 <input id="native-volume" aria-label="战斗音量" type="range" min="0" max="1" step="0.05" value="${state.volume}" style="width:72px"></label><button data-act="reduce-fx">${state.reduceFx?'动效少':'动效'}</button>${s.phase==='prep'?(state.sandbox?'<button class="native-primary" data-act="sandbox-start">开始测试 →</button>':'<button class="native-primary" data-act="start">准备完毕 →</button>'):s.phase==='intermission'?'<button class="native-primary" data-act="next">进入下一回合 →</button>':s.phase==='battle'&&turn.isBossTurn?'<button data-act="stop">结束木桩并播报伤害</button>':s.phase==='finished'?'<button data-act="result">查看伤害报告</button><button data-act="home">回到大厅</button>':''}</div><div class="native-bench-label${g.handFull()?' is-over':''}" id="native-hand-label">整备区 ${g.handLength()} / 10 ${g.handFull()?'<em class="native-hand-warn">已满，出售或部署清出空余后才能购买</em>':''}<span id="native-drop-hint" aria-live="polite">可将场上干员拖回此处；换位后重新选朝向</span></div><div class="native-bench" id="native-hand" aria-label="整备区">${s.units.filter(u=>!u.position).map(u=>`<button data-act="select" data-uid="${u.uid}" class="${state.selected===u.uid||inspectSame('unit',u.uid)?'chosen':''}">${avatar(u.charId)}<b>${esc(data.profiles[u.chessId].name)}</b>${data.profiles[u.chessId].isGolden?'<small>精锐</small>':''}</button>`).join('')}${s.items.map(i=>`<div role="button" tabindex="0" data-act="item" data-uid="${i.uid}" class="${state.item===i.uid||inspectSame('pack',i.uid)?'chosen':''}"><span class="native-item-icon">◇</span><b>${esc(itemName(i.chessId))}</b></div>`).join('')}</div></section><aside class="native-detail">${state.sandbox?sandboxDetail():waveIntel()}${detail()}<h3>${esc(data.common.bandDataDict[s.bandId].bandName)}</h3><p>${esc(plain(data.season.bandDataListDict[s.bandId].bandDesc))}</p><p>${turn.isBossTurn?'最终木桩：生命无限，防御0、法抗0，倒计时150秒。':'开局抽取三种特训词条；每档按难度预算从敌人池抽取，空池使用占位模板。'}</p><div id="native-combat-stats"></div></aside></div><div class="native-status" id="native-status"></div><section class="native-shop" id="native-supply-shop"><div><h2>调度中心 ${s.level}</h2><button class="native-supply-toggle" data-act="supply-toggle" aria-controls="native-supply-shop" aria-expanded="${!state.supplyCollapsed}">${state.supplyCollapsed?'展开商店 ▴':'收起商店 ▾'}</button><button data-act="upgrade" ${s.phase!=='prep'?'disabled':''}>升级 ${catOn()?'ALL':(g.terms().upgradeCost??'MAX')} ◆</button><button data-act="refresh" ${s.phase!=='prep'?'disabled':''}${s.forcedRefresh?` title="特殊刷新：此次刷新出现的干员优先为${esc(data.season.bondInfoDict[s.forcedRefresh.bond]?.name||'指定盟约')}干员"`:''}>${s.forcedRefresh?`特殊刷新${s.forcedRefresh.count>1?` ×${s.forcedRefresh.count}`:''}`:'刷新'} ${s.freeRefresh?'免费':catOn()?'ALL':'1 ◆'}</button>${catOn()?'<button data-act="stockview" title="查看各干员剩余库存">库存</button>':''}<button data-act="lock" ${s.phase!=='prep'?'disabled':''}>${s.locked?'❄ 已冻结':'冻结'}</button>${s.rewardPending?.tier?'<span class="native-reward-shop-hint">三合一奖励选择中 · 点击候选卡片预览，再次点击确认</span>':''}${g.handFull()?'<span class="native-reward-shop-hint is-over" title="召唤物卡、干员与装备一起占整备区格">整备区已满，暂不可购入干员／装备</span>':''}</div><div class="native-shop-cards">${shopCards(g,s)}</div></section></main>`;canvas=document.getElementById('native-canvas');syncPlayChrome();updateHud();fitWaveFaces();draw();renderModal();showRequired();
  }finally{painting=false;paint325();}
 }
@@ -13484,9 +13450,7 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
   if(result==='export'){const url=URL.createObjectURL(new Blob([JSON.stringify(state.waveTable,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-wave-table.json';link.click();URL.revokeObjectURL(url);return;}
   if(result==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{state.waveTable=saveWaveTable(normalizeWaveTable(JSON.parse(await input.files[0].text())));state.editor.sample=null;state.editor.template=0;notice('已导入波次表');render();}catch(e){notice(e.message||'无法读取波次表');}};input.click();return;}
   if(result==='bond-export'){const url=URL.createObjectURL(new Blob([JSON.stringify(state.editor.bondBan||loadBondBan(data),null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-bond-ban.json';link.click();URL.revokeObjectURL(url);return;}
-  if(result==='bond-import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{state.editor.bondBan=saveBondBan(JSON.parse(await input.files[0].text()),data);notice('已导入盟约不禁用名单');render();}catch(e){notice(e.message||'无法读取盟约名单');}};input.click();return;}
-  if(result==='bond-defaults')notice('已恢复临时默认名单（多盟约干员不禁用），可在本页继续逐条勾选。');
-  if(result==='bond-clear')notice('已清空全部盟约的不禁用名单：被禁盟约的成员将全部出局。');
+  if(result==='bond-import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{state.editor.bondBan=saveBondBan(JSON.parse(await input.files[0].text()),data);notice('已导入禁用方案');render();}catch(e){notice(e.message||'无法读取禁用方案');}};input.click();return;}
   if(result==='filled')notice('已补入基础活动中已准入、符合词条与难度限制的敌人，保留现有混编。');
   if(result==='choose-activity')notice('请先选择模板活动，或在档案中筛选一个活动。');
   if(result==='incompatible')notice('只能加入逻辑已准入的敌人。');
@@ -13495,7 +13459,7 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
   if(result)render();if(a==='ed-close-test')root.querySelector('.wave-ed-current [data-act=ed-roll]')?.focus();return;
  }
   if(a==='strategy-select'&&state.view==='briefing'){state.strategyDraft=null;state.view='strategy-select';render();return;}if(a==='strategy-pick'&&state.view==='strategy-select'){const catalog=document.querySelector('.native-strategy-catalog'),scrollHost=catalog?.scrollHeight>catalog?.clientHeight?catalog:catalog?.closest('.native-lobby'),scroll=scrollHost?.scrollTop||0,id=button.dataset.id;if(state.strategyDraft===id){state.band=id;state.strategyDraft=null;state.view='briefing';render();return;}state.strategyDraft=id;render();const next=document.querySelector('.native-strategy-catalog'),nextHost=next?.scrollHeight>next?.clientHeight?next:next?.closest('.native-lobby');if(nextHost)nextHost.scrollTop=scroll;return;}if(a==='strategy-cancel'&&state.view==='strategy-select'){state.strategyDraft=null;state.view='briefing';render();return;}
- if(a==='new'){const egg=state.mode===EGG_MODE_ID,cat=state.mode===CAT_MODE_ID,modeId=egg?EGG_BASE_MODE:cat?CAT_BASE_MODE:state.mode,seed=(Date.now()&0xffffffff)>>>0;const banConfig=loadBondBan(data);state.draft={modeId,mapId:state.map,seed,roster:createWaveRoster({random:waveRng(seed),data,modeId}),bondBan:{bonds:bondBanIds(data,seed,banConfig),exempt:banConfig.exempt,always:banConfig.always,never:banConfig.never},egg325:egg,cat};state.bondBanBlocks=0;state.view='briefing';state.strategyDraft=null;state.modal=null;render();return;}
+ if(a==='new'){const egg=state.mode===EGG_MODE_ID,cat=state.mode===CAT_MODE_ID,modeId=egg?EGG_BASE_MODE:cat?CAT_BASE_MODE:state.mode,seed=(Date.now()&0xffffffff)>>>0;const banConfig=loadBondBan(data);state.draft={modeId,mapId:state.map,seed,roster:createWaveRoster({random:waveRng(seed),data,modeId}),bondBan:{bonds:bondBanIds(data,seed,banConfig),always:banConfig.always,never:banConfig.never},egg325:egg,cat};state.bondBanBlocks=0;state.view='briefing';state.strategyDraft=null;state.modal=null;render();return;}
  if(a==='begin'){state.bountyDeferred=null;state.lastChoiceContent=null;enterPlayChrome();state.supplyCollapsed=false;if(!state.draft){state.view='lobby';leavePlayChrome();render();return;}try{state.game=new NativeSession(data,{modeId:state.draft.modeId,bandId:state.band,mapId:state.draft.mapId,seed:state.draft.seed,waveRoster:state.draft.roster,bondBan:state.draft.bondBan,egg325:!!state.draft.egg325,cat:!!state.draft.cat});state.view='game';state.draft=null;state.paused=false;state.expiresAt=null;state.selected=state.summonSelected=state.item=state.inspect=state.preview=state.modal=null;save();saveCheckpoint();render();}catch(e){notice(e.message);}return;}
  if(a==='resume'){if(state.expiresAt&&Date.now()>=state.expiresAt){notice('暂离已超过24小时，请开始新模拟');return;}enterPlayChrome();state.expiresAt=null;state.view='game';render();return;}if(a==='home'){dismissRoundEnd();if(state.view==='editor'||state.view==='briefing'){state.view='lobby';leavePlayChrome();render();return;}state.view='lobby';state.paused=true;state.expiresAt??=Date.now()+86400000;state.modal=null;save();leavePlayChrome();render();return;}if(a==='result'){showResult();return;}
  if(a==='export'){const url=URL.createObjectURL(new Blob([JSON.stringify(g.snapshot(),null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-round-'+g.s.round+'.json';link.click();URL.revokeObjectURL(url);return;}
@@ -13736,8 +13700,7 @@ root.addEventListener('change',e=>{
 root.addEventListener('input',e=>{
  if(e.target.id==='native-volume'||e.target.hasAttribute('data-native-volume')){state.volume=Number(e.target.value);savePreference('garrison-volume',String(state.volume));return;}
  if(e.target.id==='sandbox-op-search'){const term=e.target.value.trim().toLowerCase();if(state.sandbox)state.sandbox.opQuery=e.target.value;for(const button of root.querySelectorAll('[data-sandbox-op]'))button.hidden=!button.dataset.sandboxOp.includes(term);return;}if(e.target.id==='sandbox-enemy-search'){const term=e.target.value.trim().toLowerCase();if(state.sandbox)state.sandbox.enemyQuery=e.target.value;for(const button of root.querySelectorAll('[data-sandbox-enemy]'))button.hidden=!button.dataset.sandboxEnemy.includes(term);return;}
- if(e.target.id==='bb-search'){state.editor.bondQuery=e.target.value;state.editor.bondCaret=e.target.selectionStart||e.target.value.length;state.editor.bondKeep=true;render();return;}
- if(e.target.id!=='ed-search')return;state.editor.query=e.target.value;state.editor.caret=e.target.selectionStart||e.target.value.length;state.editor.keepSearch=true;const catalog=document.getElementById('ed-catalog');state.editor.scroll=catalog?.scrollTop||0;render();
+  if(e.target.id!=='ed-search')return;state.editor.query=e.target.value;state.editor.caret=e.target.selectionStart||e.target.value.length;state.editor.keepSearch=true;const catalog=document.getElementById('ed-catalog');state.editor.scroll=catalog?.scrollTop||0;render();
 });
 const paneShift=new WeakMap();
 function rotatedPlay(){return document.documentElement.classList.contains('native-need-rotate');}
@@ -14133,34 +14096,34 @@ return {renderBountyChoice,renderDecisionChoice};
 "native-bond-ban.js": function(load) {
 // 盟约禁用（作战前简报的「缺席盟约／被禁用干员」）。
 //
-// 口径（用户 2026-09-22 定稿）：
-//  * 每个盟约在「协议自定义 → 禁用方案」页里处在三种状态之一（`banRules`）：
-//      - `fixed`  固定禁用：每局必定缺席，**不占随机名额**；
-//      - `random` 参与随机：进抽取池，每局从池里等概率抽 **3 个核心 + 4 个附加**；
-//      - `never`  固定不被禁：不进池、也不固定禁。
-//    默认方案：`fixed` 为空；`never` = 协防干员（emptyShip）／绝技（suntShip）／调和（maniShip）／独行（soloShip）
-//    ＋**投资人（investShip）**（`BOND_BAN_DEFAULT_NEVER`，用户 2026-09-22 补充口径），其余 18 个（8 核心 + 10 附加）参与随机。
-//    状态由玩家在配置页改，存在 `localStorage`／存档的 `always`／`never` 两个数组里；不看 `modeDataDict` 的模式表。
-//  * 每个盟约各有一份**「不禁用名单」**：被禁盟约的成员里只有名单上的干员还能进调配池，其余全部禁用。
-//    判定只看这一条——干员只要挂在某个被禁盟约名下又不在那份名单里，就禁用（哪怕它还挂着别的没被禁的盟约）。
-//    （第一版理解的「名下盟约全被禁才禁用」是错的，别再退回去。）
+// 口径（用户 2026-09-22 二次修订，配置版本升到 v3）：
+//  * 每局从「参与随机」的盟约里随机禁用 **3 个核心盟约 + 4 个附加盟约**；固定禁用的盟约必定缺席、
+//    **不占随机名额**；同一开局种子结果固定（与商店／波次随机流分开）。
+//  * 每个盟约处在三种状态之一（`banRules`，在「协议自定义 → 禁用方案」页调）：
+//      - `fixed`  固定禁用；`random` 参与随机；`never` 固定不被禁。
+//    默认方案：`fixed` 为空；`never` = 协防干员（emptyShip）／绝技（suntShip）／调和（maniShip）／
+//    独行（soloShip）＋**投资人（investShip）**（`BOND_BAN_DEFAULT_NEVER`）。配置只存 `always`／`never`。
+//  * **干员禁用规则（v3 修订）**：一名干员**所属的全部盟约都被禁**时才被禁用；只要还挂着一个没被禁的
+//    盟约就仍然可用。v2 的逐盟约「不禁用名单」（`exempt`）已废弃，配置里不再有这一项。
+//    没有盟约归属的干员不因本机制被禁。
 //  * 限制覆盖**所有获取渠道**：商店／具名池之外，策略与卫戍的点名发放、道具、晋升奖励候选、援军转让
 //    同样拿不到被禁干员（见 `native-session.gain` / `native-economy.bondBanned`）。
-//  * **道具相关的盟约不受影响**（用户 2026-09-22 口径）：装备自身的 `giveBondId` 归属照旧用于商店／具名池
-//    取货，变形同构体照旧把另一件装备的盟约借给携带者——被禁的是**干员的获取**，不是盟约本身。
+//  * **道具相关的盟约不受影响**：装备自身的 `giveBondId` 归属照旧用于商店／具名池取货，变形同构体照旧
+//    把另一件装备的盟约借给携带者——被禁的是**干员的获取**，不是盟约本身。
+//  * 预览按**被禁盟约分组**列出被禁干员：同一名干员挂在多个被禁盟约下时，每组各列一次（用户 2026-09-22 口径）。
 //
-// 干员身份按 charId 归并：精锐与初始是同一名干员的两种状态，名单只登记一次。
+// 干员身份按 charId 归并：精锐与初始是同一名干员的两种状态，判定与展示都只算一次。
 const {waveRng} = load("native-wave-random.js");
 const BOND_BAN_KEY='garrison-bond-ban-v1';
-// 存档／localStorage 里的配置版本：临时数据时期存下来的名单没有版本号，读到就直接忽略、回落到内置名单。
-// 版本 2 起配置多了 `always`／`never` 两个字段（禁用方案）；旧 v2 配置缺字段时按默认方案补齐，不用重新导出。
-const BOND_BAN_VERSION=2;
+// 配置版本：临时数据时期存下来的名单没有版本号，读到就直接忽略、回落到默认方案；
+// v2 多了 `always`／`never`；**v3 去掉了 `exempt`（不禁用名单）**——旧 v2 配置因版本不符被忽略，
+// 按默认方案（fixed 空、never = 五个豁免盟约）重新开始，不再沿用旧名单。
+const BOND_BAN_VERSION=3;
 const BAN_CORE_COUNT=3;
 const BAN_EXTRA_COUNT=4;
 // 内置固定不参与随机禁用的四个盟约（用户 2026-09-22 口径）：协防干员、绝技、调和、独行。
 const BOND_BAN_EXCLUDED=Object.freeze(['emptyShip','suntShip','maniShip','soloShip']);
-// 默认方案在这四个之外再把**投资人**排除出随机池（用户 2026-09-22 补充口径：默认方案里投资人不被随机禁用）。
-// 它只是默认值，可以在「禁用方案」页改成固定禁用或重新参与随机。
+// 默认方案在这四个之外再把**投资人**排除出随机池。它只是默认值，可以在「禁用方案」页改。
 const BOND_BAN_DEFAULT_NEVER=Object.freeze([...BOND_BAN_EXCLUDED,'investShip']);
 // 三种状态：固定禁用 / 参与随机 / 固定不被禁。
 const BAN_MODES=Object.freeze(['fixed','random','never']);
@@ -14184,8 +14147,8 @@ function banRules(config,data){
 }
 const banModeOf=(rules,id)=>rules?.mode?.get?.(id)||(rules?.mode?.[id])||'random';
 
-// 名册（可售）干员，按 charId 归并：精锐与初始是同一名干员，名单只登记一次，
-// 盟约取两种形态的并集、等阶取低的那一份（只用于列表排序与名单按「名＋阶」定位）。
+// 名册（可售）干员，按 charId 归并：精锐与初始是同一名干员，判定只算一次，
+// 盟约取两种形态的并集、等阶取低的那一份（只用于列表排序）。
 // 盟约以 `data.profiles[chessId].bonds` 为准——盟约面板（native-play 的 bondOperators）与商店都读这份，
 // 不要再拿 charChessDataDict.bondIds 另算一套。
 const rosterCache=new WeakMap();
@@ -14214,7 +14177,7 @@ function rosterIndex(data){
 }
 // 干员身份按 charId 归并：精锐形态的 chessId（chess_char_x_y_b）既不在 charShopChessDatas 里，
 // 也不在名册索引里，直接拿 chessId 查会漏判。所有入口（商店、策略、道具、援军转让、精锐发放）
-// 都要先落到 charId 再查名单，否则「禁用盟约的精锐形态照发」就是个洞。
+// 都要先落到 charId 再判定，否则「禁用盟约的精锐形态照发」就是个洞。
 function charIdOf(data,chessId){
  if(typeof chessId!=='string'||!chessId)return null;
  const shop=data?.season?.charShopChessDatas?.[chessId];if(shop?.charId)return shop.charId;
@@ -14224,78 +14187,62 @@ function charIdOf(data,chessId){
  return null;
 }
 function bondMembers(data,bond){return bondRoster(data).filter(row=>row.bonds.includes(bond));}
-// 该干员被哪几个「已禁盟约」挡下（可能多个）：返回盟约 id 列表，供界面提示用。
-function bondBanBlockers(data,bonds,exempt,chessId){
+
+// ── 禁用判定（v3）：所属盟约「全部」被禁才禁用 ────────────────────────────────
+const banSet=bonds=>bonds instanceof Set?bonds:new Set(bonds||[]);
+function memberBanned(row,bonds){
+ if(!row?.bonds?.length)return false; // 没有盟约归属的干员不因本机制被禁
+ const set=banSet(bonds);
+ return row.bonds.every(bond=>set.has(bond));
+}
+function isOperatorBanned(data,bonds,chessId){
+ if(!bonds?.length)return false;
  const row=rosterIndex(data).get(charIdOf(data,chessId)||chessId);
- if(!row)return [];
- const set=bonds instanceof Set?bonds:new Set(bonds||[]);
- return row.bonds.filter(bond=>set.has(bond)&&!exemptOf(exempt,bond).includes(row.charId));
+ return row?memberBanned(row,bonds):false;
+}
+function bannedOperators(data,bonds){
+ if(!bonds?.length)return [];
+ return bondRoster(data).filter(row=>memberBanned(row,bonds)).map(row=>({charId:row.charId,name:row.name,tier:row.tier,bonds:row.bonds.slice()}));
+}
+// 该干员被哪些盟约挡下：被禁时就是它全部的盟约（v3 的判定要求全被禁），没被禁时返回空数组。
+function bondBanBlockers(data,bonds,chessId){
+ const row=rosterIndex(data).get(charIdOf(data,chessId)||chessId);
+ if(!row||!memberBanned(row,bonds))return [];
+ const set=banSet(bonds);
+ return row.bonds.filter(bond=>set.has(bond));
+}
+// 简报／弹窗用：每个被禁盟约的规模、状态，以及**该盟约下被禁的干员**（这是预览分组的数据源）。
+// 同一名干员挂在多个被禁盟约下时会同时出现在多组里（用户要的就是「重复多列一次」）。
+function bondBanSummary(data,bonds,config){
+ const set=banSet(bonds),rows=bondRoster(data),rules=banRules(config,data);
+ const detail=row=>({charId:row.charId,name:row.name,tier:row.tier,bonds:row.bonds.slice()});
+ return {
+  bonds:(bonds||[]).map(id=>{
+   const members=bondMembers(data,id).filter(row=>memberBanned(row,set));
+   return {
+    id,name:bondName(data,id),core:bondIsCore(data,id),mode:banModeOf(rules,id),
+    total:bondMembers(data,id).length,banned:members.map(row=>row.name),
+    members:members.sort((a,b)=>a.tier-b.tier||String(a.name).localeCompare(String(b.name),'zh-CN')).map(detail),
+   };
+  }),
+  operators:rows.filter(row=>memberBanned(row,set)).map(detail),
+ };
 }
 
-// ── 各盟约的「不禁用名单」（用户 2026-09-22 提供，游戏内显示名 + 阶）──────────────────
-// 键是盟约 id，值是 [干员显示名, 阶] 列表。名字里的间隔号会被忽略（原表「维娜·维多利亚」
-// 用户写作「维娜维多利亚」），阶用来区分同名干员（初雪III 与 圣聆初雪VI、银灰IV 与 凛御银灰V）。
-// 「叙拉古」的名单是空的：本局叙拉古被禁时它的成员全部出局。
-const BOND_EXEMPT_TABLE={
- egirShip:[['斯卡蒂',3]],
- kazimierzShip:[['砾',2],['锏',6]],
- lateranoShip:[['空弦',3],['圣约送葬人',5]],
- sargonShip:[['至简',3]],
- victoriaShip:[['哈洛德',2],['烛煌',5]],
- kjeragShip:[['哈洛德',2],['锏',6]],
- siracusaShip:[],
- yanShip:[['烛煌',5]],
- arcaneShip:[['洛洛',2],['莫斯提马',4],['圣聆初雪',6]],
- indomShip:[['风笛',4]],
- steadShip:[['斯卡蒂',3],['信仰搅拌机',4],['余',6]],
- preciShip:[['送葬人',2],['雪猎',3],['远牙',4],['缇缇',5],['异客',6]],
- skillfulShip:[['灵知',4]],
- miraShip:[['伺夜',3],['维娜·维多利亚',6]],
- investShip:[['凛御银灰',5]],
- raidShip:[['斯卡蒂',3],['瑕光',3]],
- swiftShip:[['凛御银灰',5],['异客',6],['锏',6]],
- visiShip:[['初雪',3],['风笛',4]],
- deputShip:[['耶拉',3]]
-};
-
-// 名字比对：原表的间隔号（·／・）与空白不参与匹配，用户手写名单时才不会因为一个点对不上。
-const operatorKey=name=>String(name??'').replace(/[·・\s]/g,'');
-// 把「盟约 → 名＋阶」的原始名单解析成「盟约 → charId 列表」。解析不出来（名字不在该盟约、
-// 或阶对不上）的条目会进 `unresolved`，由 tests/native-bond-ban.test.mjs 的门禁钉住，不许静默丢。
-function resolveBondExempt(data,table=BOND_EXEMPT_TABLE){
- const exempt={},unresolved=[];
- for(const id of bondIds(data))exempt[id]=[];
- for(const [bond,entries] of Object.entries(table)){
-  if(!data.season.bondInfoDict[bond]){unresolved.push({bond,entry:null,reason:'unknown-bond'});continue;}
-  const members=bondMembers(data,bond);
-  for(const entry of entries){
-   const [name,tier]=Array.isArray(entry)?entry:[entry,null],key=operatorKey(name);
-   const byName=members.filter(row=>operatorKey(row.name)===key);
-   const hit=(tier==null?byName:byName.filter(row=>row.tier===tier))[0];
-   if(!hit){unresolved.push({bond,name,tier,reason:byName.length?'tier-mismatch':'not-a-member'});continue;}
-   if(!exempt[bond].includes(hit.charId))exempt[bond].push(hit.charId);
-  }
- }
- return {exempt,unresolved};
-}
-// 默认配置＝内置名单 ＋ 默认禁用方案（投资人固定不被随机禁用）。
-function defaultBondExempt(data){return {exempt:resolveBondExempt(data).exempt,...defaultBanRules()};}
+// ── 配置读写 ─────────────────────────────────────────────────────────────────
 function normalizeBondBan(raw,data){
- const known=new Set(bondRoster(data).map(row=>row.charId)),exempt={};
- for(const id of bondIds(data))exempt[id]=[...new Set((Array.isArray(raw?.exempt?.[id])?raw.exempt[id]:[]).filter(charId=>typeof charId==='string'&&known.has(charId)))];
  const rules=banRules(raw,data);
- return {exempt,always:rules.fixed,never:rules.never};
+ return {always:rules.fixed,never:rules.never};
 }
 function loadBondBan(data){
  try{
   if(typeof localStorage!=='undefined'){
    const raw=JSON.parse(localStorage.getItem(BOND_BAN_KEY)||'null');
-   // 只认当前版本的配置：临时数据时期存下来的名单（没有 version）直接忽略，回落到内置名单。
-   // 同一版本的旧配置少了 `always`／`never` 时由 normalizeBondBan 按默认方案补齐。
+   // 只认当前版本的配置：v2 及更早（含临时数据时期的无版本名单）一律忽略，回落到默认方案。
    if(raw&&raw.version===BOND_BAN_VERSION)return normalizeBondBan(raw,data);
   }
  }catch{}
- return defaultBondExempt(data);
+ return defaultBanRules();
 }
 function saveBondBan(config,data){
  const next={version:BOND_BAN_VERSION,...normalizeBondBan(config,data)};
@@ -14325,56 +14272,27 @@ function bondBanIds(data,seed,config){
  return [...fixed,...draw(core,BAN_CORE_COUNT),...draw(extra,BAN_EXTRA_COUNT)];
 }
 
-const exemptOf=(exempt,bond)=>Array.isArray(exempt?.[bond])?exempt[bond]:[];
-function memberBanned(row,bonds,exempt){
- if(!row?.bonds?.length)return false;
- const set=bonds instanceof Set?bonds:new Set(bonds||[]);
- return row.bonds.some(bond=>set.has(bond)&&!exemptOf(exempt,bond).includes(row.charId));
-}
-function isOperatorBanned(data,bonds,exempt,chessId){
- if(!bonds?.length)return false;
- const row=rosterIndex(data).get(charIdOf(data,chessId)||chessId);
- return row?memberBanned(row,bonds,exempt):false;
-}
-function bannedOperators(data,bonds,exempt){
- if(!bonds?.length)return [];
- return bondRoster(data).filter(row=>memberBanned(row,bonds,exempt)).map(row=>({charId:row.charId,name:row.name,tier:row.tier,bonds:row.bonds.slice()}));
-}
-// 简报／配置页用：每个被禁盟约的规模与名单，以及本次真正出局的干员。
-// `config` 传本局配置时，每个盟约还会带上 `mode`（fixed／random／never），界面据此标出是固定禁用还是随机抽中。
-function bondBanSummary(data,bonds,exempt,config){
- const set=new Set(bonds||[]),rows=bondRoster(data),rules=banRules(config,data);
- return {
-  bonds:(bonds||[]).map(id=>({
-   id,name:bondName(data,id),core:bondIsCore(data,id),mode:banModeOf(rules,id),
-   total:bondMembers(data,id).length,exempt:exemptOf(exempt,id).length,
-   banned:rows.filter(row=>row.bonds.includes(id)&&memberBanned(row,set,exempt)).map(row=>row.name),
-  })),
-  operators:rows.filter(row=>memberBanned(row,set,exempt)).map(row=>({charId:row.charId,name:row.name,tier:row.tier})),
- };
-}
-
 // ── 作战前简报的两段呈现 ──────────────────────────────────────────────────────
-// 用户 2026-09-22 口径：战前预览要**列出全部核心盟约**（被禁的灰色＋划掉）、**单独列出被禁的
-// 附加盟约**（同样灰色＋划掉），被禁干员放在单独弹窗里用头像列出。
+// 战前预览要**列出全部核心盟约**（被禁的灰色＋划掉）、**单独列出被禁的附加盟约**（同样灰色＋划掉），
+// 被禁干员放在单独弹窗里、按被禁盟约分组列出。
 // 这两段 HTML 放在这里（而不是 native-play 里）是为了能在 Node 里直接断言渲染结果：
 // UI 工具函数由调用方注入——`{esc, avatar}`，native-play 传自己的转义与头像函数。
 const bondCellHtml=(data,id,isBanned,row,esc)=>{
  const mode=row?.mode||'random',tag=bondIsCore(data,id)?'核心':'附加';
  const why=isBanned?(mode==='fixed'?'固定禁用':'随机禁用'):(mode==='never'?'固定不被禁':'随机候选');
- return `<article class="native-ban-bond${isBanned?' banned':' available'}${bondIsCore(data,id)?' core':' extra'}"><b>${esc(bondName(data,id))}</b><small>${tag} · ${why}</small><span>${isBanned?`禁用 ${row?row.banned.length:0} / ${row?row.total:0} 人`:'可用'}</span></article>`;
+ return `<article class="native-ban-bond${isBanned?' banned':' available'}${bondIsCore(data,id)?' core':' extra'}"><b>${esc(bondName(data,id))}</b><small>${tag} · ${why}</small><span>${isBanned?`该盟约下禁用 ${row?row.banned.length:0} / ${row?row.total:0} 人`:'可用'}</span></article>`;
 };
 
 function bondBanBriefingHtml(data,ban,ui={}){
  if(!ban?.bonds?.length)return '';
- const esc=ui.esc||String,summary=bondBanSummary(data,ban.bonds,ban.exempt,ban),banned=new Set(ban.bonds);
+ const esc=ui.esc||String,summary=bondBanSummary(data,ban.bonds,ban),banned=new Set(ban.bonds);
  const ids=bondIds(data),rules=banRules(ban,data);
  // 核心盟约永远全列（含固定不禁用的），附加只列被禁的。
  const core=ids.filter(id=>bondIsCore(data,id)),extra=ids.filter(id=>!bondIsCore(data,id));
  const rowOf=id=>summary.bonds.find(b=>b.id===id);
  const bannedExtra=extra.filter(id=>banned.has(id));
  const fixed=[...rules.fixed,...rules.never].length?`固定禁用 ${rules.fixed.length} 个盟约${rules.fixed.length?`（${esc(rules.fixed.map(id=>bondName(data,id)).join('／'))}）`:''}；${esc(rules.never.map(id=>bondName(data,id)).join('／'))} 固定不被随机禁用。`:'';
- return `<h2>盟约缺席情况</h2><p>每局从「参与随机」的盟约里随机禁用 ${BAN_CORE_COUNT} 个核心盟约与 ${BAN_EXTRA_COUNT} 个附加盟约（不占固定禁用的名额）。${fixed}被禁盟约的干员只有在其「不禁用名单」上才能出场，商店抽取、策略与道具发放一并不提供。</p><h3 class="native-ban-heading">核心盟约 <small>${core.filter(id=>banned.has(id)).length} / ${core.length} 缺席</small></h3><div class="native-ban-bonds">${core.map(id=>bondCellHtml(data,id,banned.has(id),rowOf(id),esc)).join('')}</div><h3 class="native-ban-heading">被禁用的附加盟约 <small>${bannedExtra.length} 个</small></h3><div class="native-ban-bonds">${bannedExtra.map(id=>bondCellHtml(data,id,true,rowOf(id),esc)).join('')||'<p class="native-ban-none">本局没有被禁用的附加盟约。</p>'}</div><button class="native-ban-open" data-act="ban-list">查看本局被禁用的 ${summary.operators.length} 名干员 →</button>`;
+ return `<h2>盟约缺席情况</h2><p>每局从「参与随机」的盟约里随机禁用 ${BAN_CORE_COUNT} 个核心盟约与 ${BAN_EXTRA_COUNT} 个附加盟约（不占固定禁用的名额）。${fixed}一名干员只有在<b>所属盟约全部缺席</b>时才不可使用——只要还挂着一个未缺席的盟约就仍能出场；商店抽取、策略与道具发放都不提供被禁干员。</p><h3 class="native-ban-heading">核心盟约 <small>${core.filter(id=>banned.has(id)).length} / ${core.length} 缺席</small></h3><div class="native-ban-bonds">${core.map(id=>bondCellHtml(data,id,banned.has(id),rowOf(id),esc)).join('')}</div><h3 class="native-ban-heading">被禁用的附加盟约 <small>${bannedExtra.length} 个</small></h3><div class="native-ban-bonds">${bannedExtra.map(id=>bondCellHtml(data,id,true,rowOf(id),esc)).join('')||'<p class="native-ban-none">本局没有被禁用的附加盟约。</p>'}</div><button class="native-ban-open" data-act="ban-list">查看本局被禁用的 ${summary.operators.length} 名干员 →</button>`;
 }
 
 // 简报（按钮上的「N 名」）与弹窗必须用**同一份**禁用记录，否则会出现「按钮写 50 名、弹窗 0 名」。
@@ -14387,13 +14305,12 @@ function activeBondBan(draftBan,sessionBan){
  return draftBan||sessionBan||null;
 }
 
-// 被禁干员弹窗内容：先一行「缺席盟约」，再是头像＋名字＋阶＋「被哪几个缺席盟约挡下」。
-// 战前准备与对局中共用（对局里没有简报页，所以盟约也要在这里列出来）。一人一张，按阶再按名字排序。
+// 被禁干员弹窗内容：先一行「缺席盟约」，再**按被禁盟约分组**列出该盟约下被禁的干员。
+// 同一名干员挂在多个缺席盟约下时，每组各列一次（用户 2026-09-22 口径：重复就多列举一次）。
 function bannedOperatorsHtml(data,ban,ui={}){
  const esc=ui.esc||String,avatar=ui.avatar||(()=>'');
- const summary=bondBanSummary(data,ban?.bonds||[],ban?.exempt||{},ban);
+ const summary=bondBanSummary(data,ban?.bonds||[],ban);
  const ops=summary.operators.slice().sort((a,b)=>a.tier-b.tier||String(a.name).localeCompare(String(b.name),'zh'));
- const blockers=o=>bondBanBlockers(data,ban?.bonds||[],ban?.exempt||{},o.charId).map(id=>bondName(data,id)).join('／');
  const banned=new Set(ban?.bonds||[]),rules=banRules(ban,data);
  const fixedSet=new Set(rules.fixed);
  const coreBanned=[...banned].filter(id=>bondIsCore(data,id)),extraBanned=[...banned].filter(id=>!bondIsCore(data,id));
@@ -14402,10 +14319,14 @@ function bannedOperatorsHtml(data,ban,ui={}){
  const covenantLine=banned.size
   ?`${fixedBanned.length?`固定禁用 ${fixedBanned.length} 个${list(fixedBanned)} · `:''}随机禁用：核心 ${coreBanned.filter(id=>!fixedSet.has(id)).length} 个${list(randomBanned.filter(id=>bondIsCore(data,id)))} · 附加 ${extraBanned.filter(id=>!fixedSet.has(id)).length} 个${list(randomBanned.filter(id=>!bondIsCore(data,id)))}`
   :'本局没有被禁用的盟约。';
- return `<h2>本局禁用盟约与干员</h2><p class="native-ban-note">${covenantLine}</p><p class="native-ban-note">共 ${ops.length} 名干员无法使用：所属盟约本局缺席，且不在该盟约的不禁用名单上。商店抽取、策略与道具发放都不会提供他们。</p><div class="native-ban-operators">${ops.map(o=>`<figure title="${esc(o.name)} · 被禁盟约 ${esc(blockers(o))}"><span class="native-ban-op-art">${avatar(o.charId)}</span><figcaption><b>${esc(o.name)}</b><small>${o.tier} 阶</small><em>${esc(blockers(o))}</em></figcaption></figure>`).join('')||'<p class="native-ban-none">本局没有被禁用的干员。</p>'}</div><p class="native-ban-foot">名单与禁用方案可在协议自定义 →「盟约禁用」／「禁用方案」页调整。</p><button data-act="close">关闭</button>`;
+ // 分组顺序：核心在前、附加在后，组内按名字；被禁盟约即使没禁到人也列出来（说明该盟约下人人都有别的盟约兜底）。
+ const groups=summary.bonds.slice().sort((a,b)=>Number(b.core)-Number(a.core)||String(a.name).localeCompare(String(b.name),'zh'));
+ const card=op=>`<figure title="${esc(op.name)} · 所属盟约 ${esc(op.bonds.map(id=>bondName(data,id)).join('／'))}"><span class="native-ban-op-art">${avatar(op.charId)}</span><figcaption><b>${esc(op.name)}</b><small>${op.tier} 阶</small><em>${esc(op.bonds.map(id=>bondName(data,id)).join('／'))}</em></figcaption></figure>`;
+ const group=b=>`<section class="native-ban-group" data-bond="${esc(b.id)}"><h3 class="native-ban-heading">${esc(b.name)} <small>${b.core?'核心':'附加'} · ${b.mode==='fixed'?'固定禁用':'随机禁用'} · 该盟约下禁用 ${b.members.length} / ${b.total} 人</small></h3>${b.members.length?`<div class="native-ban-operators">${b.members.map(card).join('')}</div>`:'<p class="native-ban-none">该盟约下没有被禁用的干员：成员都还挂着未缺席的盟约。</p>'}</section>`;
+ return `<h2>本局禁用盟约与干员</h2><p class="native-ban-note">${covenantLine}</p><p class="native-ban-note">共 ${ops.length} 名干员无法使用：他们所属的盟约本局<b>全部缺席</b>（只要还有一个盟约没被禁就仍可使用）。同一名干员挂在多个缺席盟约下时，会在每组各列一次。</p>${groups.map(group).join('')||'<p class="native-ban-none">本局没有被禁用的盟约。</p>'}<p class="native-ban-foot">禁用方案可在协议自定义 →「禁用方案」页调整。</p><button data-act="close">关闭</button>`;
 }
 
-return {BOND_BAN_KEY,BOND_BAN_VERSION,BAN_CORE_COUNT,BAN_EXTRA_COUNT,BOND_BAN_EXCLUDED,BOND_BAN_DEFAULT_NEVER,BAN_MODES,bondIds,bondIsCore,bondName,bondIsBanExcluded,defaultBanRules,banRules,banModeOf,bondRoster,rosterIndex,charIdOf,bondMembers,bondBanBlockers,BOND_EXEMPT_TABLE,operatorKey,resolveBondExempt,defaultBondExempt,normalizeBondBan,loadBondBan,saveBondBan,banPool,bondBanIds,memberBanned,isOperatorBanned,bannedOperators,bondBanSummary,bondBanBriefingHtml,activeBondBan,bannedOperatorsHtml};
+return {BOND_BAN_KEY,BOND_BAN_VERSION,BAN_CORE_COUNT,BAN_EXTRA_COUNT,BOND_BAN_EXCLUDED,BOND_BAN_DEFAULT_NEVER,BAN_MODES,bondIds,bondIsCore,bondName,bondIsBanExcluded,defaultBanRules,banRules,banModeOf,bondRoster,rosterIndex,charIdOf,bondMembers,memberBanned,isOperatorBanned,bannedOperators,bondBanBlockers,bondBanSummary,normalizeBondBan,loadBondBan,saveBondBan,banPool,bondBanIds,bondBanBriefingHtml,activeBondBan,bannedOperatorsHtml};
 },
 "native-bond-keys.js": function(load) {
 // 盟约黑板键登记表 —— 「原表字段必须有人读」的唯一名单。
