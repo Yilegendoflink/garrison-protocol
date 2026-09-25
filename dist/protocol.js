@@ -41,6 +41,18 @@ export function skillWidensRange(profile,skillIndex=null){
 export const BASE_FUNDS_START=4;
 export const BASE_FUNDS_CAP=11;
 export function baseFunding(round){if(!Number.isInteger(round)||round<1)throw Error('Invalid round');return Math.min(BASE_FUNDS_CAP,BASE_FUNDS_START+round-1);}
+// 随机地图（用户 2026-09-22 口径）：大厅「作战阵地」下拉里多一项哨兵「随机地图」并作为默认。
+// 开局时按本局种子从可选阵地（weight>0）里等概率抽一个具体 stageId 写进 draft／会话——之后简报、波次、
+// 地图控制器都只看到具体阵地，认不出这个哨兵；阵地下拉里选中它只表示「本局开局再抽」。
+export const RANDOM_MAP_ID='random';
+export function selectableMaps(data){return (data?.maps||[]).filter(m=>Number(m?.weight)>0);}
+export function resolveMapId(data,id,random=Math.random){
+ if(id&&id!==RANDOM_MAP_ID)return id;
+ const list=selectableMaps(data);
+ if(!list.length)return id||null;
+ const index=Math.max(0,Math.min(list.length-1,Math.floor((Number(random())||0)*list.length)));
+ return list[index].stageId;
+}
 // 唯一的朝向表：0=右、1=下、2=左、3=上（与 `session.js` 的 aim、native-play 的「→↓←↑」一致）。
 // 范围旋转（`rangeWithSkill` 的 `[x,y]=[-y,x]`）、推拉 forward、技能落点方向都读这一份，
 // 不要再各写一张（历史上出现过 1/3 颠倒的镜像表，上下朝向会打到反方向）。

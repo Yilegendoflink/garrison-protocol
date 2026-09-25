@@ -20,7 +20,7 @@ const banModule=await readFile(path.join(root,'dist/native-bond-ban.js'),'utf8')
 const css=await readFile(path.join(root,'dist/native.css'),'utf8');
 
 test('对局按种子定死本局禁用的盟约，并原样交给 NativeSession',()=>{
- assert.match(play,/const banConfig=loadBondBan\(data\);state\.draft=\{/,'简报阶段先读一次配置（名单＋禁用方案）');
+ assert.match(play,/const banConfig=loadBondBan\(data\)[^\n]*state\.draft=\{modeId,mapId,seed,/,'简报阶段先读一次配置（名单＋禁用方案）');
  assert.match(play,/bondBan:\{bonds:bondBanIds\(data,seed,banConfig\),always:banConfig\.always,never:banConfig\.never\}/,'禁用方案要一起带进本局记录（v3 起没有 exempt），玩家看到的就是对局真正用的那份');
  assert.match(play,/bondBan:state\.draft\.bondBan/,'begin 必须把简报那份禁用记录传进 NativeSession');
  assert.match(play,/function newSandbox\(\)\{const economy=new NativeSession\(data,\{[^}]*bondBan:\{bonds:\[\]\}/,'沙盒是技能测试场，要显式关掉禁用（否则点名干员会随种子时有时无）');
