@@ -43,10 +43,13 @@ test('probability talent multiplier changes the current hit without recursive ex
 });
 
 test('duration skills with periodic damage create a timed logic zone',()=>{
+ // 莫斯提马 S2「荒时之锁」有专属圈 mostma-s2（挂攻击范围）。通用 skill-zone 兜底已收窄成白名单
+ // （只有浊心斯卡蒂 S3 与深靛 S2），见 docs/SKILL_RANGE_AUDIT_2026-09-22.md 与 tests/native-podego-bottle.test.mjs。
  const {b}=openBattle({name:'莫斯提马',chessId:'chess_char_4_02_b',skillIndex:1});deployNow(b);
  const u=byId(b,'char_213_mostma'),e=enemy(b,{x:u.x+1,y:u.y,hp:10000,res:0});u.sp=b.spCost(u)+1;b.activate(u);
- const zone=b.s.logicEffects.find(x=>x.talentOrSkillId.startsWith('skill-zone:'));
- assert.ok(zone);assert.ok(e.statuses.some(s=>s.kind==='stun'));const hp=e.hp;for(let i=0;i<35;i++)b.step();assert.ok(e.hp<hp);
+ assert.equal(b.s.logicEffects.some(x=>x.talentOrSkillId.startsWith('skill-zone:')),false,'通用兜底圈不该再出现');
+ const zone=b.s.logicEffects.find(x=>x.talentOrSkillId==='mostma-s2');
+ assert.ok(zone);assert.equal(zone.rangeUid,u.uid);assert.ok(e.statuses.some(s=>s.kind==='stun'));const hp=e.hp;for(let i=0;i<35;i++)b.step();assert.ok(e.hp<hp);
 });
 
 test('skill target rules alter acquisition without changing the shared priority engine',()=>{
@@ -90,15 +93,16 @@ test('area skill adapters retain both enemy damage and ally regeneration channel
  const zones=b.s.logicEffects.filter(f=>f.sourceUid===u.uid);assert.ok(zones.some(f=>f.values?.dot&&f.trackArea));assert.ok(zones.some(f=>f.values?.hot&&f.trackArea));assert.ok(zones.every(f=>f.endsAt===null));
 });
 
-test('generic periodic zone picks its side per clause and never fires on pure healing text',()=>{
- // 塞雷娅 S3 的文案是「附近所有友军每秒回复…／附近所有敌军受到的法术伤害+…」两句拼在一段：
- // 圈只能打敌人，友军只回血（把「敌军」也算成友方就会自己人打自己人）。
+test('generic periodic zone is allow-listed: 塞雷娅 S3/流明 S1 不再有兜底伤害圈，友军不会被打',()=>{
+ // 通用兜底圈只留给核对过的技能（浊心斯卡蒂 S3、深靛 S2），并在文案写「范围内」时挂施法者的攻击范围。
+ // 塞雷娅 S3「钙质化」只有回血/易伤/减速，本来就没有周期伤害——此前兜底圈会打友军（2026-09-22 修的）。
  const saria=openBattle([{chessId:'chess_char_5_11_b',skillIndex:2},{chessId:'chess_char_1_20_b',skillIndex:1}]);deployNow(saria.b);
  const su=byId(saria.b,'char_202_demkni'),ally=byId(saria.b,'char_107_liskam');
  ally.hp=ally.maxHp-300;su.sp=saria.b.spCost(su);saria.b.activate(su);
- const zone=saria.b.s.logicEffects.find(f=>String(f.talentOrSkillId||'').startsWith('skill-zone:char_202_demkni'));
- assert.ok(zone,'塞雷娅 S3 仍按「敌军受到的法术伤害」建圈');assert.equal(zone.trackSide,'enemy');
- const allyHp=ally.hp;for(let i=0;i<35;i++)saria.b.step();assert.ok(ally.hp>=allyHp,'友军不会被自己的周期圈打到');
+ assert.equal(saria.b.s.logicEffects.some(f=>String(f.talentOrSkillId||'').startsWith('skill-zone:char_202_demkni')),false,'塞雷娅 S3 没有周期伤害，不该建兜底圈');
+ const sariaZone=saria.b.s.logicEffects.find(f=>f.talentOrSkillId==='saria-s3');
+ assert.equal(sariaZone?.rangeUid,su.uid,'专属圈按攻击范围');
+ const allyHp=ally.hp;for(let i=0;i<35;i++)saria.b.step();assert.ok(ally.hp>=allyHp,'友军不会被自己的圈打到');
  // 流明 S1 写的是「友方每秒受到…治疗效果」，压根不是伤害：不该给治疗技挂一个打敌人的周期圈。
  const lumen=openBattle([{...reps.operators.lumen,skillIndex:0},reps.operators.yak]);deployNow(lumen.b);
  const lu=byId(lumen.b,'char_4042_lumen'),luAlly=byId(lumen.b,'char_199_yak');
@@ -106,6 +110,15 @@ test('generic periodic zone picks its side per clause and never fires on pure he
  assert.ok(!lumen.b.s.logicEffects.some(f=>String(f.talentOrSkillId||'').startsWith('skill-zone:')),'纯治疗文案不建周期伤害圈');
  assert.ok(lumen.b.s.logicEffects.some(f=>f.kind==='hot'),'治疗通道照旧');
  const luHp=luAlly.hp;for(let i=0;i<35;i++)lumen.b.step();assert.ok(luAlly.hp>=luHp);
+ // 白名单内的两个技能照旧建圈，且按「范围内」挂攻击范围
+ const skadi=openBattle({chessId:'chess_char_6_04_b',skillIndex:2});deployNow(skadi.b);
+ const sk=skadi.b.s.units[0];sk.sp=skadi.b.spCost(sk)+2;sk.lastSkill=-Infinity;skadi.b.activate(sk);
+ const skZone=skadi.b.s.logicEffects.find(f=>String(f.talentOrSkillId||'').startsWith('skill-zone:char_1012_skadi2'));
+ assert.ok(skZone,'浊心斯卡蒂 S3 保留通用圈');assert.equal(skZone.rangeUid,sk.uid,'「范围内」＝她自己的攻击范围');assert.equal(skZone.trackSide,'enemy');
+ const indigo=openBattle({chessId:'chess_char_1_17_b',skillIndex:1});deployNow(indigo.b);
+ const ig=indigo.b.s.units[0];ig.sp=indigo.b.spCost(ig)+2;ig.lastSkill=-Infinity;indigo.b.activate(ig);
+ const igZone=indigo.b.s.logicEffects.find(f=>String(f.talentOrSkillId||'').startsWith('skill-zone:char_469_indigo'));
+ assert.ok(igZone,'深靛 S2 保留通用圈');assert.equal(igZone.values.requiresStatus,'root','只打处于束缚状态的敌人');
 });
 
 test('timed ammo talents grant their bonus once and feed the next activation',()=>{

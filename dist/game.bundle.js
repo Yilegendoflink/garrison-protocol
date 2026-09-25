@@ -5988,6 +5988,14 @@ const {directionOf} = load("protocol.js");
 // becoming a normal attack.
 // 锡人「炼金单元」的表现常数（原表没有单元自身的范围与速度字段，口径见 operatorSkillStart 里的说明）。
 const ALCHEMY_UNIT_RADIUS=1.5,ALCHEMY_UNIT_SPEED=1;
+// 「停顿／失去特殊能力／寒冷」等状态挂在**投掷物／区域**上的技能：这些技能由专属圈（或专属实现）施加状态，
+// 不能再走通用兜底「开技时对攻击范围内所有敌人施加状态」——那会让状态漏到整个攻击范围（波登可的孢子群就是这样
+// 把「失去特殊能力」漏给了相邻格的敌人，2026-09-22 随瓶子一起修）。
+const DEDICATED_STATUS_SKILLS=new Set([
+ 'char_258_podego#1', // 孢子扩散：状态在 podego-s2（落点孢子群）
+ 'char_472_pasngr#2', // 辉煌裂片：状态在 pasngr-s3（雷暴区域）
+ 'char_341_sntlla#1'  // 女巫之泪：状态在 sntlla-s2（冰凌落点）
+]);
 const NUMERIC_KEYS={
  atkScale:['atk_scale','attack@atk_scale','attack@atk_scale_1','damage_scale'],
  maxTarget:['max_target','attack@max_target','attack@times_target'],
@@ -6240,6 +6248,16 @@ function operatorSkillStart(battle,u,ctx){
  const profile=battle.profile(u),config=skillConfig(profile),text=config.description,bb=config.bb;
  let suppressDefault=false;
  const skillIndex=profile.skillIndex??u.source?.skillIndex??0;
+ if(profile.charId==='char_183_skgoat'&&skillIndex===1){
+  // 地灵 S2「流沙化」：停止攻击（缴械），对攻击范围内每个敌人按各自间隔施加停顿（**没有伤害**）。
+  // PRTS 备注：「技能期间地灵持有缴械／对每个处于攻击范围内的可选敌人施加【流沙化】，持续至该敌人离开攻击范围或技能结束为止，
+  // 每个敌人的【流沙化】单独计算停顿间隔／停顿时间默认 0.8 秒」。兜底的通用伤害圈在这里是错的（此前会每秒造成伤害）。
+  const interval=Math.max(.1,Number(bb.interval)||1.6),sluggishTime=Number(bb.sluggish)||.8,skillDuration=Number(profile.skill?.duration),endsAt=skillDuration<0?null:battle.s.time+(skillDuration>0?skillDuration:5);
+  ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skgoat-s2',rangeUid:u.uid,x:u.x,y:u.y,radius:2,interval,nextAt:battle.s.time+interval,endsAt,trackSide:'enemy',values:{sluggish:true,sluggishTime},snapshot:{},refKind:'owner',persistAfterSourceGone:false});
+  for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&battle.range(u,true).some(c=>c.x===e.x&&c.y===e.y)))applyStatus(e,'sluggish',sluggishTime,{source:u.uid,resistible:false});
+  if(skillDuration>0)u.skillDisarmUntil=Math.max(u.skillDisarmUntil||0,battle.s.time+skillDuration);
+  return true;
+ }
  if(profile.charId==='char_4087_ines'&&skillIndex===1){applyStatus(u,'invisible',profile.skill.duration>0?profile.skill.duration:1e9,{source:u.uid,resistible:false});u.inesStealAt=0;u.inesStealMax=Number(bb['attack@steal_atk_speed_max'])||50;}
  if(profile.charId==='char_4087_ines'&&skillIndex===2){u.inesShadow={x:u.x,y:u.y,endsAt:battle.s.time+25};ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'ines-shadow',x:u.x,y:u.y,radius:2,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+25,trackArea:true,trackSide:'enemy',values:{sluggish:true,shape:'circle'},snapshot:{},refKind:'live',persistAfterSourceGone:true});ctx.exit?.(battle,{target:u,reason:'skill'});}
  if(profile.charId==='char_4134_cetsyr'&&(skillIndex===1||skillIndex===2)){const radius=Number(bb.outside_radius)||2;ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'cetsyr-dust:'+u.skillCount,x:u.x,y:u.y,radius,interval:1,nextAt:battle.s.time+1,endsAt:skillIndex===2?null:battle.s.time+(profile.skill.duration>0?profile.skill.duration:15),trackArea:true,trackSide:'enemy',values:{dot:true,stun:skillIndex===1?Number(bb.unmoveable_duration)||3:0,type:'true',shape:'circle',atk_scale:Number(bb.atkScale)||2.2},snapshot:{damage:battle.stats(u).atk*(Number(bb.atkScale)||2.2)},refKind:'owner',persistAfterSourceGone:false});}
@@ -6311,7 +6329,7 @@ function operatorSkillStart(battle,u,ctx){
  const cost=costValueForText(config,text,'immediate'),immediateText=has(text,/立即获得|技能开启时立即获得/),genericGain=has(text,/获得.*费用|获得.*部署费用/);if(Number.isFinite(cost)&&(immediateText||genericGain)&&(!has(text,/下次攻击|每次|持续|逐渐|击杀|击倒|攻击时/ )||immediateText))battle.gainCost?.(cost);if(Number.isFinite(cost)&&has(text,/获得.*金币/))grantCoins(u,cost,config.coinCap);
  if(profile.charId==='char_1045_svash2'&&battle.adjustReserveCost){const eligible=v=>['WARRIOR','CASTER','SNIPER'].includes(battle.profile(v)?.profession);if(profile.skillIndex===0){const amount=Number(bb['svash2_s_1[deck].cost']);if(amount>0)battle.adjustReserveCost(-amount,{predicate:eligible});}else if(profile.skillIndex===1){const amount=Number(bb.cost);if(amount>0)battle.adjustReserveCost(-amount,{predicate:eligible});}else if(profile.skillIndex===2&&!u.svashCostSwapped){battle.swapReserveBaseCosts(eligible);u.svashCostSwapped=true;}}
  if(Number.isFinite(bb.hp_ratio)&&has(text,/生命/)&&has(text,/流失|损失/)&&!has(text,/每秒|逐渐|持续/)){const base=/当前生命/.test(text)?u.hp:u.maxHp;ctx.applyLoss(battle,{target:u,source:u,amount:base*Math.abs(bb.hp_ratio),minHp:1,cause:'loss'});}
- const status=directStatus(text,config),statusAtStart=status&&!has(text,/技能结束|每次攻击|攻击时|受到攻击/)&&has(text,/立即|技能开启时|释放|对周围|对敌人造成/);if(statusAtStart)for(const e of allTargets(battle,u,true))if(applyStatus(e,status.kind,status.duration,{source:u.uid,resistible:false}))ctx.log?.(battle,'status',{uid:e.uid,kind:status.kind,sourceUid:u.uid});
+ const status=directStatus(text,config),statusAtStart=status&&!DEDICATED_STATUS_SKILLS.has(u.id+'#'+skillIndex)&&!has(text,/技能结束|每次攻击|攻击时|受到攻击/)&&has(text,/立即|技能开启时|释放|对周围|对敌人造成/);if(statusAtStart)for(const e of allTargets(battle,u,true))if(applyStatus(e,status.kind,status.duration,{source:u.uid,resistible:false}))ctx.log?.(battle,'status',{uid:e.uid,kind:status.kind,sourceUid:u.uid});
  if(profile.charId==='char_213_mostma'&&profile.skillIndex===1)for(const e of allTargets(battle,u,true))applyStatus(e,'stun',1,{source:u.uid,resistible:false});
  if(has(text,/解除.*异常|清除.*异常/))for(const a of allAllies(battle,u,true))a.statuses=(a.statuses||[]).filter(s=>!['stun','frozen','sleep','fear','terror','tremble','root','silence','levitate'].includes(s.kind));
  if(has(text,/防御力.*法术抗性/)&&Number(bb.def)<0)for(const e of allTargets(battle,u,true)){const debuffDuration=Number(profile.skill?.duration)>0?Number(profile.skill.duration):5;applyStatus(e,'defDown',debuffDuration,{source:u.uid,value:Number(bb.def),resistible:false});if(Number(bb.magic_resistance)<0)applyStatus(e,'resDown',debuffDuration,{source:u.uid,value:Number(bb.magic_resistance),resistible:false});}
@@ -6349,12 +6367,18 @@ function operatorSkillStart(battle,u,ctx){
   if(has(text,/下次攻击/)&&has(text,/额外造成|每秒受到|流失/)&&!has(text,/攻击力提高至|攻击力提升至/)){const extraScale=Number(bb.extra_damage_ratio??bb['bleed_atk_scale']??bb['attack@atk_scale']??bb.atk_scale);u.pendingNextAttack={skillCount:u.skillCount,extraScale:Number.isFinite(extraScale)?extraScale:null,extraType:config.damageType||has(text,/法术/)||has(text,/流失/) ? 'arts':'physical',bleedDuration:Number(bb.bleed_duration)||0};suppressDefault=true;}
   if(has(text,/下次攻击.*攻击力(?:提高|提升)至/)&&Number(bb.atkScale)>0)u.pendingAttackScale={skillCount:u.skillCount,scale:Number(bb.atkScale),lossRatio:has(text,/流失/) ? Number(bb.hp_ratio)||0:0};
   if(has(text,/下次攻击.*(?:回复|恢复)自身/)&&(Number(bb.value)>0||Number(bb.hp_ratio)>0))u.pendingAttackSelfHeal={skillCount:u.skillCount,amount:Number(bb.value)>0?Number(bb.value):u.maxHp*Number(bb.hp_ratio)};
- // 通用周期伤害圈的作用对象按「分句」判定，不能只看整段文案里出现过「友方」二字：塞雷娅 S3 是
- // 「友军每秒回复生命／敌军受到的法术伤害提升」两句拼在一段，浊心斯卡蒂 S3 是同一句里「敌人每秒受到
- // 真实伤害」与「友方单位获得鼓舞」，流明 S1 的「友方每秒受到治疗效果」根本不是伤害。所以只有
- // 「同一分句既提到友方又确实是伤害（不含回复／恢复／治疗）」才算打友军；两侧都没有真正的伤害分句
- // （纯治疗文案）时不建圈，免得给治疗技挂上一个打敌人的持续伤害。
- if(has(text,/每[^，。；]*秒.*(?:受到|造成|伤害|损伤)|持续.*(?:受到|造成|伤害|损伤)|周期.*(?:受到|造成|伤害|损伤)/)&&Number.isFinite(periodicScale)&&has(text,/伤害|法术|攻击/)){const requiresStatus=has(text,/处于.*束缚|束缚状态/)?'root':null,zoneClauses=String(text).split(/[；;\n]/),zoneAllyDamage=zoneClauses.some(c=>has(c,/友方单位|友方干员|友军|我方单位/)&&has(c,/受到|造成|伤害|损伤/)&&!has(c,/回复|恢复|治疗/)),zoneEnemyDamage=zoneClauses.some(c=>has(c,/敌人|敌方|敌军/)&&has(c,/受到|造成|伤害|损伤/));if(zoneAllyDamage||zoneEnemyDamage)ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-zone:'+u.id+':'+u.skillCount,x:u.x,y:u.y,radius:Number(bb.projectile_range)|| (config.multiTarget===Infinity?2:1),interval:Math.max(.1,periodicInterval),nextAt:battle.s.time+Math.max(.1,periodicInterval),endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),trackArea:has(text,/区域|影响范围|火墙/),trackSide:zoneAllyDamage&&!zoneEnemyDamage?'all':'enemy',values:{dot:true,atk_scale:periodicScale,type:has(text,/真实伤害/)?'true':config.damageType||'arts',requiresStatus},snapshot:{damage:battle.stats(u).atk*periodicScale},refKind:'owner',persistAfterSourceGone:false});}
+ // 通用周期伤害圈只对**核对过的技能**启用（GENERIC_ZONE_SKILLS），并且按「分句」判定作用对象。
+ // 为什么不再「文案里出现 每秒＋受到/造成＋伤害 就建圈」：那个兜底会给一堆技能在**自己脚下**凭空加一个伤害圈，
+ // 2026-09-22 用户报「波登可的瓶子效果不对」就是它——孢子群本该落在投掷点，兜底圈却在她脚下画了 5×5 并每秒造成伤害。
+ // 同类误伤（已核对，全部交给专属实现）：塞雷娅 S3（只有回血/易伤/减速）、莫斯提马 S2 与歌蕾蒂娅 S3（专属圈已覆盖）、
+ // 菲莱 S2（受击反伤）、蕾缪安 S3（技能结束轰炸）、焰影苇草 S2/S3（火球与灼痕目标各自结算）、烛煌 S2/S3（灼烧地段与自身流失）、
+ // 荒芜拉普兰德 S3（浮游单元周围减速）、新约能天使 S2（每次攻击）、溯光星源 S3（链接传导）、地灵 S2（只有停顿，没有伤害）。
+ // 新增技能要进这张表，必须确认「范围内持续受到伤害」且圈心就在施法者身上；否则写专属实现。
+ const GENERIC_ZONE_SKILLS=new Set([
+  'char_1012_skadi2#2', // 浊心斯卡蒂 S3「潮涌，潮枯」：范围内所有敌人每秒受到真实伤害（范围 = 她的 x-1）
+  'char_469_indigo#1'   // 深靛 S2「光影迷宫」：攻击范围内处于束缚状态的敌人每 N 秒受到法术伤害
+ ]);
+ if(GENERIC_ZONE_SKILLS.has(u.id+'#'+skillIndex)&&has(text,/每[^，。；]*秒.*(?:受到|造成|伤害|损伤)|持续.*(?:受到|造成|伤害|损伤)|周期.*(?:受到|造成|伤害|损伤)/)&&Number.isFinite(periodicScale)&&has(text,/伤害|法术|攻击/)){const requiresStatus=has(text,/处于.*束缚|束缚状态/)?'root':null,zoneClauses=String(text).split(/[；;\n]/),zoneAllyDamage=zoneClauses.some(c=>has(c,/友方单位|友方干员|友军|我方单位/)&&has(c,/受到|造成|伤害|损伤/)&&!has(c,/回复|恢复|治疗/)),zoneEnemyDamage=zoneClauses.some(c=>has(c,/敌人|敌方|敌军/)&&has(c,/受到|造成|伤害|损伤/));if(zoneAllyDamage||zoneEnemyDamage){const inRange=/攻击范围内|范围内|全范围/.test(text);ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skill-zone:'+u.id+':'+u.skillCount,...(inRange?{rangeUid:u.uid}:{}),x:u.x,y:u.y,radius:Number(bb.projectile_range)|| (config.multiTarget===Infinity?2:1),interval:Math.max(.1,periodicInterval),nextAt:battle.s.time+Math.max(.1,periodicInterval),endsAt:duration<0?null:battle.s.time+(duration>0?duration:5),trackArea:has(text,/区域|影响范围|火墙/),trackSide:zoneAllyDamage&&!zoneEnemyDamage?'all':'enemy',values:{dot:true,atk_scale:periodicScale,type:has(text,/真实伤害/)?'true':config.damageType||'arts',requiresStatus},snapshot:{damage:battle.stats(u).atk*periodicScale},refKind:'owner',persistAfterSourceGone:false});}}
  if(profile.charId==='char_213_mostma'&&profile.skillIndex===1){ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'mostma-s2',rangeUid:u.uid,x:u.x,y:u.y,radius:1,interval:.5,nextAt:battle.s.time+.5,endsAt:battle.s.time+(duration>0?duration:5),values:{dot:true,stun:1.1,type:'arts',atk_scale:Number(bb.atk_scale)||1.2},snapshot:{damage:battle.stats(u).atk*(Number(bb.atk_scale)||1.2)},refKind:'owner',persistAfterSourceGone:false});return true;}
  if(profile.charId==='char_474_glady'&&profile.skillIndex===2){const target=battle.targets(u)[0]||u,center={x:target.x,y:target.y};u.gladyVortex=center;const hitDuration=Number(bb.hit_duration)||9;if(target!==u)applyStatus(target,'root',hitDuration,{source:u.uid,resistible:false});ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'glady-s3',x:center.x,y:center.y,radius:1.5,interval:Number(bb.interval)||1.5,nextAt:battle.s.time+(Number(bb.interval)||1.5),endsAt:battle.s.time+(duration>0?duration:9),values:{dot:true,sluggish:true,pull:true,type:'arts',shape:'circle',atk_scale:Number(bb.atk_scale)||1},snapshot:{damage:battle.stats(u).atk*(Number(bb.atk_scale)||1)},refKind:'owner',persistAfterSourceGone:false});return true;}
  if(profile.charId==='char_171_bldsk'&&profile.skillIndex===1){const candidates=allAllies(battle,u,true).filter(a=>a.uid!==u.uid),target=candidates.length?candidates[Math.floor(battle.economy.random()*candidates.length)]:null;if(target){u.warfarinTargetUid=target.uid;target.warfarinBuff={atk:Number(bb.atk)||0,endsAt:battle.s.time+(Number(bb.duration)||15),sourceUid:u.uid};ctx.addEffect(battle,{kind:'loss',sourceUid:u.uid,sourceDeployGen:u.deployGen,targetUid:target.uid,talentOrSkillId:'warfarin-s2-ally',interval:Number(bb.interval)||1,nextAt:battle.s.time+(Number(bb.interval)||1),endsAt:battle.s.time+(Number(bb.duration)||15),values:{amount:target.maxHp*(Number(bb.hp_ratio)||0)},refKind:'owner',persistAfterSourceGone:false});} }
@@ -7425,7 +7449,7 @@ function settlePeriodic(battle,fx){
   }
   if(fx.values?.dot)for(const e of zoneActors(battle,fx,fx.trackSide||'enemy'))if(!fx.values.requiresStatus||(e.statuses||[]).some(s=>s.kind===fx.values.requiresStatus)){dealDamage(battle,{source,target:e,amount:fx.snapshot?.damage??(source?battle.stats(source).atk:0)*(fx.values.atk_scale||1),type:fx.values?.type||'arts',cause:'dot',effectId:fx.id});if(fx.values.elementScale&&source)applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot',parentEventId:null});}
   if(fx.values?.elementScale&&!fx.values?.dot&&source)for(const e of zoneActors(battle,fx,'enemy'))applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot'});
-  if(fx.values?.sluggish)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'sluggish',fx.interval||1,{source:source?.uid,resistible:false});
+  if(fx.values?.sluggish)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'sluggish',Number(fx.values?.sluggishTime)||fx.interval||1,{source:source?.uid,resistible:false});
   if(fx.talentOrSkillId==='bond-kjerag-storm')fx.values.cold=Number(fx.values.baseTime??fx.values.cold??20)+Number(fx.values.timePerStack??0.1)*(battle.layers.kjeragShip||0);
   if(fx.values?.cold)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'cold',fx.values.cold,{source:source?.uid,resistible:false});
   // Presentation marker for the 6-operator Kjerag storm: emitted once per periodic settlement so the
@@ -7794,8 +7818,17 @@ function onSkillStart(battle,u){
   const bb=skillBB(battle,u);grantGuard(battle,u,{charges:1,sourceUid:u.uid,id:'liskam-s1',endsAt:battle.s.time+(bb.duration||8)});
  }
  if(u.id==='char_258_podego'&&idx===1){
-  const bb=skillBB(battle,u);
-  addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'podego-s2',x:(battle.targets(u)[0]||u).x,y:(battle.targets(u)[0]||u).y,radius:1,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+(bb.projectile_delay_time||5),values:{dot:true,sluggish:true,silence:true,atk_scale:bb.atk_scale||.6},snapshot:{damage:battle.stats(u).atk*(bb.atk_scale||.6)},refKind:'owner',persistAfterSourceGone:true});return true;
+  // 波登可 S2「孢子扩散」：PRTS 技能备注写的是「※孢子群范围半径为0.9，可对空」——
+  // 半径 0.9 < 1（相邻格中心距），所以孢子群只覆盖**落点那一格**；可对空（不加 groundOnly）。
+  // 孢子群是「范围内敌人被停顿且失去特殊能力」的状态，落地即生效；伤害每秒结算 1 次，
+  // 持续 projectile_delay_time 秒（5 秒，专三 6 秒），每次为攻击力的 atk_scale（40%→专三 80%）。
+  const bb=skillBB(battle,u),spot=battle.targets(u)[0]||u;
+  addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'podego-s2',x:spot.x,y:spot.y,radius:PODEGO_SPORE_RADIUS,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+(bb.projectile_delay_time||5),trackSide:'enemy',values:{dot:true,sluggish:true,silence:true,shape:'circle',atk_scale:bb.atk_scale||.6},snapshot:{damage:battle.stats(u).atk*(bb.atk_scale||.6)},refKind:'owner',persistAfterSourceGone:true});
+  for(const e of enemyActors(battle.s).filter(x=>x.hp>0&&!x.hidden&&Math.hypot(x.x-spot.x,x.y-spot.y)<=PODEGO_SPORE_RADIUS+1e-9)){
+   applyStatus(e,'sluggish',1,{source:u.uid,resistible:false});
+   applyStatus(e,'silence',1,{source:u.uid,resistible:false});
+  }
+  return true;
  }
  if(u.id==='char_4042_lumen'&&idx===0){u.lumenHotPending=true;return true;}
  if(u.id==='char_4139_papyrs'&&idx===1){const target=alliedActors(battle.s).filter(v=>v.uid!==u.uid&&v.kind!=='summon'&&v.deployed&&v.hp>0&&battle.canHeal(v,u)&&battle.inside(u,v,true)).sort((a,b)=>b.maxHp-a.maxHp||a.uid-b.uid)[0];u.papyrsTargetUid=target?.uid??null;}
@@ -8020,6 +8053,9 @@ function summonInRange(battle,s,target){
  // 没有 battle 方法时的退化路径（单测直接造对象）：这里自行旋转
  return grids.some(g=>{let x=g.col,y=-g.row;for(let i=0;i<(s.dir||0);i++)[x,y]=[-y,x];return s.x+x===target.x&&s.y+y===target.y;});
 }
+// 波登可 S2「孢子扩散」的孢子群半径：PRTS 技能备注「※孢子群范围半径为0.9，可对空」。
+// 0.9 < 1（相邻格中心距），所以只覆盖落点那一格。
+const PODEGO_SPORE_RADIUS=0.9;
 function tickSummons(battle,dt){
  for(const s of battle.s.summons.slice()){
   if(s.neutral)continue;

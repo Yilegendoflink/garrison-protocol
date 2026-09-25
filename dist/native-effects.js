@@ -831,7 +831,7 @@ function settlePeriodic(battle,fx){
   }
   if(fx.values?.dot)for(const e of zoneActors(battle,fx,fx.trackSide||'enemy'))if(!fx.values.requiresStatus||(e.statuses||[]).some(s=>s.kind===fx.values.requiresStatus)){dealDamage(battle,{source,target:e,amount:fx.snapshot?.damage??(source?battle.stats(source).atk:0)*(fx.values.atk_scale||1),type:fx.values?.type||'arts',cause:'dot',effectId:fx.id});if(fx.values.elementScale&&source)applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot',parentEventId:null});}
   if(fx.values?.elementScale&&!fx.values?.dot&&source)for(const e of zoneActors(battle,fx,'enemy'))applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot'});
-  if(fx.values?.sluggish)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'sluggish',fx.interval||1,{source:source?.uid,resistible:false});
+  if(fx.values?.sluggish)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'sluggish',Number(fx.values?.sluggishTime)||fx.interval||1,{source:source?.uid,resistible:false});
   if(fx.talentOrSkillId==='bond-kjerag-storm')fx.values.cold=Number(fx.values.baseTime??fx.values.cold??20)+Number(fx.values.timePerStack??0.1)*(battle.layers.kjeragShip||0);
   if(fx.values?.cold)for(const e of zoneActors(battle,fx,'enemy'))applyStatus(e,'cold',fx.values.cold,{source:source?.uid,resistible:false});
   // Presentation marker for the 6-operator Kjerag storm: emitted once per periodic settlement so the
@@ -1200,8 +1200,17 @@ function onSkillStart(battle,u){
   const bb=skillBB(battle,u);grantGuard(battle,u,{charges:1,sourceUid:u.uid,id:'liskam-s1',endsAt:battle.s.time+(bb.duration||8)});
  }
  if(u.id==='char_258_podego'&&idx===1){
-  const bb=skillBB(battle,u);
-  addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'podego-s2',x:(battle.targets(u)[0]||u).x,y:(battle.targets(u)[0]||u).y,radius:1,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+(bb.projectile_delay_time||5),values:{dot:true,sluggish:true,silence:true,atk_scale:bb.atk_scale||.6},snapshot:{damage:battle.stats(u).atk*(bb.atk_scale||.6)},refKind:'owner',persistAfterSourceGone:true});return true;
+  // 波登可 S2「孢子扩散」：PRTS 技能备注写的是「※孢子群范围半径为0.9，可对空」——
+  // 半径 0.9 < 1（相邻格中心距），所以孢子群只覆盖**落点那一格**；可对空（不加 groundOnly）。
+  // 孢子群是「范围内敌人被停顿且失去特殊能力」的状态，落地即生效；伤害每秒结算 1 次，
+  // 持续 projectile_delay_time 秒（5 秒，专三 6 秒），每次为攻击力的 atk_scale（40%→专三 80%）。
+  const bb=skillBB(battle,u),spot=battle.targets(u)[0]||u;
+  addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'podego-s2',x:spot.x,y:spot.y,radius:PODEGO_SPORE_RADIUS,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+(bb.projectile_delay_time||5),trackSide:'enemy',values:{dot:true,sluggish:true,silence:true,shape:'circle',atk_scale:bb.atk_scale||.6},snapshot:{damage:battle.stats(u).atk*(bb.atk_scale||.6)},refKind:'owner',persistAfterSourceGone:true});
+  for(const e of enemyActors(battle.s).filter(x=>x.hp>0&&!x.hidden&&Math.hypot(x.x-spot.x,x.y-spot.y)<=PODEGO_SPORE_RADIUS+1e-9)){
+   applyStatus(e,'sluggish',1,{source:u.uid,resistible:false});
+   applyStatus(e,'silence',1,{source:u.uid,resistible:false});
+  }
+  return true;
  }
  if(u.id==='char_4042_lumen'&&idx===0){u.lumenHotPending=true;return true;}
  if(u.id==='char_4139_papyrs'&&idx===1){const target=alliedActors(battle.s).filter(v=>v.uid!==u.uid&&v.kind!=='summon'&&v.deployed&&v.hp>0&&battle.canHeal(v,u)&&battle.inside(u,v,true)).sort((a,b)=>b.maxHp-a.maxHp||a.uid-b.uid)[0];u.papyrsTargetUid=target?.uid??null;}
@@ -1426,6 +1435,9 @@ export function summonInRange(battle,s,target){
  // 没有 battle 方法时的退化路径（单测直接造对象）：这里自行旋转
  return grids.some(g=>{let x=g.col,y=-g.row;for(let i=0;i<(s.dir||0);i++)[x,y]=[-y,x];return s.x+x===target.x&&s.y+y===target.y;});
 }
+// 波登可 S2「孢子扩散」的孢子群半径：PRTS 技能备注「※孢子群范围半径为0.9，可对空」。
+// 0.9 < 1（相邻格中心距），所以只覆盖落点那一格。
+const PODEGO_SPORE_RADIUS=0.9;
 function tickSummons(battle,dt){
  for(const s of battle.s.summons.slice()){
   if(s.neutral)continue;
