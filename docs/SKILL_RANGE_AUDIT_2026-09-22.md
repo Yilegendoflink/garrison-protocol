@@ -191,3 +191,34 @@
 
 回归：`tests/native-podego-bottle.test.mjs`（3 条：瓶子落点/半径 0.9/落地生效/5 次伤害/可对空；地灵 S2 只停顿不掉血；
 「兜底圈白名单」的源码＋实机双门禁——后者会遍历全部 325 个技能组合，禁止任何技能同时出现兜底圈与专属圈）。
+
+## 连续坐标：范围判定不许拿格心做相等比较（2026-09-23 复盘）
+
+用户 2026-09-23 报「银灰、初雪等范围内冻结概率叠层的效果依然无法正常触发」。根因不在卫戍本身，
+而在**范围判定用错了坐标口径**：敌人的 `x/y` 是 `native-combat.advanceEnemy` 逐帧线性插值出来的**连续值**
+（只有走到路径节点那一刻才恰好是整数格心），而旧代码里若干处写成
+
+```js
+this.range(owner,skill).some(c=>c.x===actor.x&&c.y===actor.y)   // ← 移动中的敌人永远判不进来
+```
+
+于是「范围内」的效果对**正在移动的敌人**（也就是绝大多数时候）全都不触发：卫戍的「进入冻结→叠层」、
+rangeUid 圈（塞雷娅 S3／莫斯提马 S2／纯烬 S1／地灵 S2…）、召唤物的攻击／治疗范围都受影响。
+正确口径只有一个：**按「目标落在哪一格」算**，也就是 `containsTarget(cells, target)`
+（`targeting.js`，格子当单位方格、允许 `hitRadius`）或 `battle.inside(u,target,skill)`。
+
+本轮改掉的调用点（全部换成 `containsTarget`／`inside`）：
+
+| 位置 | 用途 |
+| --- | --- |
+| `native-battle.garrisonStatusEvent` | 卫戍「范围内敌人进入冻结／沉睡／晕眩」的范围判定（用户报的那条） |
+| `native-battle.garrisonInRange` | range_id（身前一格／周围 N 格）类卫戍的目标判定 |
+| `native-battle` 的 `pendingAttackHeal` | 「下一次攻击治疗范围内友方」的格子判定 |
+| `native-effects.zoneContains` 的 `rangeUid` 分支 | 所有「这个圈就是某名干员的攻击范围」的圈 |
+| `native-effects.summonInRange` | 召唤物的攻击／治疗范围（含 `rangeId` 网格） |
+| `native-operator-effects.zoneTargets` | 「下次攻击打范围内所有敌人」类技能（维娜 S1、锏 S1） |
+| `native-operator-effects` 地灵 S2 开技 | 开技那一刻对范围内敌人施加停顿 |
+
+回归：`tests/native-range-tolerance.test.mjs`（4 条：rangeUid 圈、召唤物范围、地灵 S2 的完整链路、
+**源码门禁**——`dist/native-*.js` 里再出现格心相等比较就直接挂），以及 `tests/native-kjerag-freeze.test.mjs`
+新增的两条（小数坐标的敌人、以及沿真实路径走进范围的敌人）。两条新用例在改前都会失败。

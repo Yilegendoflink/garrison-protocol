@@ -1,5 +1,6 @@
 import {applyStatus,removeStatus} from './status.js';
 import {directionOf} from './protocol.js';
+import {containsTarget} from './targeting.js';
 
 // 目标此刻是否处于某类元素爆发期间。爆发状态本身由 `native-effects.applyElementDamage` 维护
 // （`elementBurstType` / `elementBurstUntil`，爆发期间元素条锁定），这里只做只读判定——
@@ -272,7 +273,7 @@ function zoneTargets(battle,source,rangeId,radius=1){
  const cells=grids?.length?(battle.cellsForGrids?battle.cellsForGrids(source,grids):null):null;
  return battle.s.enemies.filter(e=>{
   if(!(e.hp>0)||e.hidden||e.flying)return false;
-  if(cells)return cells.some(c=>c.x===e.x&&c.y===e.y);
+  if(cells)return containsTarget(cells.map(c=>[c.x,c.y]),e);
   return Math.max(Math.abs(e.x-source.x),Math.abs(e.y-source.y))<=radius;
  });
 }
@@ -286,7 +287,7 @@ export function operatorSkillStart(battle,u,ctx){
   // 每个敌人的【流沙化】单独计算停顿间隔／停顿时间默认 0.8 秒」。兜底的通用伤害圈在这里是错的（此前会每秒造成伤害）。
   const interval=Math.max(.1,Number(bb.interval)||1.6),sluggishTime=Number(bb.sluggish)||.8,skillDuration=Number(profile.skill?.duration),endsAt=skillDuration<0?null:battle.s.time+(skillDuration>0?skillDuration:5);
   ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skgoat-s2',rangeUid:u.uid,x:u.x,y:u.y,radius:2,interval,nextAt:battle.s.time+interval,endsAt,trackSide:'enemy',values:{sluggish:true,sluggishTime},snapshot:{},refKind:'owner',persistAfterSourceGone:false});
-  for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&battle.range(u,true).some(c=>c.x===e.x&&c.y===e.y)))applyStatus(e,'sluggish',sluggishTime,{source:u.uid,resistible:false});
+  for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&battle.inside(u,e,true)))applyStatus(e,'sluggish',sluggishTime,{source:u.uid,resistible:false});
   if(skillDuration>0)u.skillDisarmUntil=Math.max(u.skillDisarmUntil||0,battle.s.time+skillDuration);
   return true;
  }

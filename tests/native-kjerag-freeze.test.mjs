@@ -296,3 +296,48 @@ test('闭环：不融冰概率造成寒冷 → 两次配对成冻结 → 触发 
   b.step();
   assert.equal(layers(b), before + 1, '冻结触发 garrison_28 → +1 层');
 });
+
+// 用户 2026-09-23 报「范围内冻结概率叠层依然无法触发」的根因：敌人的 x/y 是 `advanceEnemy` 逐帧插值的
+// **连续坐标**，只有到点那一刻才恰好落在整数格心。旧的「范围内」判定拿格心做相等比较
+//（`this.range(owner).some(c=>c.x===actor.x&&c.y===actor.y)`），于是移动中的敌人——也就是绝大多数时候——
+// 永远判不进范围，这族特质就一直是「看起来没生效」。现在统一走 `battle.inside`（按目标落在哪一格算）。
+test('「范围内进入冻结」按连续坐标判范围：移动中的敌人也会叠层', () => {
+  // 初雪与银灰各测一次（两人各持一条 garrison_28），每次只带一名持有者，避免互相干扰。
+  const caseOf = (ownerId) => {
+    const { b, unitOf } = setup([ownerId, K.耶拉, K.崖心]);
+    b.economy.random = () => 0;                   // 50% 必过
+    const owner = unitOf(ownerId);
+    const before = layers(b);
+    // 范围内的小数坐标（同一格内但没走到格心）
+    const moving = enemy(b, { x: owner.x + 1.42, y: owner.y, hp: 1e6 });
+    b.step();                                      // 先让「已见过的状态」记账建立
+    applyStatus(moving, 'frozen', 5, { source: 'test', resistible: false });
+    b.step();
+    const afterInside = layers(b);
+    assert.ok(afterInside > before, `${ownerId}：范围内的小数坐标敌人应当叠层（${before} → ${afterInside}）`);
+    // 范围外的小数坐标不叠
+    const outside = enemy(b, { x: owner.x + 8.42, y: owner.y, hp: 1e6 });
+    b.step();
+    applyStatus(outside, 'frozen', 5, { source: 'test', resistible: false });
+    b.step();
+    assert.equal(layers(b), afterInside, `${ownerId}：范围外不叠层`);
+  };
+  caseOf(K.初雪);
+  caseOf(K.银灰);
+});
+
+// 真实对局里敌人基本都是「边走边被冻」：位置是逐帧插值出来的小数。这条按真实移动路径走一遍，
+// 不做任何手工摆位。
+test('走进范围的敌人在半路上被冻结：照样触发叠层', () => {
+  const { b, unitOf } = setup([K.初雪, K.耶拉, K.崖心]);
+  b.economy.random = () => 0;
+  const owner = unitOf(K.初雪), before = layers(b);
+  const walker = enemy(b, { x: owner.x - 3, y: owner.y, hp: 1e6, speed: 1, route: [{ kind: 'move', x: owner.x + 3, y: owner.y }], cmd: 0, segment: 0, path: 0 });
+  let guard = 0;
+  while (!(b.inside(owner, walker, false) && !Number.isInteger(walker.x)) && guard++ < 900) b.step();
+  assert.ok(b.inside(owner, walker, false), '敌人应当走进范围内');
+  assert.ok(!Number.isInteger(walker.x), '走动中的敌人坐标是小数（' + walker.x + '）');
+  applyStatus(walker, 'frozen', 5, { source: 'test', resistible: false });
+  b.step();
+  assert.ok(layers(b) > before, `半路冻结 → 叠层（${before} → ${layers(b)}）`);
+});

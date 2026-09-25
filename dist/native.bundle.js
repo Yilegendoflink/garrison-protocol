@@ -6049,6 +6049,7 @@ return {TENTATIVE_WINDUP_RATIO,TENTATIVE_PROJECTILE_SPEED,TENTATIVE_HIT_GAP,enem
 "native-operator-effects.js": function(load) {
 const {applyStatus,removeStatus} = load("status.js");
 const {directionOf} = load("protocol.js");
+const {containsTarget} = load("targeting.js");
 // 目标此刻是否处于某类元素爆发期间。爆发状态本身由 `native-effects.applyElementDamage` 维护
 // （`elementBurstType` / `elementBurstUntil`，爆发期间元素条锁定），这里只做只读判定——
 // 放在本文件是为了避免 native-operator-effects ↔ native-effects 互相 import（构建期是工厂化加载，成环会拿到半成品）。
@@ -6320,7 +6321,7 @@ function zoneTargets(battle,source,rangeId,radius=1){
  const cells=grids?.length?(battle.cellsForGrids?battle.cellsForGrids(source,grids):null):null;
  return battle.s.enemies.filter(e=>{
   if(!(e.hp>0)||e.hidden||e.flying)return false;
-  if(cells)return cells.some(c=>c.x===e.x&&c.y===e.y);
+  if(cells)return containsTarget(cells.map(c=>[c.x,c.y]),e);
   return Math.max(Math.abs(e.x-source.x),Math.abs(e.y-source.y))<=radius;
  });
 }
@@ -6334,7 +6335,7 @@ function operatorSkillStart(battle,u,ctx){
   // 每个敌人的【流沙化】单独计算停顿间隔／停顿时间默认 0.8 秒」。兜底的通用伤害圈在这里是错的（此前会每秒造成伤害）。
   const interval=Math.max(.1,Number(bb.interval)||1.6),sluggishTime=Number(bb.sluggish)||.8,skillDuration=Number(profile.skill?.duration),endsAt=skillDuration<0?null:battle.s.time+(skillDuration>0?skillDuration:5);
   ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'skgoat-s2',rangeUid:u.uid,x:u.x,y:u.y,radius:2,interval,nextAt:battle.s.time+interval,endsAt,trackSide:'enemy',values:{sluggish:true,sluggishTime},snapshot:{},refKind:'owner',persistAfterSourceGone:false});
-  for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&battle.range(u,true).some(c=>c.x===e.x&&c.y===e.y)))applyStatus(e,'sluggish',sluggishTime,{source:u.uid,resistible:false});
+  for(const e of battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&battle.inside(u,e,true)))applyStatus(e,'sluggish',sluggishTime,{source:u.uid,resistible:false});
   if(skillDuration>0)u.skillDisarmUntil=Math.max(u.skillDisarmUntil||0,battle.s.time+skillDuration);
   return true;
  }
@@ -6820,6 +6821,7 @@ const {startEnemyPush,startEnemyPull} = load("native-shift.js");
 const {applyDamage,recoverHP,damage} = load("combat.js");
 const {equipmentEvent,equipmentFatal,equipmentTick} = load("native-equipment.js");
 const {allowsHighlandPlacement,branchTrait} = load("native-branches.js");
+const {containsTarget} = load("targeting.js");
 const {applyStatus,permissions,statusAttributeChanges,isIsolated,yinYangAttackScale} = load("status.js");
 const {blackboard,resolveActiveTalents,nativeAttributes,bondBlackboard,bondLayerValue,bondValue} = load("protocol.js");
 const {BOND_TEXT_CONSTANTS} = load("native-bond-keys.js");
@@ -7637,7 +7639,7 @@ function bondPeriodic(battle,u){
 //    默认切比雪夫＝「周围 N 格」的方格。见 docs/SKILL_RANGE_AUDIT_2026-09-22.md。
 function zoneContains(battle,fx,a){
  if(!fx||!a)return false;
- if(fx.rangeUid){const owner=getActor(battle.s,fx.rangeUid);if(owner&&owner.deployed&&owner.hp>0){const cells=battle.range?.(owner,true);if(cells?.length)return cells.some(c=>c.x===a.x&&c.y===a.y);}}
+ if(fx.rangeUid){const owner=getActor(battle.s,fx.rangeUid);if(owner&&owner.deployed&&owner.hp>0){const cells=battle.range?.(owner,true);if(cells?.length)return containsTarget(cells.map(c=>[c.x,c.y]),a);}}
  // 引星棘刺 S3「我的海疆」：判定区域由 3 个炼金单元的落点围成（点／宽 0.65 的直线／各边外扩 0.325 的多边形）。
  // PRTS 备注：处于区域中的**我方干员（不含装置）**阻挡敌人时，被阻挡的敌人视为处于区域内。
  const area=fx.values?.thorn2Area;
@@ -8365,7 +8367,7 @@ function summonInRange(battle,s,target){
  const grids=s.rangeId?battle?.data?.ranges?.[s.rangeId]?.grids:null;
  if(!grids?.length)return chebyshev(s,target)<=1.1;
  const cells=battle.cellsForGrids?battle.cellsForGrids(s,grids):null;
- if(cells)return cells.some(c=>c.x===target.x&&c.y===target.y);
+ if(cells)return containsTarget(cells.map(c=>[c.x,c.y]),target);
  // 没有 battle 方法时的退化路径（单测直接造对象）：这里自行旋转
  return grids.some(g=>{let x=g.col,y=-g.row;for(let i=0;i<(s.dir||0);i++)[x,y]=[-y,x];return s.x+x===target.x&&s.y+y===target.y;});
 }
@@ -10834,7 +10836,8 @@ class NativeBattle {
  garrisonCounter(key,delta=1){const next=(this.garrisonCounters.get(key)||0)+delta;this.garrisonCounters.set(key,next);return next;}
  // range_id → 该干员按朝向覆盖的格子（「自身周围4格」= x-5、「身前一格」= 1-1、「自身」= 0-1）。
  garrisonRangeTiles(owner,rangeId){const grids=this.data.ranges?.[rangeId]?.grids;if(!grids?.length)return[{x:owner.x,y:owner.y}];return grids.map(g=>{let x=Number(g.col)||0,y=-(Number(g.row)||0);for(let i=0;i<(owner.dir||0);i++)[x,y]=[-y,x];return{x:owner.x+x,y:owner.y+y};});}
- garrisonInRange(owner,rangeId,target){return this.garrisonRangeTiles(owner,rangeId).some(t=>t.x===target.x&&t.y===target.y);}
+ // 目标落在哪一格按连续坐标算（同 inside/containsTarget 的口径），别拿格心做相等比较。
+ garrisonInRange(owner,rangeId,target){return containsTarget(this.garrisonRangeTiles(owner,rangeId).map(t=>[t.x,t.y]),target);}
  // 卫戍里的伤害乘算（只改伤害，不改命中与伤害类型判定）：
  //  attack_enemy        攻击带 check_tag（seamonster／drone）的敌人时「攻击力提升至 N 倍」
  //  ab_damageScaleByBond 打束缚/停顿目标时，每个盟约分别 ⌊层数/divide_num⌋ 后相加的增伤
@@ -11175,7 +11178,9 @@ class NativeBattle {
    // 「范围内」按持有者的**当前**攻击范围算：开技扩范围（银灰真银斩 3-12→3-7、凛御银灰 3-7/3-1）
    // 时判定跟着扩大，开缩小范围的技能（银灰雪境生存法则 1-2）时也跟着缩小。写成 this.range(owner)
    // 会永远按基础范围判定（用户 2026-09-22 问到的就是这条）。
-   if(!this.range(owner,this.skillActive(owner)).some(c=>c.x===actor.x&&c.y===actor.y))continue;
+   // **必须走 inside()**：敌人的 x/y 是连续坐标（advanceEnemy 逐帧插值），拿格心做相等比较的话，
+   // 移动中的敌人（也就是绝大多数时候）永远判不进范围——用户 2026-09-23 报的「冻结叠层依然无法触发」就是这个。
+   if(!this.inside(owner,actor,this.skillActive(owner)))continue;
    for(const g of gs){
     if(!g||g.eventType!=='IN_BATTLE')continue;const b=blackboard(g.blackboard),key=b.key||'';
     let prob=1;
@@ -11245,7 +11250,7 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
   if(!opts.bondExtra&&this.on('siracusaShip')&&this.owns(u,'siracusaShip')&&!skill&&u.block==null){const b=this.params('siracusaShip'),inWindow=this.s.time<(u.siracusaInvisibleUntil||-Infinity)||(u.siracusaExposureUntil||-Infinity)>this.s.time;if(inWindow){const pity=Math.max(0,Number(this.s.siracusaPity)||0),chance=bondPityChance(b.prob,pity),cap=bondPityStep(b.prob).cap;if(this.economy.random()<chance||pity>=cap){this.s.siracusaPity=0;dealDamage(this,{source:u,target:e,amount:Number(b.base_damage||5000)+Number(b.damage_per_stack||50)*(this.layers.siracusaShip||0),type:'true',cause:'extra',skipHooks:true});applyStatus(e,'fear',Number(b.fear)||3,{source:u.uid,resistible:false});}else this.s.siracusaPity=pity+1;}}
   if(e.hp<=0)this.resolveEnemyDeath(e,u);
   if(p.charId==='char_1026_gvial2'&&(p.skillIndex??u.source?.skillIndex)===0&&this.skillActive(u)&&result.potentialHpDamage>0)this.heal(u,u,result.potentialHpDamage*(Number(blackboard(p.skill?.blackboard).heal_scale)||.35));
-  if(u.pendingAttackHeal&&!u.pendingAttackHeal.used){const pending=u.pendingAttackHeal,cells=pending.rangeId?this.cellsForRangeId(u,pending.rangeId):null,below=pending.belowRatio||.7;const ally=alliedActors(this.s).filter(v=>v.deployed&&v.hp>0&&this.canHeal(v,u)&&(cells?cells.some(c=>c.x===v.x&&c.y===v.y):Math.hypot(v.x-u.x,v.y-u.y)<=1.5)&&(!pending.requiresBelow||v.hp/v.maxHp<below)&&(v.uid!==u.uid||u.hp<u.maxHp)).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.uid-b.uid)[0];if(ally){this.heal(u,ally,this.stats(u).atk*pending.scale);pending.used=true;u.pendingAttackHeal=null;}}
+  if(u.pendingAttackHeal&&!u.pendingAttackHeal.used){const pending=u.pendingAttackHeal,cells=pending.rangeId?this.cellsForRangeId(u,pending.rangeId):null,below=pending.belowRatio||.7;const ally=alliedActors(this.s).filter(v=>v.deployed&&v.hp>0&&this.canHeal(v,u)&&(cells?containsTarget(cells.map(c=>[c.x,c.y]),v):Math.hypot(v.x-u.x,v.y-u.y)<=1.5)&&(!pending.requiresBelow||v.hp/v.maxHp<below)&&(v.uid!==u.uid||u.hp<u.maxHp)).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.uid-b.uid)[0];if(ally){this.heal(u,ally,this.stats(u).atk*pending.scale);pending.used=true;u.pendingAttackHeal=null;}}
   const healingDamage=result.blocked?0:Math.max(0,value-result.shield);if(p.branch==='incantationmedic'&&healingDamage>0&&u.deployed&&u.hp>0){const target=this.healingTargets(u)[0];if(target)this.heal(u,target,healingDamage*(branchTrait(p).values.scale??.5));}if(!result.blocked&&value>0)this.selfHealAfterDamage(u);if(p.branch==='slower'&&healingDamage>0)applyStatus(e,'sluggish',branchTrait(p).values.sluggish??.8,{source:u.uid});
  }
  hurt(u,e,{attackId=null,parentEventId=null,sourceLess=false,damageAmount=null,cause='attack',defPenetration=null}={}){if(u.neutral){const value=damage({amount:Number.isFinite(damageAmount)?damageAmount:this.enemyAttackDamage(e,1,u),type:e.damageType,defense:(u.def||0)*(1-(defPenetration??e.enemyDefPenetration??0)),resistance:u.res||0});return dealDamage(this,{source:sourceLess?null:e,target:u,value,type:e.damageType,cause,attackId,parentEventId});}const p=this.profile(u),skillIndex=p.skillIndex??u.source?.skillIndex;if(u.id==="char_311_mudrok"&&u.invulnerableUntil>this.s.time)return;if(u.id==="char_1032_excu2"&&skillIndex===1&&this.skillActive(u)&&e.damageType==="physical"&&this.economy.random()<Number(blackboard(p.skill?.blackboard).prob||0)){u.ammo=Math.min(u.ammoMax||Infinity,(u.ammo||0)+Number(blackboard(p.skill?.blackboard).recover_cnt||1));return;}let evade=this.behavior(u).evasion,evadeProb=branchTrait(p).values.prob??evade;if(u.physicalEvadeOnce&&e.damageType==='physical'){u.physicalEvadeOnce=false;evade=1;evadeProb=1;}else if(u.physicalEvadeUntil>this.s.time&&['physical'].includes(e.damageType)){evade=1;evadeProb=u.physicalEvadeProb||0;}else if(u.skillEvasionProb>0&&this.skillActive(u)&&['physical','arts'].includes(e.damageType)){evade=1;evadeProb=u.skillEvasionProb;}const tippiTalent=(p.activeTalents||[]).find(t=>t.name==='片场工作指南'),tippiQuiet=tippiTalent&&this.s.time-(u.lastDamagedAt??u.deployAt??0)>=Number(blackboard(tippiTalent.blackboard).stack_time||9);if(tippiQuiet&&e.damageType!=='true'){u.lastDamagedAt=this.s.time;this.s.effects.push({x:u.x,y:u.y,text:'闪避',life:.5,type:'evade'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'evade'});return;}if(u.id==='char_420_flamtl'&&u.flamFollowUp==null)u.flamFollowUp=false;const flamAura=this.s.units.some(v=>v.deployed&&v.hp>0&&v.id==='char_420_flamtl'&&(this.profile(v).activeTalents||[]).some(t=>t.name==='红松骑士团团长')&&Array.isArray(this.profile(u).bonds)&&this.profile(u).bonds.includes('kazimierzShip'));if(flamAura&&e.damageType!=='true'&&this.economy.random()<.22){if(u.id==='char_420_flamtl')u.flamFollowUp=true;this.s.effects.push({x:u.x,y:u.y,text:'闪避',life:.5,type:'evade'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'evade'});return;}const mountainTalent=p.charId==='char_264_f12yin'&&(p.activeTalents||[]).find(t=>t.name==='强壮肉体'),mountainProb=mountainTalent?Number(blackboard(mountainTalent.blackboard).prob)||.15:0;if(mountainProb>0&&e.damageType==='physical'&&this.economy.random()<mountainProb){this.s.effects.push({x:u.x,y:u.y,text:'闪避',life:.5,type:'evade'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'evade'});return;}const lapSkill=(p.charId==='char_140_whitew'&&(skillIndex??0)===0&&this.skillActive(u)),lapProb=lapSkill?Number(blackboard(p.skill.blackboard).prob):0;if(lapProb>0&&e.damageType==='physical'&&this.economy.random()<lapProb){this.s.effects.push({x:u.x,y:u.y,text:'抵挡',life:.5,type:'block'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'block'});return;}const armor=(p.activeTalents||[]).find(t=>t.name==='战术装甲'),armorProb=armor?Number(blackboard(armor.blackboard).prob):0;if(armorProb>0&&this.economy.random()<armorProb){this.s.effects.push({x:u.x,y:u.y,text:'抵挡',life:.5,type:'block'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'block'});return;}if(evade&&['physical','arts'].includes(e.damageType)&&this.economy.random()<evadeProb){if(u.id==='char_420_flamtl')u.flamFollowUp=true;this.s.effects.push({x:u.x,y:u.y,text:'闪避',life:.5,type:'evade'});this.emit('hit',{uid:u.uid,x:u.x,y:u.y,type:'evade'});return;}let value=damage({amount:e.atk,type:e.damageType,defense:this.stats(u).def,resistance:this.stats(u).magicResistance});if(this.on('emptyShip'))value*=.8;

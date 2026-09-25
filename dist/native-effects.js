@@ -2,6 +2,7 @@ import {startEnemyPush,startEnemyPull} from './native-shift.js';
 import {applyDamage,recoverHP,damage} from './combat.js';
 import {equipmentEvent,equipmentFatal,equipmentTick} from './native-equipment.js';
 import {allowsHighlandPlacement,branchTrait} from './native-branches.js';
+import {containsTarget} from './targeting.js';
 import {applyStatus,permissions,statusAttributeChanges,isIsolated,yinYangAttackScale} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes,bondBlackboard,bondLayerValue,bondValue} from './protocol.js';
 import {BOND_TEXT_CONSTANTS} from './native-bond-keys.js';
@@ -820,7 +821,7 @@ function bondPeriodic(battle,u){
 //    默认切比雪夫＝「周围 N 格」的方格。见 docs/SKILL_RANGE_AUDIT_2026-09-22.md。
 export function zoneContains(battle,fx,a){
  if(!fx||!a)return false;
- if(fx.rangeUid){const owner=getActor(battle.s,fx.rangeUid);if(owner&&owner.deployed&&owner.hp>0){const cells=battle.range?.(owner,true);if(cells?.length)return cells.some(c=>c.x===a.x&&c.y===a.y);}}
+ if(fx.rangeUid){const owner=getActor(battle.s,fx.rangeUid);if(owner&&owner.deployed&&owner.hp>0){const cells=battle.range?.(owner,true);if(cells?.length)return containsTarget(cells.map(c=>[c.x,c.y]),a);}}
  // 引星棘刺 S3「我的海疆」：判定区域由 3 个炼金单元的落点围成（点／宽 0.65 的直线／各边外扩 0.325 的多边形）。
  // PRTS 备注：处于区域中的**我方干员（不含装置）**阻挡敌人时，被阻挡的敌人视为处于区域内。
  const area=fx.values?.thorn2Area;
@@ -1548,7 +1549,7 @@ export function summonInRange(battle,s,target){
  const grids=s.rangeId?battle?.data?.ranges?.[s.rangeId]?.grids:null;
  if(!grids?.length)return chebyshev(s,target)<=1.1;
  const cells=battle.cellsForGrids?battle.cellsForGrids(s,grids):null;
- if(cells)return cells.some(c=>c.x===target.x&&c.y===target.y);
+ if(cells)return containsTarget(cells.map(c=>[c.x,c.y]),target);
  // 没有 battle 方法时的退化路径（单测直接造对象）：这里自行旋转
  return grids.some(g=>{let x=g.col,y=-g.row;for(let i=0;i<(s.dir||0);i++)[x,y]=[-y,x];return s.x+x===target.x&&s.y+y===target.y;});
 }
