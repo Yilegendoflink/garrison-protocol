@@ -252,7 +252,7 @@ export function consumeEnemyLancerRush(e){
  if(!e.lancerRush?.active)return 0;
  // “当前移动速度”包含减速，但不是阻挡后的实际位移速度（后者为0）。
  const slow=e.statuses.some(s=>s.kind==='sluggish')? .2:1;
- const amount=enemyMovementSpeed(e)*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*slow*Number(e.enemyTalent['firstattack.atk_scale']);
+ const amount=enemyMovementSpeed(e)*(e.moveSpeedMod??1)*(e.waterMoveScale??1)*(e.sandMoveScale??1)*(e.envMoveScale??1)*slow*Number(e.enemyTalent['firstattack.atk_scale']);
  stopLancerRush(e);return amount;
 }
 

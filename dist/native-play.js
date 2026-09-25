@@ -10,7 +10,9 @@ import {NATIVE_DATA} from './runtime-data.js';
 import {NativeSession} from './native-session.js';
 import {NativeBattle} from './native-battle.js';
 import {renderLobby} from './native-lobby.js';
-import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText,battleBoardVisible,bondCurrentPreviewHtml,isolatedPlatform,tileLiftAmount,ROUND_LEAK_CAP,enemySprite,battleTally,RANDOM_MAP_ID,resolveMapId} from './protocol.js';
+import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText,battleBoardVisible,bondCurrentPreviewHtml,isolatedPlatform,tileLiftAmount,ROUND_LEAK_CAP,enemySprite,battleTally,RANDOM_MAP_ID,resolveMapId,directionOf} from './protocol.js';
+// 特殊地块/地图装置的绘制只读环境层：气流格由 blowerCells 统一算，别在绘制里另算一遍。
+import {blowerCells} from './native-environment.js';
 import {strategyCoverage} from './strategy.js';
 import {spBarFill} from './native-sp.js';
 import {playBattleEvents,resetFxClock,unlockAudio,actorOffset,drawFx,drawStatuses,drawElementRing,drawDownRing,drawFrostOverlay,drawConcealOverlay,drawDollOverlay,drawWhitwEyes,formTintedImage} from './native-fx.js';
@@ -172,7 +174,7 @@ function render(){
  if(state.view==='briefing'){const d=state.draft,mode=data.season.modeDataDict[d.modeId],mapName=data.maps.filter(m=>m.weight>0).findIndex(m=>m.stageId===d.mapId),tags=(d.roster.types||[]).map(id=>trainingType(id)).filter(Boolean),order=(d.roster.order||[]).map(id=>trainingType(id)?.name||id);root.innerHTML=`<main class="native-lobby native-briefing"><header><button data-act="home">‹ 大厅</button><span>战前准备</span></header><h1>战前准备</h1><p>${esc(d.cat?'海猫模式':d.egg325?'325模式':mode?.name||'')} · 阵地 ${mapName+1}</p><h2>本局特训</h2><p>抽中三种词条，战斗按 ${order.map(esc).join(' → ')} 轮换出怪。</p><div class="native-tags">${tags.map(t=>`<article><b>${esc(t.name)}</b><small>${esc(t.id)}</small><p>${esc(t.desc)}</p></article>`).join('')}</div><h2>初始策略</h2><div class="native-strategy-pane"><div class="native-strategies">${Object.values(data.season.bandDataListDict).map(b=>`<button data-act="band" data-id="${b.bandId}" class="${state.band===b.bandId?'chosen':''}">${avatar(b.bandId)}<span><b>${esc(data.common.bandDataDict[b.bandId].bandName)}</b><small>生命 ${b.totalHp}</small><p>${esc(plain(b.bandDesc))}</p></span></button>`).join('')}</div></div><button class="native-primary native-begin" data-act="begin">进入对局 →</button></main>`;renderModal();return;}
   if(state.view==='prepare'){const p=prepState();root.innerHTML=renderPreparePage(data,p,{esc,avatar});if(p.scroll)window.scrollTo(0,p.scroll);renderModal();return;}
  if(state.view==='editor'){const oldNav=root.querySelector('.wave-ed-temps'),navTop=oldNav?.scrollTop||0,navLeft=oldNav?.scrollLeft||0;root.innerHTML=renderWaveEditor(data,state.waveTable,state.editor);const nav=root.querySelector('.wave-ed-temps');if(nav){nav.scrollTop=navTop;nav.scrollLeft=navLeft;}const search=document.getElementById('ed-search'),catalog=document.getElementById('ed-catalog');if(search&&state.editor.keepSearch){search.focus();try{search.setSelectionRange(state.editor.caret,state.editor.caret);}catch{}}state.editor.keepSearch=false;if(catalog)catalog.scrollTop=state.editor.scroll||0;const dialog=root.querySelector('#wave-ed-test');if(dialog){dialog.showModal();const close=()=>{state.editor.sample=null;render();root.querySelector('.wave-ed-current [data-act=ed-roll]')?.focus();};dialog.addEventListener('cancel',e=>{e.preventDefault();close();});dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();}});}renderModal();return;}
- const g=state.game,s=g.s,turn=currentTurn(),rows=g.bonds();root.innerHTML=`<main class="native-game${s.phase==='battle'?' is-battle':''}${state.supplyCollapsed?' is-supply-collapsed':''}${state.sandbox?' is-sandbox':''}">${dossier()}<header class="native-top"><button data-act="home">‹ 大厅</button><strong>卫戍协议 / 盟约下半</strong><button class="native-mobile-info" data-act="field-info">战况 / 设置</button><button data-act="limits">已知差异</button><button data-act="branches">分支规则</button><button class="native-ban-entry" data-act="ban-list">禁用名单</button><button data-act="export">导出存档</button></header>${s.phase==='battle'&&!state.sandbox?battleBar():''}<div class="native-workspace"><aside class="native-bonds">${sortedBondRows(rows,s.bondLayers).map(([id,b])=>`<button data-act="bond-info" data-id="${id}" class="${b.active?'active':''}"><b>${data.season.bondInfoDict[id].name}</b><span>${b.count} / ${data.season.bondInfoDict[id].activeCount}</span><small>${data.season.bondInfoDict[id].noStack?'':(s.bondLayers[id]||0)+' 层'}</small></button>`).join('')||'<p>部署干员以激活盟约</p>'}</aside><section class="native-field"><div class="native-field-caption"><b>${state.sandbox?(s.phase==='battle'?'技能测试':'测试配置'):s.phase==='battle'?(turn.isBossTurn?'木桩测试':'自动作战'):s.phase==='prep'?'阵地休整':s.phase==='finished'?'模拟结束':'回合结算'}</b><span id="native-wave-progress">${s.units.filter(u=>u.position).length} / ${s.capacity} 部署</span></div><div class="native-terrain-legend" aria-label="地块图例"><span><i class="terrain-high"></i>高台</span><span><i class="terrain-ground"></i>可部署地面</span><span><i class="terrain-isolated"></i>隔离平台</span><span><i class="terrain-corridor"></i>可通行通道</span><span><i class="terrain-blocked"></i>阻隔工事</span><span><i class="terrain-entry"></i>敌方入口</span><span><i class="terrain-goal"></i>防守目标</span></div><div class="native-board"><canvas id="native-canvas" tabindex="0" aria-label="战场棋盘，先选位置再拖动朝向确认"></canvas><span class="native-cost" title="战斗费用余额，与商店资金独立"><small>Cost 费用</small><output id="native-cost-balance" aria-label="战斗费用余额">—</output></span></div><div class="native-facing" ${state.preview?'':'hidden'}><span class="native-facing-tip">拖动选择朝向，松手确认；中心松手取消。</span>${[0,1,2,3].map((d)=>`<button data-act="aim" data-dir="${d}">${['→','↓','←','↑'][d]}</button>`).join('')}<button data-act="place-confirm">确认放置</button><button data-act="cancel">取消</button></div><div class="native-controls"><button data-act="fullscreen" hidden>打开全屏</button><button data-act="pause" ${s.phase!=='battle'?'disabled':''}>${state.paused?'继续':'暂停'}</button>${[1,2,4].map(n=>`<button data-act="speed" data-speed="${n}" class="${state.speed===n?'chosen':''}">${n}×</button>`).join('')}<button data-act="mute">${state.muted?'声音关':'声音开'}</button><label>音量 <input id="native-volume" aria-label="战斗音量" type="range" min="0" max="1" step="0.05" value="${state.volume}" style="width:72px"></label><button data-act="reduce-fx">${state.reduceFx?'动效少':'动效'}</button>${s.phase==='prep'?(state.sandbox?'<button class="native-primary" data-act="sandbox-start">开始测试 →</button>':'<button class="native-primary" data-act="start">准备完毕 →</button>'):s.phase==='intermission'?'<button class="native-primary" data-act="next">进入下一回合 →</button>':s.phase==='battle'&&turn.isBossTurn?'<button data-act="stop">结束木桩并播报伤害</button>':s.phase==='finished'?'<button data-act="result">查看伤害报告</button><button data-act="home">回到大厅</button>':''}</div><div class="native-bench-label${g.handFull()?' is-over':''}" id="native-hand-label">整备区 ${g.handLength()} / 10 ${g.handFull()?'<em class="native-hand-warn">已满，出售或部署清出空余后才能购买</em>':''}<span id="native-drop-hint" aria-live="polite">可将场上干员拖回此处；换位后重新选朝向</span></div><div class="native-bench" id="native-hand" aria-label="整备区">${s.units.filter(u=>!u.position).map(u=>`<button data-act="select" data-uid="${u.uid}" class="${state.selected===u.uid||inspectSame('unit',u.uid)?'chosen':''}">${avatar(u.charId)}<b>${esc(data.profiles[u.chessId].name)}</b>${data.profiles[u.chessId].isGolden?'<small>精锐</small>':''}</button>`).join('')}${s.items.map(i=>`<div role="button" tabindex="0" data-act="item" data-uid="${i.uid}" class="${state.item===i.uid||inspectSame('pack',i.uid)?'chosen':''}"><span class="native-item-icon">◇</span><b>${esc(itemName(i.chessId))}</b></div>`).join('')}</div></section><aside class="native-detail">${state.sandbox?sandboxDetail():waveIntel()}${detail()}<h3>${esc(data.common.bandDataDict[s.bandId].bandName)}</h3><p>${esc(plain(data.season.bandDataListDict[s.bandId].bandDesc))}</p><p>${turn.isBossTurn?'最终木桩：生命无限，防御0、法抗0，倒计时150秒。':'开局抽取三种特训词条；每档按难度预算从敌人池抽取，空池使用占位模板。'}</p><div id="native-combat-stats"></div></aside></div><div class="native-status" id="native-status"></div><section class="native-shop" id="native-supply-shop"><div><h2>调度中心 ${s.level}</h2><button class="native-supply-toggle" data-act="supply-toggle" aria-controls="native-supply-shop" aria-expanded="${!state.supplyCollapsed}">${state.supplyCollapsed?'展开商店 ▴':'收起商店 ▾'}</button><button data-act="upgrade" ${s.phase!=='prep'?'disabled':''}>升级 ${catOn()?'ALL':(g.terms().upgradeCost??'MAX')} ◆</button><button data-act="refresh" ${s.phase!=='prep'?'disabled':''}${s.forcedRefresh?` title="特殊刷新：此次刷新出现的干员优先为${esc(data.season.bondInfoDict[s.forcedRefresh.bond]?.name||'指定盟约')}干员"`:''}>${s.forcedRefresh?`特殊刷新${s.forcedRefresh.count>1?` ×${s.forcedRefresh.count}`:''}`:'刷新'} ${s.freeRefresh?'免费':catOn()?'ALL':'1 ◆'}</button>${catOn()?'<button data-act="stockview" title="查看各干员剩余库存">库存</button>':''}<button data-act="lock" ${s.phase!=='prep'?'disabled':''}>${s.locked?'❄ 已冻结':'冻结'}</button>${s.rewardPending?.tier?'<span class="native-reward-shop-hint">三合一奖励选择中 · 点击候选卡片预览，再次点击确认</span>':''}${g.handFull()?'<span class="native-reward-shop-hint is-over" title="召唤物卡、干员与装备一起占整备区格">整备区已满，暂不可购入干员／装备</span>':''}</div><div class="native-shop-cards">${shopCards(g,s)}</div></section></main>`;canvas=document.getElementById('native-canvas');syncPlayChrome();updateHud();fitWaveFaces();draw();renderModal();showRequired();
+ const g=state.game,s=g.s,turn=currentTurn(),rows=g.bonds();root.innerHTML=`<main class="native-game${s.phase==='battle'?' is-battle':''}${state.supplyCollapsed?' is-supply-collapsed':''}${state.sandbox?' is-sandbox':''}">${dossier()}<header class="native-top"><button data-act="home">‹ 大厅</button><strong>卫戍协议 / 盟约下半</strong><button class="native-mobile-info" data-act="field-info">战况 / 设置</button><button data-act="limits">已知差异</button><button data-act="branches">分支规则</button><button class="native-ban-entry" data-act="ban-list">禁用名单</button><button data-act="export">导出存档</button></header>${s.phase==='battle'&&!state.sandbox?battleBar():''}<div class="native-workspace"><aside class="native-bonds">${sortedBondRows(rows,s.bondLayers).map(([id,b])=>`<button data-act="bond-info" data-id="${id}" class="${b.active?'active':''}"><b>${data.season.bondInfoDict[id].name}</b><span>${b.count} / ${data.season.bondInfoDict[id].activeCount}</span><small>${data.season.bondInfoDict[id].noStack?'':(s.bondLayers[id]||0)+' 层'}</small></button>`).join('')||'<p>部署干员以激活盟约</p>'}</aside><section class="native-field"><div class="native-field-caption"><b>${state.sandbox?(s.phase==='battle'?'技能测试':'测试配置'):s.phase==='battle'?(turn.isBossTurn?'木桩测试':'自动作战'):s.phase==='prep'?'阵地休整':s.phase==='finished'?'模拟结束':'回合结算'}</b><span id="native-wave-progress">${s.units.filter(u=>u.position).length} / ${s.capacity} 部署</span></div><div class="native-terrain-legend" aria-label="地块图例">${terrainLegend(g.map)}</div><div class="native-board"><canvas id="native-canvas" tabindex="0" aria-label="战场棋盘，先选位置再拖动朝向确认"></canvas><span class="native-cost" title="战斗费用余额，与商店资金独立"><small>Cost 费用</small><output id="native-cost-balance" aria-label="战斗费用余额">—</output></span></div><div class="native-facing" ${state.preview?'':'hidden'}><span class="native-facing-tip">拖动选择朝向，松手确认；中心松手取消。</span>${[0,1,2,3].map((d)=>`<button data-act="aim" data-dir="${d}">${['→','↓','←','↑'][d]}</button>`).join('')}<button data-act="place-confirm">确认放置</button><button data-act="cancel">取消</button></div><div class="native-controls"><button data-act="fullscreen" hidden>打开全屏</button><button data-act="pause" ${s.phase!=='battle'?'disabled':''}>${state.paused?'继续':'暂停'}</button>${[1,2,4].map(n=>`<button data-act="speed" data-speed="${n}" class="${state.speed===n?'chosen':''}">${n}×</button>`).join('')}<button data-act="mute">${state.muted?'声音关':'声音开'}</button><label>音量 <input id="native-volume" aria-label="战斗音量" type="range" min="0" max="1" step="0.05" value="${state.volume}" style="width:72px"></label><button data-act="reduce-fx">${state.reduceFx?'动效少':'动效'}</button>${s.phase==='prep'?(state.sandbox?'<button class="native-primary" data-act="sandbox-start">开始测试 →</button>':'<button class="native-primary" data-act="start">准备完毕 →</button>'):s.phase==='intermission'?'<button class="native-primary" data-act="next">进入下一回合 →</button>':s.phase==='battle'&&turn.isBossTurn?'<button data-act="stop">结束木桩并播报伤害</button>':s.phase==='finished'?'<button data-act="result">查看伤害报告</button><button data-act="home">回到大厅</button>':''}</div><div class="native-bench-label${g.handFull()?' is-over':''}" id="native-hand-label">整备区 ${g.handLength()} / 10 ${g.handFull()?'<em class="native-hand-warn">已满，出售或部署清出空余后才能购买</em>':''}<span id="native-drop-hint" aria-live="polite">可将场上干员拖回此处；换位后重新选朝向</span></div><div class="native-bench" id="native-hand" aria-label="整备区">${s.units.filter(u=>!u.position).map(u=>`<button data-act="select" data-uid="${u.uid}" class="${state.selected===u.uid||inspectSame('unit',u.uid)?'chosen':''}">${avatar(u.charId)}<b>${esc(data.profiles[u.chessId].name)}</b>${data.profiles[u.chessId].isGolden?'<small>精锐</small>':''}</button>`).join('')}${s.items.map(i=>`<div role="button" tabindex="0" data-act="item" data-uid="${i.uid}" class="${state.item===i.uid||inspectSame('pack',i.uid)?'chosen':''}"><span class="native-item-icon">◇</span><b>${esc(itemName(i.chessId))}</b></div>`).join('')}</div></section><aside class="native-detail">${state.sandbox?sandboxDetail():waveIntel()}${detail()}<h3>${esc(data.common.bandDataDict[s.bandId].bandName)}</h3><p>${esc(plain(data.season.bandDataListDict[s.bandId].bandDesc))}</p><p>${turn.isBossTurn?'最终木桩：生命无限，防御0、法抗0，倒计时150秒。':'开局抽取三种特训词条；每档按难度预算从敌人池抽取，空池使用占位模板。'}</p><div id="native-combat-stats"></div></aside></div><div class="native-status" id="native-status"></div><section class="native-shop" id="native-supply-shop"><div><h2>调度中心 ${s.level}</h2><button class="native-supply-toggle" data-act="supply-toggle" aria-controls="native-supply-shop" aria-expanded="${!state.supplyCollapsed}">${state.supplyCollapsed?'展开商店 ▴':'收起商店 ▾'}</button><button data-act="upgrade" ${s.phase!=='prep'?'disabled':''}>升级 ${catOn()?'ALL':(g.terms().upgradeCost??'MAX')} ◆</button><button data-act="refresh" ${s.phase!=='prep'?'disabled':''}${s.forcedRefresh?` title="特殊刷新：此次刷新出现的干员优先为${esc(data.season.bondInfoDict[s.forcedRefresh.bond]?.name||'指定盟约')}干员"`:''}>${s.forcedRefresh?`特殊刷新${s.forcedRefresh.count>1?` ×${s.forcedRefresh.count}`:''}`:'刷新'} ${s.freeRefresh?'免费':catOn()?'ALL':'1 ◆'}</button>${catOn()?'<button data-act="stockview" title="查看各干员剩余库存">库存</button>':''}<button data-act="lock" ${s.phase!=='prep'?'disabled':''}>${s.locked?'❄ 已冻结':'冻结'}</button>${s.rewardPending?.tier?'<span class="native-reward-shop-hint">三合一奖励选择中 · 点击候选卡片预览，再次点击确认</span>':''}${g.handFull()?'<span class="native-reward-shop-hint is-over" title="召唤物卡、干员与装备一起占整备区格">整备区已满，暂不可购入干员／装备</span>':''}</div><div class="native-shop-cards">${shopCards(g,s)}</div></section></main>`;canvas=document.getElementById('native-canvas');syncPlayChrome();updateHud();fitWaveFaces();draw();renderModal();showRequired();
  }finally{painting=false;paint325();}
 }
 function waveIntel(){
@@ -459,18 +461,168 @@ function dismissInspectOnOutsidePress(e){
  return false;
 }
 
+// 地块图例：基础项常驻，特殊地块与地图装置按**当前地图真实出现**的补进去（PRTS 战场一览逐图标注）。
+function terrainLegend(map){
+ const tiles=new Set(),devices=new Set();
+ for(let y=0;y<map.rows;y++)for(let x=0;x<map.cols;x++){const t=map.grid[y][x];if(t.tileKey)tiles.add(t.tileKey);if(t.device)devices.add(t.device);}
+ const items=[['terrain-high','高台'],['terrain-ground','可部署地面'],['terrain-isolated','隔离平台'],['terrain-corridor','可通行通道'],['terrain-blocked','阻隔工事'],['terrain-entry','敌方入口'],['terrain-goal','防守目标']];
+ const special=[];
+ if(tiles.has('tile_deepsea'))special.push(['terrain-water','深水区（不可部署）']);
+ if(tiles.has('tile_mire'))special.push(['terrain-mire','沼泽地段']);
+ if(tiles.has('tile_infection'))special.push(['terrain-originium','活性源石']);
+ if(tiles.has('tile_smog'))special.push(['terrain-vent','排气格栅']);
+ if(map.environment?.blower)special.push(['terrain-wind','源石流气流']);
+ if(devices.has('trap_040_canoe'))special.push(['terrain-platform','特制水上平台']);
+ if(devices.has('trap_032_mound'))special.push(['terrain-mound','土石结构（挡沙尘暴）']);
+ if(devices.has('trap_1107_acblock'))special.push(['terrain-sealed','封印的地面']);
+ if(devices.has('trap_1106_achplat'))special.push(['terrain-achplat','射击台']);
+ if(devices.has('trap_218_fttree'))special.push(['terrain-bush','树丛']);
+ return [...items,...special].map(([cls,label])=>`<span><i class="${cls}"></i>${label}</span>`).join('');
+}
+// ── 特殊地块与地图装置的画法 ────────────────────────────────────────────────
+// PRTS《卫戍协议：盟约 下半/战场一览》逐张战场标注的地块与装置：深水区、沼泽地段、活性源石、
+// 排气格栅、源石流发生装置（气流）、特制水上平台、土石结构、封印的地面、射击台、树丛。
+// 这里只负责画：效果判定全在 native-environment.js，装置位置由 build-protocol 按裁切换算。
+// 动画用 performance.now()：地块氛围（水波/光晕/气泡/气流）不参与结算，也不随暂停停住。
+const TERRAIN_STYLE={tile_deepsea:'water',tile_mire:'mire',tile_infection:'originium',tile_smog:'vent'};
+const TERRAIN_TAG={water:'深水',mire:'沼泽',originium:'源石',vent:'格栅'};
+// 特殊地块的文字角标（和「高台／隔离／通道」同一套位置与字号）。
+function terrainTag(c,px,py,w,h,text,color){c.fillStyle=color;c.textAlign='left';c.font='9px sans-serif';c.fillText(text,px+4,py+h-4);}
+// 深水区（#05/#08，涨潮控制）：不可部署、敌方每秒受 40 真实伤害并降攻速移速（判定在环境层）。
+function drawWaterTile(c,px,py,w,h,now){
+ const g=c.createLinearGradient(px,py,px,py+h);g.addColorStop(0,'#123c52');g.addColorStop(1,'#0a2233');
+ c.fillStyle=g;c.fillRect(px,py,w,h);c.strokeStyle='#2f7f9d';c.lineWidth=1;c.strokeRect(px+.5,py+.5,w-1,h-1);
+ c.strokeStyle='#63d3ee66';
+ for(let i=0;i<2;i++){const yy=py+3+(((now*.3+i*.5)%1))*(h-6);c.beginPath();c.moveTo(px+3,yy);c.quadraticCurveTo(px+w*.5,yy-3,px+w-3,yy);c.stroke();}
+ terrainTag(c,px,py,w,h,TERRAIN_TAG.water,'#8fd8ee99');
+}
+// 沼泽地段（#06）：每 3 秒叠一层攻速/移速 -5%，离开清空（判定在环境层）。
+function drawMireTile(c,px,py,w,h,now){
+ const g=c.createLinearGradient(px,py,px,py+h);g.addColorStop(0,'#2b3a24');g.addColorStop(1,'#16210f');
+ c.fillStyle=g;c.fillRect(px,py,w,h);c.strokeStyle='#5d7a44';c.lineWidth=1;c.strokeRect(px+.5,py+.5,w-1,h-1);
+ c.strokeStyle='#9fbf7855';c.beginPath();c.moveTo(px+3,py+h*.55);c.quadraticCurveTo(px+w*.35,py+h*.42,px+w*.6,py+h*.58);c.quadraticCurveTo(px+w*.8,py+h*.7,px+w-3,py+h*.5);c.stroke();
+ c.fillStyle='#b6d68a88';
+ for(let i=0;i<2;i++){const t=(now*.5+i*.5)%1,r=1+t*2.2;c.globalAlpha=.55*(1-t);c.beginPath();c.arc(px+w*(.3+i*.38),py+h*(.4+i*.2),r,0,Math.PI*2);c.fill();}
+ c.globalAlpha=1;terrainTag(c,px,py,w,h,TERRAIN_TAG.mire,'#c8e6a099');
+}
+// 活性源石（#04）：站在上面每秒 70 真实伤害、攻击力 +20%、攻速 +20（判定在环境层）。
+function drawOriginiumTile(c,px,py,w,h,now){
+ c.fillStyle='#241a26';c.fillRect(px,py,w,h);
+ const pulse=.45+.55*Math.abs(Math.sin(now*1.6));
+ const g=c.createRadialGradient(px+w*.5,py+h*.5,1,px+w*.5,py+h*.5,Math.max(w,h)*.7);
+ g.addColorStop(0,`rgba(255,138,64,${.38+.28*pulse})`);g.addColorStop(1,'rgba(84,30,40,0)');
+ c.fillStyle=g;c.fillRect(px,py,w,h);
+ c.fillStyle=`rgba(255,180,90,${.7+.3*pulse})`;
+ for(const [fx,fy,sc] of [[.3,.34,.3],[.62,.5,.42],[.46,.72,.26]]){
+  c.beginPath();c.moveTo(px+w*fx,py+h*(fy-sc*.5));c.lineTo(px+w*(fx+sc*.26),py+h*(fy+sc*.12));c.lineTo(px+w*fx,py+h*(fy+sc*.5));c.lineTo(px+w*(fx-sc*.26),py+h*(fy+sc*.12));c.closePath();c.fill();
+ }
+ c.strokeStyle='#a4491f';c.lineWidth=1;c.strokeRect(px+.5,py+.5,w-1,h-1);
+ terrainTag(c,px,py,w,h,TERRAIN_TAG.originium,'#ffc08a');
+}
+// 排气格栅（#07）：置于其中的干员不会成为敌军远程攻击的目标（判定在敌方索敌里）。
+function drawVentTile(c,px,py,w,h,now){
+ c.fillStyle='#2b3238';c.fillRect(px,py,w,h);c.strokeStyle='#98a6ae';c.lineWidth=1;c.strokeRect(px+.5,py+.5,w-1,h-1);
+ c.strokeStyle='#141c21';c.lineWidth=2;
+ for(let i=1;i<=3;i++){const yy=py+h*i/4;c.beginPath();c.moveTo(px+3,yy);c.lineTo(px+w-3,yy);c.stroke();}
+ c.strokeStyle='#c9d6dc';c.lineWidth=1;
+ for(let i=1;i<=3;i++){const yy=py+h*i/4-2;c.beginPath();c.moveTo(px+3,yy);c.lineTo(px+w-3,yy);c.stroke();}
+ c.fillStyle=`rgba(180,200,210,${.25+.25*Math.abs(Math.sin(now*.8))})`;c.fillRect(px+3,py+h-4,w-6,2);
+ terrainTag(c,px,py,w,h,TERRAIN_TAG.vent,'#d7e3e9');
+}
+// 地图装置画在地块之上：源石流发生装置、特制水上平台、土石结构、封印的地面、射击台、树丛。
+function drawDeviceGlyph(c,t,px,py,w,h,direction){
+ const id=t.device,cx=px+w/2,cy=py+h/2,s=Math.min(w,h);
+ if(id==='trap_013_blower'){
+  c.fillStyle='#3d4a52';c.beginPath();c.arc(cx,cy,s*.3,0,Math.PI*2);c.fill();
+  c.strokeStyle='#f0d18a';c.lineWidth=1.6;
+  for(let i=0;i<3;i++){const a=i*Math.PI*2/3;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+Math.cos(a)*s*.26,cy+Math.sin(a)*s*.26);c.stroke();}
+  const [dx,dy]=directionOf(direction);
+  c.strokeStyle='#8fe6ff';c.lineWidth=2;c.beginPath();c.moveTo(cx+dx*s*.3,cy+dy*s*.3);c.lineTo(cx+dx*s*.52,cy+dy*s*.52);c.stroke();
+  c.fillStyle='#bff0ff';c.font='9px sans-serif';c.textAlign='left';c.fillText('气流',px+3,py+10);
+ }
+ else if(id==='trap_040_canoe'){
+  c.fillStyle='#7a5a33';c.fillRect(px+1,py+1,w-2,h-2);c.fillStyle='#9c7442';
+  for(let i=2;i<w-4;i+=6)c.fillRect(px+i,py+2,3,h-4);
+  c.strokeStyle='#d8b071';c.lineWidth=1;c.strokeRect(px+1.5,py+1.5,w-3,h-3);
+  terrainTag(c,px,py,w,h,'平台','#ffe3b0');
+ }
+ else if(id==='trap_032_mound'){
+  c.fillStyle='#6b6154';c.beginPath();c.moveTo(px+2,py+h-2);c.lineTo(px+w*.4,py+3);c.lineTo(px+w*.7,py+h-3);c.closePath();c.fill();
+  c.fillStyle='#877c6b';c.beginPath();c.moveTo(px+w*.45,py+h-2);c.lineTo(px+w*.75,py+5);c.lineTo(px+w-2,py+h-2);c.closePath();c.fill();
+  terrainTag(c,px,py,w,h,'掩体','#efe0c4');
+ }
+ else if(id==='trap_1107_acblock'){
+  c.fillStyle='#161f24';c.fillRect(px,py,w,h);c.strokeStyle='#7c8a90';c.lineWidth=1.4;
+  c.beginPath();c.moveTo(px+3,py+3);c.lineTo(px+w-3,py+h-3);c.moveTo(px+w-3,py+3);c.lineTo(px+3,py+h-3);c.stroke();
+  c.strokeRect(px+1.5,py+1.5,w-3,h-3);terrainTag(c,px,py,w,h,'封印','#b9c7cd');
+ }
+ else if(id==='trap_1106_achplat'){
+  c.strokeStyle='#e7d7a8';c.lineWidth=1.6;
+  for(const [sx,sy] of [[1,1],[-1,1],[1,-1],[-1,-1]]){const x=sx>0?px+2:px+w-2,y=sy>0?py+2:py+h-2;c.beginPath();c.moveTo(x+sx*5,y);c.lineTo(x,y);c.lineTo(x,y+sy*5);c.stroke();}
+  terrainTag(c,px,py,w,h,'射击台','#f2e3b6');
+ }
+ else if(id==='trap_218_fttree'){
+  c.fillStyle='#4a3a24';c.fillRect(cx-1.5,cy,3,h*.3);
+  c.fillStyle='#2f6b3c';c.beginPath();c.moveTo(cx,py+2);c.lineTo(cx+s*.3,cy+s*.2);c.lineTo(cx-s*.3,cy+s*.2);c.closePath();c.fill();
+  terrainTag(c,px,py,w,h,'树丛','#a9dfb4');
+ }
+}
+// 气流：在装置正前方 3 格画流动的人字箭头（画面只表示方向，数值在环境层）。
+function drawWindCells(c,z,map,now){
+ if(!map.environment?.blower)return;
+ for(const cell of blowerCells(map).values()){
+  const px=z.ox+cell.x*z.tw+2,py=z.oy+cell.y*z.th+2,w=z.tw-4,h=z.th-4,cx=px+w/2,cy=py+h/2;
+  c.save();c.strokeStyle='#8fe6ff';
+  for(let i=0;i<2;i++){
+   const t=((now*1.4+i*.5+((cell.x*7+cell.y*3)%10)/10)%1),alpha=.15+.5*(1-Math.abs(t-.5)*2);
+   c.globalAlpha=alpha;c.lineWidth=1.8;
+   const ox=cx+cell.dx*(t-.5)*w*.8,oy=cy+cell.dy*(t-.5)*h*.8;
+   c.beginPath();
+   c.moveTo(ox-cell.dx*5-cell.dy*4,oy-cell.dy*5-cell.dx*4);
+   c.lineTo(ox,oy);
+   c.lineTo(ox-cell.dx*5+cell.dy*4,oy-cell.dy*5+cell.dx*4);
+   c.stroke();
+  }
+  c.restore();
+ }
+}
+// 站在特殊地块上的单位角标：让「地块效果生效了没有」一眼可见（配色与图例一致）。
+function drawTerrainBadges(c,p,u,size){
+ const badges=[];
+ if(u.originium)badges.push({text:'源石',color:'#ffb066'});
+ if(u.mireStacks>0)badges.push({text:'沼泽×'+u.mireStacks,color:'#b8dc8a'});
+ if(u.windAtkRatio)badges.push({text:`气流${u.windAtkRatio>0?'+':''}${Math.round(u.windAtkRatio*100)}%`,color:'#8fe6ff'});
+ else if(u.windMove&&(u.envMoveScale??1)!==1)badges.push({text:`气流${u.envMoveScale>1?'+':''}${Math.round((u.envMoveScale-1)*100)}%`,color:'#8fe6ff'});
+ if(u.vented)badges.push({text:'格栅',color:'#d7e3e9'});
+ if(!badges.length)return;
+ c.font='bold 9px sans-serif';c.textAlign='left';
+ let x=p.x-size*.62,y=p.y-size*.95;
+ for(const badge of badges.slice(0,2)){
+  const w=c.measureText(badge.text).width+6;
+  c.fillStyle='#08161ad0';c.fillRect(x,y-8,w,10);
+  c.strokeStyle=badge.color;c.lineWidth=1;c.strokeRect(x+.5,y-7.5,w-1,9);
+  c.fillStyle=badge.color;c.fillText(badge.text,x+3,y);
+  x+=w+3;
+ }
+}
 function drawTerrain(c,z,map){
+ const now=performance.now()/1000;
  for(let y=0;y<map.rows;y++)for(let x=0;x<map.cols;x++){
   const t=map.grid[y][x];if(t.zone)continue;const px=z.ox+x*z.tw+2,py=z.oy+y*z.th+2,w=z.tw-4,h=z.th-4,lift=tileLift(t,z),entry=t.tileKey.startsWith('tile_start'),goal=t.tileKey.startsWith('tile_end'),blocked=!!t.obstacle,fenced=isolatedPlatform(t),corridor=t.buildableType==='NONE'&&t.passableMask!=='NONE'&&!blocked;
   c.fillStyle='#071216';c.fillRect(px,py+3,w,h);
   if(lift&&!blocked){const top=c.createLinearGradient(px,py,px+w,py+h-lift);top.addColorStop(0,'#a4b7bd');top.addColorStop(1,'#718b98');c.fillStyle=top;c.fillRect(px,py,w,h-lift);c.fillStyle='#314c5c';c.fillRect(px,py+h-lift,w,lift);c.strokeStyle='#d7e5e9';c.lineWidth=1.2;c.strokeRect(px+.5,py+.5,w-1,h-lift-1);c.strokeStyle='#182e3b';c.beginPath();c.moveTo(px,py+h);c.lineTo(px+w,py+h);c.stroke();c.fillStyle='#dce8eb';c.font=Math.max(8,Math.min(10,z.tw*.16))+'px sans-serif';c.textAlign='right';c.fillText('高台',px+w-3,py+h-2);}
-  else{const top=c.createLinearGradient(px,py,px,py+h);top.addColorStop(0,entry?'#824537':goal?'#356c7b':blocked?'#1a282e':corridor?'#1b4e59':'#42565b');top.addColorStop(1,entry?'#49291f':goal?'#203e4d':blocked?'#121e24':corridor?'#102d36':'#2a3c42');c.fillStyle=top;c.fillRect(px,py,w,h);c.strokeStyle=entry?'#ffad7c':goal?'#8bdcea':blocked?'#36464d':corridor?'#63dce4':'#61767b';c.lineWidth=entry||goal||corridor?1.5:.8;c.strokeRect(px+.5,py+.5,w-1,h-1);
-   if(blocked){c.save();c.beginPath();c.rect(px,py,w,h);c.clip();c.strokeStyle='#69828a22';c.lineWidth=1;for(let i=-h;i<w;i+=10){c.beginPath();c.moveTo(px+i,py+h);c.lineTo(px+i+h,py);c.stroke();}c.restore();c.fillStyle='#607780';c.font=Math.max(9,Math.min(13,z.tw*.22))+'px sans-serif';c.textAlign='center';c.fillText('工事',px+w/2,py+h/2+4);}
-   else if(entry||goal){c.fillStyle=entry?'#ffc39b':'#b8f1fb';c.textAlign='center';c.font='bold '+Math.max(9,Math.min(14,z.tw*.24))+'px sans-serif';c.fillText(entry?'入口':'目标',px+w/2,py+h/2+4);}
-   else if(fenced){c.strokeStyle='#c9a575';c.lineWidth=1.6;c.strokeRect(px+.5,py+.5,w-1,h-1);c.strokeStyle='#a8875b';c.lineWidth=1;for(let i=5;i<w-3;i+=6){c.beginPath();c.moveTo(px+i,py+1);c.lineTo(px+i,py+3.5);c.moveTo(px+i,py+h-1);c.lineTo(px+i,py+h-3.5);c.stroke();}for(let i=5;i<h-3;i+=6){c.beginPath();c.moveTo(px+1,py+i);c.lineTo(px+3.5,py+i);c.moveTo(px+w-1,py+i);c.lineTo(px+w-3.5,py+i);c.stroke();}c.fillStyle='#e6cfa4';c.textAlign='left';c.font='9px sans-serif';c.fillText('隔离',px+4,py+h-4);}
-   else{c.strokeStyle=corridor?'#8beaf055':'#91a6ac50';c.lineWidth=1;for(const [cx,cy,sx,sy]of [[px+3,py+3,1,1],[px+w-3,py+3,-1,1],[px+3,py+h-3,1,-1],[px+w-3,py+h-3,-1,-1]]){c.beginPath();c.moveTo(cx+sx*4,cy);c.lineTo(cx,cy);c.lineTo(cx,cy+sy*4);c.stroke();}if(corridor){c.save();c.beginPath();c.rect(px,py,w,h);c.clip();c.strokeStyle='#8beaf033';c.lineWidth=1;for(let i=-h;i<w;i+=8){c.beginPath();c.moveTo(px+i,py+h);c.lineTo(px+i+h,py);c.stroke();}c.restore();}c.fillStyle=corridor?'#a9f4f0b8':'#a6b7b966';c.textAlign='left';c.font='9px sans-serif';c.fillText(corridor?'通道':'地',px+4,py+h-4);}
+  else{const special=TERRAIN_STYLE[t.tileKey];
+   if(special){if(special==='water')drawWaterTile(c,px,py,w,h,now);else if(special==='mire')drawMireTile(c,px,py,w,h,now);else if(special==='originium')drawOriginiumTile(c,px,py,w,h,now);else drawVentTile(c,px,py,w,h,now);}
+   else{const top=c.createLinearGradient(px,py,px,py+h);top.addColorStop(0,entry?'#824537':goal?'#356c7b':blocked?'#1a282e':corridor?'#1b4e59':'#42565b');top.addColorStop(1,entry?'#49291f':goal?'#203e4d':blocked?'#121e24':corridor?'#102d36':'#2a3c42');c.fillStyle=top;c.fillRect(px,py,w,h);c.strokeStyle=entry?'#ffad7c':goal?'#8bdcea':blocked?'#36464d':corridor?'#63dce4':'#61767b';c.lineWidth=entry||goal||corridor?1.5:.8;c.strokeRect(px+.5,py+.5,w-1,h-1);
+    if(blocked){c.save();c.beginPath();c.rect(px,py,w,h);c.clip();c.strokeStyle='#69828a22';c.lineWidth=1;for(let i=-h;i<w;i+=10){c.beginPath();c.moveTo(px+i,py+h);c.lineTo(px+i+h,py);c.stroke();}c.restore();c.fillStyle='#607780';c.font=Math.max(9,Math.min(13,z.tw*.22))+'px sans-serif';c.textAlign='center';c.fillText('工事',px+w/2,py+h/2+4);}
+    else if(entry||goal){c.fillStyle=entry?'#ffc39b':'#b8f1fb';c.textAlign='center';c.font='bold '+Math.max(9,Math.min(14,z.tw*.24))+'px sans-serif';c.fillText(entry?'入口':'目标',px+w/2,py+h/2+4);}
+    else if(fenced){c.strokeStyle='#c9a575';c.lineWidth=1.6;c.strokeRect(px+.5,py+.5,w-1,h-1);c.strokeStyle='#a8875b';c.lineWidth=1;for(let i=5;i<w-3;i+=6){c.beginPath();c.moveTo(px+i,py+1);c.lineTo(px+i,py+3.5);c.moveTo(px+i,py+h-1);c.lineTo(px+i,py+h-3.5);c.stroke();}for(let i=5;i<h-3;i+=6){c.beginPath();c.moveTo(px+1,py+i);c.lineTo(px+3.5,py+i);c.moveTo(px+w-1,py+i);c.lineTo(px+w-3.5,py+i);c.stroke();}c.fillStyle='#e6cfa4';c.textAlign='left';c.font='9px sans-serif';c.fillText('隔离',px+4,py+h-4);}
+    else{c.strokeStyle=corridor?'#8beaf055':'#91a6ac50';c.lineWidth=1;for(const [cx,cy,sx,sy]of [[px+3,py+3,1,1],[px+w-3,py+3,-1,1],[px+3,py+h-3,1,-1],[px+w-3,py+h-3,-1,-1]]){c.beginPath();c.moveTo(cx+sx*4,cy);c.lineTo(cx,cy);c.lineTo(cx,cy+sy*4);c.stroke();}if(corridor){c.save();c.beginPath();c.rect(px,py,w,h);c.clip();c.strokeStyle='#8beaf033';c.lineWidth=1;for(let i=-h;i<w;i+=8){c.beginPath();c.moveTo(px+i,py+h);c.lineTo(px+i+h,py);c.stroke();}c.restore();}c.fillStyle=corridor?'#a9f4f0b8':'#a6b7b966';c.textAlign='left';c.font='9px sans-serif';c.fillText(corridor?'通道':'地',px+4,py+h-4);}
+   }
+   if(t.device)drawDeviceGlyph(c,t,px,py,w,h,t.direction);
   }
  }
+ drawWindCells(c,z,map,now);
  c.font='9px monospace';c.textAlign='center';c.fillStyle='#a7bebc';for(let x=map.viewport.left;x<=map.viewport.right;x++)c.fillText(String.fromCharCode(65+x),z.ox+(x+.5)*z.tw,z.oy-5);for(let y=map.viewport.top;y<=map.viewport.bottom;y++)c.fillText(canvasNumber(y+1),Math.max(8,z.ox+map.viewport.left*z.tw-10),z.oy+(y+.5)*z.th+3);
 }
 function draw(){
@@ -511,7 +663,7 @@ function draw(){
   if(u.hp!==undefined&&u.deployed){c.fillStyle='#122022';c.fillRect(p.x-size/2,p.y+size*.35,size,4);c.fillStyle='#75d9aa';c.fillRect(p.x-size/2,p.y+size*.35,size*Math.max(0,u.hp/u.maxHp),4);}
   const sk=profile(u)?.skill,cost=g.battle&&u.sp!==undefined?g.battle.spCost(u):sk?.spData?.spCost||0,fill=spBarFill(u,sk,cost);if(fill&&u.deployed){const bx=p.x-size/2,by=p.y+size*.35+(u.hp!==undefined?6:0);if(fill.kind==='ammo'){const n=fill.cells,gap=1,cw=Math.max(1,(size-(n-1)*gap)/n);for(let i=0;i<n;i++){c.fillStyle='#122022';c.fillRect(bx+i*(cw+gap),by,cw,4);if(i<fill.filled){c.fillStyle='#f4d38b';c.fillRect(bx+i*(cw+gap),by,cw,4);}}}else{c.fillStyle='#122022';c.fillRect(bx,by,size,3);c.fillStyle=fill.on?'#f4d38b':fill.ready?'#f0d18a':'#7bbaf3';c.fillRect(bx,by,size*fill.ratio,3);}}
   if(u.dollForm){c.fillStyle='#d6b5ff';c.font='bold 11px sans-serif';c.textAlign='center';c.fillText('替身 '+Math.max(0,Math.ceil(u.dollForm.until-(g.battle?.s.time||0)))+'s',p.x,p.y-size*.86);}
-  if(g.battle)drawStatuses(c,p.x,p.y,u,size);if(down)drawDownRing(c,p,u,size,eggOn()?{formatNumber:format325}:undefined);
+  if(g.battle)drawStatuses(c,p.x,p.y,u,size);if(g.battle)drawTerrainBadges(c,p,u,size);if(down)drawDownRing(c,p,u,size,eggOn()?{formatNumber:format325}:undefined);
   });
  }
  if(g.battle&&battleBoardVisible(g.s.phase))for(const s of g.battle.s.summons||[]){
@@ -527,7 +679,7 @@ function draw(){
   c.fillStyle='#e9fff7';c.font='10px sans-serif';c.textAlign='center';c.fillText(s.name||s.type,p.x,p.y-size*.65);
   });
  }
- if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),sprite=enemySprite(e),size=z.tw*.55*sprite.scale,im=formTintedImage(img(sprite.key),sprite.tint&&!state.reduceFx?sprite.tint:null);if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);drawFrostOverlay(c,e,{x:p.x-20,y:p.y-20,w:40,h:40},{reduceFx:state.reduceFx});}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{drawElementRing(c,p.x,p.y-(e.flying?15:0),e,size);drawFrostOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx});drawConcealOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx,time:g.battle.s.time,image:im});c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);});}if(g.battle.s.whitwEyes?.some(x=>x.targetUid===e.uid)){const y=p.y-size*.8-(e.flying?15:0);c.save();c.strokeStyle='#ff4f5e';c.fillStyle='#ff4f5e';c.lineWidth=2;c.beginPath();c.ellipse(p.x,y,7,4.5,0,0,Math.PI*2);c.stroke();c.beginPath();c.arc(p.x,y,2,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(p.x-11,y);c.lineTo(p.x-8,y);c.moveTo(p.x+8,y);c.lineTo(p.x+11,y);c.stroke();c.restore();}}
+ if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),sprite=enemySprite(e),size=z.tw*.55*sprite.scale,im=formTintedImage(img(sprite.key),sprite.tint&&!state.reduceFx?sprite.tint:null);if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);drawFrostOverlay(c,e,{x:p.x-20,y:p.y-20,w:40,h:40},{reduceFx:state.reduceFx});}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{drawElementRing(c,p.x,p.y-(e.flying?15:0),e,size);drawFrostOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx});drawConcealOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx,time:g.battle.s.time,image:im});c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);drawTerrainBadges(c,{x:p.x,y:p.y-(e.flying?15:0)},e,size);});}if(g.battle.s.whitwEyes?.some(x=>x.targetUid===e.uid)){const y=p.y-size*.8-(e.flying?15:0);c.save();c.strokeStyle='#ff4f5e';c.fillStyle='#ff4f5e';c.lineWidth=2;c.beginPath();c.ellipse(p.x,y,7,4.5,0,0,Math.PI*2);c.stroke();c.beginPath();c.arc(p.x,y,2,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(p.x-11,y);c.lineTo(p.x-8,y);c.moveTo(p.x+8,y);c.lineTo(p.x+11,y);c.stroke();c.restore();}}
  if(g.battle)drawWhitwEyes(c,point,z,g.battle,{reduceFx:state.reduceFx});
  if(g.battle&&g.s.phase==='battle')drawFx(c,point,z,g.battle,{reduceFx:state.reduceFx,formatText:eggOn()?rewrite325Text:null});
   if(drag?.moved&&overCanvas(drag.x,drag.y)){const cell=cellAt(drag.x,drag.y);if(g.map.grid[cell.y]?.[cell.x]){const can=drag.kind==='summon-card'?g.canDeploySummonCard(drag.uid,cell.x,cell.y):g.canDeploy(drag.uid,cell.x,cell.y);c.strokeStyle=can?'#78f1bd':'#f88c78';c.lineWidth=3;c.strokeRect(z.ox+cell.x*z.tw+2,z.oy+cell.y*z.th+2,z.tw-4,z.th-4);}}

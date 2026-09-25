@@ -1,7 +1,7 @@
 import {bountyOption} from './native-bounty.js';
 import {spawnMineCamp,toggleMineCamp,mineCampReady,spawnMiner,tickMiners} from './native-miner.js';
 import {advanceEnemyShift} from './native-shift.js';
-import {heatedByBrazier,atBrazierWindDoor,paintDominion,dominionCell,tickDeepWater,tickSandStorm} from './native-environment.js';
+import {heatedByBrazier,atBrazierWindDoor,paintDominion,dominionCell,tickDeepWater,tickSandStorm,tickTerrainEffects} from './native-environment.js';
 import {tickEnemyParasites,parasiteElementMultiplier,spreadParasiteElement,detachEnemyParasites} from './native-enemy-parasite.js';
 import {advanceEnemyFear} from './native-enemy-fear.js';
 import {initEnemyTransport,tickEnemyTransport,syncPassengerPositions,unloadEnemyTransport} from './native-enemy-transport.js';
@@ -86,7 +86,7 @@ export class NativeBattle {
  enemyOutgoingDamageMultiplier(enemy){return enemy?.id==='enemy_1509_mousek'&&enemy.hp>0&&enemy.hp<enemy.maxHp*Number(enemy.enemyTalent['enrage.hp_ratio'])?Number(enemy.enemyTalent['enrage.damage_scale']):1;}
  dominionAttackSpeed(actor){return actor.deployed&&actor.hp>0&&!actor.hidden?dominionCell(this,actor)?.attackSpeed||0:0;}
  onActorMoved(actor){paintDominion(this,actor);}
- enemyAttackTiming(e){return attackTiming(Math.max(.1,e.interval+(e.attackIntervalMod||0)),Math.max(10,Math.min(600,(e.attackSpeed+enemyConditionalAttackSpeed(e)+(e.attackSpeedMod||0)+(e.operatorAttackSpeedMod||0)+enemyWineBuffs(this,e).attackSpeed+statusAttributeChanges(e).attackSpeed)*(e.waterAttackSpeedScale??1))),windupSeconds(Math.max(.1,e.interval+(e.attackIntervalMod||0))));}
+ enemyAttackTiming(e){return attackTiming(Math.max(.1,e.interval+(e.attackIntervalMod||0)),Math.max(10,Math.min(600,(e.attackSpeed+enemyConditionalAttackSpeed(e)+(e.attackSpeedMod||0)+(e.operatorAttackSpeedMod||0)+enemyWineBuffs(this,e).attackSpeed+statusAttributeChanges(e).attackSpeed+(e.envAttackSpeed||0))*(e.waterAttackSpeedScale??1)*(e.envAttackSpeedScale??1))),windupSeconds(Math.max(.1,e.interval+(e.attackIntervalMod||0))));}
  enemyAttackDamage(enemy,scale=1,target=null){return enemy.atk*scale*yinYangAttackScale(enemy,target)*(enemy.id==='enemy_2048_smgrd'&&dominionCell(this,target)?Number(enemy.enemyTalent['DamageUp.atk_scale']):1)*enemyConditionalAttackMultiplier(enemy,target)*(enemy.waterAttackMultiplier??1)*(1+Math.min(0,statusAttributeChanges(enemy).attack||0));}
  enemyDamageDealt(enemy,opts,result){enemyTraitDamageDealt(this,enemy,result);}
  liberatePrisoners(){liberateEnemyPrisoners(this);}
@@ -218,9 +218,9 @@ export class NativeBattle {
  on(id){return !!this.rows[id]?.active;}
  stats(u){
   const mouseSandScale=(u.statuses||[]).filter(s=>s.kind==='mouseSandWeak').reduce((v,s)=>Math.min(v,s.value),1);
-  if(u.kind==='summon')return {...u,atk:u.atk*(1+(u.sandAttackRatio||0))*mouseSandScale,attackSpeed:Math.max(10,Math.min(600,u.attackSpeed+this.dominionAttackSpeed(u))),magicResistance:u.res||0,tauntLevel:u.neutral?u.taunt||0:0,parts:[]};
+  if(u.kind==='summon')return {...u,atk:u.atk*(1+(u.sandAttackRatio||0)+(u.envAtkRatio||0))*mouseSandScale,attackSpeed:Math.max(10,Math.min(600,(u.attackSpeed+this.dominionAttackSpeed(u)+(u.envAttackSpeed||0))*(u.envAttackSpeedScale??1))),magicResistance:u.res||0,tauntLevel:u.neutral?u.taunt||0:0,parts:[]};
   const p=this.profile(u),base={...p.attributes},l=this.layers,has=id=>this.on(id)&&this.owns(u,id),parts=[];
-  let atk=u.sandAttackRatio||0,hp=0,def=0,as=0;const muls={atk:[],maxHp:[],def:[]};
+  let atk=(u.sandAttackRatio||0)+(u.envAtkRatio||0),hp=0,def=0,as=0;const muls={atk:[],maxHp:[],def:[]};
   const note=(stat,layer,v,src)=>{if(v)parts.push({stat,layer,v,src});};
   const ratio=(stat,v,src)=>{if(!v)return;if(src.startsWith('盟约')||src.startsWith('策略')||src==='装备'||src==='部署加攻'||src==='击倒加攻'){muls[stat].push(1+v);note(stat,'mul',1+v,src);return;}if(stat==='atk')atk+=v;else if(stat==='maxHp')hp+=v;else def+=v;note(stat,'ratio',v,src);};
   const mul=(stat,v,src)=>{if(!Number.isFinite(v)||v===1)return;muls[stat].push(v);note(stat,'mul',v,src);};
@@ -314,7 +314,7 @@ export class NativeBattle {
   for(const e of this.economy.s.operatorModifiers||[])for(const[k,v]of Object.entries(blackboard(e.blackboard))){const key={max_hp:'maxHp',atk:'atk',def:'def'}[k];if(key)mul(key,v,'全局修正');}
   const extra=effectStatMods(this,u);atk+=extra.ratio.atk||0;hp+=extra.ratio.maxHp||0;def+=extra.ratio.def||0;as+=extra.attackSpeed;base.magicResistance+=(extra.magicResistance||0)+(extra.add.magicResistance||0);base.spRecoveryPerSec+=extra.spRecoveryPerSec;base.blockCnt=Math.max(0,(base.blockCnt||0)+(extra.add.blockCnt||0));base.tauntLevel=(base.tauntLevel||0)+(extra.add.tauntLevel||0);parts.push(...extra.parts);
   const skillBlackboard=(u.skillLeft>0||u.ammo>0)?blackboard(p.skill?.blackboard):{};if(Object.hasOwn(skillBlackboard,'block_cnt')){const value=Number(skillBlackboard.block_cnt)||0;base.blockCnt=Math.max(0,/阻挡数[^，；。\n]*\+/.test(p.skill?.description||'')?base.blockCnt+value:value);}base.tauntLevel+=(skillBlackboard.taunt_level??0);
-  const a={...base,atk:combineStat(base.atk,extra.add.atk||0,atk,muls.atk,(extra.finalAdd.atk||0)+(u.egirBorrowAtk||0)),maxHp:combineStat(base.maxHp,extra.add.maxHp||0,hp,muls.maxHp,extra.finalAdd.maxHp||0),def:combineStat(base.def,extra.add.def||0,def,muls.def,extra.finalAdd.def||0),attackSpeed:Math.max(10,Math.min(600,base.attackSpeed+as+(u.enemyAttackSpeedMod||0)+this.dominionAttackSpeed(u))),parts};
+  const a={...base,atk:combineStat(base.atk,extra.add.atk||0,atk,muls.atk,(extra.finalAdd.atk||0)+(u.egirBorrowAtk||0)),maxHp:combineStat(base.maxHp,extra.add.maxHp||0,hp,muls.maxHp,extra.finalAdd.maxHp||0),def:combineStat(base.def,extra.add.def||0,def,muls.def,extra.finalAdd.def||0),attackSpeed:Math.max(10,Math.min(600,(base.attackSpeed+as+(u.enemyAttackSpeedMod||0)+(u.envAttackSpeed||0)+this.dominionAttackSpeed(u))*(u.envAttackSpeedScale??1))),parts};
   a.blockCnt+=u.egirBorrowBlock||0;if(u.dollForm){const t=branchTrait(p).values;a.blockCnt=0;a.atk*=1+Number(t.atk||0);a.maxHp*=1+Number(t.max_hp||0);}
   a.respawnTime*=u.sandRespawnMultiplier??1;a.def=Math.max(0,a.def-(u.corrosionDefLoss||0));
   a.atk*=mouseSandScale;return a;
@@ -750,7 +750,7 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
   }
   step(){
   if(this.s.finished)return;if(this.s.settle.fault)throw Error('战斗结算异常');if(!this.s.settle.queue.length){this.s.settle.byId={};this.s.settle.consumed=[];}const dt=1/FPS;this.s.frame++;this.s.time=this.s.frame/FPS;while(this.s.queue.length&&this.s.queue[0].at<=this.s.time)this.spawn(this.s.queue.shift());this.refreshEnemyCostEffects();this.tickCost(dt);
-  for(const e of this.s.enemies){tickStatuses(e,dt);this.tickEnemyRevive(e);tickEnemyForm(this,e);tickEnemySkills(this,e,dt);tickEnemyTraits(this,e,dt);if(e.palsyCharges>0&&e.statusResistance>0&&this.s.time>=(e.palsyDecayAt||0)){e.palsyCharges--;e.palsyDecayAt=this.s.time+5;}if(e.artsWeak?.until<this.s.time)e.artsWeak=null;if(e.hp>0&&e.regen>0)e.hp=Math.min(e.maxHp,e.hp+e.regen*dt);if(e.hp>0&&!e.lowHpTriggered&&e.lowHpRatio>0&&e.hp/e.maxHp<=e.lowHpRatio){e.lowHpTriggered=true;if(e.lowHpAttackMultiplier>0)e.atk=e.baseAtk*e.lowHpAttackMultiplier;if(e.lowHpMoveMultiplier>0)e.speed=e.baseSpeed*e.lowHpMoveMultiplier;if(e.lowHpUnblockTime>0){e.unblockable=true;e.unblockableUntil=this.s.time+e.lowHpUnblockTime;}this.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'low-hp'});}if(e.unblockableUntil!=null&&this.s.time>=e.unblockableUntil)e.unblockable=false;}tickMinerEngagements(this);tickMiners(this,dt);tickEnemyNeurotoxin(this);tickDeepWater(this);tickSandStorm(this);tickEnemyTransport(this);this.refreshEnemyAuras();this.tickEnemyDeathEye();this.tickEnemyInvisibleShield();this.flushEnemySpawns();
+  for(const e of this.s.enemies){tickStatuses(e,dt);this.tickEnemyRevive(e);tickEnemyForm(this,e);tickEnemySkills(this,e,dt);tickEnemyTraits(this,e,dt);if(e.palsyCharges>0&&e.statusResistance>0&&this.s.time>=(e.palsyDecayAt||0)){e.palsyCharges--;e.palsyDecayAt=this.s.time+5;}if(e.artsWeak?.until<this.s.time)e.artsWeak=null;if(e.hp>0&&e.regen>0)e.hp=Math.min(e.maxHp,e.hp+e.regen*dt);if(e.hp>0&&!e.lowHpTriggered&&e.lowHpRatio>0&&e.hp/e.maxHp<=e.lowHpRatio){e.lowHpTriggered=true;if(e.lowHpAttackMultiplier>0)e.atk=e.baseAtk*e.lowHpAttackMultiplier;if(e.lowHpMoveMultiplier>0)e.speed=e.baseSpeed*e.lowHpMoveMultiplier;if(e.lowHpUnblockTime>0){e.unblockable=true;e.unblockableUntil=this.s.time+e.lowHpUnblockTime;}this.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'low-hp'});}if(e.unblockableUntil!=null&&this.s.time>=e.unblockableUntil)e.unblockable=false;}tickMinerEngagements(this);tickMiners(this,dt);tickEnemyNeurotoxin(this);tickDeepWater(this);tickSandStorm(this);tickTerrainEffects(this);tickEnemyTransport(this);this.refreshEnemyAuras();this.tickEnemyDeathEye();this.tickEnemyInvisibleShield();this.flushEnemySpawns();
   for(const u of this.s.units){
    tickDoll(this,u);
    const previousStatuses=new Set((u.statuses||[]).map(v=>v.kind));tickStatuses(u,dt);for(const status of u.statuses||[])if(!previousStatuses.has(status.kind))dispatch(this,'status-applied',{source:null,target:u,status});const wasSkill=this.skillActive(u);u.skillLeft=Math.max(0,u.skillLeft-dt);u.spLock=Math.max(0,(u.spLock||0)-dt);if(u.focusHealAfter!=null&&this.s.time>=u.focusHealAfter)u.focusHeal=true;

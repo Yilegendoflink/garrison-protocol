@@ -58,6 +58,10 @@ export function resolveMapId(data,id,random=Math.random){
 // 不要再各写一张（历史上出现过 1/3 颠倒的镜像表，上下朝向会打到反方向）。
 export const DIRECTIONS=Object.freeze([[1,0],[0,1],[-1,0],[0,-1]]);
 export function directionOf(dir){return DIRECTIONS[((Number(dir)||0)%4+4)%4];}
+// 原表（关卡 devices／controllers）里的朝向是字符串：RIGHT/DOWN/LEFT/UP。字符串→索引只允许这一份，
+// 别再各写一张（[x,y] 的正负和 0/1/2/3 的对应关系是最容易颠倒的地方）。
+export const DIRECTION_NAMES=Object.freeze({RIGHT:0,DOWN:1,LEFT:2,UP:3});
+export function directionIndex(name){return DIRECTION_NAMES[String(name??'').toUpperCase()]??null;}
 // Versioned native data helpers. No missing rule is guessed or silently simulated.
 export function blackboard(entries=[]){return Object.fromEntries((entries||[]).map(e=>[e.key,e.valueStr??e.value]));}
 // 棋盘上该画「上一场战斗的单位」还是「备战期的我方单位」：战斗、结算与休整期都沿用战斗棋盘，

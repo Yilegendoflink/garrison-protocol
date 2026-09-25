@@ -91173,6 +91173,7 @@
           "direction": "UP"
         }
       ],
+      "windSources": [],
       "viewport": {
         "left": 2,
         "right": 10,
@@ -92204,6 +92205,7 @@
       ],
       "weight": 50,
       "devices": [],
+      "windSources": [],
       "viewport": {
         "left": 2,
         "right": 10,
@@ -93273,6 +93275,7 @@
           "direction": "UP"
         }
       ],
+      "windSources": [],
       "viewport": {
         "left": 2,
         "right": 10,
@@ -94328,6 +94331,7 @@
           "direction": "UP"
         }
       ],
+      "windSources": [],
       "viewport": {
         "left": 2,
         "right": 10,
@@ -95496,6 +95500,7 @@
           "direction": "UP"
         }
       ],
+      "windSources": [],
       "viewport": {
         "left": 2,
         "right": 10,
@@ -96584,6 +96589,7 @@
           "direction": "UP"
         }
       ],
+      "windSources": [],
       "viewport": {
         "left": 2,
         "right": 10,
@@ -97637,6 +97643,7 @@
           "direction": "UP"
         }
       ],
+      "windSources": [],
       "viewport": {
         "left": 2,
         "right": 10,
@@ -98674,6 +98681,48 @@
         {
           "id": "trap_013_blower",
           "x": 9,
+          "y": 6,
+          "direction": "DOWN"
+        }
+      ],
+      "windSources": [
+        {
+          "x": 5,
+          "y": -1,
+          "direction": "DOWN"
+        },
+        {
+          "x": 9,
+          "y": -1,
+          "direction": "DOWN"
+        },
+        {
+          "x": 13,
+          "y": -1,
+          "direction": "DOWN"
+        },
+        {
+          "x": 17,
+          "y": -1,
+          "direction": "DOWN"
+        },
+        {
+          "x": 5,
+          "y": 6,
+          "direction": "DOWN"
+        },
+        {
+          "x": 9,
+          "y": 6,
+          "direction": "DOWN"
+        },
+        {
+          "x": 15,
+          "y": 6,
+          "direction": "DOWN"
+        },
+        {
+          "x": 11,
           "y": 6,
           "direction": "DOWN"
         }
@@ -99724,6 +99773,7 @@
           "direction": "UP"
         }
       ],
+      "windSources": [],
       "viewport": {
         "left": 2,
         "right": 10,
@@ -100775,6 +100825,7 @@
           "direction": "UP"
         }
       ],
+      "windSources": [],
       "viewport": {
         "left": 2,
         "right": 10,
@@ -101818,6 +101869,7 @@
           "direction": "UP"
         }
       ],
+      "windSources": [],
       "viewport": {
         "left": 2,
         "right": 10,
@@ -101892,7 +101944,7 @@
           {
             "tileKey": "tile_deepsea",
             "heightType": "LOWLAND",
-            "buildableType": "ALL",
+            "buildableType": "NONE",
             "passableMask": "ALL",
             "playerSideMask": "ALL",
             "blackboard": null,
@@ -101996,7 +102048,7 @@
           {
             "tileKey": "tile_deepsea",
             "heightType": "LOWLAND",
-            "buildableType": "ALL",
+            "buildableType": "NONE",
             "passableMask": "ALL",
             "playerSideMask": "ALL",
             "blackboard": null,
@@ -102103,7 +102155,7 @@
           {
             "tileKey": "tile_deepsea",
             "heightType": "LOWLAND",
-            "buildableType": "ALL",
+            "buildableType": "NONE",
             "passableMask": "ALL",
             "playerSideMask": "ALL",
             "blackboard": null,

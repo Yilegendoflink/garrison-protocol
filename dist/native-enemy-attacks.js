@@ -1,12 +1,14 @@
 import {permissions,statusAttributeChanges,applyStatus} from './status.js';
 import {attackableAllies,getActor} from './native-effects.js';
+import {onVentTile} from './native-environment.js';
 import {compareEnemyTargets,enemyTargetValid,enemyTargetInRange,scheduleStrikes,TENTATIVE_HIT_GAP,enemyChainTargets} from './native-combat.js';
 import {endEnemySkill} from './native-enemy-skills.js';
 
 export function enemyAttackTargets(battle,e,alive=attackableAllies(battle.s)){
  if(e.hidden)return [];
  const spec=e.enemyAttack||{},blocker=alive.find(u=>u.uid===e.block&&enemyTargetValid(u)&&!spec.excludeIds?.includes(u.id));
- const targets=(e.ranged||spec.unblockedTargetIds)?alive.filter(u=>(!spec.unblockedTargetIds||spec.unblockedTargetIds.includes(u.id))&&enemyTargetValid(u)&&!spec.excludeIds?.includes(u.id)&&!u.invisible&&!permissions(u).sleeping&&(!spec.groundOnly||!u.flying)&&(!spec.lowlandOnly||battle.map.grid[Math.round(u.y)]?.[Math.round(u.x)]?.heightType==='LOWLAND')&&
+ // 排气格栅（#07）：站在格栅上的干员不会成为**远程**攻击的目标（被它阻挡的近战目标照旧）。
+ const targets=(e.ranged||spec.unblockedTargetIds)?alive.filter(u=>(!spec.unblockedTargetIds||spec.unblockedTargetIds.includes(u.id))&&enemyTargetValid(u)&&!spec.excludeIds?.includes(u.id)&&!u.invisible&&!permissions(u).sleeping&&(!spec.groundOnly||!u.flying)&&(!spec.lowlandOnly||battle.map.grid[Math.round(u.y)]?.[Math.round(u.x)]?.heightType==='LOWLAND')&&!onVentTile(battle,u)&&
   (enemyTargetInRange(e,u)||(e.specialSkill?.prefab==='CrossAttack'&&(Math.abs(e.x-u.x)<=1e-6||Math.abs(e.y-u.y)<=1e-6)))):[];
  targets.sort((a,b)=>compareEnemyTargets({tauntLevel:a.kind==='summon'?(a.neutral?a.taunt||0:0):battle.stats(a).tauntLevel,deployAt:a.deployAt||0,uid:a.uid},{tauntLevel:b.kind==='summon'?(b.neutral?b.taunt||0:0):battle.stats(b).tauntLevel,deployAt:b.deployAt||0,uid:b.uid}));
  if(/^enemy_10122_uacann(?:_2)?$/.test(e.id)&&battle.enemyHasArmyOrder(e))targets.sort((a,b)=>Number(b.id==='enemy_3010_mcreep')-Number(a.id==='enemy_3010_mcreep'));

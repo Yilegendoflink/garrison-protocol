@@ -30,8 +30,20 @@ const skillTable=JSON.parse(await fs.readFile('data/gamedata/allianceLower/skill
 data.mineCamp={attributes:characterTable.trap_270_spawnp.phases[0].attributesKeyFrames[0].data,skill:skillTable.sktok_spawnp.levels[0]};
 // Dor回技力只认未激活的四种装置；不能把测试用/已激活敌方装甲混入。
 data.powerArmorSkills=Object.fromEntries(['trap_075_bgarmn','trap_076_bgarms','trap_077_rmtarmn','trap_078_rmtarms'].map(id=>{const skillId=characterTable[id].skills[0].skillId;return [id,{skillId,...skillTable[skillId].levels[0]}];}));
+// 源石流发生装置（吹风）的作用距离：取装置自身的**攻击范围**（character_table 的 phase.rangeId → range_table），
+// 减去装置所在格就是「向前方 3 格」，与技能文案一致；位置取 map.windSources（不裁切，见 build-protocol）。
+const blowerRange=data.ranges[characterTable.trap_013_blower?.phases?.[0]?.rangeId]?.grids||[];
+const BLOWER_LENGTH=Math.max(1,blowerRange.filter(cell=>cell.col||cell.row).length);
 for(const map of data.maps){
  const raw=JSON.parse(await fs.readFile('data/modes/alliance-lower/levels/'+map.source.file,'utf8'));
+ // 特殊地块的数值都写在原地块黑板上（PRTS 战场一览与之逐项一致）：
+ //   tile_infection＝活性源石（#04）：5 分钟内每秒 70 真实伤害、攻击力 +20%、攻击速度 +20。
+ const infectionTile=(raw.mapData?.tiles||[]).find(t=>t.tileKey==='tile_infection'&&t.blackboard?.length);
+ if(infectionTile){
+  const bb=Object.fromEntries(infectionTile.blackboard.map(r=>[r.key,r.valueStr??r.value]));
+  map.environment??={};
+  map.environment.originium={damage:Number(bb.damage)||0,atk:Number(bb.atk)||0,attackSpeed:Number(bb.attack_speed)||0,duration:Number(bb.duration)||0,source:map.source.file};
+ }
  for(const controller of raw.predefines?.tokenInsts||[]){
   const id=controller.inst.characterKey;
   if(id==='trap_270_spawnp'&&!controller.hidden){
@@ -42,13 +54,17 @@ for(const map of data.maps){
    (map.mineCamps??=[]).push({x:controller.position.col-map.origin.col,y:map.origin.row-controller.position.row,route,skill});
    continue;
   }
-  if(controller.hidden||!(id==='trap_042_tidectrl'&&controller.skillIndex===2||id==='trap_036_storm'))continue;
+  if(controller.hidden||!(id==='trap_042_tidectrl'&&controller.skillIndex===2||id==='trap_036_storm'||id==='trap_098_mire'||id==='trap_013_blower'))continue;
   const skillId=characterTable[id].skills[controller.skillIndex].skillId;
   const skill=skillTable[skillId].levels[controller.mainSkillLvl-1];
   const bb=Object.fromEntries([...skill.blackboard,...(controller.overrideSkillBlackboard||[])].map(x=>[x.key,x.value]));
   map.environment??={};
   if(id==='trap_042_tidectrl')map.environment.deepWater={skillId,level:controller.mainSkillLvl,damage:bb['sea_drown[enemy].damage'],moveScale:bb['sea_drown[enemy].move_speed'],attackSpeedScale:1+bb['sea_drown[enemy].attack_speed'],source:map.source.file};
-  else map.environment.sandStorm={skillId,level:controller.mainSkillLvl,direction:controller.direction,damage:bb.damage,interval:bb.interval,attackRatio:bb.atk,moveScale:1+bb['sand_storm[enemy].move_speed'],respawnMultiplier:bb.respawn_time,duration:bb.duration,source:map.source.file};
+  else if(id==='trap_036_storm')map.environment.sandStorm={skillId,level:controller.mainSkillLvl,direction:controller.direction,damage:bb.damage,interval:bb.interval,attackRatio:bb.atk,moveScale:1+bb['sand_storm[enemy].move_speed'],respawnMultiplier:bb.respawn_time,duration:bb.duration,source:map.source.file};
+  // 沼泽控制（#06）：位于<沼泽地段>的单位每 value 秒叠一层，攻速/移速各 -5%，至多 max_stack_cnt 层。
+  else if(id==='trap_098_mire')map.environment.mire={skillId,level:controller.mainSkillLvl,attackSpeed:bb.attack_speed,moveSpeed:bb.move_speed,maxStack:bb.max_stack_cnt,interval:bb.value,source:map.source.file};
+  // 源石流发生装置（#05）：气流只影响装置正前方 BLOWER_LENGTH 格（位置取地图 devices）。
+  else map.environment.blower={skillId,level:controller.mainSkillLvl,equal:bb['blower_s_character[equal].atk'],vertical:bb['blower_s_character[vertical].atk'],opposite:bb['blower_s_character[opposite].atk'],equalMove:bb['blower_s_enemy[equal].move_speed'],oppositeMove:bb['blower_s_enemy[opposite].move_speed'],length:BLOWER_LENGTH,source:map.source.file};
  }
 }
 await fs.writeFile('dist/runtime-data.js','// Generated historical mode runtime data.\nexport const NATIVE_DATA = '+JSON.stringify(data)+';\n');console.log('Native runtime: '+Object.keys(profiles).length+' cultivation states, '+Object.keys(levels).length+' levels');
