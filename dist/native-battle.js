@@ -22,7 +22,7 @@ import {containsTarget} from './targeting.js';
 import {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds,TENTATIVE_PROJECTILE_SPEED,enemyBehaviorProfile,enemyTargetValid,enemyTargetInRange,enemyShouldHoldPosition,enemySpecialTraitId,enemyBleedingTraitId,ENEMY_MOVEMENT_POLICIES} from './native-combat.js';
 import {skillWidensRange,rangeGeometry,directionOf} from './protocol.js';
 import {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,tokenCostFor} from './native-operator-effects.js';
-import {settleEgirSwallow,tickDoll,enemyOpponents,enemyWineBuffs,ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,summonLifecycle,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,canRelocateTo,nearbySpots,spawnSummon,grantGuard,chebyshev} from './native-effects.js';
+import {settleEgirSwallow,tickDoll,enemyOpponents,enemyWineBuffs,ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,summonLifecycle,tickCathyDevices,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,canRelocateTo,nearbySpots,spawnSummon,grantGuard,chebyshev} from './native-effects.js';
 
 export class NativeBattle {
  constructor(data,economy,map,turn,{restore=false}={}){
@@ -50,9 +50,13 @@ export class NativeBattle {
    if(card.type==='mlyss-fluid')token=spawnSummon(this,owner,{type:'mlyss-fluid',name:'流形',x:card.position.x,y:card.position.y,synthetic:true,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,persistAfterSourceGone:true,preparedCard:true});
    if(card.type==='silent-drone')token=spawnSummon(this,owner,{type:'silent-drone',name:'医疗无人机',x:card.position.x,y:card.position.y,targetable:false,healable:false,canBlock:false,canAttack:false,canHeal:true,device:true,maxHp:1,atk:this.stats(owner).atk,duration:10,persistAfterSourceGone:true,healScale:.5,preparedCard:true});
    if(card.type==='skadi2-seaborn')token=spawnSummon(this,owner,{type:'skadi2-seaborn',tokenId:'token_10017_skadi2_dedant',name:'海嗣',x:card.position.x,y:card.position.y,targetable:true,canBlock:true,canAttack:true,occupiesTile:true,duration:summonLifecycle(this,owner,'skadi2-seaborn').duration||25,persistAfterSourceGone:false,preparedCard:true});
-   if(card.type==='cathy-device'){const anchor=this.s.units.filter(v=>v.uid!==owner.uid).sort((a,b)=>Math.hypot(a.x-card.position.x,a.y-card.position.y)-Math.hypot(b.x-card.position.x,b.y-card.position.y))[0];token=spawnSummon(this,owner,{type:'cathy-device',name:'支援装置',x:card.position.x,y:card.position.y,targetable:false,healable:false,canBlock:false,anchorUid:anchor?.uid,occupiesTile:false,device:true,preparedCard:true});if(token&&anchor){token.nextShieldAt=this.s.time;token.shieldId='cathy-'+token.uid;token.shieldCap=this.stats(owner).maxHp*.2;}}
+   // 凯瑟琳的支援装置：PRTS 召唤物页写「部署位置：全部位」、部署占用数 0，落点完全由玩家摆的召唤卡决定；
+   // 屏障目标由 tickCathyDevices 按**装置自己的攻击范围**（自身格＋身前格，朝向取放置时选的朝向）每秒复查。
+   if(card.type==='cathy-device')token=spawnSummon(this,owner,{type:'cathy-device',name:'支援装置',x:card.position.x,y:card.position.y,dir:card.dir??owner.dir,targetable:false,healable:false,canBlock:false,occupiesTile:false,device:true,preparedCard:true});
    if(token){token.tacticalCardUid=card.uid;token.dir=card.dir??owner.dir;}
   }
+  // 开战那一刻先按装置的攻击范围发一次屏障（PRTS：装置部署后立刻给范围内一名友方干员屏障）。
+  for(const owner of this.s.units.filter(u=>u.id==='char_4162_cathy'&&u.deployed&&u.hp>0))tickCathyDevices(this,owner);
  }
  attachRuntime(){
   for(const fx of this.s.logicEffects||[])if(fx.kind==='field'&&/^enemy_10122_uacann(?:_2)?-\d+-zone$/.test(fx.talentOrSkillId||'')){fx.radius=1.5;fx.values={...fx.values,shape:'circle',groundOnly:true};}

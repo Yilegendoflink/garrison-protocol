@@ -7,7 +7,8 @@ export const BRANCH_POLICIES={
  incantationmedic:{kind:'damage-heal',damageType:'arts',antiAir:true},chainhealer:{kind:'heal',style:'heal-chain',jumpRange:'x-4'},
  bard:{kind:'regeneration',attack:false,pending:['技能替换特性与鼓舞的专属效果']},
  phalanx:{damageType:'arts',antiAir:true,attackWhen:'skill',style:'all'},librator:{attackWhen:'skill',style:'single',charge:true},
- craftsman:{damageType:'physical',pending:['支援装置']},blessing:{damageType:'arts',antiAir:true,healsDuringSkill:true},
+ // 工匠「支援装置」已按 PRTS 召唤物页实现（落点全部位、屏障按装置自身攻击范围），不再挂 pending。
+ craftsman:{damageType:'physical',pending:[]},blessing:{damageType:'arts',antiAir:true,healsDuringSkill:true},
  corecaster:{damageType:'arts',antiAir:true},artsfghter:{damageType:'arts'},artsprotector:{artsDuringSkill:true},primcaster:{damageType:'arts',antiAir:true,pending:['元素伤害机制']},primguard:{pending:['元素伤害机制']},primprotector:{pending:['元素损伤机制']},
  fastshot:{antiAir:true,priority:'air'},longrange:{antiAir:true,priority:'defense'},siegesniper:{antiAir:true,priority:'weight'},closerange:{antiAir:true},
  aoesniper:{antiAir:true,style:'splash',radius:1},splashcaster:{damageType:'arts',antiAir:true,style:'splash',radius:1.1},blastcaster:{damageType:'arts',antiAir:true,style:'all'},

@@ -25,7 +25,25 @@ export function openBattle(specs,{seed=reps.seed,data=NATIVE_DATA}={}){
   }
   assert.ok(placed,'no tile for '+u.chessId);
  }
- const summonCells=new Set();for(const card of g.s.summonCards||[]){let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++){const key=x+','+y;if(summonCells.has(key))continue;if(g.canDeploySummonCard(card.uid,x,y)){placed=g.deploySummonCard(card.uid,x,y);if(placed)summonCells.add(key);}}if(card.type!=='cathy-device')assert.ok(placed,'no tile for summon '+card.type);}
+ const summonCells=new Set();for(const card of g.s.summonCards||[]){let placed=false;
+  // 凯瑟琳的支援装置：屏障只发给**装置自身攻击范围**（token rangeId `1-1`＝自身格＋身前格）内的干员，
+  // 所以自动摆放时要挑一个能盖住别的干员的格子（自带格或让目标落在身前格）。
+  if(card.type==='cathy-device'){
+   const FRONT=[[1,0],[0,1],[-1,0],[0,-1]];
+   for(const u of g.s.units.filter(v=>v.position&&v.uid!==card.ownerUid)){
+    for(const dir of [0,1,2,3]){
+     const [fx,fy]=FRONT[dir];
+     for(const spot of [{x:u.position.x,y:u.position.y},{x:u.position.x-fx,y:u.position.y-fy}]){
+      const key=spot.x+','+spot.y;if(summonCells.has(key))continue;
+      if(g.canDeploySummonCard(card.uid,spot.x,spot.y)&&g.deploySummonCard(card.uid,spot.x,spot.y,dir)){placed=true;summonCells.add(key);break;}
+     }
+     if(placed)break;
+    }
+    if(placed)break;
+   }
+  }
+  for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++){const key=x+','+y;if(summonCells.has(key))continue;if(g.canDeploySummonCard(card.uid,x,y)){placed=g.deploySummonCard(card.uid,x,y);if(placed)summonCells.add(key);}}
+  if(card.type!=='cathy-device')assert.ok(placed,'no tile for summon '+card.type);}
  assert.ok(g.perform('start'),g.lastError||'start failed');
  const b=g.battle;b.s.queue=[];b.s.limit=1e9;
  enemy(b,{hp:1e12,x:-8,y:-8,trainingDummy:true,hidden:true,untargetable:true,invulnerable:true});

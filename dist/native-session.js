@@ -8,6 +8,12 @@ import {createWaveRoster} from './native-wave-random.js';
 import {bondBanIds,loadBondBan,normalizeBondBan} from './native-bond-ban.js';
 // 干员默认技能（「战前准备」页保存的配置）：购买时按它决定新干员携带哪一档，读档时用来补齐/对齐副本。
 import {applyPrepSkills} from './native-prep.js';
+import {TOKEN_IDS} from './native-effects.js';
+
+// 召唤物落点不受主人攻击范围限制的类型（见 summonCardRange 的注释）。
+const SUMMON_FREE_PLACEMENT=new Set(['cathy-device']);
+// 召唤物的**同时部署上限**取它自己 token 的 `maxDeployCount`（爬行号·防护单元 = 2，正好对上天赋「最多部署2个」）。
+const summonDeployCap=(data,type)=>{const t=data?.tokens?.[TOKEN_IDS[type]];return Number(t?.phases?.[0]?.attributesKeyFrames?.[0]?.data?.maxDeployCount)||Infinity;};
 
 // 商店阶级概率（项目规定口径）：最高阶 30% / 次高阶 40% / 更低阶合计 30%。
 // 抽卡顺序必须是「先掷阶级，再从该阶级的库存里抽」；掷到的阶级没库存时才回落到整池随机抽。
@@ -81,10 +87,18 @@ export class NativeSession extends NativeEconomy {
   const option=bountyOption(this.data,id);if(!option)return false;
   r.selected=id;return true;
  }
- summonCardSpecs(u){const p=this.data.profiles[u?.chessId],skillIndex=u?.skillIndex??p?.skillIndex??0,out=[];if(p?.branch==='tactician'){if(u.charId==='char_427_vigil')out.push({type:'vigil-wolf',name:'狼群',count:1,mode:'manual'});if(u.charId==='char_249_mlyss')out.push({type:'mlyss-fluid',name:'流形',count:1,mode:'manual'});}if(u.charId==='char_4162_cathy')out.push({type:'cathy-device',name:'支援装置',count:3,mode:'manual'});if(u.charId==='char_108_silent'&&skillIndex===1)out.push({type:'silent-drone',name:'医疗无人机',count:1,mode:'skill'});if(u.charId==='char_1012_skadi2')out.push({type:'skadi2-seaborn',name:'海嗣',count:1,mode:'auto'});return out;}
+ summonCardSpecs(u){const p=this.data.profiles[u?.chessId],skillIndex=u?.skillIndex??p?.skillIndex??0,out=[];if(p?.branch==='tactician'){if(u.charId==='char_427_vigil')out.push({type:'vigil-wolf',name:'狼群',count:1,mode:'manual'});if(u.charId==='char_249_mlyss')out.push({type:'mlyss-fluid',name:'流形',count:1,mode:'manual'});}
+  // 凯瑟琳「定向支援信号」：携带数量取天赋黑板 `cnt`（精英0 = 2，精英1/2 = 3），同时部署上限取 token 的 `maxDeployCount`（2）。
+  if(u.charId==='char_4162_cathy'){const talent=(p?.activeTalents||[]).find(t=>t.name==='定向支援信号'),cnt=talent?Number(blackboard(talent.blackboard).cnt)||3:3;out.push({type:'cathy-device',name:'支援装置',count:cnt,mode:'manual'});}
+  if(u.charId==='char_108_silent'&&skillIndex===1)out.push({type:'silent-drone',name:'医疗无人机',count:1,mode:'skill'});if(u.charId==='char_1012_skadi2')out.push({type:'skadi2-seaborn',name:'海嗣',count:1,mode:'auto'});return out;}
  syncSummonCards({resetPlaced=false}={}){this.s.summonCards??=[];const owners=new Map(this.s.units.filter(u=>u.position&&this.summonCardSpecs(u).length).map(u=>[u.uid,u]));this.s.summonCards=this.s.summonCards.filter(card=>{const owner=owners.get(card.ownerUid),spec=owner&&this.summonCardSpecs(owner).find(x=>x.type===card.type);if(!spec)return false;if(resetPlaced)card.position=null;card.mode=spec.mode;return true;});for(const owner of owners.values())for(const spec of this.summonCardSpecs(owner)){const existing=this.s.summonCards.filter(card=>card.ownerUid===owner.uid&&card.type===spec.type);for(let i=existing.length;i<spec.count;i++)this.s.summonCards.push({uid:++this.s.seq,kind:'summon-card',type:spec.type,name:spec.name,mode:spec.mode,ownerUid:owner.uid,position:null,dir:0});}}
- summonCardRange(card,x,y){const owner=this.s.units.find(u=>u.uid===card.ownerUid);if(!owner?.position)return false;const grids=this.data.profiles[owner.chessId]?.range?.grids||[];return grids.some(g=>{let dx=g.col,dy=-g.row;for(let i=0;i<(owner.dir||0);i++)[dx,dy]=[-dy,dx];return owner.position.x+dx===x&&owner.position.y+dy===y;});}
- canDeploySummonCard(cardUid,x,y){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid),cell=this.map.grid[y]?.[x];if(!card||!cell||cell.buildableType==='NONE'||cell.obstacle||!this.summonCardRange(card,x,y))return false;if(card.type==='cathy-device'&&this.s.summonCards.filter(c=>c.uid!==card.uid&&c.ownerUid===card.ownerUid&&c.type===card.type&&c.position).length>=2)return false;if(['vigil-wolf','skadi2-seaborn'].includes(card.type)&&cell.heightType==='HIGHLAND')return false;return card.type==='cathy-device'||(!this.s.units.some(u=>u.position?.x===x&&u.position?.y===y)&&!this.s.summonCards.some(c=>c.uid!==card.uid&&c.position?.x===x&&c.position?.y===y));}
+ // 召唤卡的落点规则（PRTS 分开写，别再统一套一套）：
+ //  * 战术家分支特性：「可以在攻击范围内选择一次战术点来召唤援军」→ 狼群／流形必须在主人当前攻击范围内；
+ //  * 工匠的支援装置（爬行号·防护单元）：召唤物页写「部署位置：全部位、部署占用数 0、不会受到攻击」，
+ //    是与普通单位同级的装置，按格子选即可、**没有攻击范围限制**——此前统一套用战术家口径，
+ //    导致凯瑟琳只能把装置放在自己脚下或身前那一格（用户 2026-09-22 报「召唤物依然不能正确放置在场上」）。
+ summonCardRange(card,x,y){if(SUMMON_FREE_PLACEMENT.has(card.type))return true;const owner=this.s.units.find(u=>u.uid===card.ownerUid);if(!owner?.position)return false;const grids=this.data.profiles[owner.chessId]?.range?.grids||[];return grids.some(g=>{let dx=g.col,dy=-g.row;for(let i=0;i<(owner.dir||0);i++)[dx,dy]=[-dy,dx];return owner.position.x+dx===x&&owner.position.y+dy===y;});}
+ canDeploySummonCard(cardUid,x,y){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid),cell=this.map.grid[y]?.[x];if(!card||!cell||cell.buildableType==='NONE'||cell.obstacle||!this.summonCardRange(card,x,y))return false;if(card.type==='cathy-device'&&this.s.summonCards.filter(c=>c.uid!==card.uid&&c.ownerUid===card.ownerUid&&c.type===card.type&&c.position).length>=summonDeployCap(this.data,card.type))return false;if(['vigil-wolf','skadi2-seaborn'].includes(card.type)&&cell.heightType==='HIGHLAND')return false;return card.type==='cathy-device'||(!this.s.units.some(u=>u.position?.x===x&&u.position?.y===y)&&!this.s.summonCards.some(c=>c.uid!==card.uid&&c.position?.x===x&&c.position?.y===y));}
  deploySummonCard(cardUid,x,y,dir=0){if(!this.canDeploySummonCard(cardUid,x,y))return false;const card=this.s.summonCards.find(c=>c.uid===cardUid);card.position={x,y};card.dir=dir;return true;}
  withdrawSummonCard(cardUid){if(this.s.phase!=='prep')return false;const card=this.s.summonCards?.find(c=>c.uid===cardUid&&c.position);if(!card||this.handFull())return false;card.position=null;return true;}
  // 所属盟约全部被禁的干员不进调配池。判定只有这一条：
@@ -248,7 +262,9 @@ export class NativeSession extends NativeEconomy {
   const valid=(unit,tile)=>{const p=this.data.profiles[unit.chessId];return tile.heightType!=='HIGHLAND'||p.position!=='MELEE'||allowsHighlandPlacement(p);};if(!valid(u,cell))return false;
   const other=this.s.units.find(v=>v.uid!==uid&&v.position?.x===x&&v.position?.y===y),old=u.position;
   // 已放置的召唤物卡也占格：干员不能压在**别人**的召唤物上（自己的那张在移动时会被清位）。
-  if((this.s.summonCards||[]).some(c=>c.ownerUid!==uid&&c.position?.x===x&&c.position?.y===y))return false;
+  // 例外：部署占用数 0 的装置（凯瑟琳的支援装置）不占格——PRTS 写「部署占用数 0」，
+  // 所以「先把装置摆好、干员后上场」是成立的，摆在同一个格子上也算在装置的攻击范围内。
+  if((this.s.summonCards||[]).some(c=>c.ownerUid!==uid&&c.position?.x===x&&c.position?.y===y&&!SUMMON_FREE_PLACEMENT.has(c.type)))return false;
   if(!old&&!other&&this.s.units.filter(v=>v.position).length>=this.s.capacity)return false;
   return !other||!old||valid(other,this.map.grid[old.y][old.x]);
  }

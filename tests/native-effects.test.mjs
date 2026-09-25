@@ -150,7 +150,11 @@ test('整备区召唤卡按范围放置并在开战时生成对应召唤物',()=
  const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:1});g.s.funds=9999;g.s.capacity=16;g.s.rewardPending=null;g.s.rewardQueue=[];
  for(const id of ['chess_char_3_19_a','chess_char_4_11_b','chess_char_2_02_b','chess_char_6_04_b'])g.gain(id);
  for(const u of g.s.units){let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(!g.s.units.some(v=>v.uid!==u.uid&&v.position?.x===x&&v.position?.y===y)&&g.canDeploy(u.uid,x,y))placed=g.deploy(u.uid,x,y,0);assert.ok(placed,u.chessId);}
- const cards=g.s.summonCards;assert.equal(cards.filter(c=>c.type==='vigil-wolf').length,1);assert.equal(cards.filter(c=>c.type==='cathy-device').length,3);assert.equal(cards.filter(c=>c.type==='silent-drone').length,1);assert.equal(cards.filter(c=>c.type==='skadi2-seaborn').length,1);
+ const cards=g.s.summonCards;assert.equal(cards.filter(c=>c.type==='vigil-wolf').length,1);assert.equal(cards.filter(c=>c.type==='silent-drone').length,1);assert.equal(cards.filter(c=>c.type==='skadi2-seaborn').length,1);
+ // 支援装置的携带数量取天赋黑板 `cnt`：初始形态 3 个，精锐形态（带模组 uniequip_002_cathy）4 个。
+ const cathyOwner=g.s.units.find(u=>u.charId==='char_4162_cathy'),cathyCnt=g.summonCardSpecs(cathyOwner).find(s=>s.type==='cathy-device').count;
+ assert.equal(cathyCnt,4,'精锐凯瑟琳带模组：持有上限 +1');
+ assert.equal(cards.filter(c=>c.type==='cathy-device').length,cathyCnt,'卡数 = 天赋 cnt');
  const used=new Set();for(const card of cards){let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++){if(used.has(x+','+y))continue;if(g.canDeploySummonCard(card.uid,x,y))placed=g.deploySummonCard(card.uid,x,y),used.add(x+','+y);}if(card.type!=='cathy-device')assert.ok(placed,card.type);}
  assert.equal(g.perform('start'),true,g.lastError||'start failed');const types=new Set(g.battle.s.summons.map(s=>s.type));assert.ok(types.has('vigil-wolf')&&types.has('silent-drone')&&types.has('skadi2-seaborn'));assert.ok(g.battle.s.summons.filter(s=>s.type==='cathy-device').length>=1);
 });

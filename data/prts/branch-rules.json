@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-09-13T11:08:11.913Z",
+  "recordedAt": "2026-09-25T06:15:52.302Z",
   "scope": "Historical branch definitions plus current PRTS clarifications. Base branch behavior is separate from operator skills, talents and module exceptions.",
   "sources": [
     {
@@ -2333,19 +2333,14 @@
       ],
       "wikiDetailSectionFound": true,
       "runtime": {
-        "pending": [
-          "部署费用持续消耗与自动撤退"
-        ],
         "kind": "damage",
         "style": "single",
         "damageType": "physical",
         "antiAir": false,
         "attack": true,
-        "status": "partial"
+        "status": "base-implemented"
       },
-      "pending": [
-        "部署费用持续消耗与自动撤退"
-      ],
+      "pending": [],
       "traitVariants": [
         {
           "charId": "char_1033_swire2",
@@ -2400,6 +2395,7 @@
       "wikiDetailSectionFound": true,
       "runtime": {
         "antiAir": true,
+        "highland": true,
         "pending": [
           "位移力度与碰撞"
         ],
@@ -2729,18 +2725,14 @@
       "wikiDetailSectionFound": true,
       "runtime": {
         "damageType": "physical",
-        "pending": [
-          "支援装置"
-        ],
+        "pending": [],
         "kind": "damage",
         "style": "single",
         "antiAir": false,
         "attack": true,
-        "status": "partial"
+        "status": "base-implemented"
       },
-      "pending": [
-        "支援装置"
-      ],
+      "pending": [],
       "traitVariants": [
         {
           "charId": "char_4162_cathy",
@@ -2828,6 +2820,7 @@
       "wikiDetailSectionFound": true,
       "runtime": {
         "style": "block-count",
+        "highland": true,
         "kind": "damage",
         "damageType": "physical",
         "antiAir": false,
@@ -2859,7 +2852,7 @@
       "wikiDetailSectionFound": true,
       "runtime": {
         "pending": [
-          "替身切换与Buff清理"
+          "各模组替身专属例外"
         ],
         "kind": "damage",
         "style": "single",
@@ -2869,7 +2862,7 @@
         "status": "partial"
       },
       "pending": [
-        "替身切换与Buff清理"
+        "各模组替身专属例外"
       ],
       "traitVariants": [
         {

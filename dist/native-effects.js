@@ -943,7 +943,9 @@ export function effectStatMods(battle,u){
   if(src.id==='char_1041_angel2'){
    const t=talents.find(x=>x.name==='铳弹协约');if(t){const base=t.values.atk||.09,mult=t.values.mult||2;auras.push({key:'angel-ammo-atk',stat:'atk',layer:'maxSame',v:base,src:'新约能天使',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'});auras.push({key:'angel-ammo-laterano',stat:'atk',layer:'maxSame',v:base*mult,src:'新约能天使·拉特兰',ok:v=>v.kind!=='summon'&&battle.profile(v)?.skill?.durationType==='AMMO'&&battle.profile(v)?.bonds?.includes('lateranoShip')});}
   }
-  if(src.id==='char_4162_cathy'&&(src.source?.skillIndex??battle.profile(src).skillIndex)===0){const bb=skillBB(battle,src),devices=battle.s.summons.filter(s=>s.ownerUid===src.uid&&s.type==='cathy-device');auras.push({key:'cathy-device-atk',stat:'atk',layer:'maxSame',v:Number(bb.s1_atk)||.11,src:'凯瑟琳',ok:v=>devices.some(d=>d.anchorUid===v.uid)});auras.push({key:'cathy-device-def',stat:'def',layer:'maxSame',v:Number(bb.s1_def)||.11,src:'凯瑟琳',ok:v=>devices.some(d=>d.anchorUid===v.uid)});}
+  // 凯瑟琳 S1「岁月锻打」：**自身**和「拥有装置屏障的其他干员」都吃攻防加成。
+  // 装置屏障的判定看装置当前的目标（`anchorUid`，由 tickCathyDevices 每秒同步），自身无条件吃。
+  if(src.id==='char_4162_cathy'&&(src.source?.skillIndex??battle.profile(src).skillIndex)===0){const bb=skillBB(battle,src),devices=battle.s.summons.filter(s=>s.ownerUid===src.uid&&s.type==='cathy-device'),hasDevice=v=>v.uid===src.uid||devices.some(d=>d.anchorUid===v.uid);auras.push({key:'cathy-device-atk',stat:'atk',layer:'maxSame',v:Number(bb.s1_atk)||.11,src:'凯瑟琳',ok:hasDevice});auras.push({key:'cathy-device-def',stat:'def',layer:'maxSame',v:Number(bb.s1_def)||.11,src:'凯瑟琳',ok:hasDevice});}
   if(src.id==='char_245_cello'&&battle.skillActive(src)&&(src.source?.skillIndex??battle.profile(src).skillIndex)===2){const bb=skillBB(battle,src),all=battle.s.units.filter(v=>v.uid!==src.uid&&v.deployed&&v.hp>0&&battle.inside(src,v,true));const hp=all.slice().sort((a,b)=>b.maxHp-a.maxHp)[0],atk=all.slice().sort((a,b)=>b.atk-a.atk)[0],def=all.slice().sort((a,b)=>b.def-a.def)[0];if(hp)auras.push({key:'cello-maxhp',stat:'maxHp',layer:'maxSame',v:Number(bb['cello_s_3[max_hp].max_hp'])||.2,src:'塑心',ok:v=>v.uid===hp.uid});if(atk)auras.push({key:'cello-atk',stat:'atk',layer:'maxSame',v:Number(bb['cello_s_3[atk].atk'])||.2,src:'塑心',ok:v=>v.uid===atk.uid});if(def)auras.push({key:'cello-def',stat:'def',layer:'maxSame',v:Number(bb['cello_s_3[def].def'])||.2,src:'塑心',ok:v=>v.uid===def.uid});}
   if(src.id==='char_4134_cetsyr'&&battle.skillActive(src)&&(src.source?.skillIndex??battle.profile(src).skillIndex)===2){const bb=skillBB(battle,src);auras.push({key:'cetsyr-maxhp',stat:'maxHp',layer:'maxSame',v:Number(bb.max_hp)||.65,src:'魔王',ok:v=>v.uid!==src.uid&&battle.inside(src,v,true)});}
   if(src.id==='char_391_rosmon'&&src.rosmonPartner!=null)auras.push({key:'rosmon-caster',stat:'atk',layer:'maxSame',v:.08,src:'迷迭香·感知稳定',ok:v=>v.uid===src.rosmonPartner});
@@ -1291,7 +1293,8 @@ function onOperatorExit(battle,u,reason){
  }
 }
 
-const TOKEN_IDS={'skadi2-seaborn':'token_10017_skadi2_dedant','silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
+// 召唤物类型 → token id 的唯一映射（`native-session` 也用它取 token 的部署上限）。
+export const TOKEN_IDS={'skadi2-seaborn':'token_10017_skadi2_dedant','silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
 // 荒芜拉普兰德「终幕·浩劫」的特种浮游单元（自由飞行实体，走 battle.s.whitwEyes）。
 // 注意：它和凛御银灰待部署区里的「风雪之眼」不是同一种东西——后者本期不实现（见 onOperatorDeploy 的注释）。
 // 完整流程见 PRTS：散开 1.3s（初速0.1/加速1.9/上限2.0）→ 索敌飞向（初速2.0/加速1.0/上限4.0/转向1/6每帧）
@@ -1442,6 +1445,46 @@ export function summonInRange(battle,s,target){
  // 没有 battle 方法时的退化路径（单测直接造对象）：这里自行旋转
  return grids.some(g=>{let x=g.col,y=-g.row;for(let i=0;i<(s.dir||0);i++)[x,y]=[-y,x];return s.x+x===target.x&&s.y+y===target.y;});
 }
+// 凯瑟琳「定向支援信号」的支援装置（爬行号·防护单元 `token_10041_cathy_catsld`）。
+// PRTS（召唤物页 oldid 386131）：部署位置「全部位」、部署占用数 0、特性「不会受到攻击」；
+// 召唤物天赋「使**攻击范围内**一名友方干员获得相当于凯瑟琳生命上限 X% 的屏障（若目标最近 5 秒内未受攻击，
+// 则每秒补充相当于凯瑟琳生命上限 6% 的屏障，不超过初始上限），装置效果不叠加，持续时间无限」。
+// 数值一律取 token 自带天赋的黑板（按**持有者当前精英阶段**解析）：`max_shield_ratio`（精英0/1/2 = 10/15/20%，
+// 潜能5 +2%）、`shield_ratio_each_trigger`(6%)、`interval`(5 秒静默窗口)、`catsld_t_1[timer][interval].interval`(1 秒结算间隔)。
+export function cathyDeviceValues(battle,owner){
+ const token=battle?.data?.tokens?.[TOKEN_IDS['cathy-device']],p=battle.profile(owner),talents=token?.talents||[];
+ const talent=talents.length?resolveActiveTalents({talents},p.status,{modulePhase:p.modulePhase}).find(t=>t.name==='定向支援信号'):null;
+ const bb=talent?blackboard(talent.blackboard):{},num=(v,fallback)=>Number.isFinite(Number(v))?Number(v):fallback;
+ return {capRatio:num(bb.max_shield_ratio,.2),eachRatio:num(bb.shield_ratio_each_trigger,.06),interval:num(bb['catsld_t_1[timer][interval].interval'],1),quiet:num(bb.interval,5)};
+}
+// 装置每秒复查一次目标：**装置自己的攻击范围**（token rangeId `1-1`＝自身格＋身前格，朝向取放置时选的朝向）内
+// 的一名友方干员。所以「先把装置摆好、干员后上场」也能吃到（PRTS 分支信息：干员部署后按天赋数量补充持有数、
+// 干员离场后附属装置消失）；凯瑟琳本人也可以是目标（对准她自己＝自辅自护）。
+// 「装置效果不叠加」：同一名干员身上只保留一份支援装置屏障——屏障 id 按持有者＋目标复用，第二个装置不再叠加，
+// 且每个目标每秒只结算一次。目标换人时把旧目标身上那份撤掉（效果跟着装置的攻击范围走）。
+export function tickCathyDevices(battle,owner){
+ const devices=battle.s.summons.filter(s=>s.ownerUid===owner.uid&&s.type==='cathy-device'&&s.deployed);
+ if(!devices.length)return;
+ const values=cathyDeviceValues(battle,owner),maxHp=battle.stats(owner).maxHp,cap=maxHp*values.capRatio;
+ const overwrite=(owner.source?.skillIndex??battle.profile(owner).skillIndex)===1?Number(skillBB(battle,owner).overwrite_ratio)||0:0;
+ const claimed=new Set();
+ for(const device of devices){
+  const candidates=battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.kind!=='summon'&&summonInRange(battle,device,u)).sort((a,b)=>(Math.hypot(a.x-device.x,a.y-device.y)-Math.hypot(b.x-device.x,b.y-device.y))||a.uid-b.uid);
+  const target=candidates[0]||null,previous=device.anchorUid;
+  device.anchorUid=target?target.uid:null;
+  if(!target)continue;
+  if(previous&&previous!==target.uid){const old=getActor(battle.s,previous),id='cathy-shield-'+owner.uid+'-'+previous;
+   if(old?.shieldLayers?.length){old.shieldLayers=old.shieldLayers.filter(l=>l.id!==id);old.shield=old.shieldLayers.reduce((n,l)=>n+l.remaining,0);}}
+  if(claimed.has(target.uid))continue;
+  claimed.add(target.uid);
+  const id='cathy-shield-'+owner.uid+'-'+target.uid,layer=(target.shieldLayers||[]).find(l=>l.id===id),fresh=previous!==target.uid||!device.shieldGranted;
+  if(!fresh&&battle.s.time<(device.nextShieldAt??battle.s.time))continue;
+  device.nextShieldAt=battle.s.time+Math.max(.1,values.interval);
+  if(fresh){device.shieldGranted=true;grantShield(battle,target,{id,amount:cap,sourceUid:owner.uid});continue;}
+  const top=overwrite>0?maxHp*overwrite:(battle.s.time-(target.lastDamagedAt??-Infinity)>=values.quiet?maxHp*values.eachRatio:0);
+  if(top>0)grantShield(battle,target,{id,amount:Math.min(cap,(layer?.remaining||0)+top),sourceUid:owner.uid});
+ }
+}
 // 波登可 S2「孢子扩散」的孢子群半径：PRTS 技能备注「※孢子群范围半径为0.9，可对空」。
 // 0.9 < 1（相邻格中心距），所以只覆盖落点那一格。
 const PODEGO_SPORE_RADIUS=0.9;
@@ -1504,9 +1547,10 @@ function tickSummons(battle,dt){
    }
   }
   for(const owner of battle.s.units.filter(u=>u.id==='char_4162_cathy'&&u.deployed&&u.hp>0)){
-  const ctrl=owner.summonCtrl;if(!ctrl)continue;const devices=battle.s.summons.filter(s=>s.ownerUid===owner.uid&&s.type==='cathy-device');
-  if(!ctrl.manualSummonCards)for(const target of battle.s.units.filter(t=>t.uid!==owner.uid&&t.deployed&&t.hp>0&&!devices.some(s=>s.anchorUid===t.uid))){if(ctrl.stock<=0||devices.length>=ctrl.cap)break;const device=spawnSummon(battle,owner,{type:'cathy-device',name:'支援装置',targetable:false,healable:false,canBlock:false,anchorUid:target.uid});if(device){device.nextShieldAt=battle.s.time+1;device.shieldId='cathy-'+target.uid;device.shieldCap=battle.stats(owner).maxHp*.2;grantShield(battle,target,{id:device.shieldId,amount:device.shieldCap,sourceUid:owner.uid});devices.push(device);}}
-  for(const device of devices){const target=getActor(battle.s,device.anchorUid);if(!target?.deployed)continue;if(battle.s.time>=device.nextShieldAt){device.nextShieldAt+=1;const ownerSkill=owner.source?.skillIndex??battle.profile(owner).skillIndex,obb=ownerSkill===1?skillBB(battle,owner):null;if(ownerSkill===1){const cap=device.shieldCap,layer=target.shieldLayers.find(l=>l.id===device.shieldId),remaining=Math.min(cap,(layer?.remaining||0)+battle.stats(owner).maxHp*(Number(obb.overwrite_ratio)||.06));grantShield(battle,target,{id:device.shieldId,amount:remaining,sourceUid:owner.uid});}else if(battle.s.time-(target.lastDamagedAt??-999)>=5){const layer=target.shieldLayers.find(l=>l.id===device.shieldId),remaining=Math.min(device.shieldCap,(layer?.remaining||0)+battle.stats(owner).maxHp*.06);grantShield(battle,target,{id:device.shieldId,amount:remaining,sourceUid:owner.uid});}}}
+  const ctrl=owner.summonCtrl;if(!ctrl)continue;
+  // `manualSummonCards` 为真时装置完全由整备期摆好的召唤卡生成；这条自动补充只作兜底。
+  if(!ctrl.manualSummonCards)for(const target of battle.s.units.filter(t=>t.uid!==owner.uid&&t.deployed&&t.hp>0)){if(ctrl.stock<=0||battle.s.summons.filter(s=>s.ownerUid===owner.uid&&s.type==='cathy-device').length>=ctrl.cap)break;spawnSummon(battle,owner,{type:'cathy-device',name:'支援装置',targetable:false,healable:false,canBlock:false,occupiesTile:false});}
+  tickCathyDevices(battle,owner);
  }
 }
 
