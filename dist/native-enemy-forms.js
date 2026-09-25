@@ -197,7 +197,7 @@ export function releaseParrotPassenger(b,e,{skill=false}={}){
  const enemyKey=skill?bb?.enemy_key:bb?.['StateController.enemy_key'],count=Number(skill?bb?.cnt:bb?.['StateController.cnt']),delay=Number(skill?bb?.delay:bb?.['StateController.delay']);
  if(!enemyKey||!(count>0))return false;
  e.parrotHasPassenger=false;
- for(let i=0;i<count;i++)b.queueEnemySpawn({id:enemyKey},{x:Math.round(e.x),y:Math.round(e.y),route:structuredClone(e.route),cmd:e.cmd||0,routeDiagonal:e.routeDiagonal},delay||0);
+ for(let i=0;i<count;i++)b.queueEnemySpawn({id:enemyKey,derived:true},{x:Math.round(e.x),y:Math.round(e.y),route:structuredClone(e.route),cmd:e.cmd||0,routeDiagonal:e.routeDiagonal},delay||0);
  b.emit('enemy-ability',{uid:e.uid,x:e.x,y:e.y,ability:'release-sailor',count});return true;
 }
 

@@ -65,6 +65,16 @@ export function enemySprite(enemy){
  const scale=Number(sprite.scale);
  return {key:sprite.avatar||base.key,scale:Number.isFinite(scale)&&scale>0?scale:base.scale,tint:sprite.tint||null};
 }
+// ── 战斗顶栏（回合 / 击杀·剩余敌人 / 剩余生命）────────────────────────────
+// 击杀数**不含衍生敌人**：解压缩碎片、敌方召唤／分裂／幻影这些战斗中途生成的敌人不是本波编制，
+// 单独记在 `s.derivedKills` 里（`s.kills` 保持原语义，战报记录与卫戍击倒计数都不受影响）。
+// 剩余敌人＝还没处理掉的：队列里未入场 ＋ 已排定但还没落地 ＋ 场上存活（漏怪算已处理）。
+export function battleTally(s){
+ const kills=Math.max(0,(Number(s?.kills)||0)-(Number(s?.derivedKills)||0));
+ const alive=(s?.enemies||[]).filter(e=>e.hp>0).length;
+ const pending=(s?.queue||[]).length+(s?.pendingEnemySpawns||[]).length;
+ return {kills,alive,pending,remaining:alive+pending,total:Number(s?.total)||0};
+}
 // 地块的抬升高度：只有**可部署的高台**才抬起（隔离平台是地面，永远不抬）。
 export function tileLiftAmount(tile,tileHeight){return tile?.heightType==='HIGHLAND'&&tile.buildableType!=='NONE'?Math.min(10,(tileHeight||0)*.22):0;}
 // ── 盟约面板的「当前动态数值」 ─────────────────────────────────────────────

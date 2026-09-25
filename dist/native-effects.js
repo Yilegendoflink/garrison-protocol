@@ -183,6 +183,9 @@ export function commitExit(battle,{target,reason='knockdown',killer=null,event=n
   battle.onActorExit?.(target,{reason,killer,event});
   if(reason==='leak'){log(battle,'leak-exit',{uid:target.uid,eventId:event?.eventId});return true;}
   if(!target.notCountInTotal)battle.s.kills++;
+  // 衍生敌人（解压缩碎片、敌方召唤／分裂／幻影）不计入顶栏击杀数，单独记账；
+  // `s.kills` 原样保留，战报记录与卫戍「击倒计数」不受影响。
+  if(target.derived)battle.s.derivedKills=(battle.s.derivedKills||0)+1;
   const credit=killer?.kind==='summon'?getActor(battle.s,killer.ownerUid):killer;
   if(credit&&battle.s.units.includes(credit))battle.event?.(credit,'kill');
   log(battle,'death',{uid:target.uid,reason,killerUid:killer?.uid,x:target.x,y:target.y,eventId:event?.eventId});

@@ -404,7 +404,7 @@ export function enemyTraitOnDeath(battle,e,info){
  const spec=e.spawnOnDeath;if(!spec||['leak','fall'].includes(info.reason))return;
  for(let i=0;i<spec.count;i++){
   const scatter=Number(spec.scatter)||0,x=Math.round(e.x)+(battle.economy.random()*2-1)*scatter,y=Math.round(e.y)+(battle.economy.random()*2-1)*scatter;
-  battle.queueEnemySpawn({id:spec.enemyKey},{x,y,route:structuredClone(e.route),cmd:e.cmd||0},spec.delay||0);
+  battle.queueEnemySpawn({id:spec.enemyKey,derived:true},{x,y,route:structuredClone(e.route),cmd:e.cmd||0},spec.delay||0);
  }
 }
 

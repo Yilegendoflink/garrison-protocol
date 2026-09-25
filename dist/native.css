@@ -8,6 +8,23 @@
 .native-status{display:flex;gap:36px;align-items:flex-end;margin:16px 0 0;padding:14px 20px;background:#101f1b;border:1px solid #577b6c;font-variant-numeric:tabular-nums}.native-status small{display:block;margin-bottom:4px;font-size:11px;letter-spacing:.14em;color:#8eb4a7}.native-status b{font-size:36px;line-height:1;font-weight:700;color:#e9fff7}.native-status b i{font-style:normal;font-size:.52em;font-weight:600;opacity:.72}.native-status .hp{color:#57cfaa}.native-status .funds{color:#f0d18a}.native-wave-preview{height:212px;overflow:hidden}.native-wave-preview>.native-wave-faces{display:flex;flex-wrap:wrap;align-content:flex-start;width:100%;height:140px;margin-top:6px;padding:0;overflow:hidden;background:#0f1e1a;border:1px solid #375447}.native-wave-faces img,.native-wave-faces .native-wave-miss{width:var(--face,36px);height:var(--face,36px);flex:0 0 var(--face,36px);object-fit:contain}.native-wave-faces .native-wave-miss{display:grid;place-content:center;color:#8eb4a7}
 .native-game{position:relative}
 .native-top,.native-status,.native-shop{position:relative;z-index:9}
+/* 战斗中顶栏：左=当前回合，中=击杀敌人/剩余敌人（衍生敌人不计击杀数），右=剩余生命值。
+   样式对齐作战终端（原作同一块 UI）：深色斜切面板 + 橙色核心胶囊；数值由 updateHud 刷新，口径走 protocol.battleTally。 */
+.native-battle-bar{position:relative;z-index:9;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;align-items:center;margin:10px 0 0;padding:6px 10px;border:1px solid #33544e;border-top-color:#4c7a70;background:linear-gradient(90deg,#081416f2,#0e2426f0,#081416f2),repeating-linear-gradient(90deg,transparent 0 39px,#77e8d012 39px 40px);box-shadow:0 6px 20px #0006,inset 0 0 26px #77e8d00d;color:#dff3ec}
+.native-bb-seg{display:flex;flex-direction:column;gap:3px;min-width:0;padding:5px 14px;border:1px solid #33544e;background:#0c1e1dcc;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.native-bb-side-right{align-items:flex-end;text-align:right}
+.native-bb-cap{font:9px/1 var(--mono,monospace);letter-spacing:.16em;color:#7ea79b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.native-bb-row{display:flex;align-items:center;gap:7px;font:700 22px/1 var(--mono,monospace);font-variant-numeric:tabular-nums}
+.native-bb-row em{font:500 11px/1 var(--mono,monospace);font-style:normal;letter-spacing:.18em;color:#a9c8bd}
+.native-bb-seg>.native-bb-row>#native-bb-round{padding:1px 9px;background:#d9e8e2;color:#0a1a18;font-size:18px}
+.native-bb-core{align-items:center;padding:4px 26px;border-color:#d0743c;background:linear-gradient(180deg,#3d230bee,#5a3210d9);box-shadow:0 0 20px #ff8a3d2e,inset 0 0 20px #ff8a3d1f;clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,14px 100%,0 50%)}
+.native-bb-core .native-bb-cap{color:#f0b78c;letter-spacing:.22em}
+.native-bb-core .native-bb-row{color:#fff2e4;text-shadow:0 0 14px #ff8a3d55}
+.native-bb-slash{font-style:normal;margin:0 -2px;font-size:18px;color:#ff8a3d99}
+.native-bb-accent{color:#ffa254}
+.native-bb-icon{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:#ffb072;stroke-width:1.6;stroke-linejoin:round}
+.native-bb-icon-hp{width:18px;height:18px;stroke:#57cfaa}
+#native-bb-hp{color:#7fe7c4}
  .native-shop-cards .chosen{outline:2px solid #69dbae}.native-shop-cards .native-shop-frozen{border:2px solid #e4fbff!important;outline:1px solid #55cfff;box-shadow:inset 0 0 0 1px #3aa8e8,0 0 8px #55cfff,0 0 16px #d8fbff;animation:native-shop-frozen-pulse 1.4s ease-in-out infinite alternate}
  @keyframes native-shop-frozen-pulse{from{box-shadow:inset 0 0 0 1px #3aa8e8,0 0 5px #55cfff,0 0 10px #d8fbff}to{box-shadow:inset 0 0 0 1px #e4fbff,0 0 10px #55cfff,0 0 20px #d8fbff}}
 .native-dossier{position:absolute;z-index:8;inset:64px auto 0 0;width:min(540px,64%);pointer-events:none;background:linear-gradient(90deg,#061014f7 0%,#061014ee 34%,#06101488 62%,#06101400 100%)}
@@ -288,6 +305,15 @@ html.native-need-rotate .native-lobby,html.native-need-rotate .native-briefing{
 /* Keep the entry flow usable on short mobile landscape screens. */
 @media (orientation:landscape) and (max-height:600px) and (max-width:1100px){
  html.native-landscape-ui .native-lobby{height:100vh;height:100dvh;min-height:0;max-height:100vh;max-height:100dvh;padding:10px max(12px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-bottom));overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+ html.native-landscape-ui .native-battle-bar{gap:6px;margin-top:6px;padding:4px 6px}
+ html.native-landscape-ui .native-bb-seg{gap:2px;padding:3px 9px;clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+ html.native-landscape-ui .native-bb-core{padding:3px 18px;clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,10px 100%,0 50%)}
+ html.native-landscape-ui .native-bb-cap{font-size:8px;letter-spacing:.1em}
+ html.native-landscape-ui .native-bb-row{gap:5px;font-size:17px}
+ html.native-landscape-ui .native-bb-row em{font-size:10px}
+ html.native-landscape-ui .native-bb-seg>.native-bb-row>#native-bb-round{padding:0 6px;font-size:14px}
+ html.native-landscape-ui .native-bb-icon{width:16px;height:16px}
+ html.native-landscape-ui .native-bb-icon-hp{width:15px;height:15px}
  html.native-landscape-ui .native-lobby-topbar{gap:10px;padding-bottom:10px}
  html.native-landscape-ui .native-brand{gap:8px}
  html.native-landscape-ui .native-brand-mark{width:28px;height:28px;font-size:16px}
@@ -398,6 +424,9 @@ html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px
 /* ── 回合结束演出：暗屏 + 拉出横幅（横幅留在场上，文字在横幅内换场）─────────────
    横幅先拉出并显示「波次结束 / WAVE END」，1 秒后只让这行文字离场，横幅不动，
    「损失生命 / 完美通关」的播报接着在同一个横幅里出现。只做表现，数值来自 s.lastBattle。 */
+/* 作战报告底部动作行吸底：手机伤害列表要滚动时，回到大厅／导出不能被列表顶出屏幕。 */
+.native-result-actions{position:sticky;bottom:-1px;z-index:1;display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding:10px 0 4px;background:linear-gradient(180deg,#17292400,#172924 34%)}
+.native-result-actions>button{flex:1 1 140px;padding:11px 16px;font-size:13px}
 .native-round-end{--round-accent:#77e8d0;position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;color:#e7fff4;font-family:inherit;text-align:center;padding:12px;box-sizing:border-box}
 .native-round-end[data-tone=danger]{--round-accent:#ffac88}
 /* 公共减动效规则会 animation:none!important，静态样式必须保持可见，不能依赖动画解除透明。 */
@@ -425,6 +454,11 @@ html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px
 .native-round-end .native-primary{min-width:220px;padding:11px 24px;border:1px solid var(--round-accent);border-radius:0;background:#77e8d00c;color:#e7fff4;letter-spacing:.12em;box-shadow:inset 3px 0 var(--round-accent);transition:background .15s}
 .native-round-end .native-primary:hover{background:#77e8d021}
 .native-round-end .native-primary:focus-visible{outline:2px solid #fff;outline-offset:4px}
+/* 整局结束（血量清空）的横幅除「查看伤害报告」外还要留一个「回到大厅」。 */
+.native-round-end-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
+.native-round-end-actions>button{min-width:150px;padding:11px 22px;border:1px solid var(--round-accent);border-radius:0;background:#77e8d00c;color:#e7fff4;letter-spacing:.12em;transition:background .15s}
+.native-round-end-actions>button:hover{background:#77e8d021}
+.native-round-end-actions>button:focus-visible{outline:2px solid #fff;outline-offset:4px}
 @keyframes native-round-dim{from{opacity:0}to{opacity:.9}}
 @keyframes native-round-banner-in{from{opacity:0;transform:scaleX(.08) scaleY(.96)}55%{opacity:1;transform:scaleX(1) scaleY(.96)}to{opacity:1;transform:none}}
 @keyframes native-round-scan{from{opacity:0;transform:translateX(-100%)}15%{opacity:.8}80%{opacity:.5}to{opacity:0;transform:translateX(570%)}}
@@ -687,4 +721,9 @@ html.native-landscape-ui #native-modal .native-ban-entry{display:block;width:100
  .wave-ed-bonds-grid{grid-template-columns:1fr}
  .native-ban-bonds{grid-template-columns:repeat(2,minmax(0,1fr))}
  .native-ban-operators{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}
+}
+
+/* 极矮屏（手机横屏 430px 以下）只留数值，去掉顶栏两侧的英文说明，避免挤掉棋盘高度。 */
+@media (orientation:landscape) and (max-height:430px){
+ html.native-landscape-ui .native-bb-cap{display:none}
 }

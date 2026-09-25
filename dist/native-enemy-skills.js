@@ -235,7 +235,7 @@ function tickCrownBlink(battle,enemy){
  if(!state.moved&&battle.s.time+1e-9>=state.moveAt){
   state.moved=true;
   if(teleportActor(battle,enemy,{x:state.x,y:state.y,source:enemy,mode:'blink',allowOccupied:true,exactCoordinates:true,allowFlyOnly:false})){
-   if(state.phantomSpawn)battle.queueEnemySpawn({id:'enemy_2017_csphts'},state.phantomSpawn);
+   if(state.phantomSpawn)battle.queueEnemySpawn({id:'enemy_2017_csphts',derived:true},state.phantomSpawn);
    enemy.cmd=state.cmd;enemy.cmdLeft=null;enemy.lastCheckpoint=Math.max(enemy.lastCheckpoint||0,state.checkpoint||0);enemy.crownRejoin={formHold:state.restore.formHold};rejoinCrownRoute(battle,enemy);enemy.formHold=true;
   }
  }
@@ -425,7 +425,7 @@ export function tickEnemySkills(battle,enemy,dt){
  if(cast?.spawn){
   if(enemy.hidden||!control.skill||control.silenced){cancelEnemyCast(battle,enemy);return;}
   if(battle.s.time+1e-9>=cast.endsAt){
-   for(const dx of cast.spawn.offsets)battle.queueEnemySpawn({id:cast.spawn.enemyKey},{x:enemy.x+dx,y:enemy.y,route:structuredClone(enemy.route),cmd:enemy.cmd||0});
+   for(const dx of cast.spawn.offsets)battle.queueEnemySpawn({id:cast.spawn.enemyKey,derived:true},{x:enemy.x+dx,y:enemy.y,route:structuredClone(enemy.route),cmd:enemy.cmd||0});
    enemy.stanceUntil=0;endEnemySkill(battle,enemy);
   }
   return;
