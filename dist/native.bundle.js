@@ -10510,6 +10510,10 @@ const {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlock
 const {skillWidensRange,rangeGeometry,directionOf} = load("protocol.js");
 const {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,moduleRows,tokenCostFor} = load("native-operator-effects.js");
 const {settleEgirSwallow,tickDoll,enemyOpponents,enemyWineBuffs,ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,elementBurstActive,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,summonLifecycle,tickCathyDevices,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,canRelocateTo,nearbySpots,spawnSummon,grantGuard,chebyshev} = load("native-effects.js");
+// 路线寻路时「偏离本路线起点所在行」的每行代价（格）：只求最短格数会让两条出入口路线贴成一条，
+// 0.4 是「愿意多绕不到半格也不换道」的量级（见 NativeBattle.path 的注释与 tests/native-wave-lanes.test.mjs）。
+const LANE_ROW_PENALTY=0.4;
+
 class NativeBattle {
  constructor(data,economy,map,turn,{restore=false}={}){
   this.data=data;this.economy=economy;this.map=map;this.turn=turn;this.operatorRegistry=operatorRegistry(data);
@@ -10951,12 +10955,19 @@ class NativeBattle {
  path(route,flying){
   const to=p=>({x:p.col-this.map.origin.col,y:this.map.origin.row-p.row});
   const walk=p=>this.tileWalkable(p.x,p.y);
+  // 路线寻路：**每条路线走自己那一条通道**。原表把「上方门／下方门」写成两条起点不同的路线，
+  // 同一条路线不该随便穿到对面那条道上去。做法是给「偏离本路线起点所在行」的格子加一点代价
+  // （0.4 格／行）：本道没被堵死时就会一路直走在自己的道上，只有该行被隔离平台／阻隔工事挡住时
+  // 才拐到另一条道。旧实现只求最短格数，于是两条道在多数地图上贴成一条（用户 2026-09-23 报的
+  // 「上方门刷怪但走的是下方门的路径／两条路看起来一样」）。
+  const laneY=route&&route.startPosition?to(route.startPosition).y:null;
+  const laneCost=p=>laneY==null?0:Math.abs(p.y-laneY)*LANE_ROW_PENALTY;
   const bfs=(from,dest)=>{
    if(flying)return from.x===dest.x&&from.y===dest.y?[]:[dest];
    const key=p=>p.x+','+p.y,queue=[from],seen=new Map([[key(from),null]]),cost=new Map([[key(from),0]]),closed=new Set();
    const dirs=route.allowDiagonalMove?[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]:[[1,0],[-1,0],[0,1],[0,-1]];
    while(queue.length){queue.sort((a,b)=>cost.get(key(a))-cost.get(key(b)));const p=queue.shift(),pk=key(p);if(closed.has(pk))continue;closed.add(pk);if(pk===key(dest))break;
-    for(const [dx,dy]of dirs){const q={x:p.x+dx,y:p.y+dy},qk=key(q);if(!walk(q)||closed.has(qk)||(dx&&dy&&(!walk({x:p.x+dx,y:p.y})||!walk({x:p.x,y:p.y+dy}))))continue;const next=cost.get(pk)+Math.hypot(dx,dy);if(next<(cost.get(qk)??Infinity)){cost.set(qk,next);seen.set(qk,p);queue.push(q);}}
+    for(const [dx,dy]of dirs){const q={x:p.x+dx,y:p.y+dy},qk=key(q);if(!walk(q)||closed.has(qk)||(dx&&dy&&(!walk({x:p.x+dx,y:p.y})||!walk({x:p.x,y:p.y+dy}))))continue;const next=cost.get(pk)+Math.hypot(dx,dy)+laneCost(q);if(next<(cost.get(qk)??Infinity)){cost.set(qk,next);seen.set(qk,p);queue.push(q);}}
    }
    if(!seen.has(key(dest)))return null;const segment=[];let p=dest;while(p&&key(p)!==key(from)){segment.unshift(p);p=seen.get(key(p));}return segment;
   };
