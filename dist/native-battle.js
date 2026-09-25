@@ -21,7 +21,7 @@ import {usesSp,spTypeOf,skillKind,ammoCount,initSpOf,gainSp,tickTimeSp} from './
 import {containsTarget} from './targeting.js';
 import {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds,TENTATIVE_PROJECTILE_SPEED,enemyBehaviorProfile,enemyTargetValid,enemyTargetInRange,enemyShouldHoldPosition,enemySpecialTraitId,enemyBleedingTraitId,ENEMY_MOVEMENT_POLICIES} from './native-combat.js';
 import {skillWidensRange,rangeGeometry,directionOf} from './protocol.js';
-import {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,tokenCostFor} from './native-operator-effects.js';
+import {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,moduleRows,tokenCostFor} from './native-operator-effects.js';
 import {settleEgirSwallow,tickDoll,enemyOpponents,enemyWineBuffs,ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,elementBurstActive,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,summonLifecycle,tickCathyDevices,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,canRelocateTo,nearbySpots,spawnSummon,grantGuard,chebyshev} from './native-effects.js';
 
 export class NativeBattle {
@@ -309,6 +309,10 @@ export class NativeBattle {
   if(p.charId==='char_4148_philae'&&u.philaeElementBoost&&this.skillActive(u))ratio('atk',Number(blackboard(p.skill?.blackboard).atk)||.8,'菲莱·元素反击');
   // 纯烬艾雅法拉天赋「火山灰疗愈」：攻击范围内的友方单位生命上限 +6%（S3 期间第二天赋效果 ×talent_scale）。
   if(u.elementAuraMaxHp)ratio('maxHp',u.elementAuraMaxHp,'纯烬·火山灰疗愈');
+  // 引星棘刺天赋「视界」：在场时全场友方攻速 +5（敌方 -5 在 tickAuras），位于连续 6 格以上直线道路的单位效果翻倍。
+  for(const owner of this.s.units)if(owner.deployed&&owner.hp>0&&owner.id==='char_1039_thorn2'){const t=(this.profile(owner).activeTalents||[]).find(x=>x.name==='视界'),vb=t&&blackboard(t.blackboard);if(vb){const doubled=this.straightRoads().has(Math.round(u.x)+','+Math.round(u.y)),extra=Number(vb.attack_speed_ally_extra);as+=Number(vb.attack_speed_ally)||5;if(doubled)as+=Number.isFinite(extra)?extra:(Number(vb.attack_speed_ally)||5);}}
+  // 模组「场上存在炼金单元时，技力自然恢复速度 +0.1/秒」（引星棘刺 ALC-X、锡人「颅相学」）。
+  {const rows=moduleRows(p),conditional=rows.some(r=>/炼金单元/.test(String(r.description||'')));if(conditional)for(const row of rows){const v=Number(row.values?.sp_recovery_per_sec);if(Number.isFinite(v)&&v>0&&(this.s.logicEffects||[]).some(fx=>fx.values?.alchemyUnit))base.spRecoveryPerSec+=v;}}
   if(p.charId==='char_4145_ulpia'&&u.ulpiaKills){const t=(p.activeTalents||[]).find(x=>x.name==='血脉的哺养'),bb=t&&blackboard(t.blackboard);if(t){base.maxHp+=u.ulpiaKills*(Number(bb.max_hp)||120);base.atk+=u.ulpiaKills*(Number(bb.atk)||30);}}
   if(p.charId==='char_437_mizuki'){const talent=(p.activeTalents||[]).find(t=>t.name==='反移情');if(talent&&this.s.enemies.some(e=>e.hp>0&&!e.hidden&&e.maxHp>0&&e.hp/e.maxHp<=(Number(blackboard(talent.blackboard).hp_ratio)||.5)&&this.inside(u,e,true)))ratio('atk',Number(blackboard(talent.blackboard).atk)||.1,'水月·反移情');}
   if(p.charId==='char_1012_skadi2'){const talent=(p.activeTalents||[]).find(t=>t.name==='捕食习性');if(talent){const bb=blackboard(talent.blackboard),deep=this.s.units.some(v=>v.uid!==u.uid&&v.deployed&&v.hp>0&&this.profile(v).bonds?.includes('egirShip')&&this.inside(u,v,true));ratio('atk',Number(bb[deep?'skadi2_t_2[atk][2].atk':'skadi2_t_2[atk][1].atk'])|| (deep?.15:.06),'浊心斯卡蒂·捕食习性');}}
@@ -366,6 +370,17 @@ export class NativeBattle {
     if(held){const stacks=this.garrisonStacks(b.bond_id,b);if(stacks)scale*=1+Number(b.damage_scale_per_stack||0)*stacks;}
    }
   }
+  return scale;
+ }
+ // 干员模组在**常驻**伤害上的倍率：只认文案写明条件的模组行（目前只有妮芙 ALC-X
+ // 「对处于元素爆发期间的敌人造成的伤害提升至 110%」），取该行黑板的 `damage_scale`。
+ // 由 `native-effects.dealDamage` 统一乘——普攻、技能、天赋持续伤害（「失魂」）三条路径都会经过它，
+ // 所以不要把这条倍率再抄进某个技能的结算里（会重复乘算）。
+ moduleElementBurstScale(source,target){
+  if(!source||!target)return 1;
+  if(!((Number(target.elementBurstUntil)||0)>this.s.time))return 1;
+  let scale=1;
+  for(const row of moduleRows(this.profile(source))){const v=Number(row.values?.damage_scale);if(Number.isFinite(v)&&v>1&&/元素爆发/.test(String(row.description||'')))scale=Math.max(scale,v);}
   return scale;
  }
  range(u,skill=false){return this.rangeWithSkill(u,skill).cells;}
@@ -433,6 +448,18 @@ export class NativeBattle {
  prepareWaves(turn){const plan=nativeWavePlan(this.data,turn,this.economy.s.waveRoster);this.level=plan.level;this.s.queue=plan.queue;this.s.total=plan.total;this.combatScale=plan.scale||{atk:1,hp:1,moveSpeed:1};if(this.economy.s.bandId==='band_ducklord'&&turn.round>=5&&this.s.queue.length){const targets=['enemy_2002_bearmi_2','enemy_2034_sythef_2','enemy_2085_skzjxd_2','enemy_2001_duckmi_2'],ground=this.s.queue.filter(q=>this.level.routes[q.route]?.motionMode!=='FLY'),count=Math.min(2,Math.floor(this.economy.random()*3));for(let i=0;i<count&&ground.length;i++){if(this.economy.random()<.6)continue;const q=ground.splice(Math.floor(this.economy.random()*ground.length),1)[0];q.id=targets[Math.floor(this.economy.random()*targets.length)];q.ducklord=true;}}const contract=this.economy.s.roundBounty,selected=contract?.round===turn.round&&contract.selected?bountyOption(this.data,contract.selected):null;const bounties=[this.economy.s.pendingBounty,selected].filter(Boolean);for(const bounty of bounties){const motion=this.enemyRaw(bounty.enemyId)?.motion==='FLY'?'FLY':'WALK',route=(this.level.routes||[]).findIndex(r=>r.motionMode===motion&&r.startPosition.col<=10&&r.startPosition.row>=6&&r.startPosition.row<=12),baseAt=this.s.queue.reduce((n,q)=>Math.max(n,q.at||0),0);for(let i=0;i<bounty.count;i++)this.s.queue.push({id:bounty.enemyId,at:baseAt+1.5+i*1.2,route:route<0?0:route,cost:0,bountyReward:bounty.coin});this.s.total=this.s.queue.length;this.economy.s.pendingBounty=null;}this.s.queue=scheduleWaveQueue(this.s.queue,this.level,turn.round);this.s.total=this.s.queue.filter(q=>!(this.enemyRaw(q.id)?.enemyBehavior?.notCountInTotal??this.enemyRaw(q.id)?.notCountInTotal)).length;}
  enemyRaw(id){return this.level?.enemyProfiles?.[id]||this.data.enemies[id]||this.data.enemyDependencies?.[id];}
  isPrimaryEnemy(id){return this.enemyRaw(id)?.enemyBehavior?.nonPrimary!==true;}
+ // 引星棘刺天赋「视界」的「连续 6 格或以上直线道路」：开战时按 PRTS 备注扫描一次（先横后竖，只算**可通行的地面**格）。
+ straightRoadTile(x,y){
+  if(!this.tileWalkable(x,y))return false;
+  const cell=this.map.grid[y]?.[x];return Boolean(cell)&&cell.heightType!=='HIGHLAND';
+ }
+ straightRoads(){
+  if(this.s.straightRoads)return this.s.straightRoads;
+  const set=new Set(),add=cells=>{if(cells.length>=6)for(const c of cells)set.add(c.x+','+c.y);};
+  for(let y=0;y<this.map.rows;y++){let run=[];for(let x=0;x<this.map.cols;x++){if(this.straightRoadTile(x,y))run.push({x,y});else{add(run);run=[];}}add(run);}
+  for(let x=0;x<this.map.cols;x++){let run=[];for(let y=0;y<this.map.rows;y++){if(this.straightRoadTile(x,y))run.push({x,y});else{add(run);run=[];}}add(run);}
+  return this.s.straightRoads=set;
+ }
  tileWalkable(x,y){if(this.s?.summons?.some(s=>s.type==='mine-camp'&&s.deployed&&s.hp>0&&s.x===x&&s.y===y))return false;return x>=0&&y>=0&&x<this.map.cols&&y<this.map.rows&&Boolean(this.map.grid[y]?.[x])&&this.map.grid[y][x].passableMask!=='FLY_ONLY'&&this.map.grid[y][x].passableMask!=='NONE';}
  path(route,flying){
   const to=p=>({x:p.col-this.map.origin.col,y:this.map.origin.row-p.row});

@@ -6096,11 +6096,13 @@ function coinGainAtSkillStart(battle,u){
  return amount;
 }
 function moduleRows(profile){
- const rows=[];
+ const rows=[],seen=new Set();
+ // 同一个模组天赋既挂在 activeTalents（fromModule）又在 modulePhase.parts 里，必须去重，
+ // 否则读 moduleRows 的数值（如技力自然恢复 +0.1/秒）会被叠加两次。
  const add=(value,fromModule=false)=>{
   if(!value||typeof value!=='object')return;
   const values=blackboardValues({blackboard:value.blackboard}),description=[value.description,value.overrideDescripton,value.additionalDescription].filter(Boolean).join(' ');
-  if(fromModule||value.fromModule||Object.keys(values).some(key=>/cost|withdraw/i.test(key)))rows.push({values,description});
+  if(fromModule||value.fromModule||Object.keys(values).some(key=>/cost|withdraw/i.test(key))){const key=JSON.stringify([values,description]);if(seen.has(key))return;seen.add(key);rows.push({values,description});}
  };
  for(const talent of profile?.activeTalents||[])if(talent.fromModule||!talent.name||['10','20_root','-1'].includes(String(talent.prefabKey)))add(talent,true);
  for(const part of profile?.modulePhase?.parts||[]){
@@ -6349,7 +6351,7 @@ function operatorSkillStart(battle,u,ctx){
    const target=allAllies(battle,u,true).filter(a=>a.uid!==u.uid&&a.kind!=='summon'&&!a.device).sort((a,b)=>(a.hp/a.maxHp)-(b.hp/b.maxHp)||(b.deployAt??0)-(a.deployAt??0)||b.uid-a.uid)[0]||u;
    const spot={x:mid(target.x),y:mid(target.y)};
    ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'thorn2-s1:'+u.skillCount,x:u.x,y:u.y,radius:1,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
-    trackArea:true,trackSide:'ally',shape:'square',refKind:'live',persistAfterSourceGone:false,values:{holdUntilArrival:true,regen:atk*(Number(bb.hpRecoveryPerSecRatio)||.11),defBuff:Number(bb.def)||60},
+    trackArea:true,trackSide:'ally',shape:'square',refKind:'live',persistAfterSourceGone:false,values:{alchemyUnit:true,holdUntilArrival:true,regen:atk*(Number(bb.hpRecoveryPerSecRatio)||.11),defBuff:Number(bb.def)||60},
     snapshot:{},carrier:{toX:spot.x,toY:spot.y,speed:THORN2_THROW_SPEED,arrived:false}});
    return true;
   }
@@ -6366,7 +6368,7 @@ function operatorSkillStart(battle,u,ctx){
    const radius=Number(bb.projectile_range)||1.1,grow=Number(bb.value)||.13,moveSpeed=Number(bb.projectile_move_speed)||.1,window=Number(bb.remaining_time)||plainLife;
    ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'thorn2-s2:'+u.skillCount,x:u.x,y:u.y,radius,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
     trackArea:true,trackSide:'enemy',shape:'circle',refKind:'live',persistAfterSourceGone:false,
-    values:{holdUntilArrival:true,dot:true,groundOnly:true,type:'arts',atk_scale:Number(bb.atk_scale)||1.2,healDown:Number(bb.heal_scale)||.5,regen:atk*(Number(bb.hp_recovery_per_sec_ratio_chr)||.12),
+    values:{alchemyUnit:true,noSource:true,holdUntilArrival:true,dot:true,groundOnly:true,type:'arts',atk_scale:Number(bb.atk_scale)||1.2,healDown:Number(bb.heal_scale)||.5,regen:atk*(Number(bb.hp_recovery_per_sec_ratio_chr)||.12),
      ...(moving?{drift:{x:throwDir.x,y:throwDir.y,speed:moveSpeed,time:window}}:{}),growth:{base:radius,rate:grow,time:window}},
     snapshot:{damage:atk*(Number(bb.atk_scale)||1.2)},carrier:{toX:spot.x,toY:spot.y,speed:THORN2_THROW_SPEED,arrived:false}});
    return true;
@@ -6378,7 +6380,7 @@ function operatorSkillStart(battle,u,ctx){
    const center=points.reduce((acc,p)=>({x:acc.x+p.x/points.length,y:acc.y+p.y/points.length}),{x:0,y:0});
    ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'thorn2-s3:'+u.skillCount,x:center.x,y:center.y,radius:1,interval:Number(bb.interval)||1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
     trackArea:true,trackSide:'enemy',refKind:'owner',persistAfterSourceGone:true,
-    values:{thorn2Area:{points,width:.325},thorn2Sap:{atkValue:atk,cap:Number(bb.max_stack_cnt)||15,dps:Number(bb.atk_scale)||1.2,dpsPer:Number(bb.atk_scale_per_interval)||.12,dpsMax:Number(bb.max_atk_scale)||3,atk:Number(bb.atk)||-.12,atkPer:Number(bb.atk_per_interval)||-.006,atkMax:Number(bb.max_atk)||-.21,def:Number(bb.def)||-.32,defPer:Number(bb.def_per_interval)||-.006,defMax:Number(bb.max_def)||-.41,res:Number(bb.magic_resistance)||-.32,resPer:Number(bb.magic_resistance_per_interval)||-.006,resMax:Number(bb.max_magic_resistance)||-.41}},
+    values:{alchemyUnit:true,thorn2Area:{points,width:.325},thorn2Sap:{atkValue:atk,cap:Number(bb.max_stack_cnt)||15,dps:Number(bb.atk_scale)||1.2,dpsPer:Number(bb.atk_scale_per_interval)||.12,dpsMax:Number(bb.max_atk_scale)||3,atk:Number(bb.atk)||-.12,atkPer:Number(bb.atk_per_interval)||-.006,atkMax:Number(bb.max_atk)||-.21,def:Number(bb.def)||-.32,defPer:Number(bb.def_per_interval)||-.006,defMax:Number(bb.max_def)||-.41,res:Number(bb.magic_resistance)||-.32,resPer:Number(bb.magic_resistance_per_interval)||-.006,resMax:Number(bb.max_magic_resistance)||-.41}},
     snapshot:{}});
    return true;
   }
@@ -6477,8 +6479,10 @@ function operatorSkillStart(battle,u,ctx){
   const life=Math.max(.5,Number(bb.projectile_delay_time)||8),healRatio=Number(bb.hp_recovery_per_sec_ratio)||0;
   ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'tinman-alchemy:'+u.id+':'+u.skillCount,
    stackRule:'stack',x:u.x,y:u.y,radius:ALCHEMY_UNIT_RADIUS,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
-   trackArea:true,trackSide:'enemy',refKind:'live',values:{dot:true,groundOnly:true,shape:'circle',atk_scale:scale,type:'arts',
-    attackDown:Number(bb.atk)<0?Number(bb.atk):0,hot:healRatio>0?atk*healRatio:0,fragile:talent?Number(talent.values?.['skill@damage_scale'])||1.2:0},
+   trackArea:true,trackSide:'enemy',refKind:'live',values:{alchemyUnit:true,noSource:true,dot:true,groundOnly:true,shape:'circle',atk_scale:scale,type:'arts',
+    // PRTS：锡人的炼金单元「造成无来源法术持续伤害」；「大拉里」的生命恢复是加**生命回复速度**（`regen`），
+    // 不受治疗加成与禁疗影响，所以不能用 `hot`（走 applyHeal）。
+    attackDown:Number(bb.atk)<0?Number(bb.atk):0,regen:healRatio>0?atk*healRatio:0,fragile:talent?Number(talent.values?.['skill@damage_scale'])||1.2:0},
    snapshot:{damage:atk*scale},carrier:{toX:spot.x,toY:spot.y,speed:ALCHEMY_UNIT_SPEED,arrived:false}});
   return true;
  }
@@ -6670,7 +6674,7 @@ function onEvent(battle,type,payload,ctx){
    // 进表前提：PRTS 文案确认元素是**这次攻击**造成的，且本文件没有专属实现；数值不拿 atkScale 顶替。
    const elementSkill=GENERIC_ELEMENT_SKILLS.has(source.id+'#'+(source.source?.skillIndex??battle.profile(source).skillIndex));
    const elementRatio=Number(config.bb.elementScale??config.bb.ep_damage_ratio??config.bb['attack@ep_damage_ratio']);
-   if(elementSkill&&Number.isFinite(elementRatio)&&elementRatio>0&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*elementRatio,type:has(config.description,/凋亡/)?'necrosis':has(config.description,/灼燃/)?'burn':has(config.description,/神经损伤/)?'neural':'elemental',cause:'skill',parentEventId:payload.event?.eventId});
+   if(elementSkill&&Number.isFinite(elementRatio)&&elementRatio>0&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*elementRatio,type:has(config.description,/神经损伤[^，。；]{0,6}（优先）/)?'neural':has(config.description,/凋亡/)?'necrosis':has(config.description,/灼燃/)?'burn':has(config.description,/神经损伤/)?'neural':'elemental',cause:'skill',parentEventId:payload.event?.eventId});
   const bb=config.bb;if(Number.isFinite(bb.value)&&has(config.description,/恢复自身|回复自身/))ctx.applyHeal(battle,{source,target:source,amount:bb.value});
   // Defense penetration is applied before mitigation by NativeBattle.hit; do not mutate the target.
  }
@@ -6712,7 +6716,7 @@ function onEvent(battle,type,payload,ctx){
    // 【法术脆弱】的倍率，却被当成灼燃损伤——她因此**每次攻击**都挂 115% 攻击力的灼燃（2026-09-22 排查烛煌时发现，
    // 与烛煌同属「拿普通数值键顶替元素比例」）。烛煌天赋的 `ep_damage_scale` 也不能进这张通用表：
    // 她的「熔点引爆」是灼燃爆发时的专属结算，写成每次攻击就是用户报的那个 bug。
-   const talentElement=TALENT_ELEMENT_DEDICATED.has(source.id)?NaN:Number(bb.ep_damage_ratio??bb.element_damage_scale);if(Number.isFinite(talentElement)&&talentElement>0&&has(text,/灼痕|灼燃|凋亡损伤|元素伤害|神经损伤/)&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*talentElement,type:has(text,/凋亡/)?'necrosis':has(text,/神经损伤/)?'neural':'burn',cause:'extra',parentEventId:payload.event?.eventId});if(has(text,/灼痕/))applyStatus(target,'burn',Number(bb.duration)||6,{source:source.uid,resistible:false});}
+   const talentElement=TALENT_ELEMENT_DEDICATED.has(source.id)?NaN:Number(bb.ep_damage_ratio??bb.element_damage_scale);if(Number.isFinite(talentElement)&&talentElement>0&&has(text,/灼痕|灼燃|凋亡损伤|元素伤害|神经损伤/)&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*talentElement,type:has(text,/神经损伤[^，。；]{0,6}（优先）/)?'neural':has(text,/凋亡/)?'necrosis':has(text,/神经损伤/)?'neural':'burn',cause:'extra',parentEventId:payload.event?.eventId});if(has(text,/灼痕/))applyStatus(target,'burn',Number(bb.duration)||6,{source:source.uid,resistible:false});}
   }
  }
  if(type==='after-heal'&&source&&target){
@@ -6789,7 +6793,7 @@ function periodicMods(battle,u,ctx){
  }
 }
 
-return {blackboardValues,talentValues,coinCapFor,grantCoins,spendCoins,coinGainAtSkillStart,zoneVisual,moduleCostData,tokenCostFor,targetFilter,operatorRegistry,skillConfig,costValue,textCostValue,costValueForText,statMods,attackModifier,attackPenetration,damageReductionFor,operatorSkillStart,onEvent,periodicMods};
+return {blackboardValues,talentValues,coinCapFor,grantCoins,spendCoins,coinGainAtSkillStart,moduleRows,zoneVisual,moduleCostData,tokenCostFor,targetFilter,operatorRegistry,skillConfig,costValue,textCostValue,costValueForText,statMods,attackModifier,attackPenetration,damageReductionFor,operatorSkillStart,onEvent,periodicMods};
 },
 "native-effects.js": function(load) {
 const {startEnemyPush,startEnemyPull} = load("native-shift.js");
@@ -7125,6 +7129,9 @@ function dealDamage(battle,opts){
   }
  }
  if(battle.on?.('emptyShip')&&battle.s.units.includes(target)&&['physical','arts'].includes(type)&&!opts.fromHurt)value*=Math.max(0,1-bondValue(bondParam(battle,'emptyShip'),'damage_resistance',.2));
+ // 干员模组的常驻伤害倍率（妮芙 ALC-X「对处于元素爆发期间的敌人造成的伤害提升至 110%」）：
+ // 唯一入口就是这里（`NativeBattle.moduleElementBurstScale`），别在技能结算里再乘一次。
+ if(source&&battle.s.enemies.includes(target)&&battle.moduleElementBurstScale)value*=battle.moduleElementBurstScale(source,target);
  if(!opts.sourceDamageHandled)value*=battle.enemyOutgoingDamageMultiplier?.(source)??1;
  const wineDodge=type==='physical'&&opts.cause!=='dot'&&battle.s.enemies.includes(target)?enemyWineBuffs(battle,target).physicalDodge:0;
  const unblockedDodge=['physical','arts'].includes(type)&&opts.cause!=='dot'&&battle.s.enemies.includes(target)&&target.block==null?Math.max(0,Math.min(1,Number(target.enemyUnblockedDodge)||0)):0;
@@ -7182,7 +7189,9 @@ function dealDamage(battle,opts){
  result.potentialHpDamage=result.blocked?0:(result.raw??Math.max(0,value-result.shield));
  const wouldDie=target.hp<=0;
  if(wouldDie&&runFatal(battle,target,true,event,source)){/* still alive */}
- const credit=source?.kind==='summon'?getActor(battle.s,source.ownerUid):source;
+ // `creditUid`：**无来源伤害**（PRTS 写「造成的伤害为无来源法术持续伤害」的炼金单元）仍然要把战报归属算给召唤者，
+ // 但伤害本身没有 source，所以不会被「来源相关」的效果（反伤、吸血、某些敌人能力）认领。
+ const credit=opts.creditUid!=null?getActor(battle.s,opts.creditUid):(source?.kind==='summon'?getActor(battle.s,source.ownerUid):source);
  if(credit&&battle.s.units.includes(credit)&&battle.s.enemies.includes(target)){credit.damage=(credit.damage||0)+result.total;battle.s.damage[credit.uid]=(battle.s.damage[credit.uid]||0)+result.total;}
  battle.emit('hit',{uid:target.uid,x:target.x,y:target.y,type,amount:result.total,blocked:!!result.blocked,skill:!!opts.skill});
  if(result.blocked)battle.s.effects.push({x:target.x,y:target.y,text:'抵消',life:.5,type:'block'});
@@ -7664,7 +7673,7 @@ function settleThorn2Sap(battle,fx,source){
  const step=(from,per,max)=>{const v=Number(from||0)+Number(per||0)*k,m=Number(max);return Number.isFinite(m)?(m<Number(from||0)?Math.max(m,v):Math.min(m,v)):v;};
  const dps=step(sap.dps,sap.dpsPer,sap.dpsMax),atk=step(sap.atk,sap.atkPer,sap.atkMax),def=step(sap.def,sap.defPer,sap.defMax),res=step(sap.res,sap.resPer,sap.resMax);
  for(const e of zoneActors(battle,fx,'enemy')){
-  if(dps>0)dealDamage(battle,{source,target:e,amount:Number(sap.atkValue||0)*dps,type:'arts',cause:'dot',effectId:fx.id});
+  if(dps>0)dealDamage(battle,{source:null,creditUid:fx.sourceUid,target:e,amount:Number(sap.atkValue||0)*dps,type:'arts',cause:'dot',effectId:fx.id});
   if(atk<0)applyStatus(e,'attackDown',fx.interval||1,{source:source?.uid,value:atk,resistible:false,pick:'strong'});
   if(def<0)applyStatus(e,'defDown',fx.interval||1,{source:source?.uid,value:def,resistible:false,pick:'strong'});
   if(res<0)applyStatus(e,'resDown',fx.interval||1,{source:source?.uid,value:res,resistible:false,pick:'strong'});
@@ -7716,7 +7725,7 @@ function settlePeriodic(battle,fx){
    }
    return;
   }
-  if(fx.values?.dot)for(const e of zoneActors(battle,fx,fx.trackSide||'enemy'))if(!fx.values.requiresStatus||(e.statuses||[]).some(s=>s.kind===fx.values.requiresStatus)){const tickDamage=fx.snapshot?.damage??(source?battle.stats(source).atk:0)*(fx.values.atk_scale||1);dealDamage(battle,{source,target:e,amount:tickDamage,type:fx.values?.type||'arts',cause:'dot',effectId:fx.id});
+  if(fx.values?.dot)for(const e of zoneActors(battle,fx,fx.trackSide||'enemy'))if(!fx.values.requiresStatus||(e.statuses||[]).some(s=>s.kind===fx.values.requiresStatus)){const tickDamage=fx.snapshot?.damage??(source?battle.stats(source).atk:0)*(fx.values.atk_scale||1);dealDamage(battle,{source:fx.values?.noSource?null:source,creditUid:fx.values?.noSource?fx.sourceUid:undefined,target:e,amount:tickDamage,type:fx.values?.type||'arts',cause:'dot',effectId:fx.id});
    // `elementOffDamage`：元素损伤量取「**这一次**伤害的比例」而不是攻击力的比例（烛煌 S1/S2 的 PRTS 文案都写「相当于法术伤害的 30%」）。
    if(fx.values.elementScale&&source)applyElementDamage(battle,{source,target:e,amount:(fx.values.elementOffDamage?tickDamage:battle.stats(source).atk)*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot',parentEventId:null});}
   if(fx.values?.elementScale&&!fx.values?.dot&&source)for(const e of zoneActors(battle,fx,'enemy'))applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot'});
@@ -7783,7 +7792,7 @@ function tickAuras(battle){
  for(const owner of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1016_agoat2')){const talent=activeTalentsOf(battle,owner).find(t=>t.name==='火山灰疗愈'),v=talent?Number(talent.values?.max_hp):NaN;if(Number.isFinite(v)&&v>0){const s3=battle.skillActive(owner)&&(owner.source?.skillIndex??battle.profile(owner).skillIndex)===2,scale=s3?(Number(blackboard(owner.skill?.blackboard).talent_scale)||1):1;for(const a of battle.s.units.filter(x=>x.deployed&&x.hp>0&&battle.inside(owner,x,true)))a.elementAuraMaxHp=Math.max(Number(a.elementAuraMaxHp)||0,v*scale);}}
  for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_245_cello')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='精神逆构'),v=talent?Number(talent.values?.ep_damage_scale):NaN;if(Number.isFinite(v)&&v>1)for(const e of enemyActors(battle.s))if(battle.inside(source,e,true))e.elementDamageTakenBonusByType={necrosis:Math.max(Number(e.elementDamageTakenBonusByType?.necrosis)||0,v-1)};}
  for(const e of enemyActors(battle.s))e.operatorAttackSpeedMod=0;
- for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1039_thorn2')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='视界'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s))e.operatorAttackSpeedMod-=Number(bb.attack_speed_enemy)||5;}
+ for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1039_thorn2')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='视界'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s)){const base=Number(bb.attack_speed_enemy)||-5,extra=Number(bb.attack_speed_enemy_extra),doubled=battle.straightRoads?battle.straightRoads().has(Math.round(e.x)+','+Math.round(e.y)):false;e.operatorAttackSpeedMod+=base+(doubled&&Number.isFinite(extra)?extra:0);}}
  for(const fx of battle.s.logicEffects||[])if(fx.kind==='zone'&&fx.values?.fragile&&(fx.endsAt==null||battle.s.time<fx.endsAt))for(const e of zoneActors(battle,fx,'enemy'))e.fragile=Math.max(e.fragile||1,Number(fx.values.fragile));
  for(const source of battle.s.summons.filter(s=>s.type==='yan-guardian'&&s.deployed&&s.hp>0))for(const e of enemyActors(battle.s))if(Math.hypot(source.x-e.x,source.y-e.y)<=1.5)e.yanElementDamageTakenBonus=Math.max(e.yanElementDamageTakenBonus||0,source.yanVulnerability||.2);
  for(const u of battle.s.units){
@@ -10471,7 +10480,7 @@ const {usesSp,spTypeOf,skillKind,ammoCount,initSpOf,gainSp,tickTimeSp} = load("n
 const {containsTarget} = load("targeting.js");
 const {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds,TENTATIVE_PROJECTILE_SPEED,enemyBehaviorProfile,enemyTargetValid,enemyTargetInRange,enemyShouldHoldPosition,enemySpecialTraitId,enemyBleedingTraitId,ENEMY_MOVEMENT_POLICIES} = load("native-combat.js");
 const {skillWidensRange,rangeGeometry,directionOf} = load("protocol.js");
-const {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,tokenCostFor} = load("native-operator-effects.js");
+const {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,moduleRows,tokenCostFor} = load("native-operator-effects.js");
 const {settleEgirSwallow,tickDoll,enemyOpponents,enemyWineBuffs,ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,elementBurstActive,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,summonLifecycle,tickCathyDevices,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,canRelocateTo,nearbySpots,spawnSummon,grantGuard,chebyshev} = load("native-effects.js");
 class NativeBattle {
  constructor(data,economy,map,turn,{restore=false}={}){
@@ -10758,6 +10767,10 @@ class NativeBattle {
   if(p.charId==='char_4148_philae'&&u.philaeElementBoost&&this.skillActive(u))ratio('atk',Number(blackboard(p.skill?.blackboard).atk)||.8,'菲莱·元素反击');
   // 纯烬艾雅法拉天赋「火山灰疗愈」：攻击范围内的友方单位生命上限 +6%（S3 期间第二天赋效果 ×talent_scale）。
   if(u.elementAuraMaxHp)ratio('maxHp',u.elementAuraMaxHp,'纯烬·火山灰疗愈');
+  // 引星棘刺天赋「视界」：在场时全场友方攻速 +5（敌方 -5 在 tickAuras），位于连续 6 格以上直线道路的单位效果翻倍。
+  for(const owner of this.s.units)if(owner.deployed&&owner.hp>0&&owner.id==='char_1039_thorn2'){const t=(this.profile(owner).activeTalents||[]).find(x=>x.name==='视界'),vb=t&&blackboard(t.blackboard);if(vb){const doubled=this.straightRoads().has(Math.round(u.x)+','+Math.round(u.y)),extra=Number(vb.attack_speed_ally_extra);as+=Number(vb.attack_speed_ally)||5;if(doubled)as+=Number.isFinite(extra)?extra:(Number(vb.attack_speed_ally)||5);}}
+  // 模组「场上存在炼金单元时，技力自然恢复速度 +0.1/秒」（引星棘刺 ALC-X、锡人「颅相学」）。
+  {const rows=moduleRows(p),conditional=rows.some(r=>/炼金单元/.test(String(r.description||'')));if(conditional)for(const row of rows){const v=Number(row.values?.sp_recovery_per_sec);if(Number.isFinite(v)&&v>0&&(this.s.logicEffects||[]).some(fx=>fx.values?.alchemyUnit))base.spRecoveryPerSec+=v;}}
   if(p.charId==='char_4145_ulpia'&&u.ulpiaKills){const t=(p.activeTalents||[]).find(x=>x.name==='血脉的哺养'),bb=t&&blackboard(t.blackboard);if(t){base.maxHp+=u.ulpiaKills*(Number(bb.max_hp)||120);base.atk+=u.ulpiaKills*(Number(bb.atk)||30);}}
   if(p.charId==='char_437_mizuki'){const talent=(p.activeTalents||[]).find(t=>t.name==='反移情');if(talent&&this.s.enemies.some(e=>e.hp>0&&!e.hidden&&e.maxHp>0&&e.hp/e.maxHp<=(Number(blackboard(talent.blackboard).hp_ratio)||.5)&&this.inside(u,e,true)))ratio('atk',Number(blackboard(talent.blackboard).atk)||.1,'水月·反移情');}
   if(p.charId==='char_1012_skadi2'){const talent=(p.activeTalents||[]).find(t=>t.name==='捕食习性');if(talent){const bb=blackboard(talent.blackboard),deep=this.s.units.some(v=>v.uid!==u.uid&&v.deployed&&v.hp>0&&this.profile(v).bonds?.includes('egirShip')&&this.inside(u,v,true));ratio('atk',Number(bb[deep?'skadi2_t_2[atk][2].atk':'skadi2_t_2[atk][1].atk'])|| (deep?.15:.06),'浊心斯卡蒂·捕食习性');}}
@@ -10815,6 +10828,17 @@ class NativeBattle {
     if(held){const stacks=this.garrisonStacks(b.bond_id,b);if(stacks)scale*=1+Number(b.damage_scale_per_stack||0)*stacks;}
    }
   }
+  return scale;
+ }
+ // 干员模组在**常驻**伤害上的倍率：只认文案写明条件的模组行（目前只有妮芙 ALC-X
+ // 「对处于元素爆发期间的敌人造成的伤害提升至 110%」），取该行黑板的 `damage_scale`。
+ // 由 `native-effects.dealDamage` 统一乘——普攻、技能、天赋持续伤害（「失魂」）三条路径都会经过它，
+ // 所以不要把这条倍率再抄进某个技能的结算里（会重复乘算）。
+ moduleElementBurstScale(source,target){
+  if(!source||!target)return 1;
+  if(!((Number(target.elementBurstUntil)||0)>this.s.time))return 1;
+  let scale=1;
+  for(const row of moduleRows(this.profile(source))){const v=Number(row.values?.damage_scale);if(Number.isFinite(v)&&v>1&&/元素爆发/.test(String(row.description||'')))scale=Math.max(scale,v);}
   return scale;
  }
  range(u,skill=false){return this.rangeWithSkill(u,skill).cells;}
@@ -10882,6 +10906,18 @@ class NativeBattle {
  prepareWaves(turn){const plan=nativeWavePlan(this.data,turn,this.economy.s.waveRoster);this.level=plan.level;this.s.queue=plan.queue;this.s.total=plan.total;this.combatScale=plan.scale||{atk:1,hp:1,moveSpeed:1};if(this.economy.s.bandId==='band_ducklord'&&turn.round>=5&&this.s.queue.length){const targets=['enemy_2002_bearmi_2','enemy_2034_sythef_2','enemy_2085_skzjxd_2','enemy_2001_duckmi_2'],ground=this.s.queue.filter(q=>this.level.routes[q.route]?.motionMode!=='FLY'),count=Math.min(2,Math.floor(this.economy.random()*3));for(let i=0;i<count&&ground.length;i++){if(this.economy.random()<.6)continue;const q=ground.splice(Math.floor(this.economy.random()*ground.length),1)[0];q.id=targets[Math.floor(this.economy.random()*targets.length)];q.ducklord=true;}}const contract=this.economy.s.roundBounty,selected=contract?.round===turn.round&&contract.selected?bountyOption(this.data,contract.selected):null;const bounties=[this.economy.s.pendingBounty,selected].filter(Boolean);for(const bounty of bounties){const motion=this.enemyRaw(bounty.enemyId)?.motion==='FLY'?'FLY':'WALK',route=(this.level.routes||[]).findIndex(r=>r.motionMode===motion&&r.startPosition.col<=10&&r.startPosition.row>=6&&r.startPosition.row<=12),baseAt=this.s.queue.reduce((n,q)=>Math.max(n,q.at||0),0);for(let i=0;i<bounty.count;i++)this.s.queue.push({id:bounty.enemyId,at:baseAt+1.5+i*1.2,route:route<0?0:route,cost:0,bountyReward:bounty.coin});this.s.total=this.s.queue.length;this.economy.s.pendingBounty=null;}this.s.queue=scheduleWaveQueue(this.s.queue,this.level,turn.round);this.s.total=this.s.queue.filter(q=>!(this.enemyRaw(q.id)?.enemyBehavior?.notCountInTotal??this.enemyRaw(q.id)?.notCountInTotal)).length;}
  enemyRaw(id){return this.level?.enemyProfiles?.[id]||this.data.enemies[id]||this.data.enemyDependencies?.[id];}
  isPrimaryEnemy(id){return this.enemyRaw(id)?.enemyBehavior?.nonPrimary!==true;}
+ // 引星棘刺天赋「视界」的「连续 6 格或以上直线道路」：开战时按 PRTS 备注扫描一次（先横后竖，只算**可通行的地面**格）。
+ straightRoadTile(x,y){
+  if(!this.tileWalkable(x,y))return false;
+  const cell=this.map.grid[y]?.[x];return Boolean(cell)&&cell.heightType!=='HIGHLAND';
+ }
+ straightRoads(){
+  if(this.s.straightRoads)return this.s.straightRoads;
+  const set=new Set(),add=cells=>{if(cells.length>=6)for(const c of cells)set.add(c.x+','+c.y);};
+  for(let y=0;y<this.map.rows;y++){let run=[];for(let x=0;x<this.map.cols;x++){if(this.straightRoadTile(x,y))run.push({x,y});else{add(run);run=[];}}add(run);}
+  for(let x=0;x<this.map.cols;x++){let run=[];for(let y=0;y<this.map.rows;y++){if(this.straightRoadTile(x,y))run.push({x,y});else{add(run);run=[];}}add(run);}
+  return this.s.straightRoads=set;
+ }
  tileWalkable(x,y){if(this.s?.summons?.some(s=>s.type==='mine-camp'&&s.deployed&&s.hp>0&&s.x===x&&s.y===y))return false;return x>=0&&y>=0&&x<this.map.cols&&y<this.map.rows&&Boolean(this.map.grid[y]?.[x])&&this.map.grid[y][x].passableMask!=='FLY_ONLY'&&this.map.grid[y][x].passableMask!=='NONE';}
  path(route,flying){
   const to=p=>({x:p.col-this.map.origin.col,y:this.map.origin.row-p.row});

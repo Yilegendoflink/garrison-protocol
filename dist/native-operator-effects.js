@@ -67,12 +67,14 @@ export function coinGainAtSkillStart(battle,u){
  }
  return amount;
 }
-function moduleRows(profile){
- const rows=[];
+export function moduleRows(profile){
+ const rows=[],seen=new Set();
+ // 同一个模组天赋既挂在 activeTalents（fromModule）又在 modulePhase.parts 里，必须去重，
+ // 否则读 moduleRows 的数值（如技力自然恢复 +0.1/秒）会被叠加两次。
  const add=(value,fromModule=false)=>{
   if(!value||typeof value!=='object')return;
   const values=blackboardValues({blackboard:value.blackboard}),description=[value.description,value.overrideDescripton,value.additionalDescription].filter(Boolean).join(' ');
-  if(fromModule||value.fromModule||Object.keys(values).some(key=>/cost|withdraw/i.test(key)))rows.push({values,description});
+  if(fromModule||value.fromModule||Object.keys(values).some(key=>/cost|withdraw/i.test(key))){const key=JSON.stringify([values,description]);if(seen.has(key))return;seen.add(key);rows.push({values,description});}
  };
  for(const talent of profile?.activeTalents||[])if(talent.fromModule||!talent.name||['10','20_root','-1'].includes(String(talent.prefabKey)))add(talent,true);
  for(const part of profile?.modulePhase?.parts||[]){
@@ -321,7 +323,7 @@ export function operatorSkillStart(battle,u,ctx){
    const target=allAllies(battle,u,true).filter(a=>a.uid!==u.uid&&a.kind!=='summon'&&!a.device).sort((a,b)=>(a.hp/a.maxHp)-(b.hp/b.maxHp)||(b.deployAt??0)-(a.deployAt??0)||b.uid-a.uid)[0]||u;
    const spot={x:mid(target.x),y:mid(target.y)};
    ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'thorn2-s1:'+u.skillCount,x:u.x,y:u.y,radius:1,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
-    trackArea:true,trackSide:'ally',shape:'square',refKind:'live',persistAfterSourceGone:false,values:{holdUntilArrival:true,regen:atk*(Number(bb.hpRecoveryPerSecRatio)||.11),defBuff:Number(bb.def)||60},
+    trackArea:true,trackSide:'ally',shape:'square',refKind:'live',persistAfterSourceGone:false,values:{alchemyUnit:true,holdUntilArrival:true,regen:atk*(Number(bb.hpRecoveryPerSecRatio)||.11),defBuff:Number(bb.def)||60},
     snapshot:{},carrier:{toX:spot.x,toY:spot.y,speed:THORN2_THROW_SPEED,arrived:false}});
    return true;
   }
@@ -338,7 +340,7 @@ export function operatorSkillStart(battle,u,ctx){
    const radius=Number(bb.projectile_range)||1.1,grow=Number(bb.value)||.13,moveSpeed=Number(bb.projectile_move_speed)||.1,window=Number(bb.remaining_time)||plainLife;
    ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'thorn2-s2:'+u.skillCount,x:u.x,y:u.y,radius,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
     trackArea:true,trackSide:'enemy',shape:'circle',refKind:'live',persistAfterSourceGone:false,
-    values:{holdUntilArrival:true,dot:true,groundOnly:true,type:'arts',atk_scale:Number(bb.atk_scale)||1.2,healDown:Number(bb.heal_scale)||.5,regen:atk*(Number(bb.hp_recovery_per_sec_ratio_chr)||.12),
+    values:{alchemyUnit:true,noSource:true,holdUntilArrival:true,dot:true,groundOnly:true,type:'arts',atk_scale:Number(bb.atk_scale)||1.2,healDown:Number(bb.heal_scale)||.5,regen:atk*(Number(bb.hp_recovery_per_sec_ratio_chr)||.12),
      ...(moving?{drift:{x:throwDir.x,y:throwDir.y,speed:moveSpeed,time:window}}:{}),growth:{base:radius,rate:grow,time:window}},
     snapshot:{damage:atk*(Number(bb.atk_scale)||1.2)},carrier:{toX:spot.x,toY:spot.y,speed:THORN2_THROW_SPEED,arrived:false}});
    return true;
@@ -350,7 +352,7 @@ export function operatorSkillStart(battle,u,ctx){
    const center=points.reduce((acc,p)=>({x:acc.x+p.x/points.length,y:acc.y+p.y/points.length}),{x:0,y:0});
    ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'thorn2-s3:'+u.skillCount,x:center.x,y:center.y,radius:1,interval:Number(bb.interval)||1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
     trackArea:true,trackSide:'enemy',refKind:'owner',persistAfterSourceGone:true,
-    values:{thorn2Area:{points,width:.325},thorn2Sap:{atkValue:atk,cap:Number(bb.max_stack_cnt)||15,dps:Number(bb.atk_scale)||1.2,dpsPer:Number(bb.atk_scale_per_interval)||.12,dpsMax:Number(bb.max_atk_scale)||3,atk:Number(bb.atk)||-.12,atkPer:Number(bb.atk_per_interval)||-.006,atkMax:Number(bb.max_atk)||-.21,def:Number(bb.def)||-.32,defPer:Number(bb.def_per_interval)||-.006,defMax:Number(bb.max_def)||-.41,res:Number(bb.magic_resistance)||-.32,resPer:Number(bb.magic_resistance_per_interval)||-.006,resMax:Number(bb.max_magic_resistance)||-.41}},
+    values:{alchemyUnit:true,thorn2Area:{points,width:.325},thorn2Sap:{atkValue:atk,cap:Number(bb.max_stack_cnt)||15,dps:Number(bb.atk_scale)||1.2,dpsPer:Number(bb.atk_scale_per_interval)||.12,dpsMax:Number(bb.max_atk_scale)||3,atk:Number(bb.atk)||-.12,atkPer:Number(bb.atk_per_interval)||-.006,atkMax:Number(bb.max_atk)||-.21,def:Number(bb.def)||-.32,defPer:Number(bb.def_per_interval)||-.006,defMax:Number(bb.max_def)||-.41,res:Number(bb.magic_resistance)||-.32,resPer:Number(bb.magic_resistance_per_interval)||-.006,resMax:Number(bb.max_magic_resistance)||-.41}},
     snapshot:{}});
    return true;
   }
@@ -449,8 +451,10 @@ export function operatorSkillStart(battle,u,ctx){
   const life=Math.max(.5,Number(bb.projectile_delay_time)||8),healRatio=Number(bb.hp_recovery_per_sec_ratio)||0;
   ctx.addEffect(battle,{kind:'zone',sourceUid:u.uid,sourceDeployGen:u.deployGen,talentOrSkillId:'tinman-alchemy:'+u.id+':'+u.skillCount,
    stackRule:'stack',x:u.x,y:u.y,radius:ALCHEMY_UNIT_RADIUS,interval:1,nextAt:battle.s.time+1,endsAt:battle.s.time+life,
-   trackArea:true,trackSide:'enemy',refKind:'live',values:{dot:true,groundOnly:true,shape:'circle',atk_scale:scale,type:'arts',
-    attackDown:Number(bb.atk)<0?Number(bb.atk):0,hot:healRatio>0?atk*healRatio:0,fragile:talent?Number(talent.values?.['skill@damage_scale'])||1.2:0},
+   trackArea:true,trackSide:'enemy',refKind:'live',values:{alchemyUnit:true,noSource:true,dot:true,groundOnly:true,shape:'circle',atk_scale:scale,type:'arts',
+    // PRTS：锡人的炼金单元「造成无来源法术持续伤害」；「大拉里」的生命恢复是加**生命回复速度**（`regen`），
+    // 不受治疗加成与禁疗影响，所以不能用 `hot`（走 applyHeal）。
+    attackDown:Number(bb.atk)<0?Number(bb.atk):0,regen:healRatio>0?atk*healRatio:0,fragile:talent?Number(talent.values?.['skill@damage_scale'])||1.2:0},
    snapshot:{damage:atk*scale},carrier:{toX:spot.x,toY:spot.y,speed:ALCHEMY_UNIT_SPEED,arrived:false}});
   return true;
  }
@@ -642,7 +646,7 @@ export function onEvent(battle,type,payload,ctx){
    // 进表前提：PRTS 文案确认元素是**这次攻击**造成的，且本文件没有专属实现；数值不拿 atkScale 顶替。
    const elementSkill=GENERIC_ELEMENT_SKILLS.has(source.id+'#'+(source.source?.skillIndex??battle.profile(source).skillIndex));
    const elementRatio=Number(config.bb.elementScale??config.bb.ep_damage_ratio??config.bb['attack@ep_damage_ratio']);
-   if(elementSkill&&Number.isFinite(elementRatio)&&elementRatio>0&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*elementRatio,type:has(config.description,/凋亡/)?'necrosis':has(config.description,/灼燃/)?'burn':has(config.description,/神经损伤/)?'neural':'elemental',cause:'skill',parentEventId:payload.event?.eventId});
+   if(elementSkill&&Number.isFinite(elementRatio)&&elementRatio>0&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*elementRatio,type:has(config.description,/神经损伤[^，。；]{0,6}（优先）/)?'neural':has(config.description,/凋亡/)?'necrosis':has(config.description,/灼燃/)?'burn':has(config.description,/神经损伤/)?'neural':'elemental',cause:'skill',parentEventId:payload.event?.eventId});
   const bb=config.bb;if(Number.isFinite(bb.value)&&has(config.description,/恢复自身|回复自身/))ctx.applyHeal(battle,{source,target:source,amount:bb.value});
   // Defense penetration is applied before mitigation by NativeBattle.hit; do not mutate the target.
  }
@@ -684,7 +688,7 @@ export function onEvent(battle,type,payload,ctx){
    // 【法术脆弱】的倍率，却被当成灼燃损伤——她因此**每次攻击**都挂 115% 攻击力的灼燃（2026-09-22 排查烛煌时发现，
    // 与烛煌同属「拿普通数值键顶替元素比例」）。烛煌天赋的 `ep_damage_scale` 也不能进这张通用表：
    // 她的「熔点引爆」是灼燃爆发时的专属结算，写成每次攻击就是用户报的那个 bug。
-   const talentElement=TALENT_ELEMENT_DEDICATED.has(source.id)?NaN:Number(bb.ep_damage_ratio??bb.element_damage_scale);if(Number.isFinite(talentElement)&&talentElement>0&&has(text,/灼痕|灼燃|凋亡损伤|元素伤害|神经损伤/)&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*talentElement,type:has(text,/凋亡/)?'necrosis':has(text,/神经损伤/)?'neural':'burn',cause:'extra',parentEventId:payload.event?.eventId});if(has(text,/灼痕/))applyStatus(target,'burn',Number(bb.duration)||6,{source:source.uid,resistible:false});}
+   const talentElement=TALENT_ELEMENT_DEDICATED.has(source.id)?NaN:Number(bb.ep_damage_ratio??bb.element_damage_scale);if(Number.isFinite(talentElement)&&talentElement>0&&has(text,/灼痕|灼燃|凋亡损伤|元素伤害|神经损伤/)&&ctx.applyElementDamage)ctx.applyElementDamage(battle,{source,target,amount:battle.stats(source).atk*talentElement,type:has(text,/神经损伤[^，。；]{0,6}（优先）/)?'neural':has(text,/凋亡/)?'necrosis':has(text,/神经损伤/)?'neural':'burn',cause:'extra',parentEventId:payload.event?.eventId});if(has(text,/灼痕/))applyStatus(target,'burn',Number(bb.duration)||6,{source:source.uid,resistible:false});}
   }
  }
  if(type==='after-heal'&&source&&target){

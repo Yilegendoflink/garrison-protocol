@@ -21,6 +21,8 @@ function stepFor(b,seconds){for(let i=0;i<Math.ceil(seconds*30);i++)b.step();}
 function hitsOn(b,target){return (b.s.logicLog||[]).filter(r=>r.type==='damage'&&r.targetUid===target.uid).map(r=>({t:r.t,cause:r.cause,dealt:Math.round(r.hp)}));}
 const dotHits=(b,target)=>hitsOn(b,target).filter(h=>h.cause==='dot');
 const healOn=(b,target)=>(b.s.logicLog||[]).filter(r=>r.type==='heal'&&r.targetUid===target.uid);
+// 「大拉里」的生命恢复走 `regen`（生命回复速度），不是 `heal`（PRTS 备注）。
+const regenOn=(b,target)=>(b.s.logicLog||[]).filter(r=>r.type==='regen'&&r.targetUid===target.uid);
 
 test('炼金单元是半径 1.5 的投掷物：从干员格起飞、朝目标格每秒飞一格、抵达后停在原地',()=>{
  const {b,u}=battleWith(1);const e=enemy(b,{x:u.x+2,y:u.y,hp:1e6,def:0,res:0});
@@ -73,20 +75,31 @@ test('圈在飞行途中就开始结算，抵达后继续每秒一跳，时间�
  assert.equal(dotHits(b,e).length,before,'消失后不再结算');
 });
 
-test('“大拉里”的圈每秒治疗圈内友方（攻击力的 hp_recovery_per_sec_ratio）',()=>{
+test('“大拉里”的圈每秒**回复**圈内友方（生命回复速度，不受治疗加成与禁疗影响）',()=>{
  const {b,u}=battleWith(1,'chess_char_2_19_a',[{chessId:'chess_char_1_20_b',skillIndex:0}]);
  const ally=byId(b,'char_107_liskam');
  const e=enemy(b,{x:u.x+2,y:u.y,hp:1e6,def:0,res:0});
  ally.x=u.x+2;ally.y=u.y+1;ally.hp=ally.maxHp-2000;
  activate(b,u);const fx=alchemy(b);
- assert.ok(fx.values.hot>0,'S2 带治疗量');
- assert.equal(Math.round(fx.values.hot),Math.round(b.stats(u).atk*bbOf(b,u).hp_recovery_per_sec_ratio));
+ assert.ok(fx.values.regen>0,'S2 带回复量');
+ assert.equal(fx.values.hot,undefined,'回复不走治疗通道');
+ assert.equal(Math.round(fx.values.regen),Math.round(b.stats(u).atk*bbOf(b,u).hp_recovery_per_sec_ratio));
  assert.equal(e.hp,1e6);
  stepFor(b,1.2);
- const heals=healOn(b,ally);
- assert.equal(heals.length,1,'落地前就有一跳治疗');
- assert.equal(Math.round(heals[0].amount),Math.round(fx.values.hot));
+ const regens=regenOn(b,ally);
+ assert.equal(regens.length,1,'落地前就有一跳回复');
+ assert.equal(Math.round(regens[0].amount),Math.round(fx.values.regen));
+ assert.equal(healOn(b,ally).length,0,'生命回复速度不算治疗事件');
  assert.equal(dotHits(b,e).length,1,'同一片圈同时打敌人');
+ // PRTS：「炼金单元…造成无来源法术持续伤害」——伤害事件本身没有来源，但战报归属仍算给锡人。
+ const dot=(b.s.logicLog||[]).filter(r=>r.type==='damage'&&r.targetUid===e.uid&&r.cause==='dot')[0];
+ assert.ok(dot.sourceUid==null,'伤害事件无来源');
+ assert.ok((b.s.damage?.[u.uid]||0)>=dot.hp,'无来源伤害仍计入锡人的伤害统计');
+ // PRTS：不受禁疗影响（`healable=false` 照样回复）
+ ally.healable=false;ally.hp=ally.maxHp-2000;
+ stepFor(b,1.2);
+ assert.equal(regenOn(b,ally).length,2,'禁疗不能挡住生命回复速度');
+ ally.healable=true;
 });
 
 test('“老科利”的圈只虚弱地面敌人并造成持续伤害，不给友方治疗',()=>{
@@ -94,7 +107,7 @@ test('“老科利”的圈只虚弱地面敌人并造成持续伤害，不给�
  const ally=byId(b,'char_107_liskam'),e=enemy(b,{x:u.x+2,y:u.y,hp:1e6,def:0,res:0});
  ally.x=u.x+2;ally.y=u.y+1;ally.hp=ally.maxHp-2000;
  activate(b,u);const fx=alchemy(b);
- assert.equal(fx.values.hot,0,'S1 没有治疗');
+ assert.equal(fx.values.regen,0,'S1 没有回复');
  assert.equal(fx.values.attackDown,bbOf(b,u).atk);
  stepFor(b,1.2);
  const down=(e.statuses||[]).find(s=>s.kind==='attackDown');
@@ -102,6 +115,7 @@ test('“老科利”的圈只虚弱地面敌人并造成持续伤害，不给�
  assert.equal(down.value,bbOf(b,u).atk);
  assert.equal(dotHits(b,e).length,1);
  assert.equal(healOn(b,ally).length,0,'S1 不治疗圈内友方');
+ assert.equal(regenOn(b,ally).length,0,'S1 也不给生命回复速度');
 });
 
 test('原表写「地面敌人」：飞行单位站在圈里也不吃炼金单元的伤害',()=>{

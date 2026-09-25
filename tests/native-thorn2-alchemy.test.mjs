@@ -165,6 +165,28 @@ test('判定区域的几何：一点／直线／三角形（各边外扩 0.325�
  assert.equal(zoneContains(b,fx,e),false,'阻挡者不在场上时不算');
 });
 
+// PRTS 备注里「多点共线」「内角 >180° 的四边形」两种退化情形，客户端一律用**凸包**判定
+// （`thorn2AreaContains`）。这里把等价关系钉住，免得以后有人以为凸包只是近似：
+//  · 共线：单调链会把中间点弹掉，凸包退化成线段 ⇒ 正好是「宽 0.65 的直线」。
+//  · 凹四边形（一个点落在另外三点的三角形内）：四点凸包＝外侧那三点 ⇒ 正好是原作「忽视一个炼金单元、
+//    取面积最大的三角形」（四个三点子集的面积都不超过外侧三角形，所以最大值就是它）。凸四边形则没有凹陷，
+//    四个点都在凸包上 ⇒ 与「围成区域」一致。
+test('判定区域的退化情形：共线取直线、凹陷四边形取凸包（＝原作的最大面积三角形）',()=>{
+ assert.equal(thorn2AreaContains({points:[{x:0,y:0},{x:2,y:0},{x:4,y:0}],width:.325},2,.3),true,'共线三点（含中点）仍是宽 0.65 的直线');
+ assert.equal(thorn2AreaContains({points:[{x:0,y:0},{x:2,y:0},{x:4,y:0}],width:.325},2,.4),false,'直线的外扩也只有 0.325');
+ assert.equal(thorn2AreaContains({points:[{x:0,y:0},{x:0,y:3}],width:.325},.3,1.5),true,'两点＝线段外扩 0.325');
+ assert.equal(thorn2AreaContains({points:[{x:0,y:0},{x:0,y:3}],width:.325},.4,1.5),false);
+ // 凹陷四边形：(1,1) 在 (0,0)(4,0)(4,4) 这个三角形的边上，凸包弹掉它 → 与最大面积三角形一致
+ const concave={points:[{x:0,y:0},{x:4,y:0},{x:4,y:4},{x:1,y:1}],width:.325};
+ assert.equal(thorn2AreaContains(concave,3,3),true,'三角形内部');
+ assert.equal(thorn2AreaContains(concave,.6,.2),true,'边的外扩范围内');
+ assert.equal(thorn2AreaContains(concave,-.5,.2),false,'超出外扩范围');
+ // 凸四边形：四点都在凸包上，凸包＝围成的区域
+ const convex={points:[{x:0,y:0},{x:4,y:0},{x:5,y:3},{x:0,y:4}],width:.325};
+ assert.equal(thorn2AreaContains(convex,2,2),true,'凸四边形内部');
+ assert.equal(thorn2AreaContains(convex,6.2,1.5),false,'右侧边外 1.2 格不算');
+});
+
 test('炼金单元的伤害缓存开技瞬间的攻击力，天赋「心相」的延长只在投掷那一刻判定',()=>{
  const {b,u}=battleWith(1,[{chessId:ALLY}]);
  const e=enemy(b,{x:u.x+2,y:u.y,hp:1e9,def:0,res:0});

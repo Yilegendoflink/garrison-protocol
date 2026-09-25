@@ -332,6 +332,9 @@ export function dealDamage(battle,opts){
   }
  }
  if(battle.on?.('emptyShip')&&battle.s.units.includes(target)&&['physical','arts'].includes(type)&&!opts.fromHurt)value*=Math.max(0,1-bondValue(bondParam(battle,'emptyShip'),'damage_resistance',.2));
+ // 干员模组的常驻伤害倍率（妮芙 ALC-X「对处于元素爆发期间的敌人造成的伤害提升至 110%」）：
+ // 唯一入口就是这里（`NativeBattle.moduleElementBurstScale`），别在技能结算里再乘一次。
+ if(source&&battle.s.enemies.includes(target)&&battle.moduleElementBurstScale)value*=battle.moduleElementBurstScale(source,target);
  if(!opts.sourceDamageHandled)value*=battle.enemyOutgoingDamageMultiplier?.(source)??1;
  const wineDodge=type==='physical'&&opts.cause!=='dot'&&battle.s.enemies.includes(target)?enemyWineBuffs(battle,target).physicalDodge:0;
  const unblockedDodge=['physical','arts'].includes(type)&&opts.cause!=='dot'&&battle.s.enemies.includes(target)&&target.block==null?Math.max(0,Math.min(1,Number(target.enemyUnblockedDodge)||0)):0;
@@ -389,7 +392,9 @@ export function dealDamage(battle,opts){
  result.potentialHpDamage=result.blocked?0:(result.raw??Math.max(0,value-result.shield));
  const wouldDie=target.hp<=0;
  if(wouldDie&&runFatal(battle,target,true,event,source)){/* still alive */}
- const credit=source?.kind==='summon'?getActor(battle.s,source.ownerUid):source;
+ // `creditUid`：**无来源伤害**（PRTS 写「造成的伤害为无来源法术持续伤害」的炼金单元）仍然要把战报归属算给召唤者，
+ // 但伤害本身没有 source，所以不会被「来源相关」的效果（反伤、吸血、某些敌人能力）认领。
+ const credit=opts.creditUid!=null?getActor(battle.s,opts.creditUid):(source?.kind==='summon'?getActor(battle.s,source.ownerUid):source);
  if(credit&&battle.s.units.includes(credit)&&battle.s.enemies.includes(target)){credit.damage=(credit.damage||0)+result.total;battle.s.damage[credit.uid]=(battle.s.damage[credit.uid]||0)+result.total;}
  battle.emit('hit',{uid:target.uid,x:target.x,y:target.y,type,amount:result.total,blocked:!!result.blocked,skill:!!opts.skill});
  if(result.blocked)battle.s.effects.push({x:target.x,y:target.y,text:'抵消',life:.5,type:'block'});
@@ -871,7 +876,7 @@ function settleThorn2Sap(battle,fx,source){
  const step=(from,per,max)=>{const v=Number(from||0)+Number(per||0)*k,m=Number(max);return Number.isFinite(m)?(m<Number(from||0)?Math.max(m,v):Math.min(m,v)):v;};
  const dps=step(sap.dps,sap.dpsPer,sap.dpsMax),atk=step(sap.atk,sap.atkPer,sap.atkMax),def=step(sap.def,sap.defPer,sap.defMax),res=step(sap.res,sap.resPer,sap.resMax);
  for(const e of zoneActors(battle,fx,'enemy')){
-  if(dps>0)dealDamage(battle,{source,target:e,amount:Number(sap.atkValue||0)*dps,type:'arts',cause:'dot',effectId:fx.id});
+  if(dps>0)dealDamage(battle,{source:null,creditUid:fx.sourceUid,target:e,amount:Number(sap.atkValue||0)*dps,type:'arts',cause:'dot',effectId:fx.id});
   if(atk<0)applyStatus(e,'attackDown',fx.interval||1,{source:source?.uid,value:atk,resistible:false,pick:'strong'});
   if(def<0)applyStatus(e,'defDown',fx.interval||1,{source:source?.uid,value:def,resistible:false,pick:'strong'});
   if(res<0)applyStatus(e,'resDown',fx.interval||1,{source:source?.uid,value:res,resistible:false,pick:'strong'});
@@ -923,7 +928,7 @@ function settlePeriodic(battle,fx){
    }
    return;
   }
-  if(fx.values?.dot)for(const e of zoneActors(battle,fx,fx.trackSide||'enemy'))if(!fx.values.requiresStatus||(e.statuses||[]).some(s=>s.kind===fx.values.requiresStatus)){const tickDamage=fx.snapshot?.damage??(source?battle.stats(source).atk:0)*(fx.values.atk_scale||1);dealDamage(battle,{source,target:e,amount:tickDamage,type:fx.values?.type||'arts',cause:'dot',effectId:fx.id});
+  if(fx.values?.dot)for(const e of zoneActors(battle,fx,fx.trackSide||'enemy'))if(!fx.values.requiresStatus||(e.statuses||[]).some(s=>s.kind===fx.values.requiresStatus)){const tickDamage=fx.snapshot?.damage??(source?battle.stats(source).atk:0)*(fx.values.atk_scale||1);dealDamage(battle,{source:fx.values?.noSource?null:source,creditUid:fx.values?.noSource?fx.sourceUid:undefined,target:e,amount:tickDamage,type:fx.values?.type||'arts',cause:'dot',effectId:fx.id});
    // `elementOffDamage`：元素损伤量取「**这一次**伤害的比例」而不是攻击力的比例（烛煌 S1/S2 的 PRTS 文案都写「相当于法术伤害的 30%」）。
    if(fx.values.elementScale&&source)applyElementDamage(battle,{source,target:e,amount:(fx.values.elementOffDamage?tickDamage:battle.stats(source).atk)*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot',parentEventId:null});}
   if(fx.values?.elementScale&&!fx.values?.dot&&source)for(const e of zoneActors(battle,fx,'enemy'))applyElementDamage(battle,{source,target:e,amount:battle.stats(source).atk*fx.values.elementScale,type:fx.values.elementType||'burn',cause:'dot'});
@@ -990,7 +995,7 @@ function tickAuras(battle){
  for(const owner of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1016_agoat2')){const talent=activeTalentsOf(battle,owner).find(t=>t.name==='火山灰疗愈'),v=talent?Number(talent.values?.max_hp):NaN;if(Number.isFinite(v)&&v>0){const s3=battle.skillActive(owner)&&(owner.source?.skillIndex??battle.profile(owner).skillIndex)===2,scale=s3?(Number(blackboard(owner.skill?.blackboard).talent_scale)||1):1;for(const a of battle.s.units.filter(x=>x.deployed&&x.hp>0&&battle.inside(owner,x,true)))a.elementAuraMaxHp=Math.max(Number(a.elementAuraMaxHp)||0,v*scale);}}
  for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_245_cello')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='精神逆构'),v=talent?Number(talent.values?.ep_damage_scale):NaN;if(Number.isFinite(v)&&v>1)for(const e of enemyActors(battle.s))if(battle.inside(source,e,true))e.elementDamageTakenBonusByType={necrosis:Math.max(Number(e.elementDamageTakenBonusByType?.necrosis)||0,v-1)};}
  for(const e of enemyActors(battle.s))e.operatorAttackSpeedMod=0;
- for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1039_thorn2')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='视界'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s))e.operatorAttackSpeedMod-=Number(bb.attack_speed_enemy)||5;}
+ for(const source of battle.s.units.filter(u=>u.deployed&&u.hp>0&&u.id==='char_1039_thorn2')){const talent=activeTalentsOf(battle,source).find(t=>t.name==='视界'),bb=talent?.values||{};if(talent)for(const e of enemyActors(battle.s)){const base=Number(bb.attack_speed_enemy)||-5,extra=Number(bb.attack_speed_enemy_extra),doubled=battle.straightRoads?battle.straightRoads().has(Math.round(e.x)+','+Math.round(e.y)):false;e.operatorAttackSpeedMod+=base+(doubled&&Number.isFinite(extra)?extra:0);}}
  for(const fx of battle.s.logicEffects||[])if(fx.kind==='zone'&&fx.values?.fragile&&(fx.endsAt==null||battle.s.time<fx.endsAt))for(const e of zoneActors(battle,fx,'enemy'))e.fragile=Math.max(e.fragile||1,Number(fx.values.fragile));
  for(const source of battle.s.summons.filter(s=>s.type==='yan-guardian'&&s.deployed&&s.hp>0))for(const e of enemyActors(battle.s))if(Math.hypot(source.x-e.x,source.y-e.y)<=1.5)e.yanElementDamageTakenBonus=Math.max(e.yanElementDamageTakenBonus||0,source.yanVulnerability||.2);
  for(const u of battle.s.units){

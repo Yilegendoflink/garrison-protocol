@@ -99,3 +99,26 @@ test('哈洛德 S2「重症优先」：元素损伤累计超过一半时，元�
  assert.ok(high.healed>0&&low.healed>0,'两次都发生了元素回复');
  assert.ok(high.healed>low.healed,'损伤过半时回复量更高（160% vs 100%）');
 });
+
+test('哈洛德天赋「我即军营」：攻击范围内元素损伤**累计超过一半**的目标受到的损伤 -12%',()=>{
+ // 通用扫描只认 `ep_damage_resistance`＋文案「元素损伤…降低」，并且**文案写「超过一半」时才加过半条件**：
+ // 没过半按原文吃满伤害，过半后按黑板 -12%。
+ const dose=(injury)=>{
+  const {b,u,allies}=pair(HAROLD,0);
+  const ally=allies[0];
+  ally.x=u.x+1;ally.y=u.y;                     // 站进哈洛德攻击范围
+  if(injury>0)applyElementDamage(b,{source:u,target:ally,amount:injury,type:'necrosis'});
+  const before=b.elementInjury(ally);
+  const result=applyElementDamage(b,{source:null,target:ally,amount:100,type:'necrosis'});
+  return {added:result.added,before};
+ };
+ const low=dose(0),high=dose(600);                // 上限 1000，600 即「超过一半」
+ assert.ok(low.before<=500&&high.before>500,'两次分别处于没过半／过半');
+ assert.ok(Math.abs(low.added-100)<1e-6,'没过半：100 点损伤照原样入账');
+ assert.ok(Math.abs(high.added-88)<1e-6,'过半：100 → 88（-12%）');
+ // 范围外不吃这个减免
+ const {b,u,allies}=pair(HAROLD,0);
+ const far=allies[0];far.x=u.x+9;far.y=u.y;
+ applyElementDamage(b,{source:u,target:far,amount:600,type:'necrosis'});
+ assert.ok(Math.abs(applyElementDamage(b,{source:null,target:far,amount:100,type:'necrosis'}).added-100)<1e-6,'攻击范围外不生效');
+});

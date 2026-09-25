@@ -92,3 +92,28 @@ test('焰影苇草「灼痕」：30% 概率触发（攻击力-10%＋15% 法术�
  assert.ok(!(e3.statuses||[]).some(s=>s.kind==='burn'),'技能结束时清空技能期间施加的灼痕');
  assert.equal(Math.max(1,...(e3.statuses||[]).filter(s=>s.kind==='fragile').map(s=>Number(s.value)||1)),1,'灼痕的法术脆弱也一并撤掉');
 });
+
+test('妮芙模组 ALC-X：对处于元素爆发期间的敌人造成伤害 ×1.1（普攻与天赋持续伤害都吃）',()=>{
+ const ELITE='chess_char_5_22_b';               // 模组只挂在精锐形态上（moduleId uniequip_002_nymph）
+ const measure=(chessId,burst)=>{
+  const {b,u}=solo(chessId,0);
+  const e=enemy(b,{x:u.x+1,y:u.y,hp:1e9,def:0,res:0});
+  if(burst){e.elementBurstType='necrosis';e.elementBurstUntil=b.s.time+30;}
+  b.hit(u,e,1000,'arts');
+  return dmgLog(b,e)[0]?.hp;
+ };
+ assert.ok(Math.abs(measure(ELITE,false)-1000)<1e-6,'没进爆发：原样 1000');
+ assert.ok(Math.abs(measure(ELITE,true)-1100)<1e-6,'爆发期间：1000 → 1100');
+ assert.ok(Math.abs(measure(NYMPH,true)-1000)<1e-6,'不带模组的初始形态没有这条倍率');
+ // 天赋「失魂」的每秒元素伤害也走同一个倍率（PRTS 模组写的是「造成的伤害」，不区分来源路径）
+ const {b,u}=solo(ELITE,0);
+ const e=enemy(b,{x:u.x+1,y:u.y,hp:1e9,def:0,res:0});
+ applyElementDamage(b,{source:u,target:e,amount:1000,type:'necrosis'});
+ assert.equal(e.elementBurstType,'necrosis','凋亡损伤满格后爆发');
+ const before=dmgLog(b,e).filter(r=>r.cause==='dot').length;
+ runTo(b,1.2);
+ const dot=dmgLog(b,e).filter(r=>r.cause==='dot'&&r.sourceUid===u.uid);
+ assert.equal(dot.length,before+1,'爆发期间每秒一跳「失魂」');
+ const expect=b.stats(u).atk*0.4*1.1;
+ assert.ok(Math.abs(dot.at(-1).hp-expect)<1e-6,'失魂的一跳＝攻击力×40%×1.1（'+dot.at(-1).hp.toFixed(2)+' vs '+expect.toFixed(2)+'）');
+});
