@@ -1,5 +1,6 @@
 import {runStrategyEvent,strategyCoverage} from './strategy.js';
-import {PreparationState,activeBonds,blackboard,purchasePrice,restoreStock,stockOf} from './protocol.js';
+import {PreparationState,activeBonds,blackboard,purchasePrice,restoreStock,stockOf,bondEffectBlackboard,bondValue} from './protocol.js';
+import {BOND_TEXT_CONSTANTS} from './native-bond-keys.js';
 import {runGarrison} from './garrison.js';
 import {bannedOperators,bondBanBlockers,bondBanSummary,bondMembers,isOperatorBanned} from './native-bond-ban.js';
 
@@ -58,6 +59,7 @@ export class NativeEconomy extends PreparationState {
    const p=blackboard(e.blackboard),layers=this.s.bondLayers[id]||0,key=id+':'+index;
    if(e.key==='bond_layer_gain_coin'){const count=Math.floor(layers/p.layer),old=this.s.claimedBondRewards[key]||0;if(count>old){this.addFunds((count-old)*p.count);this.s.claimedBondRewards[key]=count;}}
    if(e.key==='bond_layer_added_reward_equip'){const count=Math.floor(layers/(Number(p.layer)||25)),old=this.s.claimedBondRewards[key]||0;if(count>old){for(let n=old;n<count;n++){let itemId;if(this.poolDraw)itemId=this.draw({kind:'item',pool:p.pool});else{const items=(this.data.items||[]).filter(i=>!i.hidden&&i.normal?.itemType==='EQUIP'&&(!String(p.pool).includes('equip_vict')||i.normal?.giveBondId==='victoriaShip'));const fallback=items.length?items.map(i=>i.id):Object.entries(this.data.season.trapChessDataDict).filter(([,i])=>i.itemType==='EQUIP'&&(!String(p.pool).includes('equip_vict')||i.giveBondId==='victoriaShip')).map(([id])=>id);if(!fallback.length)throw Error('没有可用装备');itemId=this.pick(fallback);}this.gainItem(itemId);}this.s.claimedBondRewards[key]=count;}}
+   // permanentDiscount 是客户端档位编码：2=调度中心内所有干员、1=仅【远见】干员；折扣金额读原表 discount（见 price()）。
    if(e.key==='bond_multi_layer_char_goods_price_bond_discount'){if(layers>=p.layer2)this.s.permanentDiscount=2;else if(layers>=p.layer1)this.s.permanentDiscount=Math.max(1,this.s.permanentDiscount);}
   }}
  }
@@ -65,7 +67,10 @@ export class NativeEconomy extends PreparationState {
  triggerGarrisons(event,unit,{effectOwner=unit}={}){
   const key=unit.uid+':'+event;if(this.triggerChain.includes(key)){if(this.manualPreview)return;throw Error('Cyclic garrison trigger '+key);}this.triggerChain.push(key);
   try{
-   const repeat=event==='SERVER_GAIN'&&this.bonds().investShip?.active?((this.s.bondLayers.investShip||0)>=100?3:2):1;
+   // 「获得时」类特质每次触发几次读原表 bond_layer_char_garrison_bonus 行（event/count）；
+   // 「达到100层再+1次」原表没有阈值字段（该行 layer=0），只写在盟约文案里 → BOND_TEXT_CONSTANTS.investShip。
+   const investBB=bondEffectBlackboard(this.data,'investShip','bond_layer_char_garrison_bonus'),investActive=!!this.bonds().investShip?.active,investCount=bondValue(investBB,'count',2);
+   const repeat=investActive&&event===String(investBB.event||'SERVER_GAIN')?((this.s.bondLayers.investShip||0)>=BOND_TEXT_CONSTANTS.investShip.powerLayer?investCount+BOND_TEXT_CONSTANTS.investShip.powerCountAdd:investCount):1;
    for(let i=0;i<repeat;i++)for(const id of this.data.season.charChessDataDict[unit.chessId].garrisonIds){const rule=this.data.season.garrisonDataDict[id];if(rule.eventType===event){runGarrison(this,effectOwner,rule,event);this.s.events.push({type:'garrison',id,uid:effectOwner.uid,event});}}
   }finally{this.triggerChain.pop();}
  }
@@ -81,7 +86,7 @@ export class NativeEconomy extends PreparationState {
   if(def.upgradeChessId){const copies=[...this.s.items.map(i=>({i,owner:null})),...this.s.units.flatMap(u=>u.equipment.map(i=>({i,owner:u})))].filter(x=>x.i.chessId===chessId);if(copies.length>=def.upgradeNum){const chosen=copies.slice(0,def.upgradeNum),owner=chosen.find(x=>x.owner)?.owner;for(const x of chosen){if(x.owner)x.owner.equipment=x.owner.equipment.filter(i=>i.uid!==x.i.uid);else this.s.items=this.s.items.filter(i=>i.uid!==x.i.uid);}const merged={uid:++this.s.seq,chessId:def.upgradeChessId};if(owner)owner.equipment.push(merged);else this.s.items.push(merged);return merged;}}
   return item;
  }
- price(id){const def=this.data.season.charChessDataDict[id];if(!def)return purchasePrice(this.data,id);let value=purchasePrice(this.data,id);for(const gid of def.garrisonIds){const g=this.data.season.garrisonDataDict[gid];if(g.eventType==='SERVER_PRICE')value=runGarrison(this,null,g,'SERVER_PRICE');}if(this.s.permanentDiscount===2||(this.s.permanentDiscount===1&&def.bondIds.includes('visiShip')))value--;const special=runStrategyEvent(this,'price',{chessId:id});if(special.length)value=special.at(-1);return Math.max(0,value);}
+ price(id){const def=this.data.season.charChessDataDict[id];if(!def)return purchasePrice(this.data,id);let value=purchasePrice(this.data,id);for(const gid of def.garrisonIds){const g=this.data.season.garrisonDataDict[gid];if(g.eventType==='SERVER_PRICE')value=runGarrison(this,null,g,'SERVER_PRICE');}const visiDiscount=bondValue(bondEffectBlackboard(this.data,'visiShip','bond_multi_layer_char_goods_price_bond_discount'),'discount',1);if(this.s.permanentDiscount&&(this.s.permanentDiscount===2||(this.s.permanentDiscount===1&&def.bondIds.includes('visiShip'))))value-=visiDiscount;const special=runStrategyEvent(this,'price',{chessId:id});if(special.length)value=special.at(-1);return Math.max(0,value);}
  spend(amount){if(this.s.funds<amount)return false;this.addFunds(-amount);this.s.roundSpent+=amount;this.s.totalSpent+=amount;runStrategyEvent(this,'spent');return true;}
  buy(index){
   if(this.s.phase!=='prep'||this.s.rewardPending)return {ok:false,code:'WRONG_PHASE'};const id=this.s.offers[index],shop=this.data.season.charShopChessDatas[id];if(!shop?.charId||shop.chessLevel>this.s.level||this.bondBanned(id))return {ok:false,code:'INVALID_OFFER'};
@@ -108,7 +113,7 @@ export class NativeEconomy extends PreparationState {
  }
  beginBattle(){
   if(this.s.phase!=='prep'||this.s.rewardPending)return false;if(this.s.prepApplied)return super.beginBattle();for(const u of this.s.units.slice())this.triggerGarrisons('SERVER_PREP_FIN',u);
-  const rows=this.bonds();if(rows.deputShip.active){const variants=new Set(this.s.units.filter(u=>u.position&&this.ownBonds(u).includes('deputShip')).map(u=>u.charId+':'+this.data.season.charChessDataDict[u.chessId].isGolden));const amount=variants.size>=3?4:2;for(const[id,b]of Object.entries(rows))if(b.active)this.addLayers(id,amount);}
+  const rows=this.bonds();if(rows.deputShip.active){const bb=bondEffectBlackboard(this.data,'deputShip','bond_activated_add_layer'),variants=new Set(this.s.units.filter(u=>u.position&&this.ownBonds(u).includes('deputShip')).map(u=>u.charId+':'+this.data.season.charChessDataDict[u.chessId].isGolden)),amount=variants.size>=bondValue(bb,'count',3)?bondValue(bb,'more_layer',4):bondValue(bb,'layer',2);for(const[id,b]of Object.entries(rows))if(b.active)this.addLayers(id,amount);}
   runStrategyEvent(this,'prepEnd');this.s.prepApplied=true;if(this.s.rewardPending)return true;return super.beginBattle();
  }
  nextRound(...args){const result=super.nextRound(...args);if(result&&['prep','decision'].includes(this.s.phase)){this.s.roundGainCount=0;this.s.roundSpent=0;this.s.roundRefreshCount=0;this.s.roundBoughtBonds={};this.s.refreshLayerClaimed={};if(this.s.phase==='prep')this.startPreparation();}return result;}

@@ -2,7 +2,7 @@
 // 面板必须**逐项**给出当前值（用户 2026-09-19：叙拉古的 buff 持续时间、以及其他盟约同类数值都曾漏注）。
 import test from 'node:test';import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
-import {bondScaledParams, bondCurrentPreviewHtml} from '../dist/protocol.js';
+import {bondScaledParams, bondCurrentPreviewHtml, bondBlackboard, bondPanelExtraList} from '../dist/protocol.js';
 
 const data = NATIVE_DATA, bonds = data.season.bondInfoDict;
 
@@ -32,20 +32,28 @@ test('其他盟约的受层数影响数值同样标注（谢拉格寒风时长�
 
 test('门禁：原表声明受层数影响的每一项都有当前值，一条都不能漏', () => {
  let checked = 0;
+ // 战斗里确实按层数生效、但原表 descParamBaseList 漏声明的项（登记在 protocol.BOND_PANEL_EXTRA）
+ const extrasOf = id => bondPanelExtraList(id).map(x => x.baseKey);
  for (const [id, info] of Object.entries(bonds)) {
   const base = info.descParamBaseList || [], per = info.descParamPerStackList || [];
+  const extras = extrasOf(id);
   const params = bondScaledParams(data, id, 30);
-  if (!base.length) { assert.equal(params.length, 0, id + ' 没声明参数就不该有数值行'); continue; }
-  assert.equal(params.length, base.length, `${id} 声明了 ${base.length} 项，只渲染了 ${params.length} 项`);
-  // 逐项校验数值 = base + per × 层数
+  if (!base.length) { assert.equal(params.length, extras.length, id + ' 没声明参数就不该有数值行（额外登记项除外）'); continue; }
+  assert.equal(params.length, base.length + extras.length, `${id} 声明了 ${base.length} 项（另加登记的额外项 ${extras.length} 项），只渲染了 ${params.length} 项`);
+  // 逐项校验数值 = base + per × 层数（额外登记项用它们自己的 baseKey/perKey）
   const values = {};
   for (const row of (data.season.effectBuffInfoDataDict[info.effectId] || []).flatMap(e => e.blackboard || [])) if (row.key !== 'key' && values[row.key] === undefined) values[row.key] = Number(row.valueStr ?? row.value);
+  const scoped = bondBlackboard(data, id);
+  const pick = key => (Number.isFinite(Number(scoped[key])) ? Number(scoped[key]) : values[key]);
+  const plan = base.map((key, i) => ({ key, per: per[i] })).concat(bondPanelExtraList(id).map(x => ({ key: x.baseKey, per: x.perKey })));
   for (const [i, param] of params.entries()) {
-   const expected = values[base[i]] + (per[i] != null ? (Number(values[per[i]]) || 0) : 0) * 30;
+   const { key, per: perKey } = plan[i] || {};
+   assert.equal(param.key, key, `${id} 第 ${i + 1} 项应是 ${key}`);
+   const expected = pick(key) + (perKey != null ? (Number(pick(perKey)) || 0) : 0) * 30;
    const shown = Number(String(param.text).replace(/[^\d.-]/g, ''));
    const scale = /%/.test(param.text) ? 100 : 1;
-   assert.ok(Math.abs(shown - expected * scale) < 1e-6, `${id}.${base[i]} 显示 ${param.text}，期望 ${expected * scale}`);
-   assert.ok(param.label && param.label !== base[i], `${id}.${base[i]} 应有可读标签`);
+   assert.ok(Math.abs(shown - expected * scale) < 1e-6, `${id}.${key} 显示 ${param.text}，期望 ${expected * scale}`);
+   assert.ok(param.label && param.label !== key, `${id}.${key} 应有可读标签`);
    checked++;
   }
   const html = bondCurrentPreviewHtml(data, id, 30);

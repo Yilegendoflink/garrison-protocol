@@ -7,8 +7,8 @@ import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 export {reps,blackboard};
 
-export function openBattle(specs,{seed=reps.seed}={}){
- const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed});
+export function openBattle(specs,{seed=reps.seed,data=NATIVE_DATA}={}){
+ const g=new NativeSession(data,{bondBan:NO_BOND_BAN,seed});
  g.s.funds=9999;g.s.capacity=16;g.s.rewardPending=null;g.s.rewardQueue=[];
  const list=Array.isArray(specs)?specs:[specs];
  for(const spec of list){

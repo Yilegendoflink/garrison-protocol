@@ -114,17 +114,56 @@ function bondEffectValues(data,bondId){
  for(const row of (data.season.effectBuffInfoDataDict?.[info?.effectId]||[]).flatMap(e=>e.blackboard||[]))if(row.key!=='key'&&values[row.key]===undefined)values[row.key]=Number(row.valueStr??row.value);
  return {info,values};
 }
+// ── 盟约数值的唯一读取口径（战斗与面板共用）──────────────────────────────────
+// 1) 一块盟约的黑板来源：原表 effectBuffInfoDataDict[effectId] 里 key==='env_gbuff_new' 的那一行。
+//    面板过去合并全部行（首见优先）、战斗只认这一行，两边口径不同就会「显示了但没生效」。
+// 2) 数值一律走 bondValue／bondLayerValue 读原表字段；兜底值只在字段缺失时用，不得替代原表数值。
+// 3) 层数公式＝base + per × 当前层数（原表 descParamBaseList／descParamPerStackList 的模型，从 0 层线性起算）。
+export function bondBlackboard(data,bondId){
+ const info=data.season.bondInfoDict?.[bondId],rows=data.season.effectBuffInfoDataDict?.[info?.effectId]||[],row=rows.find(e=>e.key==='env_gbuff_new');
+ // 有 env_gbuff_new 行的盟约，它就是数值的唯一来源（层数参数都在这行）；没有这行的盟约
+ // （奇迹／远见／投资人）退回「该盟约全部行合并」——它们没有层数参数，各自的专用行由 native-economy 显式读取。
+ if(row)return blackboard(row.blackboard);
+ const merged={};for(const r of rows)for(const b of r.blackboard||[])if(b.key!=='key'&&merged[b.key]===undefined)merged[b.key]=b.valueStr??b.value;
+ return merged;
+}
+// 取盟约 effect 里指定 key 的那一行黑板（例：助力的 bond_activated_add_layer、投资人的 bond_layer_char_garrison_bonus）。
+export function bondEffectBlackboard(data,bondId,key){
+ const info=data.season.bondInfoDict?.[bondId];
+ return blackboard(data.season.effectBuffInfoDataDict?.[info?.effectId]?.find(e=>e.key===key)?.blackboard);
+}
+export function bondValue(b,key,fallback=0){const v=Number(b?.[key]);return Number.isFinite(v)?v:fallback;}
+export function bondLayerValue(b,baseKey,perKey,layers,baseFallback=0,perFallback=0){
+ return bondValue(b,baseKey,baseFallback)+bondValue(b,perKey,perFallback)*(Math.max(0,Number(layers)||0));
+}
+// 保底（线性递增）口径：把原表 prob 当作期望命中率（例：叙拉古「3%的概率造成真实伤害」）。
+// 原表只给概率、不给保底曲线，所以步长由 E[命中次数]≈sqrt(π/(2c))=1/prob 反解、保底上限 ceil(1/c)。
+export function bondPityStep(prob){
+ const p=Math.min(1,Math.max(0,Number(prob)||0));if(!p)return {step:1,cap:1};
+ const step=Math.min(1,Math.PI*p*p/2);return {step,cap:Math.min(4096,Math.ceil(1/step))};
+}
+export function bondPityChance(prob,hits){return Math.min(1,bondPityStep(prob).step*(Math.max(0,Number(hits)||0)+1));}
+// 面板额外项：原表 descParamBaseList 漏声明、但战斗里确实按层数生效的项
+// （突袭文案写「攻击力和生命值提升（受层数影响）」，原表只声明了 base_atk）。
+// 改这里要同步 tests/native-bond-preview.test.mjs 与 tests/native-bond-formula.test.mjs 的面板门禁。
+export const BOND_PANEL_EXTRA=Object.freeze({
+ raidShip:Object.freeze([Object.freeze({baseKey:'base_max_hp',perKey:'max_hp_per_stack',label:'最大生命值提升',kind:'pctAdd'})])
+});
+export function bondPanelExtraList(bondId){return (BOND_PANEL_EXTRA[bondId]||[]).slice();}
 export function bondScaledParams(data,bondId,layers){
  const {info,values}=bondEffectValues(data,bondId);if(!info)return[];
- const level=Math.max(0,Number(layers)||0),base=info.descParamBaseList||[],per=info.descParamPerStackList||[],out=[];
- for(let i=0;i<Math.max(base.length,per.length);i++){
-  const baseKey=base[i];if(!baseKey)continue;
-  const baseValue=Number(values[baseKey]),perValue=per[i]!=null?Number(values[per[i]])||0:0;
-  if(!Number.isFinite(baseValue))continue;
+ const level=Math.max(0,Number(layers)||0),base=info.descParamBaseList||[],per=info.descParamPerStackList||[],out=[],scoped=bondBlackboard(data,bondId);
+ // 原表字段优先（scoped 就是战斗读的那一行），缺了才退回整块盟约的合并值。
+ const pick=key=>{const v=Number(scoped[key]);return Number.isFinite(v)?v:Number(values[key]);};
+ const push=(baseKey,perKey,forceMeta)=>{
+  const baseValue=pick(baseKey);if(!Number.isFinite(baseValue))return;
+  const perRaw=pick(perKey),perValue=Number.isFinite(perRaw)?perRaw:0;
   const override=(BOND_PARAM_LABEL_OVERRIDE[bondId]||{})[baseKey];
-  const meta={...(BOND_PARAM_META[baseKey]||{label:baseKey,kind:'flat'}),...(override||{})};
+  const meta={...(BOND_PARAM_META[baseKey]||{label:baseKey,kind:'flat'}),...(override||{}),...(forceMeta||{})};
   out.push({key:baseKey,label:meta.label,text:formatBondValue(baseValue+perValue*level,meta.kind),formula:`${bondRound(baseValue)} + ${bondRound(perValue)} × ${level}层`});
- }
+ };
+ for(let i=0;i<Math.max(base.length,per.length);i++)if(base[i])push(base[i],per[i]);
+ for(const extra of BOND_PANEL_EXTRA[bondId]||[])if(!out.some(item=>item.key===extra.baseKey))push(extra.baseKey,extra.perKey,extra);
  return out;
 }
 // 面板 HTML：受层数影响的数值 + 少量「阈值／累计」类备注（不含层数参数本身）。
@@ -243,7 +282,8 @@ export function activeBonds(data,units,modeId=null){
   const threshold=Number(b.activeParamList[0]),active=b.activeConditionTemplate==='count_threshold_downward'?count>=threshold&&count<Number(b.activeParamList[1]):count>=threshold;
   rows[id]={count,rawCount:count,active:(!allowed||allowed.has(id))&&active};
  }
- if(rows.maniShip?.active)for(const[id,row]of Object.entries(rows))if(data.common.bondInfoDict[id]?.isPower&&row.rawCount>0){row.count++;row.active=(!allowed||allowed.has(id))&&row.count>=Number(data.season.bondInfoDict[id].activeParamList[0]);}
+ const maniAdd=bondValue(bondEffectBlackboard(data,'maniShip','other_bond_add_trigger_cnt'),'count',1);
+ if(rows.maniShip?.active)for(const[id,row]of Object.entries(rows))if(data.common.bondInfoDict[id]?.isPower&&row.rawCount>0){row.count+=maniAdd;row.active=(!allowed||allowed.has(id))&&row.count>=Number(data.season.bondInfoDict[id].activeParamList[0]);}
  return rows;
 }
 export function applyEnemyOverrides(base,override){
