@@ -381,7 +381,7 @@ export class NativeBattle {
  // 自动释放专用：技能开启后这次攻击能不能真的打到它。
  // 与 targets() 的区别是范围强制用技能范围，且不要求「当前就能选中」（飞行单位在开技前可能不可选）。
  skillWouldHitTarget(u,p){
-  const cfg=operatorSkillConfig(this,u),behavior=this.behavior(u);
+  const cfg=operatorSkillConfig(this,u),behavior=this.behavior(u),canHitAir=this.upcomingAntiAir(u,p);
   const sleepOk=cfg.canTargetSleep||behavior.kind==='damage-heal'||p.charId==='char_4056_titi'||(p.charId==='char_423_blemsh'&&(p.activeTalents||[]).some(t=>/优先攻击.*沉睡/.test(t.description||'')));
   const cells=this.rangeWithSkill(u,false,true).cells;
   if(!cells.length)return false;
@@ -391,7 +391,7 @@ export class NativeBattle {
   };
   return this.s.enemies.some(e=>e.hp>0&&!e.hidden&&!e.invulnerable&&!e.untargetable&&
    (!e.invisible||cfg.canSeeHidden||e.block!=null)&&
-   (e.block===u.uid||(!e.flying||behavior.antiAir))&&
+   (e.block===u.uid||(!e.flying||canHitAir))&&
    (sleepOk||!permissions(e).sleeping)&&
    canReach(e));
  }
@@ -400,9 +400,17 @@ export class NativeBattle {
  // none=未扩大范围；burst=瞬时自身 AoE；sweep=持续范围强化；passive=入场自动释放的大范围技能
  wideSkillKind(p,skillIndex=null){const skill=skillIndex!=null?(p?.skillChoices?.[skillIndex]?.skill??p?.skill):p?.skill;if(!skill?.rangeId||!p?.rangeId||skill.rangeId===p.rangeId)return null;if(skill.skillType==='PASSIVE')return 'passive';return Number(skill.duration)>0?'sweep':'burst';}
  wideKind(u){return this.wideSkillKind(this.profile(u),u.skillIndex??u.source?.skillIndex??null);}
+ // 即将使用的技能能否打空（PRTS 技能备注优先，其次分支默认）。**开技前的预判必须用它**：
+ // 地面干员的对空技能（德克萨斯「剑雨」等）在只有空中敌人时压根进不了 targets()（分支默认 antiAir=false），
+ // 用分支默认值做预判就永远不会释放（用户 2026-09-22 报的「对空技能不对空释放」）。
+ upcomingAntiAir(u,p=this.profile(u)){
+  const override=skillAntiAir(p?.charId,p?.skillIndex??u.source?.skillIndex);
+  return override==null?this.behavior(u).antiAir:override;
+ }
  // 特效层用：取该单位当前生效范围的几何（技能激活／被动／本帧挂起时用技能范围，否则用常态范围）
  rangeGeometry(u){return rangeGeometry(this.data,this.rangeWithSkill(u,this.skillActive(u)).rangeId);}
- targets(u){const behavior=this.behavior(u),p=this.profile(u),cfg=operatorSkillConfig(this,u),sleepOk=cfg.canTargetSleep||behavior.kind==='damage-heal'||p.charId==='char_4056_titi'||(p.charId==='char_423_blemsh'&&(p.activeTalents||[]).some(t=>/优先攻击.*沉睡/.test(t.description||'')));if(p.charId==='char_291_aglina'&&!this.skillActive(u))return [];if(p.charId==='char_245_cello'&&!this.skillActive(u))return [];let targets=this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&(!e.invisible||cfg.canSeeHidden||e.block!=null)&&!e.invulnerable&&!e.untargetable&&(sleepOk||!permissions(e).sleeping)&&(e.block===u.uid||((!e.flying||behavior.antiAir)&&(!behavior.airOnlyIdle||this.skillActive(u)||e.flying)&&this.inside(u,e))));if(p.charId==='char_391_rosmon'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u))targets=targets.filter(e=>e.block!=null);if(p.charId==='char_1019_siege2'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u))targets=targets.filter(e=>e.block!=null);if(p.charId==='char_4193_lemuen'){const wanted=targets.filter(e=>e.wantedByLemuen);if(wanted.length)targets=wanted;}if(u.floatTarget!=null){const locked=targets.find(e=>e.uid===u.floatTarget);if(locked)targets=[locked];else u.floatTarget=null;}
+ // options.antiAir：用「即将释放的技能」的对空值算一张**预判用**的目标表，只改这一处、不改当前索敌状态。
+ targets(u,options=null){const base=this.behavior(u),behavior=options?.antiAir==null?base:{...base,antiAir:options.antiAir},p=this.profile(u),cfg=operatorSkillConfig(this,u),sleepOk=cfg.canTargetSleep||behavior.kind==='damage-heal'||p.charId==='char_4056_titi'||(p.charId==='char_423_blemsh'&&(p.activeTalents||[]).some(t=>/优先攻击.*沉睡/.test(t.description||'')));if(p.charId==='char_291_aglina'&&!this.skillActive(u))return [];if(p.charId==='char_245_cello'&&!this.skillActive(u))return [];let targets=this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&(!e.invisible||cfg.canSeeHidden||e.block!=null)&&!e.invulnerable&&!e.untargetable&&(sleepOk||!permissions(e).sleeping)&&(e.block===u.uid||((!e.flying||behavior.antiAir)&&(!behavior.airOnlyIdle||this.skillActive(u)||e.flying)&&this.inside(u,e))));if(p.charId==='char_391_rosmon'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u))targets=targets.filter(e=>e.block!=null);if(p.charId==='char_1019_siege2'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u))targets=targets.filter(e=>e.block!=null);if(p.charId==='char_4193_lemuen'){const wanted=targets.filter(e=>e.wantedByLemuen);if(wanted.length)targets=wanted;}if(u.floatTarget!=null){const locked=targets.find(e=>e.uid===u.floatTarget);if(locked)targets=[locked];else u.floatTarget=null;}
   if(p.charId==='char_430_fartth'&&(p.skillIndex??u.source?.skillIndex)===2&&this.skillActive(u)){const dir=directionOf(u.dir||0);targets=this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&(!e.invisible||e.block!=null)&&!e.invulnerable&&!e.untargetable&&((e.y===u.y&&dir[0]!==0&&Math.sign(e.x-u.x)===dir[0])||(e.x===u.x&&dir[1]!==0&&Math.sign(e.y-u.y)===dir[1])));}
   const talentTargetRule=(p.activeTalents||[]).some(t=>/不以束缚状态的敌人为攻击目标/.test(t.description||''))?'rooted':null;
   // 索敌规则是「优先」不是「只能」：过滤后一个都不剩时必须回退到原目标集。
@@ -766,8 +774,11 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
    // 自动释放的判定口径：只要「技能开启后能打到」任何敌人就该开。因此这里用的是技能范围（不是当前范围）
    // 预判，包含飞行敌人、召唤物、以及未被阻挡的目标；被阻挡只是让单位可选，不是唯一条件。
    const canHitAfterSkill=this.skillWouldHitTarget(u,p);
-   const readyByTargets=healer?heals.length>0:(targets.length>0||canHitAfterSkill);
-   const skillReady=skill?.skillType==='AUTO'?u.sp>=cost&&readyByTargets:shouldAutoSkill({policy,ready:u.sp>=cost,deployed:u.deployed,now:this.s.time,lastOperation:u.lastSkill,initialDeployment:u.deployAt,hasTarget:readyByTargets,hasAnyTarget:this.s.enemies.length>0,hasEnemyInInitialRange:targets.length>0,hasEnemyInSkillRange:canHitAfterSkill,wasDamaged:this.s.time-(u.lastDamagedAt??-999)<.1});
+   // 决策用的目标表带上「这次要开的技能」的对空覆盖：地面干员的对空技能在只有空中敌人时也要能触发；
+   // 开了技能反而不能打空的（银灰「雪境生存法则」）同样按覆盖后的值判断。非对空技能两张表完全一致。
+   const decisionAntiAir=this.upcomingAntiAir(u,p),decisionTargets=decisionAntiAir===behavior.antiAir?targets:this.targets(u,{antiAir:decisionAntiAir});
+   const readyByTargets=healer?heals.length>0:(decisionTargets.length>0||canHitAfterSkill);
+   const skillReady=skill?.skillType==='AUTO'?u.sp>=cost&&readyByTargets:shouldAutoSkill({policy,ready:u.sp>=cost,deployed:u.deployed,now:this.s.time,lastOperation:u.lastSkill,initialDeployment:u.deployAt,hasTarget:readyByTargets,hasAnyTarget:this.s.enemies.length>0,hasEnemyInInitialRange:decisionTargets.length>0,hasEnemyInSkillRange:canHitAfterSkill,wasDamaged:this.s.time-(u.lastDamagedAt??-999)<.1});
    if(skill?.skillType==='PASSIVE'&&u.coinSkillEnabled&&(skill.skillIndex??u.source?.skillIndex)===1&&u.coins>0&&targets.length)this.activate(u);
    if(skill&&skill.skillType!=='PASSIVE'&&!u.enhanced&&!this.skillActive(u)&&skillReady)this.activate(u);
    stats=this.stats(u);behavior=this.behavior(u);healer=behavior.kind==='heal'||u.focusHeal;u.branchSkillActive=this.skillActive(u);

@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {SKILL_ANTIAIR,skillAntiAir,branchBehavior} from '../dist/native-branches.js';
+import {skillPolicy} from '../dist/protocol.js';
 import {tickLogic} from '../dist/native-effects.js';
 import {openBattle,deployNow,enemy,byId} from './effects-harness.mjs';
 
@@ -130,8 +131,7 @@ test('玛恩纳「未照耀的荣光」期间普通攻击真的能打到飞行�
  assert.ok(flyer.hp<hp,`飞行敌人应当被普通攻击打到（剩余 ${flyer.hp}）`);
 });
 
-test('烛煌「灼烧地段」按 PRTS 备注不可对空：圈里的飞行单位不吃伤害',()=>{
- const {b,u}=openFor('char_1040_blaze2',0);
+test('烛煌「灼烧地段」按 PRTS 备注不可对空：圈里的飞行单位不吃伤害',()=>{ const {b,u}=openFor('char_1040_blaze2',0);
  const ground=enemy(b,{x:u.x,y:u.y+1,hp:100000,def:0,res:0});
  const flyer=enemy(b,{x:u.x+1,y:u.y,hp:100000,def:0,res:0,flying:true});
  activate(b)(u);
@@ -142,4 +142,54 @@ test('烛煌「灼烧地段」按 PRTS 备注不可对空：圈里的飞行单�
  b.s.time=zone.nextAt;tickLogic(b,1/30);
  assert.ok(ground.hp<before.ground,'地面敌人照常结算');
  assert.equal(flyer.hp,before.flyer,'飞行单位不吃灼烧地段');
+});
+
+// 用户 2026-09-22 报的「一部分地面干员的对空技能又不对空释放了（例如德克萨斯的剑雨）」：
+// 技能级对空原来只在 activate() 之后写进 u.skillAir，**开技前的自动释放预判**读的是分支默认值，
+// 于是地面干员在只有空中敌人时永远进不了 targets()、技能一直不放。这里锁住预判与释放两段。
+// 自动释放只对「按目标触发」的 policy 有意义（TAKE_DAMAGE 类是被打才开、PASSIVE 没有主动释放）。
+const TARGET_POLICIES=new Set(['DEFAULT','SEARCH','CUSTOM_RANGE_SEARCH_ENEMY','GDGLOW_SKILL_2','ALWAYS']);
+const policyOf=(charId,index)=>{const p=profileFor(charId);return skillPolicy(NATIVE_DATA.common,{id:p.charId,profession:p.profession,branch:p.branch},index).skillTriggerType;};
+
+test('地面干员的对空技能在只有空中敌人时也能自动释放（德克萨斯「剑雨」等）',()=>{
+ let covered=0,released=0;
+ for(const [charId,byIndex] of Object.entries(SKILL_ANTIAIR)){
+  for(const [index,flag] of Object.entries(byIndex)){
+   if(!flag)continue;
+   const {b,u}=openFor(charId,Number(index));
+   const flyer=spawnFlyerInRange(b,u);
+   if(!flyer)continue;
+   covered++;
+   assert.equal(b.targets(u).some(e=>e.uid===flyer.uid),false,`${charId} 技能 ${index} 未开技时本来选不到空中目标`);
+   assert.equal(b.skillWouldHitTarget(u,b.profile(u)),true,`${charId} 技能 ${index} 开技后应当能打到飞行敌人`);
+   if(b.profile(u)?.skill?.skillType==='PASSIVE'||!TARGET_POLICIES.has(policyOf(charId,Number(index))))continue;
+   released++;
+   const before=u.skillCount;
+   for(let i=0;i<240&&u.skillCount===before;i++){u.sp=b.spCost(u);b.step();}
+   assert.ok(u.skillCount>before,`${charId} 技能 ${index} 应当在只有空中敌人时自动释放`);
+  }
+ }
+ assert.ok(covered>=6,`至少覆盖 6 个对空技能，实际 ${covered}`);
+ assert.ok(released>=4,`至少 4 个是按目标触发的技能，实际 ${released}`);
+});
+
+test('没有对空标注的地面技能在只有空中敌人时不释放（对照）',()=>{
+ const {b,u}=openFor('char_4058_pepe',0);
+ const flyer=spawnFlyerInRange(b,u);
+ assert.ok(flyer,'佩佩技能范围内应当能放下飞行敌人');
+ assert.equal(b.skillWouldHitTarget(u,b.profile(u)),false,'不可对空的技能不该预判成能打到飞行敌人');
+ const before=u.skillCount;
+ for(let i=0;i<240&&u.skillCount===before;i++){u.sp=b.spCost(u);b.step();}
+ assert.equal(u.skillCount,before,'只有空中敌人时不该放技能');
+});
+
+test('开了技能反而不能打空的（银灰「雪境生存法则」）：只有空中敌人时也不误放',()=>{
+ const {b,u}=openFor('char_172_svrash',1);
+ const flyer=spawnFlyerInRange(b,u);
+ assert.ok(flyer,'银灰技能范围内应当能放下飞行敌人');
+ assert.equal(b.behavior(u).antiAir,true,'未开技时领主常态可以打空');
+ assert.equal(b.skillWouldHitTarget(u,b.profile(u)),false,'按技能覆盖算：开了雪境生存法则打不到空中单位');
+ const before=u.skillCount;
+ for(let i=0;i<240&&u.skillCount===before;i++){u.sp=b.spCost(u);b.step();}
+ assert.equal(u.skillCount,before,'不该为了打不到的空中目标放这个技能');
 });
