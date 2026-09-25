@@ -73,6 +73,8 @@
 - **手机端整备区拖放**：装备卡片是 `<div role="button" data-act="item">` 不是 `<button>`，给它写样式／`touch-action` 时**必须和 `.native-bench button` 并列**（`touch-action:none` 少了它，手机上拖动会被横向滚动接管并触发 `pointercancel`，装备就拖不到干员身上）。盖在棋盘上的信息层（`.native-bench-label`、`.native-facing`）一律 `pointer-events:none`、只留按钮 `pointer-events:auto`，说明性文字在 `@media(hover:none)` 下关掉——否则预览格落在它们下面时按不到画布、选不了朝向。回归：`tests/native-ui-mobile-drag.test.mjs`。
 - **详情（干员档案／商店干员／道具）点外部关闭**：统一走 `native-play` 的 `dismissInspectOnOutsidePress(e)`（pointerdown 里调用）。可关闭的 kind 是 `unit／shop／shopItem／pack／equip／summon`；商店卡片（`buy`／`buyItem`）、奖励候选（`reward`）与「已选好装备再点干员」不吞这一次按压，落在棋盘上的按压才吞掉（否则关详情的同时会把干员挪过去）。干员档案的名字旁边直接内联所属盟约（`native-dossier-name-bonds`，取 `bondIds`＋原表名字），不要再让玩家翻到「所属盟约」一节才看得到。
 
+- **同名干员的技能是共用的**（用户 2026-09-22 口径）：`perform('skill',uid,index)`（`native-session.js` 里 `type==='skill'` 那一条）会把技能档位写到**同一名干员的全部副本**上——按 `charId` 归并（精锐与初始算同一名，与盟约禁用／名册同一套身份口径），并且只在副本自己的 `profiles[chessId].skillChoices` 真有这一档时才写（形态之间档数可能不同）。于是**场上所有同名干员的技能始终一致**，改整备区那张也会同步到场上的那张，反之亦然；`u.skillIndex` 初始是 `undefined`（跟随档案默认档），所以同步要显式写值。不同干员互不影响，越界档位整组都不动，战斗中仍不允许改。档案的技能下拉下面会提示「同名干员共 N 张，技能会一起切换」。回归：`tests/native-skill-sync.test.mjs`。
+
 ## 敌人能力口径
 
 - **寒冷/冻结按施加类型区分**：`applyStatus` 的 `frostSide` 默认 `ally`，敌方施加必须显式传 `enemy`，不能按目标阵营推断。两类寒冷互不配对；敌方寒冷在同类冻结期间可续冻，友方寒冷始终两两配对并取已抵抗时长中的较长者。只有友方冻结减15法抗，冻结本身不另减攻速，也不解除我方阻挡（眩晕仍解除）。状态类型随JSON保存；当前无类型旧状态沿用友方语义。回归：`native-status-immunity.test.mjs`、`native-enemy-attacks.test.mjs`。

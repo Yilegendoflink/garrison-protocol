@@ -202,7 +202,14 @@ export class NativeSession extends NativeEconomy {
    else if(type==='lock'){if(this.s.phase!=='prep')return false;this.s.locked=!this.s.locked;result=true;}
   else if(type==='withdraw'){const u=this.s.units.find(u=>u.uid===args[0]);if(this.s.phase!=='prep'||!u?.position||this.handFull())return false;u.position=null;this.settleBondRewards();result=true;}
   else if(type==='withdrawSummon')result=this.withdrawSummonCard(args[0]);
-   else if(type==='skill'){const u=this.s.units.find(u=>u.uid===args[0]),p=this.data.profiles[u?.chessId];if(this.s.phase!=='prep'||!u||!p.skillChoices[args[1]])return false;u.skillIndex=args[1];result=true;}
+   else if(type==='skill'){
+    const u=this.s.units.find(u=>u.uid===args[0]),p=this.data.profiles[u?.chessId],index=args[1];if(this.s.phase!=='prep'||!u||!p.skillChoices[index])return false;
+    // 同名牌统一技能（用户 2026-09-22 口径）：同一名干员（按 charId 归并，精锐与初始算同一名）的副本必须用同一个技能，
+    // 所以改一次就把所有副本一起改——场上的保证了「同名干员技能一致」，整备区的也一起改，免得之后上场又出现不一致。
+    // 只在副本自己的 skillChoices 有这一档时才改（形态之间技能档数可能不同）。
+    for(const unit of this.s.units)if(unit.charId===u.charId&&this.data.profiles[unit.chessId]?.skillChoices?.[index])unit.skillIndex=index;
+    result=true;
+   }
    else if(type==='buyItem')result=this.buyItem(args[0]);
    else if(type==='equip')result=this.equip(args[0],args[1],args[2]);
    else if(type==='bounty')result=this.chooseBounty(args[0]);
