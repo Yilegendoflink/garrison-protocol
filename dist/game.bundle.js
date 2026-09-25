@@ -14584,12 +14584,54 @@ if(d.kind==='item'&&d.from==='hand'){const u=equipDropTarget(e.clientX,e.clientY
 });
 root.addEventListener('pointercancel',()=>{if(!drag&&!aim&&!state.preview&&!canvasPress)return;clearDrag();aim=null;state.preview=null;render();});
 document.addEventListener('keydown',e=>{if(root.querySelector('#wave-ed-test[open]')||root.querySelector('.native-choice-overlay'))return;if(e.target.matches('input,select,textarea'))return;if(e.key==='Escape'){clearDrag();aim=null;state.preview=null;state.selected=state.summonSelected=null;state.inspect=null;if(!state.game?.s.rewardPending&&state.game?.s.phase!=='decision')state.modal=null;render();}if(state.preview){const d={ArrowRight:0,ArrowDown:1,ArrowLeft:2,ArrowUp:3}[e.key];if(d!==undefined){e.preventDefault();state.preview.dir=d;draw();}if(e.key==='Enter')commitPreview();}});
-window.addEventListener('beforeunload',()=>{state.expiresAt??=Date.now()+86400000;save();});document.addEventListener('visibilitychange',()=>{if(document.hidden){state.paused=true;state.expiresAt??=Date.now()+86400000;save();}});
+window.addEventListener('beforeunload',()=>{state.expiresAt??=Date.now()+86400000;save();});
+// 切走页面**不再自动暂停**（用户 2026-09-23 口径「网页切走时后台继续运行而不是暂停」）：隐藏标签页里
+// requestAnimationFrame 会停摆，所以换一条按真实时间补帧的后台驱动（scheduleBackground），回到前台再交还给 rAF。
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden){state.expiresAt??=Date.now()+86400000;save();scheduleBackground();}
+ else{cancelBackground();last=performance.now();acc=Math.min(acc,1/30);updateHud();draw();}
+});
+// 后台继续跑：
+//  · 隐藏标签页里 rAF 完全停摆，浏览器还会节流定时器（Chrome：隐藏后最多 1 秒一次；隐藏 5 分钟后可能降到
+//    1 分钟一次，个别情况整个标签页被冻结）。所以每次唤醒都按 performance.now() 的**真实差值**补帧，
+//    不能假设「一帧 = 1/30 秒」。
+//  · 单次唤醒给一个**墙钟预算**（BG_BUDGET_MS）：预算用完就把欠账留在 acc 里，下一次唤醒继续补，
+//    免得一次性跑几千帧把主线程卡住。欠账只在回到前台时截断成一帧（那时玩家在看，宁可少补也不能卡）。
+//  · 后台不发声、不重绘画布/头部计数（playBattleEvents 仍以静音调用，只为推进「已播放」游标，
+//    否则回来时会补响一串音效）；阶段变化（波次结束、整局结束）照旧 render()，回到前台立刻 updateHud()+draw()。
+const BG_WAKE_MS=250,BG_BUDGET_MS=200,BG_MAX_GAP=3600;
+let bgTimer=null;
+function scheduleBackground(){if(bgTimer!=null||runtimeFault)return;bgTimer=setTimeout(backgroundWake,BG_WAKE_MS);}
+function cancelBackground(){if(bgTimer!=null){clearTimeout(bgTimer);bgTimer=null;}}
+function backgroundWake(){
+ bgTimer=null;
+ if(runtimeFault||!document.hidden)return;
+ try{advance(performance.now(),false);}
+ catch(error){runtimeFault=error;state.paused=true;console.error('Native runtime paused',error);try{notice('战斗已暂停：'+(error?.message||String(error)));}catch{}}
+ if(document.hidden)scheduleBackground();
+}
+// 一帧的推进（可见与后台共用）：live=false 就是后台补帧。
+function advance(now,live){
+ const gap=Math.max(0,(now-last)/1000);last=now;
+ const dt=Math.min(live?.15:BG_MAX_GAP,gap);
+ const g=state.game;
+ if(state.view==='game'&&g?.s.phase==='battle'&&!state.paused){
+  acc+=dt*state.speed;const previous=g.s.phase,deadline=live?0:performance.now()+BG_BUDGET_MS;
+  while(acc>=1/30&&g.s.phase==='battle'){acc-=1/30;g.tick();if(!live&&performance.now()>deadline)break;}
+  if(g.battle)playBattleEvents(g.battle.s,live?state.muted:true,state.volume);
+  if(g.s.phase!==previous){acc=0;save();render();if(g.s.phase==='intermission')roundEndBegin(g);else if(g.s.phase==='finished'){const dmg=Math.round(g.s.runResult?.totalDamage||0);notice('模拟结束，总伤害 '+(eggOn()?format325(dmg):dmg.toLocaleString()));if(g.s.runResult?.kind==='training-dummy')showResult();else roundEndBegin(g);}}
+ }else if(state.view==='sandbox'&&state.sandbox?.phase==='battle'&&!state.paused){
+  acc+=dt*state.speed;const deadline=live?0:performance.now()+BG_BUDGET_MS;
+  while(acc>=1/30&&!state.sandbox.battle.s.finished){acc-=1/30;state.sandbox.battle.step();if(!live&&performance.now()>deadline)break;}
+  if(state.sandbox.battle)playBattleEvents(state.sandbox.battle.s,live?state.muted:true,state.volume);
+ }else acc=0;
+ hudTime+=dt;saveTime+=dt;if(hudTime>.2){updateHud();hudTime=0;}if(saveTime>2&&g){save();saveTime=0;}
+ if(live){roundEndTick(now);draw();}
+}
 function frame(now){
  if(runtimeFault){requestAnimationFrame(frame);return;}
- try{
-  const dt=Math.min(.15,(now-last)/1000);last=now;const g=state.game;if(state.view==='game'&&g?.s.phase==='battle'&&!state.paused){acc+=dt*state.speed;const previous=g.s.phase;while(acc>=1/30&&g.s.phase==='battle'){acc-=1/30;g.tick();}if(g.battle)playBattleEvents(g.battle.s,state.muted,state.volume);if(g.s.phase!==previous){acc=0;save();render();if(g.s.phase==='intermission')roundEndBegin(g);else if(g.s.phase==='finished'){const dmg=Math.round(g.s.runResult?.totalDamage||0);notice('模拟结束，总伤害 '+(eggOn()?format325(dmg):dmg.toLocaleString()));if(g.s.runResult?.kind==='training-dummy')showResult();else roundEndBegin(g);}}}else if(state.view==='sandbox'&&state.sandbox?.phase==='battle'&&!state.paused){acc+=dt*state.speed;while(acc>=1/30&&!state.sandbox.battle.s.finished){acc-=1/30;state.sandbox.battle.step();}if(state.sandbox.battle)playBattleEvents(state.sandbox.battle.s,state.muted,state.volume);}else acc=0;hudTime+=dt;saveTime+=dt;if(hudTime>.2){updateHud();hudTime=0;}if(saveTime>2&&g){save();saveTime=0;}roundEndTick(now);draw();
- }catch(error){runtimeFault=error;state.paused=true;console.error('Native runtime paused',error);try{notice('战斗已暂停：'+(error?.message||String(error)));}catch{}}
+ try{advance(now,!document.hidden);}
+ catch(error){runtimeFault=error;state.paused=true;console.error('Native runtime paused',error);try{notice('战斗已暂停：'+(error?.message||String(error)));}catch{}}
  requestAnimationFrame(frame);
 }
 root.setAttribute('data-view','native');root.addEventListener('pointerdown',()=>unlockAudio(),{once:true});syncPlayChrome();render();document.getElementById('boot-screen')?.remove();clearTimeout(window.__garrisonBootTimer);window.__garrisonReady=true;requestAnimationFrame(frame);

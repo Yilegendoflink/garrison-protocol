@@ -24,6 +24,9 @@
 
 功能分支上的提交不等于已发布内容。敌人特殊行为的已实现范围、剩余缺口和暂停检查点见 [敌人行为审计](docs/ENEMY_BEHAVIOR_GAP_AUDIT.md)。
 
+切走标签页时战斗**不再自动暂停**（隐藏时 `requestAnimationFrame` 停摆，改由定时器按真实时间补帧），
+口径、浏览器节流限制与未闭环清单见 [后台继续运行](docs/BACKGROUND_LOOP_2026-09-23.md)。
+
 2026-09-13 的地图裁切、预置工事、分支规则修正仍然有效，详见 [BRANCH_RULES.md](BRANCH_RULES.md)。
 
 ## 已知差异
