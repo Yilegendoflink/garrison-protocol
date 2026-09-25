@@ -1,3 +1,4 @@
+import {baseFunding} from './protocol.js';
 const params=e=>Object.fromEntries(e.blackboard.map(b=>[b.key,b.valueStr??b.value]));
 const list=v=>String(v??'').split(',').filter(Boolean);
 const fixedGain=(c,p)=>{for(let i=0;i<(p.count||1);i++)p.type==='char'?c.gain(p.chess):c.gainItem(p.chess);};
@@ -5,7 +6,7 @@ const randomGain=(c,p)=>{for(let i=0;i<(p.count||1);i++){const kind=p.type==='ch
 const effects={
  preparation_start_gain_chess_from_round:{event:'prep',run:(c,p)=>{if(c.s.round===p.round)fixedGain(c,p);}},
  preparation_start_gain_chess_every_n_round:{event:'prep',run:(c,p)=>{if(c.s.round%p.round===0)fixedGain(c,p);}},
- give_coin_in_round:{event:'prep',run:(c,p)=>{if(c.s.round===p.round)c.addFunds(p.coin-(c.s.round+3));}},
+ give_coin_in_round:{event:'prep',run:(c,p)=>{if(c.s.round===p.round)c.addFunds(p.coin-baseFunding(c.s.round));}},// 把该回合整备资金顶到 p.coin：基数走 baseFunding（含 11 上限），不要再写 round+3
  prep_start_gain_chess_from_pool_in_round:{event:'prep',run:(c,p)=>{if(c.s.round===p.round)randomGain(c,p);}},
  gain_bond_char_per_round:{event:'prep',run:(c,p)=>{if(!c.bondHasCandidates?.(p.bond,c.s.level))return;if(c.s.round>=p.round&&(c.s.round-p.round)%p.preround===0)for(let i=0;i<p.count;i++)c.gain(c.draw({kind:'operator',bond:p.bond,maxTier:c.s.level}));}},
  round_start_bond_check_gain_layer:{event:'prep',run:(c,p)=>{if(c.s.round!==p.round)return;const ids=Object.keys(c.bonds()).filter(id=>c.bonds()[id].active);for(const id of ids)c.addLayers(id,ids.length===p.factioncount?p.count1:p.count2);}},

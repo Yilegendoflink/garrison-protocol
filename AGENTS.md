@@ -109,6 +109,7 @@
 
 - **资料已采集 ≠ 机制已实现 ≠ 原作对照通过。** 适配层有注册、有处理器，只说明入口在，不说明数值和时序已对照。
 - **四个账本分开：** `funds`（整备资金）≠ `cost`（战斗部署费用，本项目开局 20）≠ 诗怀雅金币 ≠ 技力 SP。
+- **整备资金曲线与升级费用是项目规定值（用户 2026-09-22 口径）**：`protocol.baseFunding(round)`＝开局 `BASE_FUNDS_START=4`、每回合 +1、**默认收入封顶 `BASE_FUNDS_CAP=11`**（第 8 回合起都是 11，与难度无关）。上限只约束「默认回合收入」这一条路径（`nextRound` 里的 `setFunds(baseFunding(...))`）；效果／策略／装备发的额外资金一律走 `addFunds`，不封顶，海猫模式仍是 `INFINITE_FUNDS`。商店升级原价取 `shopLevelDataDict[mode][level].initialUpgradePrice`（本期 2–6 级＝5／8／11／12／13，客户端不另写一套），升级费用＝原价 − 已累积折扣、下限 0、6 级返回 `null`；**每经过一回合 `s.discount++`（当前升级费用 -1，直到 0）**，升级成功后清零、按新等级原价重算（`shopTerms` 是唯一入口，UI 直接显示它）。任何「把资金顶到 N」的策略／装备都必须用 `baseFunding(round)` 当基数（`strategy.js` 的 `give_coin_in_round` 过去写死 `round+3`）。回归：`tests/native-funding.test.mjs`、`tests/native-protocol.test.mjs`。
 - 战斗规则走 `native-effects` 结算入口（伤害/治疗/回复/流失/退场，带 `eventId` / `parentEventId` / `attackId`）。不要为了特效去改命中结果。
 - 能力状态只能由真实场景改 `operator-capability-status.json`；构建脚本不得批量升 `verified`。
 - 商店抽取顺序是**先掷阶级再从该阶级库存里抽**（`native-session.js` 的 `SHOP_TIER_ROLL`：最高阶30% / 次高阶40% / 更低阶合计30%，档内按剩余库存加权、同店无放回）；掷中的阶级没库存才回落到整池随机。百分比是项目规定值，不要写成原作权重，也不要改回「整池直接按库存抽」。
