@@ -63,6 +63,37 @@ test('enemy behavior profiles infer documented move-and-attack and scheduled sta
 test('集团军重型火炮只在开火动作期间停留',()=>{
  const profile=enemyBehaviorProfile(NATIVE_DATA.enemies.enemy_10122_uacann_2);assert.equal(profile.movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING);assert.equal(profile.attackWhileMoving,false);
 });
+// 用户 2026-09-23 报「萨卡兹枯朽战车／掠海漂移体一直原地开火不前进」：
+// 原表把「近战 远程」写成 `applyWay: 'ALL'`，而默认策略只判了 `==='RANGED'`，
+// 这类敌人于是落到 `stop-on-target`——只要攻击范围里有个活着的目标就永远站桩。
+test('「近战 远程」（applyWay ALL）且攻击范围半径大于 1 的敌人默认只在攻击动作期间停留',()=>{
+ // PRTS：掠海漂移体 2.6、萨卡兹枯朽战车 2.2（攻击方式都写「近战 远程」）
+ for(const id of ['enemy_2025_syufo','enemy_1272_nhtank','enemy_1272_nhtank_2'])assert.equal(enemyBehaviorProfile(NATIVE_DATA.enemies[id]).movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING,id);
+ // 贴脸打的 ALL 单位（半径缺省/≤1）与纯近战照旧停走
+ for(const id of ['enemy_1535_wlfmster','enemy_1512_mcmstr','enemy_1267_nhpbr'])assert.equal(enemyBehaviorProfile(NATIVE_DATA.enemies[id]).movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET,id);
+ // 明确写了别的策略的敌人不受影响（爆炸类文字推导仍优先）
+ assert.equal(enemyBehaviorProfile({applyWay:'ALL',rangeRadius:2,description:'不停止移动的四向攻击'}).movementPolicy,ENEMY_MOVEMENT_POLICIES.ALWAYS_MOVE_ATTACK);
+ assert.equal(enemyBehaviorProfile({applyWay:'ALL',rangeRadius:2,enemyBehavior:{movementPolicy:ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET}}).movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET);
+});
+test('全表门禁：能隔着距离开火的敌人不得落到 stop-on-target',()=>{
+ const stuck=[];
+ for(const [id,e] of Object.entries(NATIVE_DATA.enemies)){
+  const ranged=e.applyWay==='RANGED'||(e.applyWay==='ALL'&&Number(e.rangeRadius)>1);
+  if(ranged&&e.enemyBehavior?.movementPolicy===ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET)stuck.push(e.name+'('+id+')');
+ }
+ assert.deepEqual(stuck,[],'远程敌人被范围里的目标永久钉住；要改策略请写进 enemy-behavior-overrides.json');
+});
+test('掠海漂移体：攻击范围里有目标也会继续推进，只在开火时停一下',()=>{
+ const b=liveBattle(),u=b.s.units[0];u.x=8;u.y=0;u.maxHp=1e9;u.hp=1e9;   // 站在 m01 第 0 行那条路上（血量拉满，免得被它打死就没人挡了）
+ const at=(x,y)=>({col:b.map.origin.col+x,row:b.map.origin.row-y});
+ b.level={...b.level,routes:[{motionMode:'WALK',startPosition:at(4,0),endPosition:at(10,0),checkpoints:[]}],enemyProfiles:{...b.level.enemyProfiles,enemy_2025_syufo:NATIVE_DATA.enemies.enemy_2025_syufo}};
+ b.spawn({id:'enemy_2025_syufo',route:0});
+ const e=b.s.enemies.at(-1),x0=e.x,hp0=u.hp;
+ for(let i=0;i<300;i++)b.step();
+ assert.equal(e.movementPolicy,ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING);
+ assert.ok(e.x>x0+3,`进入射程（${x0}+2.6）后必须继续推进，而不是停在射程边缘（x=${e.x}）`);
+ assert.ok(u.hp<hp0,'推进途中应当照常开火');
+});
 test('最终木桩占据右上方两列三行并可作为范围判定目标',()=>{
  const dummy=createTrainingDummy(1,9,1);assert.deepEqual(dummy.area,{left:9,right:10,top:0,bottom:2});
  const b=liveBattle(),u=b.s.units[0];b.range=()=>[{x:10,y:2}];assert.equal(b.inside(u,dummy),true);b.range=()=>[{x:5,y:3}];assert.equal(b.inside(u,dummy),false);

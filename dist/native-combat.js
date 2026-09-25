@@ -187,7 +187,13 @@ export function enemyBehaviorProfile(raw={}){
  if(normalized?.behaviorInferred&&normalized.attackWhileMoving!==undefined&&normalized.stallTimeout!==undefined)return {...normalized};
  const explicit=raw.movementPolicy||raw.enemyBehavior?.movementPolicy||raw.behavior?.movementPolicy;
  const text=enemyText(raw);
- let movementPolicy=explicit||(raw.applyWay==='RANGED'?ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING:ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET);
+ // 默认策略按「会不会隔着距离开火」定（与 `data/modes/alliance-lower/enemy-behavior-overrides.json` 的说明一致：
+ // 「未确认远程单位默认只在攻击动作期间停留」）。原表把「近战 远程」写成 `applyWay: 'ALL'`，
+ // 只判 `==='RANGED'` 会把这类敌人误落到 `stop-on-target`——它们会停在攻击范围边缘一直开火、
+ // 再也不前进（用户 2026-09-23 报的萨卡兹枯朽战车 2.2／掠海漂移体 2.6 就是这个）。
+ // `rangeRadius` 缺省或 ≤1 的 ALL 单位只能贴脸打（例如扎罗、巨大的丑东西），维持原默认。
+ const rangedAttack=raw.applyWay==='RANGED'||(raw.applyWay==='ALL'&&Number(raw.rangeRadius)>1);
+ let movementPolicy=explicit||(rangedAttack?ENEMY_MOVEMENT_POLICIES.STOP_WHILE_ATTACKING:ENEMY_MOVEMENT_POLICIES.STOP_ON_TARGET);
  if(!explicit){
   if(/不停止移动|持续攻击.*移动|移动中.*攻击/.test(text))movementPolicy=ENEMY_MOVEMENT_POLICIES.ALWAYS_MOVE_ATTACK;
   else if(/周期性停止移动/.test(text))movementPolicy=ENEMY_MOVEMENT_POLICIES.SCHEDULED_STOP;

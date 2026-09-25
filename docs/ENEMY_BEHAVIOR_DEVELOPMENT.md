@@ -15,7 +15,17 @@
 - `scheduled-stop`：按 `stanceInterval` / `stanceDuration` 周期停移。
 - `skill-controlled`：由技能或蓄力状态控制停移。
 
-当前默认值仍为 `stop-on-target`，未取得逐关卡证据的敌人不会被自动推断为更复杂的行为。复杂敌人通过 `enemyBehavior.randomPoolEligible=false` 排除出随机池，先放入固定波次。
+当前默认值按「会不会隔着距离开火」定：**能隔着距离开火的单位（`applyWay: RANGED`，或原表写「近战 远程」的
+`applyWay: ALL` 且攻击范围半径 > 1）默认只在攻击动作期间停留**；其余（纯近战、贴脸打的 ALL 单位）默认
+`stop-on-target`。文案里有更复杂证据的（不停止移动／周期性停止移动／蓄力／连击）优先于默认值，
+逐关卡覆盖仍然最高优先。
+
+> 2026-09-23 修正：默认策略原来只判 `applyWay === 'RANGED'`，于是写「近战 远程」的敌人（萨卡兹枯朽战车 2.2、
+> 掠海漂移体 2.6、碎骨、墓碑、杰斯顿等 11 名）落到 `stop-on-target`——只要攻击范围里有个活着的目标就
+> 永久站桩开火、再也不前进（用户报的就是这两种）。贴脸打的 ALL 单位（扎罗、巨大的丑东西，半径缺省）
+> 与纯近战维持 `stop-on-target`；`tests/native-combat.test.mjs` 有「远程敌人不得落到 stop-on-target」的全表门禁。
+
+复杂敌人通过 `enemyBehavior.randomPoolEligible=false` 排除出随机池，先放入固定波次。
 
 逐关卡覆盖写在 `data/modes/alliance-lower/enemy-behavior-overrides.json`，可单独指定移动策略、连射次数、停移时长和随机池资格，构建时同时写入协议目录与战斗运行时。
 
