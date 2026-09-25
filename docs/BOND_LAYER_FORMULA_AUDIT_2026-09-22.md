@@ -98,3 +98,25 @@
 - 验证方式：原表逐键比对 + 源码消费点通读 + 真实战斗行为断言（改原表数值看面板与结算是否同步）。
 - `npm test`：1143 通过 / 0 失败（含新增 17 条）。
 - **没有浏览器／游戏内验证**：本次改动是数值与读取路径，画面无变化；奥术、谢拉格这类倍率只做了伤害比值断言。
+
+## 九、战斗中的层数显示（2026-09-23 用户口径）
+
+用户问：「在战斗中触发的层数变化是否实时显示？至少谢拉格目前测试到回合结束才累加」。
+
+**根因不在数值，在显示时机**：层数本身是实时写进 `economy.s.bondLayers` 的（卫戍「敌人进入冻结→叠层」、
+装备／策略发层都在开战中就写，`tests/native-kjerag-freeze.test.mjs` 逐帧断言过），但侧栏盟约按钮
+（`.native-bonds`）过去**只在 `render()` 里生成**，而战斗期间 `render()` 只在阶段切换时
+（波次结束／整局结束）跑一次——所以战斗中层数变了要等回合结束那一刻才显示。
+
+**现在**：`native-play` 把侧栏与盟约面板的 HTML 各自收敛成一个生成器（`bondSidebarHtml` / `bondModalHtml`），
+`render()` 与 `updateHud()` 共用；`updateHud()`（每 0.2 秒模拟时间跑一次，可见与后台都跑）调用
+`updateBondLive()`：按当前 `bonds()`／`s.bondLayers` 重算侧栏，**只在内容真的变了才写 DOM**
+（`dataset.bondSig` 去抖，不打断悬停／焦点）；打开着的盟约面板（`modal(html,{bond:id})` 记的 meta）
+也按新层数重建，面板里的「当前动态数值」（`bondCurrentPreviewHtml`，含谢拉格寒风时长这类按层数算的项）因此跟着走。
+
+**回归**：`tests/native-bond-live.test.mjs`（3 条）——真启动 native 客户端打一局，**战斗中**侧栏
+（只由 `updateBondLive` 写的替身节点）内容必须等于局内状态；局内状态一变（落场干员）下一次 HUD 节奏就更新；
+源码门禁（生成器只有一份、`updateHud` 每个节奏调用一次、只在变化时写 DOM）。
+宿主抽到 `tests/native-host.mjs`（最小 DOM ＋ 虚拟时钟 ＋ 固定 `Date.now`；**同一个元素同一事件类型保留多个监听**，
+因为 native-play 在 `#app` 上注册了两次 `pointerdown`——主处理器与开局的 `unlockAudio`），
+`tests/native-background.test.mjs` 与它共用这个宿主。
