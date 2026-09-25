@@ -5,8 +5,10 @@
 //    **不占随机名额**；同一开局种子结果固定（与商店／波次随机流分开）。
 //  * 每个盟约处在三种状态之一（`banRules`，在「协议自定义 → 禁用方案」页调）：
 //      - `fixed`  固定禁用；`random` 参与随机；`never` 固定不被禁。
-//    默认方案：`fixed` 为空；`never` = 协防干员（emptyShip）／绝技（suntShip）／调和（maniShip）／
-//    独行（soloShip）＋**投资人（investShip）**（`BOND_BAN_DEFAULT_NEVER`）。配置只存 `always`／`never`。
+//    默认方案：`fixed` 为空；`never` = 协防干员（emptyShip）／绝技（suntShip）／调和（maniShip）
+//    ＋**投资人（investShip）**（`BOND_BAN_DEFAULT_NEVER`，配置只存 `always`／`never`）。
+//    **独行（soloShip）不在默认豁免里，默认就可能被随机禁到**（用户 2026-09-22 二次修订）；
+//    **绝技（suntShip）是硬锁**：任何情况下都不会被禁，也不允许被配置成固定禁用或参与随机（`BOND_BAN_LOCKED_NEVER`）。
 //  * **干员禁用规则（v3 修订）**：一名干员**所属的全部盟约都被禁**时才被禁用；只要还挂着一个没被禁的
 //    盟约就仍然可用。v2 的逐盟约「不禁用名单」（`exempt`）已废弃，配置里不再有这一项。
 //    没有盟约归属的干员不因本机制被禁。
@@ -26,10 +28,17 @@ export const BOND_BAN_KEY='garrison-bond-ban-v1';
 export const BOND_BAN_VERSION=3;
 export const BAN_CORE_COUNT=3;
 export const BAN_EXTRA_COUNT=4;
-// 内置固定不参与随机禁用的四个盟约（用户 2026-09-22 口径）：协防干员、绝技、调和、独行。
-export const BOND_BAN_EXCLUDED=Object.freeze(['emptyShip','suntShip','maniShip','soloShip']);
+// 默认不参与随机禁用的内置盟约（用户 2026-09-22 二次修订）：协防干员、绝技、调和。
+// **独行（soloShip）已从这份名单移出**——默认就参与随机、可能被禁；玩家仍可在「禁用方案」页把它改成不被禁。
+export const BOND_BAN_EXCLUDED=Object.freeze(['emptyShip','suntShip','maniShip']);
+// **硬锁不被禁**：绝技在任何情况下都不会被禁，也不允许被配置成固定禁用／参与随机。
+// `banRules` 会强制把它归到 `never`，配置页对它只显示不可点的状态（用户 2026-09-22 口径：
+// 「绝技在任何情况下固定不会 ban（也不可能 ban）」）。
+export const BOND_BAN_LOCKED_NEVER=Object.freeze(['suntShip']);
 // 默认方案在这四个之外再把**投资人**排除出随机池。它只是默认值，可以在「禁用方案」页改。
-export const BOND_BAN_DEFAULT_NEVER=Object.freeze([...BOND_BAN_EXCLUDED,'investShip']);
+// 默认方案里「不被禁」且**玩家可改**的盟约：三个内置豁免里去掉硬锁的绝技，再加投资人。
+// 绝技由 BOND_BAN_LOCKED_NEVER 保证，不写进配置也不出现在这份默认值里（避免同一件事两处记账）。
+export const BOND_BAN_DEFAULT_NEVER=Object.freeze([...BOND_BAN_EXCLUDED.filter(id=>!BOND_BAN_LOCKED_NEVER.includes(id)),'investShip']);
 // 三种状态：固定禁用 / 参与随机 / 固定不被禁。
 export const BAN_MODES=Object.freeze(['fixed','random','never']);
 
@@ -37,6 +46,8 @@ export function bondIds(data){return Object.keys(data?.season?.bondInfoDict||{})
 export function bondIsCore(data,id){return data?.common?.bondInfoDict?.[id]?.isPower===true;}
 export function bondName(data,id){return data?.season?.bondInfoDict?.[id]?.name||id;}
 export function bondIsBanExcluded(id){return BOND_BAN_EXCLUDED.includes(id);}
+// 硬锁：任何配置都改不了它的状态（绝技）。
+export function bondIsLockedNever(id){return BOND_BAN_LOCKED_NEVER.includes(id);}
 // 默认方案（禁用方案页的「恢复默认」用的就是它）。
 export function defaultBanRules(){return {always:[],never:[...BOND_BAN_DEFAULT_NEVER]};}
 // 把配置解析成「谁固定禁用、谁固定不被禁、每个盟约当前是什么状态」。
@@ -45,10 +56,12 @@ export function defaultBanRules(){return {always:[],never:[...BOND_BAN_DEFAULT_N
 export function banRules(config,data){
  const ids=bondIds(data),known=new Set(ids),fallback=defaultBanRules();
  const clean=list=>[...new Set((Array.isArray(list)?list:[]).filter(id=>known.has(id)))];
- const fixed=clean(Array.isArray(config?.always)?config.always:fallback.always);
- const never=clean(Array.isArray(config?.never)?config.never:fallback.never).filter(id=>!fixed.includes(id));
+ // 硬锁的盟约永远只可能是 never：既不能出现在 fixed 里，也一定出现在 never 里。
+ const locked=BOND_BAN_LOCKED_NEVER.filter(id=>known.has(id));
+ const fixed=clean(Array.isArray(config?.always)?config.always:fallback.always).filter(id=>!locked.includes(id));
+ const never=[...new Set([...clean(Array.isArray(config?.never)?config.never:fallback.never).filter(id=>!fixed.includes(id)),...locked])];
  const mode=new Map(ids.map(id=>[id,fixed.includes(id)?'fixed':never.includes(id)?'never':'random']));
- return {fixed,never,mode};
+ return {fixed,never,locked,mode};
 }
 export const banModeOf=(rules,id)=>rules?.mode?.get?.(id)||(rules?.mode?.[id])||'random';
 
@@ -136,8 +149,9 @@ export function bondBanSummary(data,bonds,config){
 
 // ── 配置读写 ─────────────────────────────────────────────────────────────────
 export function normalizeBondBan(raw,data){
- const rules=banRules(raw,data);
- return {always:rules.fixed,never:rules.never};
+ const rules=banRules(raw,data),locked=new Set(BOND_BAN_LOCKED_NEVER);
+ // 配置只留玩家意图：硬锁的盟约（绝技）不写进配置文件，判定与展示时由 banRules 强制补进 never。
+ return {always:rules.fixed.filter(id=>!locked.has(id)),never:rules.never.filter(id=>!locked.has(id))};
 }
 export function loadBondBan(data){
  try{

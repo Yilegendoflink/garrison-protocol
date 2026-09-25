@@ -4,10 +4,10 @@ import {NATIVE_DATA as data} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {runGarrison} from '../dist/garrison.js';
 import {
- BAN_CORE_COUNT,BAN_EXTRA_COUNT,BOND_BAN_DEFAULT_NEVER,BOND_BAN_EXCLUDED,BOND_BAN_KEY,BOND_BAN_VERSION,
+ BAN_CORE_COUNT,BAN_EXTRA_COUNT,BOND_BAN_DEFAULT_NEVER,BOND_BAN_EXCLUDED,BOND_BAN_KEY,BOND_BAN_LOCKED_NEVER,BOND_BAN_VERSION,
  banModeOf,banPool,banRules,bondBanBlockers,bondBanIds,bondBanSummary,bondIds,bondIsBanExcluded,bondIsCore,
  bondBanBriefingHtml,bannedOperatorsHtml,activeBondBan,
- bondMembers,bondName,bondRoster,charIdOf,defaultBanRules,isOperatorBanned,loadBondBan,normalizeBondBan,
+ bondMembers,bondName,bondRoster,charIdOf,defaultBanRules,isOperatorBanned,loadBondBan,normalizeBondBan,bondIsLockedNever,
  saveBondBan,
 } from '../dist/native-bond-ban.js';
 import {editorState,renderWaveEditor,applyEditorAction} from '../dist/native-wave-editor.js';
@@ -31,14 +31,19 @@ test('每局随机禁 3 个核心 + 4 个附加盟约，默认方案里投资人
  assert.equal(BAN_CORE_COUNT,3);assert.equal(BAN_EXTRA_COUNT,4);
  assert.equal(bondIds(data).length,23);
  assert.equal(core.length,8,'8 个核心盟约全部可被禁');
- assert.equal(extra.length,10,'15 个附加盟约里除去 5 个默认不被随机禁的，剩 10 个可被禁');
+ assert.equal(extra.length,11,'15 个附加盟约里除去 4 个默认不被随机禁的，剩 11 个可被禁（独行默认参与随机）');
  assert.deepEqual(core.filter(bondIsBanExcluded),[]);
  assert.deepEqual(extra.filter(bondIsBanExcluded),[]);
  for(const id of BOND_BAN_EXCLUDED)assert.equal(bondIsBanExcluded(id),true);
- assert.deepEqual([...BOND_BAN_EXCLUDED].sort(),['emptyShip','maniShip','soloShip','suntShip'],'固定不被禁的是协防干员／绝技／调和／独行');
- assert.deepEqual([...BOND_BAN_DEFAULT_NEVER],['emptyShip','suntShip','maniShip','soloShip','investShip'],'默认不被随机禁用的名单＝四个固定豁免 ＋ 投资人');
+ assert.deepEqual([...BOND_BAN_EXCLUDED].sort(),['emptyShip','maniShip','suntShip'],'默认不被随机禁的是协防干员／绝技／调和');
+ assert.deepEqual([...BOND_BAN_DEFAULT_NEVER],['emptyShip','maniShip','investShip'],'默认「不被禁」且可改的是协防干员／调和／投资人（绝技由硬锁保证，不写进配置）');
+ assert.equal(bondIsBanExcluded('soloShip'),false,'独行不在默认豁免里（用户 2026-09-22 口径：默认可能被 ban）');
+ assert.equal(extra.includes('soloShip'),true,'独行默认就在随机池里');
+ assert.deepEqual([...BOND_BAN_LOCKED_NEVER],['suntShip'],'绝技是硬锁不被禁');
  assert.equal(bondName(data,'investShip'),'投资人');
  assert.equal(banModeOf(banRules(null,data),'investShip'),'never','默认方案里投资人是「固定不被禁」');
+ assert.equal(banModeOf(banRules(null,data),'suntShip'),'never','默认方案里绝技也是「不被禁」（硬锁）');
+ assert.equal(banRules(null,data).never.includes('suntShip'),true,'硬锁会补进判定的 never');
  assert.equal(extra.includes('investShip'),false,'投资人不进随机池');
  for(const seed of [1,2,3,7,42,999]){
   const ids=bondBanIds(data,seed);
@@ -60,11 +65,42 @@ test('每局随机禁 3 个核心 + 4 个附加盟约，默认方案里投资人
  for(const id of BOND_BAN_DEFAULT_NEVER)assert.equal(drawn.has(id),false,'默认不被随机禁的盟约永远不进抽取范围');
 });
 
+test('绝技硬锁：任何配置都禁不了它，也不会进随机池',()=>{
+ assert.equal(bondIsLockedNever('suntShip'),true);
+ assert.equal(bondIsLockedNever('yanShip'),false);
+ // 配置里硬写固定禁用也不行：banRules 会把它从 fixed 里摘掉并强制归到 never。
+ const forced=banRules({always:['suntShip','yanShip'],never:['investShip']},data);
+ assert.deepEqual(forced.fixed,['yanShip'],'绝技不能被固定禁用');
+ assert.deepEqual(forced.locked,['suntShip']);
+ assert.equal(banModeOf(forced,'suntShip'),'never');
+ assert.equal(forced.never.includes('suntShip'),true,'硬锁一定出现在 never 里');
+ // 显式清空 never 也去不掉硬锁。
+ assert.equal(banModeOf(banRules({always:[],never:[]},data),'suntShip'),'never');
+ const normalized=normalizeBondBan({always:['suntShip'],never:[]},data);
+ assert.deepEqual(normalized.always,[],'归一化时把绝技从固定禁用里剔除');
+ assert.equal(normalized.never.includes('suntShip'),false,'硬锁不写进配置（配置只留玩家意图）');
+ assert.equal(banRules(normalized,data).never.includes('suntShip'),true,'判定时照样补上硬锁');
+ // 抽取池与每一局的名单里都不会出现它。
+ const pool=banPool(data,{always:[],never:[]});
+ assert.equal([...pool.core,...pool.extra].includes('suntShip'),false,'绝技不进抽取池');
+ assert.equal(Array.from({length:300},(_,i)=>bondBanIds(data,i,{always:[],never:[]})).some(ids=>ids.includes('suntShip')),false,'任何 seed 都抽不到绝技');
+ // 配置页对它只给不可点的状态。
+ const ui=editorState(),table=defaultWaveTable();
+ applyEditorAction('ed-page',{page:'rules'},table,ui,data);
+ const page=renderWaveEditor(data,table,ui);
+ assert.match(page,/data-bond="suntShip" data-mode="never" aria-pressed="true"/,'绝技显示为「不被禁」');
+ assert.match(page,/data-mode="fixed" aria-pressed="false" class="" disabled/,'绝技的「固定禁用」按钮要禁用');
+ assert.ok(page.includes('固定不被禁（硬锁，不可改）'),'硬锁要有说明');
+ for(const mode of ['fixed','random','never'])applyEditorAction('ed-br-mode',{bond:'suntShip',mode},table,ui,data);
+ assert.deepEqual(banRules(ui.bondBan,data).fixed,[],'点它也不改配置');
+ assert.equal(bondIsLockedNever('suntShip'),true);
+});
+
 test('禁用方案：固定禁用每局必缺席且不占随机名额，固定不被禁的永不入池',()=>{
  const config={always:['yanShip','investShip'],never:['emptyShip','kjeragShip']};
  const rules=banRules(config,data);
  assert.deepEqual(rules.fixed,['yanShip','investShip']);
- assert.deepEqual(rules.never,['emptyShip','kjeragShip']);
+ assert.deepEqual(rules.never.filter(id=>!BOND_BAN_LOCKED_NEVER.includes(id)),['emptyShip','kjeragShip'],'配置里的「不被禁」照旧生效');
  assert.equal(banModeOf(rules,'yanShip'),'fixed');
  assert.equal(banModeOf(rules,'kjeragShip'),'never');
  assert.equal(banModeOf(rules,'siracusaShip'),'random');
@@ -81,23 +117,25 @@ test('禁用方案：固定禁用每局必缺席且不占随机名额，固定�
 });
 
 test('禁用方案配置：只认已知盟约、去重，显式清空才是全部参与随机',()=>{
- assert.deepEqual(defaultBanRules(),{always:[],never:[...BOND_BAN_DEFAULT_NEVER]});
- assert.deepEqual(normalizeBondBan(null,data),{always:[],never:[...BOND_BAN_DEFAULT_NEVER]},'没有配置＝默认方案');
+ assert.deepEqual(defaultBanRules(),{always:[],never:[...BOND_BAN_DEFAULT_NEVER]},'默认方案＝固定的空 ＋ 默认不被禁（含硬锁的绝技）');
+ assert.deepEqual(normalizeBondBan(null,data),{always:[],never:[...BOND_BAN_DEFAULT_NEVER]},'没有配置＝默认方案（只含可改的那几个）');
  const half=normalizeBondBan({always:['yanShip']},data);
  assert.deepEqual(half.always,['yanShip']);
  assert.deepEqual(half.never,[...BOND_BAN_DEFAULT_NEVER]);
+ assert.equal(half.never.includes('suntShip'),false,'默认配置里不含硬锁的绝技');
  assert.equal('exempt' in half,false,'v3 的配置里不再有不禁用名单');
  const conflict=normalizeBondBan({always:['yanShip'],never:['yanShip','investShip']},data);
  assert.deepEqual(conflict.always,['yanShip']);
  assert.equal(conflict.never.includes('yanShip'),false,'同时写进两个数组时以固定禁用为准');
  assert.equal(banPool(data,conflict).core.includes('yanShip'),false);
  const allRandom=normalizeBondBan({always:[],never:[]},data);
- assert.deepEqual(allRandom.never,[]);
- assert.equal(banPool(data,allRandom).core.length+banPool(data,allRandom).extra.length,23,'全部参与随机时 23 个盟约都在池里');
+ assert.deepEqual(allRandom.never,[],'硬锁不进配置，所以「全部参与随机」存下来是空的');
+ assert.equal(banRules(allRandom,data).never.includes('suntShip'),true,'但判定时绝技仍被强制归到不被禁');
+ assert.equal(banPool(data,allRandom).core.length+banPool(data,allRandom).extra.length,22,'23 个盟约里绝技是硬锁，不进抽取池');
  const redrawn=new Set(Array.from({length:400},(_,i)=>bondBanIds(data,i,allRandom)).flat());
  assert.equal(redrawn.has('investShip'),true,'清掉「不被禁」之后投资人能重新被抽中');
  const dirty=normalizeBondBan({always:['yanShip','nope','yanShip'],never:['investShip','nope']},data);
- assert.deepEqual(dirty.always,['yanShip']);assert.deepEqual(dirty.never,['investShip']);
+ assert.deepEqual(dirty.always,['yanShip']);assert.deepEqual(dirty.never.filter(id=>!BOND_BAN_LOCKED_NEVER.includes(id)),['investShip']);
 });
 
 test('禁用判定（v3 核心口径）：所属盟约全部被禁才禁用，剩一个未缺席就仍可用',()=>{
@@ -271,7 +309,7 @@ test('禁用方案落盘：只认当前版本，v2／无版本／坏数据一律
   assert.equal(BOND_BAN_VERSION,3,'v3＝去掉不禁用名单那一版');
   assert.equal('exempt' in saved,false,'落盘的配置里不该再有 exempt');
   assert.deepEqual(loadBondBan(data).always,['yanShip']);
-  assert.deepEqual(loadBondBan(data).never,['investShip']);
+  assert.deepEqual(loadBondBan(data).never.filter(id=>!BOND_BAN_LOCKED_NEVER.includes(id)),['investShip']);
   store.set(BOND_BAN_KEY,JSON.stringify({version:2,always:['yanShip'],never:[],exempt:{yanShip:[]}}));
   assert.deepEqual(loadBondBan(data),defaultBanRules(),'v2 配置要按版本丢弃');
   store.set(BOND_BAN_KEY,JSON.stringify({exempt:{yanShip:[]}}));
@@ -312,6 +350,7 @@ test('协议自定义的「禁用方案」页：逐盟约三选一（固定禁�
  for(const label of ['固定禁用','参与随机','不被禁'])assert.ok(page.includes(`>${label}</button>`),label+' 按钮要在');
  assert.match(page,/data-bond="investShip" data-mode="never" aria-pressed="true"/,'默认方案里投资人是「不被禁」');
  assert.match(page,/data-bond="yanShip" data-mode="random" aria-pressed="true"/,'核心盟约默认参与随机');
+ assert.match(page,/data-bond="soloShip" data-mode="random" aria-pressed="true"/,'独行默认参与随机（2026-09-22 二次修订）');
  assert.equal(applyEditorAction('ed-br-mode',{bond:'yanShip',mode:'fixed'},table,ui,data),'render');
  assert.deepEqual(ui.bondBan.always,['yanShip']);
  assert.deepEqual(ui.bondBan.never,[...BOND_BAN_DEFAULT_NEVER]);
@@ -326,7 +365,7 @@ test('协议自定义的「禁用方案」页：逐盟约三选一（固定禁�
  assert.deepEqual(ui.bondBan.always,[]);assert.deepEqual(ui.bondBan.never,[...BOND_BAN_DEFAULT_NEVER]);
  assert.equal(banPool(data,ui.bondBan).core.includes('yanShip'),true);
  applyEditorAction('ed-br-mode',{bond:'investShip',mode:'random'},table,ui,data);
- assert.deepEqual(ui.bondBan.never,['emptyShip','suntShip','maniShip','soloShip']);
+ assert.deepEqual(ui.bondBan.never,['emptyShip','maniShip'],'把投资人改成参与随机后只剩两个默认豁免（绝技是硬锁、不进配置）');
  assert.equal(banPool(data,ui.bondBan).extra.includes('investShip'),true);
  applyEditorAction('ed-br-mode',{bond:'yanShip',mode:'fixed'},table,ui,data);
  assert.equal(applyEditorAction('ed-br-defaults',{},table,ui,data),'bond-rules-defaults');
@@ -334,7 +373,7 @@ test('协议自定义的「禁用方案」页：逐盟约三选一（固定禁�
  assert.equal(banPool(data,ui.bondBan).extra.includes('investShip'),false,'恢复默认方案后投资人重新不入池');
  assert.equal(applyEditorAction('ed-br-random-all',{},table,ui,data),'bond-rules-random');
  assert.deepEqual(ui.bondBan.always,[]);assert.deepEqual(ui.bondBan.never,[]);
- assert.equal(banPool(data,ui.bondBan).core.length+banPool(data,ui.bondBan).extra.length,23);
+ assert.equal(banPool(data,ui.bondBan).core.length+banPool(data,ui.bondBan).extra.length,22,'绝技是硬锁，永远不进池');
  assert.equal(applyEditorAction('ed-bb-export',{},table,ui,data),'bond-export','配置能导出');
  assert.equal(applyEditorAction('ed-bb-import',{},table,ui,data),'bond-import','配置能导入');
  applyEditorAction('ed-br-mode',{bond:'nope',mode:'fixed'},table,ui,data);

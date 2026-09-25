@@ -1,6 +1,6 @@
 import {TRAINING_TYPES,saveWaveTable,emptyWaveTable,defaultWaveTable,enemyCost,tierPack,currentTemplate,emptyTemplate,templateLabel,enemyActivity,enemyActivitySource,enemyPoolEligible} from './native-wave-fill.js';
 import {fillBudgetWave,waveRng,filterRandomPoolTable} from './native-wave-random.js';
-import {BAN_CORE_COUNT,BAN_EXTRA_COUNT,BAN_MODES,bondIds,bondIsCore,bondName,bondMembers,banRules,banModeOf,defaultBanRules,loadBondBan,saveBondBan} from './native-bond-ban.js';
+import {BAN_CORE_COUNT,BAN_EXTRA_COUNT,BAN_MODES,bondIds,bondIsCore,bondName,bondMembers,banRules,banModeOf,defaultBanRules,loadBondBan,saveBondBan,bondIsLockedNever} from './native-bond-ban.js';
 
 const KIND_LABEL={ 'random-pool':'常规池','mode-effect':'策略／悬赏','template':'生成模板' };
 const SORTS=[['name','名称'],['hp','生命'],['atk','攻击'],['cost','难度'],['id','ID']];
@@ -144,10 +144,10 @@ function renderBondRulePage(data,ui){
  const rules=banRules(ui.bondBan,data);
  const ids=bondIds(data),core=ids.filter(id=>bondIsCore(data,id)),extra=ids.filter(id=>!bondIsCore(data,id));
  const card=id=>{
-  const mode=banModeOf(rules,id),members=bondMembers(data,id).length;
-  const btn=(value,label)=>`<button data-act="ed-br-mode" data-bond="${esc(id)}" data-mode="${value}" aria-pressed="${mode===value}" class="${mode===value?'chosen':''}">${label}</button>`;
-  return `<article class="wave-ed-bond wave-ed-rule${bondIsCore(data,id)?' core':' extra'}${mode==='fixed'?' is-fixed':mode==='never'?' is-never':''}" data-bond="${esc(id)}">
-   <header><div><b>${esc(bondName(data,id))}</b><small>${bondIsCore(data,id)?'核心盟约':'附加盟约'} · ${members} 名成员</small></div><span class="wave-ed-rule-mode">${BAN_MODE_LABEL[mode]}</span></header>
+  const mode=banModeOf(rules,id),members=bondMembers(data,id).length,locked=bondIsLockedNever(id);
+  const btn=(value,label)=>`<button data-act="ed-br-mode" data-bond="${esc(id)}" data-mode="${value}" aria-pressed="${mode===value}" class="${mode===value?'chosen':''}" ${locked?'disabled title="硬锁：任何情况下都不被禁，配置改不了"':''}>${label}</button>`;
+  return `<article class="wave-ed-bond wave-ed-rule${bondIsCore(data,id)?' core':' extra'}${mode==='fixed'?' is-fixed':mode==='never'?' is-never':''}${locked?' is-locked':''}" data-bond="${esc(id)}">
+   <header><div><b>${esc(bondName(data,id))}</b><small>${bondIsCore(data,id)?'核心盟约':'附加盟约'} · ${members} 名成员</small></div><span class="wave-ed-rule-mode">${locked?'固定不被禁（硬锁，不可改）':BAN_MODE_LABEL[mode]}</span></header>
    <div class="wave-ed-bond-actions wave-ed-rule-modes" role="group" aria-label="${esc(bondName(data,id))}禁用状态">${btn('fixed','固定禁用')}${btn('random','参与随机')}${btn('never','不被禁')}</div>
   </article>`;
  };
@@ -155,7 +155,7 @@ function renderBondRulePage(data,ui){
  const total=ids.length;
  return `<section class="wave-ed-bonds">
   <header class="wave-ed-current"><div><small>BOND BAN PLAN</small><h2>禁用方案</h2></div><span class="wave-ed-bond-rule">每局抽 ${BAN_CORE_COUNT} 核心 ＋ ${BAN_EXTRA_COUNT} 附加</span></header>
-  <p class="wave-ed-hint"><b>固定禁用</b>＝本局必定缺席，且<b>不占</b>随机名额；<b>参与随机</b>＝进抽取池，每局等概率抽 ${BAN_CORE_COUNT} 个核心 ＋ ${BAN_EXTRA_COUNT} 个附加（同一开局种子结果固定）；<b>不被禁</b>＝既不进池也不会被固定禁。一名干员只有在<b>所属盟约全部缺席</b>时才不可使用——只要还挂着未缺席的盟约就仍能出场；所有获取渠道（商店／策略／道具／卫戍／晋升候选）都受这条限制。</p>
+  <p class="wave-ed-hint"><b>固定禁用</b>＝本局必定缺席，且<b>不占</b>随机名额；<b>参与随机</b>＝进抽取池，每局等概率抽 ${BAN_CORE_COUNT} 个核心 ＋ ${BAN_EXTRA_COUNT} 个附加（同一开局种子结果固定）；<b>不被禁</b>＝既不进池也不会被固定禁。<b>绝技</b>是硬锁：任何情况下都不被禁，三个按钮对它不可用。一名干员只有在<b>所属盟约全部缺席</b>时才不可使用——只要还挂着未缺席的盟约就仍能出场；所有获取渠道（商店／策略／道具／卫戍／晋升候选）都受这条限制。</p>
   <p class="wave-ed-hint wave-ed-bond-temp">当前方案：固定禁用 <b>${rules.fixed.length}</b> 个 · 参与随机 <b>${total-rules.fixed.length-rules.never.length}</b> 个（核心 ${count(core,'random')} / 附加 ${count(extra,'random')}） · 不被禁 <b>${rules.never.length}</b> 个。</p>
   <div class="wave-ed-bonds-tools"><button data-act="ed-br-defaults">恢复默认方案</button><button data-act="ed-br-random-all">全部参与随机</button><button data-act="ed-bb-export">导出配置 JSON</button><button data-act="ed-bb-import">导入配置 JSON</button></div>
   <h3 class="wave-ed-bonds-group">核心盟约 <small>${core.length} 个 · 固定禁用 ${count(core,'fixed')} · 不被禁 ${count(core,'never')}</small></h3>
@@ -199,7 +199,7 @@ export function applyEditorAction(act,dataset,table,ui,data){
  if(act==='ed-br-mode'){
   ui.bondBan=ui.bondBan||loadBondBan(data);
   const id=dataset.bond,mode=dataset.mode;
-  if(!data.season.bondInfoDict[id]||!BAN_MODES.includes(mode))return 'render';
+  if(!data.season.bondInfoDict[id]||!BAN_MODES.includes(mode)||bondIsLockedNever(id))return 'render';
   const rules=banRules(ui.bondBan,data);
   const always=new Set(rules.fixed),never=new Set(rules.never);
   if(mode==='fixed'){always.add(id);never.delete(id);}

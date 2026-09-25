@@ -63,8 +63,12 @@ test('协议自定义只有两页：敌人波次 + 禁用方案（固定禁用�
 });
 
 test('默认不被随机禁用的盟约（含投资人）与三态配置都在界面上说清楚',()=>{
- assert.match(banModule,/BOND_BAN_EXCLUDED=Object\.freeze\(\['emptyShip','suntShip','maniShip','soloShip'\]\)/,'协防干员／绝技／调和／独行要显式登记为固定不被禁');
- assert.match(banModule,/BOND_BAN_DEFAULT_NEVER=Object\.freeze\(\[\.\.\.BOND_BAN_EXCLUDED,'investShip'\]\)/,'默认方案要额外把投资人排除出随机池');
+ assert.match(banModule,/BOND_BAN_EXCLUDED=Object\.freeze\(\['emptyShip','suntShip','maniShip'\]\)/,'默认不被随机禁的是协防干员／绝技／调和（独行默认参与随机）');
+ assert.match(banModule,/BOND_BAN_LOCKED_NEVER=Object\.freeze\(\['suntShip'\]\)/,'绝技要登记成硬锁不被禁');
+ assert.match(banModule,/const fixed=clean\(.*?\)\.filter\(id=>!locked\.includes\(id\)\)/,'固定禁用要从配置里剔除硬锁的盟约');
+ assert.match(banModule,/locked=new Set\(BOND_BAN_LOCKED_NEVER\)/,'硬锁也不写进配置文件');
+ assert.match(editor,/固定不被禁（硬锁，不可改）/,'配置页要标出硬锁且不可改');
+ assert.match(banModule,/BOND_BAN_DEFAULT_NEVER=Object\.freeze\(\[\.\.\.BOND_BAN_EXCLUDED\.filter\(id=>!BOND_BAN_LOCKED_NEVER\.includes\(id\)\),'investShip'\]\)/,'默认「不被禁」＝内置豁免去掉硬锁的绝技 ＋ 投资人');
  assert.match(banModule,/const fixed=clean\(Array\.isArray\(config\?\.always\)/,'固定禁用／不被禁由配置决定，不是写死的名单');
  assert.match(banModule,/if\(skip\.has\(id\)\)continue/,'抽取池要跳过固定禁用与固定不被禁的盟约');
  assert.doesNotMatch(banModule,/BOND_EXEMPT_TABLE|resolveBondExempt|defaultBondExempt/,'v3 起不再有内置不禁用名单');

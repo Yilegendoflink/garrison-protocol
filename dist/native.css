@@ -682,6 +682,10 @@ html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px
 .wave-ed-rule-modes{padding:8px 10px 10px}
 .wave-ed-rule-modes button.chosen{outline:0;border-color:var(--we-accent);color:var(--we-accent);background:var(--we-raised);font-weight:700}
 .wave-ed-rule.is-fixed .wave-ed-rule-modes button.chosen{border-color:var(--we-warning);color:var(--we-warning)}
+/* 硬锁（绝技）：任何情况下都不被禁，三个状态按钮不可点。 */
+.wave-ed-rule.is-locked{border-left:3px solid var(--we-accent)}
+.wave-ed-rule.is-locked>header>span.wave-ed-rule-mode{border-color:var(--we-accent);color:var(--we-accent)}
+.wave-ed-rule.is-locked .wave-ed-rule-modes button{opacity:.5;cursor:not-allowed}
 .wave-ed-bond .wave-ed-empty{padding:16px 8px!important}
 /* 作战前简报的「盟约缺席情况」：沿用大厅那份深色卡片语言。
    核心盟约全列出来，被禁的灰掉＋划掉；附加盟约只列被禁的，同样灰掉＋划掉。
