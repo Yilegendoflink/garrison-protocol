@@ -72,6 +72,15 @@ export function saveWaveTable(table){
  try{if(typeof localStorage!=='undefined')localStorage.setItem(WAVE_STORE_KEY,JSON.stringify(next));}catch{}
  return next;
 }
+// 递归排序后的 JSON：编辑器保存回来的表可能键序不同、但配置等价，判等不能直接比字符串。
+function canonical(value){
+ if(Array.isArray(value))return value.map(canonical);
+ if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
+ return value;
+}
+export function sameWaveTable(a,b){return JSON.stringify(canonical(a??null))===JSON.stringify(canonical(b??null));}
+// 大厅提示用：当前敌人池是否还是默认配置（没读过存档时以本地存档为准）。
+export function waveTableIsDefault(table=loadWaveTable()){return sameWaveTable(table,defaultWaveTable());}
 
 export function enemyCost(table,id){
  const n=Number(table?.costs?.[id]);

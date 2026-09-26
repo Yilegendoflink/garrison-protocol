@@ -218,7 +218,7 @@ test('页面：两个页签、六个阶级选项、两个盟约下拉、保存�
 
 test('接线：大厅入口、独立页面、动作与筛选下拉都接上，模块登记进构建脚本',async()=>{
  const [lobby,play,session,css,build]=await Promise.all([read('dist/native-lobby.js'),read('dist/native-play.js'),read('dist/native-session.js'),read('dist/native.css'),read('scripts/build-browser.mjs')]);
- assert.match(lobby,/data-act="prepare"><span class="native-tool-icon">◈<\/span><span><b>战前准备<\/b>/,'大厅资料与工具里要有「战前准备」入口');
+ assert.match(lobby,/native-loadout-actions"><button data-act="prepare">战前准备<\/button>\$\{state\.game\?'<button data-act="resume">恢复本地模拟<\/button>':''\}/,'「战前准备」入口要挪进任务配置，并排在「恢复本地模拟」上面');
  assert.match(play,/if\(state\.view==='prepare'\)\{const p=prepState\(\);root\.innerHTML=renderPreparePage\(data,p,\{esc,avatar\}\)/,'独立页面走 renderPreparePage');
  for(const [act,label] of [['prepare','打开页面'],['prep-tab','切页签'],['prep-tier','阶级筛选'],['prep-save','保存'],['prep-clear','改回档案默认']])assert.match(play,new RegExp(`a==='${act}'`),`动作 ${act}（${label}）要接上`);
  assert.match(play,/if\(e\.target\.id==='prep-core'\)\{p\.core=e\.target\.value/,'核心盟约下拉要重筛');

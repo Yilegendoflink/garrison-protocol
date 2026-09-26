@@ -5038,6 +5038,15 @@ function saveWaveTable(table){
  try{if(typeof localStorage!=='undefined')localStorage.setItem(WAVE_STORE_KEY,JSON.stringify(next));}catch{}
  return next;
 }
+// 递归排序后的 JSON：编辑器保存回来的表可能键序不同、但配置等价，判等不能直接比字符串。
+function canonical(value){
+ if(Array.isArray(value))return value.map(canonical);
+ if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
+ return value;
+}
+function sameWaveTable(a,b){return JSON.stringify(canonical(a??null))===JSON.stringify(canonical(b??null));}
+// 大厅提示用：当前敌人池是否还是默认配置（没读过存档时以本地存档为准）。
+function waveTableIsDefault(table=loadWaveTable()){return sameWaveTable(table,defaultWaveTable());}
 
 function enemyCost(table,id){
  const n=Number(table?.costs?.[id]);
@@ -5060,7 +5069,7 @@ function templateLabel(slot,index){return (slot?.name||'').trim()||`模板 ${ind
 
 function tierSlot(table,type,tier){return currentTemplate(table,type,tier,0);}
 
-return {enemyActivity,enemyActivitySource,enemyPoolEligible,WAVE_STORE_KEY,TRAINING_TYPES,PLACEHOLDER_ENEMY,DEFAULT_BUDGETS,emptyTemplate,normalizeTemplate,templatesOf,emptyWaveTable,defaultWaveTable,normalizeWaveTable,loadWaveTable,saveWaveTable,enemyCost,tierPack,currentTemplate,templateLabel,tierSlot};
+return {enemyActivity,enemyActivitySource,enemyPoolEligible,WAVE_STORE_KEY,TRAINING_TYPES,PLACEHOLDER_ENEMY,DEFAULT_BUDGETS,emptyTemplate,normalizeTemplate,templatesOf,emptyWaveTable,defaultWaveTable,normalizeWaveTable,loadWaveTable,saveWaveTable,sameWaveTable,waveTableIsDefault,enemyCost,tierPack,currentTemplate,templateLabel,tierSlot};
 },
 "native-wave-random.js": function(load) {
 const {buildPhasePlan} = load("protocol.js");
@@ -13756,7 +13765,7 @@ function renderLobby({data,state,avatar,esc=escDefault}){
  const maps=data.maps.filter(m=>m.weight>0);
  // 阵地下拉第一项是哨兵「随机地图」（用户 2026-09-22 口径，且为默认）：开局时按本局种子抽一个具体阵地。
  const randomMapOption=`<option value="${RANDOM_MAP_ID}" ${state.map===RANDOM_MAP_ID?'selected':''}>随机地图 · 开局按种子抽一个</option>`;
- return `<main class="native-lobby"><header class="native-lobby-topbar"><div class="native-brand"><span class="native-brand-mark" aria-hidden="true">◇</span><div><span class="native-eyebrow">RHODES ISLAND / PRTS</span><strong>联合防卫终端</strong></div></div><div class="native-lobby-meta"><span class="native-live-dot">ONLINE</span><button data-act="limits">已知差异 ↗</button></div></header><section class="native-hero"><div class="native-hero-copy"><p class="native-kicker">卫戍协议 · 盟约下半期</p><h1>卫戍协议</h1><p class="native-hero-lead">以真实数据驱动的独立战斗模拟。调配干员、构筑盟约，在连续回合中守住阵地。</p><div class="native-hero-actions"><button class="native-primary native-hero-start" data-act="new"><span>开始一局</span><small>随机生成本局特训与波次 →</small></button><button class="sandbox-entry" data-act="sandbox"><span>战斗技能测试场</span><small>搜索任意干员与敌人，使用正式战场操作</small></button></div><div class="native-hero-facts" aria-label="终端数据"><span><b>${operatorCount}</b><small>干员数据</small></span><span><b>${enemyCount}</b><small>敌人档案</small></span><span><b>${mapCount}</b><small>可用阵地</small></span></div></div><aside class="native-hero-panel"><div class="native-panel-kicker">CURRENT OPERATION</div><div class="native-operation-code">B-02 / LOWER PACT</div><div class="native-operation-line"></div><p>盟约下半期数据已载入</p><ul><li><span>开局战斗费用</span><b>20</b></li><li><span>阶段结构</span><b>8 回合</b></li><li><span>最终阶段</span><b>无限生命木桩</b></li></ul><div class="native-signal"><i></i><span>系统运行正常 · 可离线使用</span></div></aside></section><div class="native-home"><section class="native-home-card native-loadout"><div class="native-card-heading"><div><span class="native-eyebrow">MISSION SETUP</span><h2>任务配置</h2></div><span class="native-card-index">01</span></div><label class="native-field-label" for="native-mode">行动难度<select id="native-mode">${modes.map(m=>`<option value="${m.modeId}" ${m.modeId===state.mode?'selected':''}>${m.name}</option>`).join('')}</select></label><label class="native-field-label" for="native-map">作战阵地<select id="native-map">${randomMapOption}${maps.map((m,i)=>`<option value="${m.stageId}" ${m.stageId===state.map?'selected':''}>阵地 ${i+1} · ${m.stageId}</option>`).join('')}</select></label><p class="native-loadout-note"><span>费用规则</span>基础资金第 1 轮 4，此后每轮 +1；战斗费用与调度中心资金独立。</p><div class="native-loadout-actions">${state.game?'<button data-act="resume">恢复本地模拟</button>':''}<button data-act="import">导入存档</button></div></section><section class="native-home-card native-database"><div class="native-card-heading"><div><span class="native-eyebrow">REFERENCE / TOOLS</span><h2>资料与工具</h2></div><span class="native-card-index">02</span></div><div class="native-tool-grid"><button data-act="prepare"><span class="native-tool-icon">◈</span><span><b>战前准备</b><small>查看全干员／全装备效果，并设置干员的默认技能</small></span><em>→</em></button><button data-act="editor"><span class="native-tool-icon">▦</span><span><b>协议自定义</b><small>编辑敌人波次、盟约禁用名单与随机禁用方案</small></span><em>→</em></button><button data-act="branches"><span class="native-tool-icon">⌘</span><span><b>职业分支规则</b><small>查看基础行为与当前接入状态</small></span><em>→</em></button><a class="native-tool-link" href="./legacy.html"><span>旧版演示与资料库</span><span>↗</span></a></div></section></div><footer class="native-lobby-footer"><span>本期预设与属性来源：PRTS / 历史游戏数据</span><span>非官方同人作品 · v0.9 combat console</span></footer></main>`;
+ return `<main class="native-lobby"><header class="native-lobby-topbar"><div class="native-brand"><span class="native-brand-mark" aria-hidden="true">◇</span><div><span class="native-eyebrow">RHODES ISLAND / PRTS</span><strong>联合防卫终端</strong></div></div><div class="native-lobby-meta"><span class="native-live-dot">ONLINE</span></div></header><section class="native-hero"><div class="native-hero-copy"><p class="native-kicker">卫戍协议 · 盟约下半期</p><h1>卫戍协议</h1><p class="native-hero-lead">以真实数据驱动的独立战斗模拟。调配干员、构筑盟约，在连续回合中守住阵地。</p><div class="native-hero-actions"><button class="native-primary native-hero-start" data-act="new"><span>开始一局</span><small>随机生成本局特训与波次 →</small></button><button class="sandbox-entry" data-act="sandbox"><span>战斗技能测试场</span><small>搜索任意干员与敌人，使用正式战场操作</small></button></div><div class="native-hero-facts" aria-label="终端数据"><span><b>${operatorCount}</b><small>干员数据</small></span><span><b>${enemyCount}</b><small>敌人档案</small></span><span><b>${mapCount}</b><small>可用阵地</small></span></div></div><aside class="native-hero-panel"><div class="native-panel-kicker">CURRENT OPERATION</div><div class="native-operation-code">B-02 / LOWER PACT</div><div class="native-operation-line"></div><p>盟约下半期数据已载入</p><ul><li><span>开局战斗费用</span><b>20</b></li><li><span>阶段结构</span><b>8 回合</b></li><li><span>最终阶段</span><b>无限生命木桩</b></li></ul><div class="native-signal"><i></i><span>系统运行正常 · 可离线使用</span></div></aside></section><div class="native-home"><section class="native-home-card native-loadout"><div class="native-card-heading"><div><span class="native-eyebrow">MISSION SETUP</span><h2>任务配置</h2></div><span class="native-card-index">01</span></div><label class="native-field-label" for="native-mode">行动难度<select id="native-mode">${modes.map(m=>`<option value="${m.modeId}" ${m.modeId===state.mode?'selected':''}>${m.name}</option>`).join('')}</select></label><label class="native-field-label" for="native-map">作战阵地<select id="native-map">${randomMapOption}${maps.map((m,i)=>`<option value="${m.stageId}" ${m.stageId===state.map?'selected':''}>阵地 ${i+1} · ${m.stageId}</option>`).join('')}</select></label><div class="native-loadout-actions"><button data-act="prepare">战前准备</button>${state.game?'<button data-act="resume">恢复本地模拟</button>':''}<button data-act="import">导入存档</button></div></section><section class="native-home-card native-database"><div class="native-card-heading"><div><span class="native-eyebrow">REFERENCE / TOOLS</span><h2>资料与工具</h2></div><span class="native-card-index">02</span></div><div class="native-tool-grid"><button data-act="editor"><span class="native-tool-icon">▦</span><span><b>协议自定义</b><small>编辑敌人波次、盟约禁用名单与随机禁用方案</small></span><em>→</em></button><button data-act="passcode"><span class="native-tool-icon">※</span><span><b>输入密码</b><small>用数字键盘输入密码</small></span><em>→</em></button></div></section></div><footer class="native-lobby-footer"><span>本期预设与属性来源：PRTS / 历史游戏数据</span><span>非官方同人作品 · v0.9 combat console</span></footer></main>`;
 }
 
 return {renderLobby};
@@ -13765,10 +13774,10 @@ return {renderLobby};
 const {bountyOption,BOUNTY_FIRST_ROUND,BOUNTY_INTERVAL} = load("native-bounty.js");
 const {renderBountyChoice,renderDecisionChoice} = load("native-choices.js");
 const {nativeWavePlan} = load("native-waves.js");
-const {TRAINING_TYPES,loadWaveTable,normalizeWaveTable,saveWaveTable} = load("native-wave-fill.js");
+const {TRAINING_TYPES,loadWaveTable,normalizeWaveTable,saveWaveTable,defaultWaveTable,waveTableIsDefault} = load("native-wave-fill.js");
 const {createWaveRoster,trainingType,waveRng} = load("native-wave-random.js");
 const {applyEditorAction,applyEditorField,editorState,renderWaveEditor} = load("native-wave-editor.js");
-const {activeBondBan,bannedOperatorsHtml,bondBanBriefingHtml,bondBanIds,loadBondBan,saveBondBan} = load("native-bond-ban.js");
+const {activeBondBan,banConfigIsDefault,bannedOperatorsHtml,bondBanBriefingHtml,bondBanIds,loadBondBan,resetBondBan,saveBondBan} = load("native-bond-ban.js");
 const {loadPrepSkills,prepDirtyCount,prepOperatorRow,renderPreparePage,savePrepSkills} = load("native-prep.js");
 const {NATIVE_DATA} = load("runtime-data.js");
 const {NativeSession} = load("native-session.js");
@@ -13855,6 +13864,10 @@ function paint325(target=root){
  document.documentElement.classList.toggle('egg-325',on);
  if(on&&target)apply325Display(target);
 }
+// 大厅顶部那条「配置已改动」提示的判定：敌人池或盟约禁用配置只要有一个和默认不一致就出现
+// （用户 2026-09-22 口径）。两边的判定都放在各自模块里（`waveTableIsDefault`／`banConfigIsDefault`），
+// 这里只做「或」。
+function poolDirty(){return !waveTableIsDefault(state.waveTable||loadWaveTable())||!banConfigIsDefault(data);}
 function renderModal(){
  const old=document.getElementById('native-modal');if(old&&old._content===state.modal)return;old?.remove();if(!state.modal)return;
  const choice=state.modal.includes('native-choice-content'),el=document.createElement('div');el.id='native-modal';el._content=state.modal;
@@ -13864,6 +13877,23 @@ function renderModal(){
  root.append(el);if(choice){el.querySelector('h2')?.focus({preventScroll:true});el.addEventListener('keydown',e=>{if(e.key!=='Tab')return;const buttons=[...el.querySelectorAll('button:not(:disabled)')],first=buttons[0],last=buttons.at(-1);if(e.shiftKey&&(document.activeElement===first||document.activeElement===el.querySelector('h2'))){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}});}if(!painting)paint325(el);
 }
 
+// 大厅「资料与工具 → 输入密码」：弹数字键盘，支持数字／删除／清空／确定。
+// 密码本身不做任何事（用户 2026-09-22：具体触发的功能之后补充），确认后统一交给 `passcodeSubmit`。
+const PASSCODE_MAX=12;
+function renderPasscodePad(){
+ const digits=state.passcode?.digits||'';
+ modal(`<h2>输入密码</h2><p class="native-passcode-hint">用下方数字键盘输入，确认后交给后续功能处理。</p><div class="native-passcode-display">${digits?esc(digits.split('').join(' ')):'<span>未输入</span>'}</div><div class="native-keypad">${['1','2','3','4','5','6','7','8','9'].map(d=>`<button data-act="passcode-key" data-key="${d}">${d}</button>`).join('')}<button data-act="passcode-key" data-key="back" aria-label="删除一位">⌫</button><button data-act="passcode-key" data-key="0">0</button><button data-act="passcode-key" data-key="clear">清空</button></div><div class="native-keypad-actions"><button data-act="passcode-key" data-key="ok" class="native-primary">确定</button></div>`);
+}
+function passcodeKey(key){
+ const p=state.passcode??={digits:''};
+ if(key==='clear')p.digits='';
+ else if(key==='back')p.digits=p.digits.slice(0,-1);
+ else if(key==='ok'){if(!p.digits){notice('请先输入密码');return;}const code=p.digits;p.digits='';state.modal=null;renderModal();passcodeSubmit(code);return;}
+ else if(/^\d$/.test(key)&&p.digits.length<PASSCODE_MAX)p.digits+=key;
+ renderPasscodePad();
+}
+// 密码确认后的唯一接线点：功能待补，先只回执。
+function passcodeSubmit(code){notice('已输入密码 '+code+'（功能待接入）');}
 function showBranches(id=null){
  const all=data.branchRules.records,records=id?all.filter(r=>r.id===id):all;
  modal(`<h2>职业分支规则</h2><p>已记录 ${all.length} 个历史分支，${all.filter(r=>r.inCurrentMode).length} 个出现在本期固定预设中。这里区分分支基础逻辑与干员专属技能、天赋、模组；复杂机制仍有待补齐项。</p><div class="native-branch-catalog">${records.map(r=>`<details ${id?'open':''}><summary><b>${esc(r.name)}</b><span>${r.inCurrentMode?'本期包含':'非本期固定预设'} · ${r.runtime.status==='partial'?'部分接入':'基础行为已接入'}</span></summary><p>${esc(r.baseTrait)}</p><p>${r.pending.length?'待补齐：'+r.pending.map(esc).join('、'):'专属技能／天赋／模组例外另行处理。'}</p><a href="${r.sources[1].url}" target="_blank" rel="noreferrer">PRTS 特性细则 · 修订 ${r.sources[1].revision} ↗</a></details>`).join('')}</div>`);
@@ -13947,7 +13977,7 @@ function render(){
   const bannedNames=(blocked?.bonds||[]).map(id=>data.season.bondInfoDict[id]?.name||id).join('／');
   notice(`${data.profiles[blocked?.chessId]?.name||'该干员'}属于本局被禁用的【${bannedNames||'盟约'}】，本次无法获得。`);
  }
- if(state.view==='lobby'){root.innerHTML=renderLobby({data,state,avatar});root.querySelector('.native-tool-grid')?.insertAdjacentHTML('afterbegin','<div class="native-pool-update"><div><span>CONFIGURATION UPDATE</span><b>默认敌人池已经更新</b><small>需要点击按钮刷新新配置</small></div><button class="native-pool-update-action" data-act="ed-defaults">重置默认敌人池</button></div>');renderModal();return;}
+ if(state.view==='lobby'){root.innerHTML=renderLobby({data,state,avatar});root.querySelector('.native-tool-grid')?.insertAdjacentHTML('afterbegin',poolDirty()?'<div class="native-pool-update"><div><span>CONFIGURATION UPDATE</span><b>敌人池／禁用配置已改动</b><small>与默认配置不一致，点击右侧按钮把两者一起恢复默认</small></div><button class="native-pool-update-action" data-act="pool-defaults">恢复默认配置</button></div>':'');renderModal();return;}
   if(state.view==='strategy-select'){root.innerHTML=renderStrategySelectScreen();decorateStrategyCatalog();renderModal();return;}
  if(state.view==='briefing'){root.innerHTML=renderBriefingScreen();renderModal();return;}
  if(state.view==='briefing'){const d=state.draft,mode=data.season.modeDataDict[d.modeId],mapName=data.maps.filter(m=>m.weight>0).findIndex(m=>m.stageId===d.mapId),tags=(d.roster.types||[]).map(id=>trainingType(id)).filter(Boolean),order=(d.roster.order||[]).map(id=>trainingType(id)?.name||id);root.innerHTML=`<main class="native-lobby native-briefing"><header><button data-act="home">‹ 大厅</button><span>战前准备</span></header><h1>战前准备</h1><p>${esc(d.cat?'海猫模式':d.egg325?'325模式':mode?.name||'')} · 阵地 ${mapName+1}</p><h2>本局特训</h2><p>抽中三种词条，战斗按 ${order.map(esc).join(' → ')} 轮换出怪。</p><div class="native-tags">${tags.map(t=>`<article><b>${esc(t.name)}</b><small>${esc(t.id)}</small><p>${esc(t.desc)}</p></article>`).join('')}</div><h2>初始策略</h2><div class="native-strategy-pane"><div class="native-strategies">${Object.values(data.season.bandDataListDict).map(b=>`<button data-act="band" data-id="${b.bandId}" class="${state.band===b.bandId?'chosen':''}">${avatar(b.bandId)}<span><b>${esc(data.common.bandDataDict[b.bandId].bandName)}</b><small>生命 ${b.totalHp}</small><p>${esc(plain(b.bandDesc))}</p></span></button>`).join('')}</div></div><button class="native-primary native-begin" data-act="begin">进入对局 →</button></main>`;renderModal();return;}
@@ -14048,6 +14078,8 @@ function showResult(){const g=state.game,r=g.s.runResult||g.s.history.at(-1);if(
 function action(button){const a=button.dataset.act,g=state.game,uid=Number(button.dataset.uid);if(button.disabled)return;if(['home','new','begin','resume','sandbox','sandbox-exit'].includes(a))runtimeFault=null;if(['sandbox','home','sandbox-exit','new'].includes(a))rememberView('lobby');if(['begin','resume','import'].includes(a))rememberView('game');
  if(a==='fullscreen'){enterPlayChrome().then(()=>{if(!(document.fullscreenElement||document.webkitFullscreenElement))notice('未能进入全屏，请再次点击或检查浏览器全屏设置。');});return;}
  if(a==='ban-list'){showBannedOperators();return;}
+ if(a==='passcode'){state.passcode={digits:''};renderPasscodePad();return;}
+ if(a==='passcode-key'){passcodeKey(button.dataset.key||'');return;}
  if(a==='bounty-later'){state.bountyDeferred=g.s.round;state.modal=null;renderModal();root.querySelector('[data-act=start]')?.focus();return;}
  if(a==='round-bounty'){if(g.perform('roundBounty',button.dataset.id)){state.modal=null;save();saveCheckpoint();render();}else notice('当前悬赏已选择或不可接取');return;}
  if(a==='start'&&!state.sandbox&&g?.s.roundBounty?.round===g.s.round&&!g.s.roundBounty.selected&&g.s.roundBounty.offers.length){modal(renderBountyChoice(data,g.s.roundBounty.offers,g.s.round));return;}
@@ -14067,6 +14099,13 @@ function action(button){const a=button.dataset.act,g=state.game,uid=Number(butto
   if(a==='prep-clear'){const p=prepState();p.skills={};p.scroll=window.scrollY||0;render();return;}
   if(a==='prep-save'){const p=prepState();p.saved=savePrepSkills(p.skills,data);p.skills={...p.saved};p.scroll=window.scrollY||0;const count=Object.keys(p.saved).length;notice(count?`已保存默认技能：${count} 名干员指定了档位，其余跟随档案默认。`:'已保存默认技能：全部干员跟随档案默认。');render();return;}
  if(a==='editor'){state.view='editor';state.editor.sample=null;state.waveTable=loadWaveTable();render();return;}
+ // 大厅提示的「恢复默认配置」：敌人池与禁用方案一起回到默认（正在进行的对局不受影响，改动从下一局生效）。
+ if(a==='pool-defaults'){
+  state.waveTable=saveWaveTable(normalizeWaveTable(defaultWaveTable()));
+  resetBondBan(data);
+  if(state.editor){state.editor.bondBan=null;state.editor.sample=null;state.editor.template=0;}
+  notice('已恢复默认敌人池与禁用配置。');render();return;
+ }
  if(a.startsWith('ed-')){
   const catalog=document.getElementById('ed-catalog');state.editor.scroll=catalog?.scrollTop||0;
   const result=applyEditorAction(a,button.dataset,state.waveTable,state.editor,data);
@@ -15086,6 +15125,13 @@ function saveBondBan(config,data){
  try{if(typeof localStorage!=='undefined')localStorage.setItem(BOND_BAN_KEY,JSON.stringify(next));}catch{}
  return next;
 }
+// 大厅提示用：禁用配置是否还是默认方案（两个数组按集合比，顺序差异不算改动）。
+function banConfigIsDefault(data,config=loadBondBan(data)){
+ const fallback=defaultBanRules(),sameList=(a,b)=>{const x=[...new Set(a||[])].sort(),y=[...new Set(b||[])].sort();return x.length===y.length&&x.every((v,i)=>v===y[i]);};
+ return sameList(config?.always,fallback.always)&&sameList(config?.never,fallback.never);
+}
+// 把禁用配置恢复成默认方案（大厅提示的「恢复默认配置」用）。
+function resetBondBan(data){return saveBondBan(defaultBanRules(),data);}
 
 // 本局禁用哪些盟约：固定禁用的全部计入，其余从「参与随机」的池里抽 3 核心 + 4 附加，
 // 等概率、不放回；同一 seed 结果固定（跟商店/波次随机流分开）。
@@ -15163,7 +15209,7 @@ function bannedOperatorsHtml(data,ban,ui={}){
  return `<h2>本局禁用盟约与干员</h2><p class="native-ban-note">${covenantLine}</p><p class="native-ban-note">共 ${ops.length} 名干员无法使用：他们所属的盟约本局<b>全部缺席</b>（只要还有一个盟约没被禁就仍可使用）。同一名干员挂在多个缺席盟约下时，会在每组各列一次。</p>${groups.map(group).join('')||'<p class="native-ban-none">本局没有被禁用的盟约。</p>'}<p class="native-ban-foot">禁用方案可在协议自定义 →「禁用方案」页调整。</p><button data-act="close">关闭</button>`;
 }
 
-return {BOND_BAN_KEY,BOND_BAN_VERSION,BAN_CORE_COUNT,BAN_EXTRA_COUNT,BOND_BAN_EXCLUDED,BOND_BAN_LOCKED_NEVER,BOND_BAN_DEFAULT_NEVER,BAN_MODES,bondIds,bondIsCore,bondName,bondIsBanExcluded,bondIsLockedNever,defaultBanRules,banRules,banModeOf,bondRoster,rosterIndex,charIdOf,bondMembers,memberBanned,isOperatorBanned,bannedOperators,bondBanBlockers,bondBanSummary,normalizeBondBan,loadBondBan,saveBondBan,banPool,bondBanIds,bondBanBriefingHtml,activeBondBan,bannedOperatorsHtml};
+return {BOND_BAN_KEY,BOND_BAN_VERSION,BAN_CORE_COUNT,BAN_EXTRA_COUNT,BOND_BAN_EXCLUDED,BOND_BAN_LOCKED_NEVER,BOND_BAN_DEFAULT_NEVER,BAN_MODES,bondIds,bondIsCore,bondName,bondIsBanExcluded,bondIsLockedNever,defaultBanRules,banRules,banModeOf,bondRoster,rosterIndex,charIdOf,bondMembers,memberBanned,isOperatorBanned,bannedOperators,bondBanBlockers,bondBanSummary,normalizeBondBan,loadBondBan,saveBondBan,banConfigIsDefault,resetBondBan,banPool,bondBanIds,bondBanBriefingHtml,activeBondBan,bannedOperatorsHtml};
 },
 "native-bond-keys.js": function(load) {
 // 盟约黑板键登记表 —— 「原表字段必须有人读」的唯一名单。

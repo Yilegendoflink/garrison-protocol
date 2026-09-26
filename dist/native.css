@@ -212,8 +212,6 @@ body{min-width:0;background:#071114}
 .native-field-label{display:flex;flex-direction:column;gap:7px;margin:13px 0;color:#91b6ad;font-size:11px;letter-spacing:.05em}
 .native-field-label select{width:100%;padding:11px 12px;border:1px solid #315e5a;color:#e5f7ef;background:#0a191d;border-radius:0}
 .native-field-label select:focus{border-color:#71e1c3;outline:2px solid #71e1c333;outline-offset:1px}
-.native-loadout-note{margin:20px 0 0;padding:11px 13px;border-left:2px solid #d9b36b;background:#15252a;color:#a9c6bd;font-size:11px;line-height:1.8}
-.native-loadout-note span{display:block;margin-bottom:3px;color:#e6ca8b;font:600 10px var(--mono,'Arial Narrow',sans-serif);letter-spacing:.14em}
 .native-loadout-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 .native-loadout-actions button{padding:8px 12px;color:#b6d2c8;background:#10282a;border-color:#315e5a;font-size:11px}
 .native-tool-grid{display:grid;gap:9px}
@@ -226,6 +224,16 @@ body{min-width:0;background:#071114}
 .native-tool-icon{display:grid;place-items:center;width:29px;height:29px;color:#77e3c4;border:1px solid #437d73;font-size:17px}
 .native-tool-link{justify-content:space-between;margin-top:3px;color:#a4c9bd;font-size:11px;background:transparent}
 .native-tool-link span:last-child{color:#73dbbe;font-size:16px}
+/* 大厅「输入密码」：数字键盘弹窗（数字／删除／清空／确定）。确认后的功能待补，这里只管输入。 */
+.native-passcode-hint{margin:2px 0 10px;color:#9fc0b6;font-size:12px}
+.native-passcode-display{display:grid;place-items:center;min-height:52px;margin:0 0 12px;padding:8px;border:1px solid #41665f;background:#08161a;color:#eafff5;font:700 22px var(--mono,monospace);letter-spacing:.28em;font-variant-numeric:tabular-nums}
+.native-passcode-display span{color:#5f8179;font-size:13px;letter-spacing:.1em}
+.native-keypad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.native-keypad button{min-height:48px;padding:0;font:700 20px var(--mono,monospace)}
+.native-keypad button[data-key=clear]{font-size:14px;letter-spacing:.1em}
+.native-keypad-actions{margin-top:8px}
+.native-keypad-actions button{width:100%;min-height:46px}
+@media (orientation:landscape) and (max-height:600px){.native-keypad{gap:5px}.native-keypad button{min-height:36px;font-size:17px}.native-passcode-display{min-height:40px;font-size:18px}}
 .native-lobby-footer{display:flex;justify-content:space-between;gap:16px;margin-top:30px;padding-top:14px;border-top:1px solid #224543;color:#63877e;font-size:10px;letter-spacing:.04em}
 .native-lobby-footer span:last-child{font-family:var(--mono,'Arial Narrow',sans-serif);letter-spacing:.08em;text-align:right}
 .native-briefing{background:radial-gradient(circle at 82% 5%,#17403d 0,#0b1a1d 48%,#061013 100%)}
@@ -351,7 +359,6 @@ html.native-need-rotate .native-lobby,html.native-need-rotate .native-briefing{
  html.native-landscape-ui .native-card-index{font-size:17px}
  html.native-landscape-ui .native-field-label{gap:4px;margin:8px 0;font-size:10px}
  html.native-landscape-ui .native-field-label select{padding:7px 8px}
- html.native-landscape-ui .native-loadout-note{margin:10px 0;padding:8px 10px;font-size:10px;line-height:1.5}
  html.native-landscape-ui .native-loadout-actions{margin-top:9px}
  html.native-landscape-ui .native-loadout-actions button{padding:6px 9px;font-size:10px}
  html.native-landscape-ui .native-tool-grid{gap:5px}
@@ -405,14 +412,16 @@ html.native-landscape-ui .native-strategy-select-actions button{padding:7px 13px
  html.native-landscape-ui .native-lobby,html.native-landscape-ui .native-briefing{height:100svh;max-height:100svh}
  .native-modal>section{max-height:calc(100svh - 16px)}
 }
-.native-pool-update{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid #d3a954;background:linear-gradient(105deg,#3a3020,#172b2b);color:#f4dda0}
-.native-pool-update>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+/* 大厅「配置已改动」提示：只在敌人池／禁用配置与默认不一致时由 native-play 插进 .native-tool-grid。 */
+.native-pool-update{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid #d3a954;background:linear-gradient(105deg,#3a3020,#172b2b);color:#f4dda0}
+.native-pool-update>div{display:flex;flex:1 1 auto;flex-direction:column;gap:3px;min-width:0}
 .native-pool-update span{font:600 8px var(--mono,'Arial Narrow',sans-serif);letter-spacing:.14em;color:#d6b867}
-.native-pool-update b{font-size:11px;color:#fff0bd}
-.native-pool-update small{font-size:9px;line-height:1.4;color:#c8c09d}
-.native-pool-update-action{flex:none!important;margin:0!important;padding:7px 9px!important;border:1px solid #f0c65e!important;background:#e5b64f!important;color:#15261f!important;font-size:10px!important;font-weight:700;white-space:nowrap}
+.native-pool-update b{font-size:13px;color:#fff0bd}
+.native-pool-update small{font-size:10px;line-height:1.5;color:#c8c09d}
+/* 动作按钮必须显式 width:auto：大厅的 `.native-home button{width:100%}` 会把提示文字挤成一列一个字。 */
+.native-pool-update-action{flex:0 0 auto!important;display:inline-block!important;width:auto!important;margin:0!important;padding:8px 12px!important;border:1px solid #f0c65e!important;background:#e5b64f!important;color:#15261f!important;font-size:11px!important;font-weight:700;white-space:nowrap}
 .native-pool-update-action:hover{background:#f1c96b!important;border-color:#ffe29a!important}
-@media(max-width:680px){.native-pool-update{align-items:stretch;flex-direction:column}.native-pool-update-action{width:100%}}
+@media(max-width:680px){.native-pool-update{align-items:stretch;flex-direction:column}.native-pool-update-action{width:100%!important}}
 @media (orientation:landscape) and (max-height:600px) and (max-width:1100px){
  html.native-landscape-ui .native-shop:has(.native-reward-shop-card)>div:first-child:after{display:none}
  html.native-landscape-ui .native-shop:has(.native-reward-shop-card)>div:first-child{display:flex;flex-wrap:wrap;align-items:center;gap:4px}

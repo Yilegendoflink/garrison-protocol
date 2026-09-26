@@ -168,6 +168,13 @@ export function saveBondBan(config,data){
  try{if(typeof localStorage!=='undefined')localStorage.setItem(BOND_BAN_KEY,JSON.stringify(next));}catch{}
  return next;
 }
+// 大厅提示用：禁用配置是否还是默认方案（两个数组按集合比，顺序差异不算改动）。
+export function banConfigIsDefault(data,config=loadBondBan(data)){
+ const fallback=defaultBanRules(),sameList=(a,b)=>{const x=[...new Set(a||[])].sort(),y=[...new Set(b||[])].sort();return x.length===y.length&&x.every((v,i)=>v===y[i]);};
+ return sameList(config?.always,fallback.always)&&sameList(config?.never,fallback.never);
+}
+// 把禁用配置恢复成默认方案（大厅提示的「恢复默认配置」用）。
+export function resetBondBan(data){return saveBondBan(defaultBanRules(),data);}
 
 // 本局禁用哪些盟约：固定禁用的全部计入，其余从「参与随机」的池里抽 3 核心 + 4 附加，
 // 等概率、不放回；同一 seed 结果固定（跟商店/波次随机流分开）。
