@@ -6,6 +6,8 @@
 > 仍未做：迷彩的完整细则（§七），它不影响本批已经落地的选择判定。
 
 > **2026-10-02 回归补记**：隐匿不影响阻挡资格；`blockingActors()` 将隐匿干员交给 `resolveBlocks()`，隐匿干员可以正常阻挡隐匿敌人，敌人被挡后按阻挡目标规则可被攻击。忍冬 S3 击倒敌人后获得迷彩，迷彩期间仍可阻挡隐匿敌人。安洁莉娜 S1 待机攻击来积攒攻击回复技力；S2/S3 未开启时不攻击；三个技能开启期间均有伤害回归。S3 施加独立的 `weightless` 状态，重量按 0 参与重量判定，但不会浮空、打断攻击或解除阻挡。回归分别位于 `tests/native-invisibility.test.mjs` 与 `tests/native-operator-effects.test.mjs`。
+>
+> **2026-10-03 回归补记**：能天使 S3 的 `attack@times=5` 曾泄漏到未开启技能时的普通攻击；普攻构建现在只在技能有效期间读取技能攻击参数，回归确认常态 1 连射、S3 开启后 5 连射。伊内丝影哨对形态自带隐匿也能生效：显形时同步重算 `invisible`，影哨记录撤退时常态攻击范围的实际格子与朝向，不再按方形跨度扩大。回归覆盖形态隐匿、范围边角和离开影哨后的恢复，位于 `tests/native-operator-effects.test.mjs` 与 `tests/native-invisibility.test.mjs`。
 
 目标：把隐匿做成**一套统一的可选性规则**，让敌人的隐匿、我方干员／召唤物获得的隐匿都真正生效；反隐（隐匿免疫）按原表逐个接入；隐匿单位在场上带**暗灰色流动马赛克**特效。
 
@@ -133,13 +135,13 @@
 
 | 项 | 实现位置 | 口径 |
 | --- | --- | --- |
-| 形态自带的隐匿 | `native-battle.js` spawn 的 `formInvisible` | `invisible` 每帧由状态表重算，`initialInvisible` 敌人第 2 帧就会显形（实测山海众头目）；补 `formInvisible` 后 12 名自带隐匿的敌人才真正生效 |
+| 形态自带的隐匿 | `native-battle.js` spawn 的 `formInvisible` | `invisible` 每帧由状态表重算，`revealed` 可压制形态隐匿；`initialInvisible` 敌人第 2 帧就会显形（实测山海众头目）；补 `formInvisible` 后 12 名自带隐匿的敌人才真正生效 |
 | 攻击显形后重新隐匿 | `resolveEnemyStrike` / 敌人循环 | 山海众（`InvisibleCombat`）攻击时置 `formInvisible=false` 并记 `invisibleRecoverAt=+6s`，到点恢复；此前这段逻辑因上面的显形问题从未触发过 |
 | 被阻挡即脱离隐匿 | `targets()`、`autoSkillWouldHit()`、法尔科内 S2 分支 | 敌人侧：`e.block!=null` 时对所有人都可选（原来只有阻挡者能打） |
 | 我方隐匿 | 敌方 AI 的远程目标过滤 | `alive.filter(u=>!u.invisible&&...)`；正在阻挡该敌人的单位仍是合法目标（与敌人侧对称），光环/AoE 不受隐匿制约 |
 | 反隐模型 | `native-effects.js` 的 `revealEnemy` + `syncReveals` | 反隐源只写 `e.revealUntil`，每帧末尾统一收敛成 `e.revealed`；来源消失后窗口走完自动恢复隐匿（原实现是永久置位，走出去也不撤销） |
 | 银灰【鹰眼视觉】 | `periodicMods` | 攻击范围内（含技能改范围）敌人隐匿失效 |
-| 伊内丝【影哨】 | `periodicMods` + `placeInesSentry` | 攻击范围内隐匿失效且移速 -30%；撤退后在原地留 1 个影哨继续生效（半径取她撤退时攻击范围的最大切比雪夫跨度） |
+| 伊内丝【影哨】 | `periodicMods` + `placeInesSentry` | 攻击范围内隐匿失效且移速 -30%；撤退后在原地留 1 个影哨继续生效，覆盖撤退时常态攻击范围的实际格子与朝向；反隐同时压制形态自带隐匿 |
 | 马赛克 | `drawConcealOverlay`（native-fx） | 我方／召唤物／敌人三处；灰滤镜 + 马赛克（有头像时缩到 10×10 再关插值放大），被反隐时不画，`reduceFx` 下不流动。**强度只在 `CONCEAL_STYLE` 里调**（wash 0.22 / detail 10 / block 5 / 块 α 0.28·0.22 / band 0.10）：早先的 6×6 + 0.45 灰滤镜糊到认不出人，用户要求调低，现在只做提示不做遮挡；改完要 `node scripts/build-browser.mjs` 重编 bundle |
 | 被阻挡即脱隐匿（表现） | `concealActive` + `drawStatuses` | 与索敌同口径：`actor.block!=null` 时 `concealActive` 返回 false，马赛克与头顶隐匿图标一起消失，解除阻挡后恢复（用户 2026-09-19 追加） |
 | 隐匿不影响阻挡 | `native-effects.blockingActors` → `native-combat.resolveBlocks` | 阻挡候选包含隐匿干员；隐匿干员可阻挡隐匿敌人，敌人被阻挡后按现有规则可被阻挡者索敌 |

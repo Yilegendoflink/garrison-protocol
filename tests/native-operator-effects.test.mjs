@@ -77,6 +77,18 @@ test('安洁莉娜 S3 给予失重而非浮空，保留阻挡并持续造成攻�
  assert.ok(b.s.logicLog.some(row=>row.type==='damage'&&row.sourceUid===angelina.uid),'伤害账本应记录安洁莉娜的攻击');
 });
 
+test('能天使 S3 的连射只在技能开启期间生效',()=>{
+ const {b}=openBattle({chessId:'chess_char_3_01_b',skillIndex:2});deployNow(b);
+ const u=byId(b,'char_103_angel'),spot=b.range(u,false)[0],e=enemy(b,{x:spot.x,y:spot.y,hp:1e6,def:0,res:0});
+ u.sp=0;u.skillLeft=0;u.ammo=0;u.enhanced=false;b.step();
+ assert.equal(b.skillActive(u),false,'常态攻击时技能必须未开启');
+ assert.equal(u.action?.hits,1,'未开技能时能天使应只有一次普通攻击');
+ u.action=null;u.attackCooldown=0;u.sp=b.spCost(u);u.lastSkill=-1e9;b.activate(u);
+ assert.ok(b.skillActive(u),'能天使 S3 应成功开启');
+ b.step();
+ assert.equal(u.action?.hits,5,'S3 开启后按黑板配置连射五次');
+});
+
 test('probability talent multiplier changes the current hit without recursive extra damage',()=>{
  const {b}=openBattle({name:'跃跃',chessId:'chess_char_1_09_b'});deployNow(b);
  const u=byId(b,'char_4100_caper'),e=enemy(b,{hp:1000,def:0}),original=b.profile.bind(b);

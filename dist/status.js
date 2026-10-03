@@ -1,5 +1,6 @@
 // Common status semantics; durations are simulation seconds, never render time.
 const CONTROL={skillLock:['skill'],unableAct:['attack','move','block','skill'],stun:['attack','move','block','skill'],frozen:['attack','move','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:[],selfFear:[],terror:['attack','move','block','skill'],tremble:['attack','skill'],disarm:['attack'],forcedDisarm:['attack'],cannotRetreat:['retreat'],root:['move'],silence:[]};
+export function syncInvisibility(target){target.invisible=(target.formInvisible===true||target.statuses?.some(s=>['invisible','camouflage'].includes(s.kind)))&&!target.revealed;}
 export function applyStatus(target,kind,duration,{source=null,value=1,resistible=true,frostSide='ally',pick='max'}={}){
  if(!Number.isFinite(duration)||duration<=0||target.hp<=0)return false;if(target.immunities?.[kind])return false;if(['fear','selfFear'].includes(kind)&&target.chessId)return false;
  if(['sleep','levitate','fear','selfFear','terror'].includes(kind)&&Object.hasOwn(target,'block'))target.block=null;target.statuses??=[];
@@ -20,10 +21,10 @@ export function applyStatus(target,kind,duration,{source=null,value=1,resistible
  // 同名同来源的状态只保留一条：默认取较大的 value（正增益口径）。
  // `pick:'strong'` 用于**负值减益**（攻击力/防御力/法抗降低）：这时「更强」是绝对值更大的那个，
  // 否则递减的 ramp（如引星棘刺 S3 从 -12% 逐秒到 -21%）会被 Math.max 卡死在首个较弱值上。
- if(existing){existing.remaining=Math.max(existing.remaining,time);existing.value=pick==='strong'?(Math.abs(value)>Math.abs(existing.value??0)?value:existing.value):Math.max(existing.value,value);}else target.statuses.push({kind,remaining:time,source,value,...(frost?{frostSide}:{})});if(['invisible','camouflage'].includes(kind))target.invisible=target.formInvisible===true||!target.revealed;if(kind==='fragile')target.fragile=Math.max(target.fragile||1,value);return true;
+ if(existing){existing.remaining=Math.max(existing.remaining,time);existing.value=pick==='strong'?(Math.abs(value)>Math.abs(existing.value??0)?value:existing.value):Math.max(existing.value,value);}else target.statuses.push({kind,remaining:time,source,value,...(frost?{frostSide}:{})});if(['invisible','camouflage'].includes(kind))syncInvisibility(target);if(kind==='fragile')target.fragile=Math.max(target.fragile||1,value);return true;
 }
-// formInvisible：形态自带的常驻隐匿（例如深池逐火的「怨恨的余烬」），不是可驱散的状态，
-// 因此不能被 tickStatuses 按状态表覆盖掉。
+// formInvisible：形态自带的常驻隐匿（例如深池逐火的「怨恨的余烬」），来源不能被状态表清除；
+// 但 `revealed` 是反隐免疫，期间应暂时压制生效值，显形结束后由这个来源自动恢复。
 // 主动摘掉一条状态（例如忍冬 S3 的迷彩「直至下一次开启技能」，下一次开技时要手动撤销）。
 // source 给定时只摘该来源的那一条；摘完重算 `invisible`，避免隐匿残留。
 export function removeStatus(target,kind,source){
@@ -33,7 +34,7 @@ export function removeStatus(target,kind,source){
  if(['invisible','camouflage'].includes(kind))tickStatuses(target,0);
  return true;
 }
-export function tickStatuses(target,dt){if(!Number.isFinite(dt)||dt<0)throw Error('Invalid status delta');target.statuses??=[];for(const s of target.statuses)s.remaining-=dt;target.statuses=target.statuses.filter(s=>s.remaining>1e-9);target.invisible=target.formInvisible===true||(target.statuses.some(s=>['invisible','camouflage'].includes(s.kind))&&!target.revealed);target.levitated=target.statuses.some(s=>s.kind==='levitate');target.fragile=target.statuses.filter(s=>s.kind==='fragile').reduce((v,s)=>Math.max(v,s.value||1),1);}
+export function tickStatuses(target,dt){if(!Number.isFinite(dt)||dt<0)throw Error('Invalid status delta');target.statuses??=[];for(const s of target.statuses)s.remaining-=dt;target.statuses=target.statuses.filter(s=>s.remaining>1e-9);syncInvisibility(target);target.levitated=target.statuses.some(s=>s.kind==='levitate');target.fragile=target.statuses.filter(s=>s.kind==='fragile').reduce((v,s)=>Math.max(v,s.value||1),1);}
 export function permissions(target){const denied=new Set(target.shift?['attack','skill','block']:[]);if(target.type==='neutral-miner'&&target.waiting)denied.add('move');for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!target.shift&&!(target.statuses||[]).some(s=>['sleep','levitate','fear','selfFear'].includes(s.kind)),retreat:!denied.has('retreat'),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
 export function effectiveWeight(target){return (target.statuses||[]).some(s=>s.kind==='weightless')?0:Math.max(0,Number(target.weight)||0);}
 export function statusAttributeChanges(target){const s=target.statuses||[];return {attackSpeed:(-30*new Set(s.filter(s=>s.kind==='cold').map(s=>s.frostSide||'ally')).size)+s.filter(s=>s.kind==='attackSpeedDown'||s.kind==='attackSpeedUp').reduce((n,s)=>n+(s.value||0),0),resistance:s.some(s=>s.kind==='frozen'&&s.frostSide!=='enemy')?-15:0,attack:s.filter(s=>s.kind==='attackDown').reduce((v,x)=>Math.min(v,x.value??0),0),defense:s.filter(s=>s.kind==='defDown').reduce((v,x)=>Math.min(v,x.value??0),0),magicResistance:s.filter(s=>s.kind==='resDown').reduce((v,x)=>Math.min(v,x.value??0),0)};}

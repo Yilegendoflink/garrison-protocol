@@ -264,6 +264,7 @@ return {FPS,clamp,attribute,attackTiming,damage,applyDamage,recoverHP,spCapacity
 "status.js": function(load) {
 // Common status semantics; durations are simulation seconds, never render time.
 const CONTROL={skillLock:['skill'],unableAct:['attack','move','block','skill'],stun:['attack','move','block','skill'],frozen:['attack','move','skill'],sleep:['attack','move','block','skill'],levitate:['attack','move','block','skill'],fear:[],selfFear:[],terror:['attack','move','block','skill'],tremble:['attack','skill'],disarm:['attack'],forcedDisarm:['attack'],cannotRetreat:['retreat'],root:['move'],silence:[]};
+function syncInvisibility(target){target.invisible=(target.formInvisible===true||target.statuses?.some(s=>['invisible','camouflage'].includes(s.kind)))&&!target.revealed;}
 function applyStatus(target,kind,duration,{source=null,value=1,resistible=true,frostSide='ally',pick='max'}={}){
  if(!Number.isFinite(duration)||duration<=0||target.hp<=0)return false;if(target.immunities?.[kind])return false;if(['fear','selfFear'].includes(kind)&&target.chessId)return false;
  if(['sleep','levitate','fear','selfFear','terror'].includes(kind)&&Object.hasOwn(target,'block'))target.block=null;target.statuses??=[];
@@ -284,10 +285,10 @@ function applyStatus(target,kind,duration,{source=null,value=1,resistible=true,f
  // 同名同来源的状态只保留一条：默认取较大的 value（正增益口径）。
  // `pick:'strong'` 用于**负值减益**（攻击力/防御力/法抗降低）：这时「更强」是绝对值更大的那个，
  // 否则递减的 ramp（如引星棘刺 S3 从 -12% 逐秒到 -21%）会被 Math.max 卡死在首个较弱值上。
- if(existing){existing.remaining=Math.max(existing.remaining,time);existing.value=pick==='strong'?(Math.abs(value)>Math.abs(existing.value??0)?value:existing.value):Math.max(existing.value,value);}else target.statuses.push({kind,remaining:time,source,value,...(frost?{frostSide}:{})});if(['invisible','camouflage'].includes(kind))target.invisible=target.formInvisible===true||!target.revealed;if(kind==='fragile')target.fragile=Math.max(target.fragile||1,value);return true;
+ if(existing){existing.remaining=Math.max(existing.remaining,time);existing.value=pick==='strong'?(Math.abs(value)>Math.abs(existing.value??0)?value:existing.value):Math.max(existing.value,value);}else target.statuses.push({kind,remaining:time,source,value,...(frost?{frostSide}:{})});if(['invisible','camouflage'].includes(kind))syncInvisibility(target);if(kind==='fragile')target.fragile=Math.max(target.fragile||1,value);return true;
 }
-// formInvisible：形态自带的常驻隐匿（例如深池逐火的「怨恨的余烬」），不是可驱散的状态，
-// 因此不能被 tickStatuses 按状态表覆盖掉。
+// formInvisible：形态自带的常驻隐匿（例如深池逐火的「怨恨的余烬」），来源不能被状态表清除；
+// 但 `revealed` 是反隐免疫，期间应暂时压制生效值，显形结束后由这个来源自动恢复。
 // 主动摘掉一条状态（例如忍冬 S3 的迷彩「直至下一次开启技能」，下一次开技时要手动撤销）。
 // source 给定时只摘该来源的那一条；摘完重算 `invisible`，避免隐匿残留。
 function removeStatus(target,kind,source){
@@ -297,7 +298,7 @@ function removeStatus(target,kind,source){
  if(['invisible','camouflage'].includes(kind))tickStatuses(target,0);
  return true;
 }
-function tickStatuses(target,dt){if(!Number.isFinite(dt)||dt<0)throw Error('Invalid status delta');target.statuses??=[];for(const s of target.statuses)s.remaining-=dt;target.statuses=target.statuses.filter(s=>s.remaining>1e-9);target.invisible=target.formInvisible===true||(target.statuses.some(s=>['invisible','camouflage'].includes(s.kind))&&!target.revealed);target.levitated=target.statuses.some(s=>s.kind==='levitate');target.fragile=target.statuses.filter(s=>s.kind==='fragile').reduce((v,s)=>Math.max(v,s.value||1),1);}
+function tickStatuses(target,dt){if(!Number.isFinite(dt)||dt<0)throw Error('Invalid status delta');target.statuses??=[];for(const s of target.statuses)s.remaining-=dt;target.statuses=target.statuses.filter(s=>s.remaining>1e-9);syncInvisibility(target);target.levitated=target.statuses.some(s=>s.kind==='levitate');target.fragile=target.statuses.filter(s=>s.kind==='fragile').reduce((v,s)=>Math.max(v,s.value||1),1);}
 function permissions(target){const denied=new Set(target.shift?['attack','skill','block']:[]);if(target.type==='neutral-miner'&&target.waiting)denied.add('move');for(const s of target.statuses||[])for(const k of CONTROL[s.kind]||[])denied.add(k);return {beBlocked:!target.shift&&!(target.statuses||[]).some(s=>['sleep','levitate','fear','selfFear'].includes(s.kind)),retreat:!denied.has('retreat'),sleeping:(target.statuses||[]).some(s=>s.kind==='sleep'),attack:!denied.has('attack'),move:!denied.has('move'),block:!denied.has('block'),skill:!denied.has('skill'),silenced:(target.statuses||[]).some(s=>s.kind==='silence')};}
 function effectiveWeight(target){return (target.statuses||[]).some(s=>s.kind==='weightless')?0:Math.max(0,Number(target.weight)||0);}
 function statusAttributeChanges(target){const s=target.statuses||[];return {attackSpeed:(-30*new Set(s.filter(s=>s.kind==='cold').map(s=>s.frostSide||'ally')).size)+s.filter(s=>s.kind==='attackSpeedDown'||s.kind==='attackSpeedUp').reduce((n,s)=>n+(s.value||0),0),resistance:s.some(s=>s.kind==='frozen'&&s.frostSide!=='enemy')?-15:0,attack:s.filter(s=>s.kind==='attackDown').reduce((v,x)=>Math.min(v,x.value??0),0),defense:s.filter(s=>s.kind==='defDown').reduce((v,x)=>Math.min(v,x.value??0),0),magicResistance:s.filter(s=>s.kind==='resDown').reduce((v,x)=>Math.min(v,x.value??0),0)};}
@@ -316,7 +317,7 @@ function yinYangAttackScale(source,target){
  const scale=a.attribute===b.attribute?a.sameScale:a.differentScale;return Number.isFinite(scale)&&scale>=0?scale:1;
 }
 
-return {applyStatus,removeStatus,tickStatuses,permissions,effectiveWeight,statusAttributeChanges,abilityEnabled,isIsolated,wakeOnHit,enemyMovementSpeed,yinYangAttackScale};
+return {syncInvisibility,applyStatus,removeStatus,tickStatuses,permissions,effectiveWeight,statusAttributeChanges,abilityEnabled,isIsolated,wakeOnHit,enemyMovementSpeed,yinYangAttackScale};
 },
 "targeting.js": function(load) {
 // Range geometry does not select targets or cause damage. Local +x is forward.
@@ -8891,7 +8892,7 @@ const {applyDamage,recoverHP,damage,attackTiming} = load("combat.js");
 const {equipmentEvent,equipmentFatal,equipmentTick} = load("native-equipment.js");
 const {allowsHighlandPlacement,branchTrait} = load("native-branches.js");
 const {containsTarget} = load("targeting.js");
-const {applyStatus,permissions,statusAttributeChanges,isIsolated,yinYangAttackScale} = load("status.js");
+const {applyStatus,syncInvisibility,permissions,statusAttributeChanges,isIsolated,yinYangAttackScale} = load("status.js");
 const {blackboard,resolveActiveTalents,nativeAttributes,bondBlackboard,bondLayerValue,bondValue,applyOwnedBonus} = load("protocol.js");
 const {BOND_TEXT_CONSTANTS} = load("native-bond-keys.js");
 const {gainSp,initSpOf} = load("native-sp.js");
@@ -9549,16 +9550,16 @@ function revealEnemy(battle,target,hold=.3){
 }
 // 伊内丝【影哨】：撤退后原地留下一个影哨，令「攻击范围内隐匿失效 + 移速-30%」继续生效，最多 1 个。
 function placeInesSentry(battle,u){
- const geo=battle.rangeGeometry?.(u),cells=geo?.cells||[];
- const radius=Math.max(1,cells.reduce((m,g)=>Math.max(m,Math.abs(g.col),Math.abs(g.row)),0));
+ const cells=(battle.range?.(u,false)||[]).map(({x,y})=>({x,y}));
  const kept=(battle.s.revealSentries||[]).filter(s=>s.fromUid!==u.uid);
- battle.s.revealSentries=[...kept,{fromUid:u.uid,x:u.x,y:u.y,radius}].slice(-1);
+ battle.s.revealSentries=[...kept,{fromUid:u.uid,x:u.x,y:u.y,cells}].slice(-1);
 }
 function syncReveals(battle){
  const now=battle.s.time,enemies=battle.s.enemies||[];
  for(const sentry of battle.s.revealSentries||[]){
   if(sentry.endsAt!=null&&now>sentry.endsAt)continue;
-  for(const e of enemies)if(e.hp>0&&!e.hidden&&Math.max(Math.abs(e.x-sentry.x),Math.abs(e.y-sentry.y))<=sentry.radius){
+  const cells=Array.isArray(sentry.cells)?sentry.cells.map(({x,y})=>[x,y]):null;
+  for(const e of enemies)if(e.hp>0&&!e.hidden&&(cells?containsTarget(cells,e):Math.max(Math.abs(e.x-sentry.x),Math.abs(e.y-sentry.y))<=sentry.radius)){
    revealEnemy(battle,e,.3);
    applyStatus(e,'sluggish',1,{source:sentry.fromUid,resistible:false});
   }
@@ -9566,6 +9567,7 @@ function syncReveals(battle){
  for(const e of enemies){
   if(Number(e.revealUntil)>now)e.revealed=true;
   else{e.revealed=false;e.revealUntil=null;}
+  syncInvisibility(e);
  }
 }
 
@@ -13854,9 +13856,9 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
    const trait=branchTrait(p).values;
    if(behavior.magazine){u.magazine??=trait.value??8;if(u.magazine<=0||(!targets.length&&u.magazine<(trait.value??8))){u.action={kind:'reload',left:Math.max(1,Math.round(p.attributes.baseAttackTime*FPS))};continue;}}
    if(behavior.storage&&!targets.length&&(u.energy||0)<(trait.times??3)){const t=attackTiming(stats.baseAttackTime,stats.attackSpeed,windupSeconds(stats.baseAttackTime,p.attackWindup));u.attackCooldown=t.frames;u.action={kind:'charge',left:t.windupFrames};continue;}
-   const active=this.skillActive(u)||u.enhanced,bb=active?blackboard(skill?.blackboard):{},cfg=operatorSkillConfig(this,u),defaultCount=behavior.style==='all'?this.s.enemies.length:behavior.style==='block-count'?Math.max(1,stats.blockCnt):behavior.targets||1;
-   const talentCount=(p.activeTalents||[]).some(t=>/同时攻击两个目标/.test(t.description||''))?2:1,skillIndex=skill?.skillIndex??u.source?.skillIndex,skillExtra=(p.charId==='char_1019_siege2'&&active&&(skillIndex===1||skillIndex===2))?1:0,blockAll=(p.charId==='char_311_mudrok'&&active&&skillIndex===2)?Math.max(1,stats.blockCnt):0,count=cfg.multiTarget===Infinity?999:Math.max(blockAll,talentCount+skillExtra,cfg.multiTarget??bb.max_target??defaultCount,u.attackTargetCountOverride||0),chosen=(healer?heals:targets).slice(0,count);if(u.coinSkillEnabled&&skillIndex===0&&u.coins>0&&!healer){const ally=alliedActors(this.s).filter(v=>v.deployed&&v.hp>0&&this.canHeal(v,u)&&v.hp/v.maxHp<.7&&Math.max(Math.abs(v.x-u.x),Math.abs(v.y-u.y))<=1).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.uid-b.uid)[0];if(ally&&spendCoins(u,1))u.pendingAttackHeal={scale:cfg.bb.healScale??bb.heal_scale??.25,requiresBelow:true};}
-   if(chosen.length){const timing=attackTiming(stats.baseAttackTime,stats.attackSpeed,windupSeconds(stats.baseAttackTime,p.attackWindup));u.attackCooldown=timing.frames;const hits=u.id==='char_1021_kroos2'&&u.kroosQuad?4:u.id==='char_427_vigil'&&skillIndex===2?3:(cfg.hits??bb['attack@times']??bb.hit_count??bb.times??behavior.hits??1);u.lockId=chosen[0].uid;u.action={kind:healer?'heal':'damage',left:timing.windupFrames,targets:chosen.map(e=>e.uid),amount:stats.atk*(cfg.atkScale??bb.atk_scale??1),baseAmount:stats.atk,hits:Math.max(1,Math.min(12,hits)),extraProjectiles:behavior.returnProjectile?cfg.extraProjectiles||0:0,type:this.baseDamageType(u),enhanced:!!u.enhanced,storedEnergy:behavior.storage?(u.energy||0):0,energyScale:behavior.storage?(cfg.atkScale??bb.atk_scale??1):1};u.enhanced=false;}
+   const active=this.skillActive(u)||u.enhanced,bb=active?blackboard(skill?.blackboard):{},cfg=operatorSkillConfig(this,u),attackCfg=active?cfg:{},defaultCount=behavior.style==='all'?this.s.enemies.length:behavior.style==='block-count'?Math.max(1,stats.blockCnt):behavior.targets||1;
+   const talentCount=(p.activeTalents||[]).some(t=>/同时攻击两个目标/.test(t.description||''))?2:1,skillIndex=skill?.skillIndex??u.source?.skillIndex,skillExtra=(p.charId==='char_1019_siege2'&&active&&(skillIndex===1||skillIndex===2))?1:0,blockAll=(p.charId==='char_311_mudrok'&&active&&skillIndex===2)?Math.max(1,stats.blockCnt):0,count=attackCfg.multiTarget===Infinity?999:Math.max(blockAll,talentCount+skillExtra,attackCfg.multiTarget??bb.max_target??defaultCount,u.attackTargetCountOverride||0),chosen=(healer?heals:targets).slice(0,count);if(u.coinSkillEnabled&&skillIndex===0&&u.coins>0&&!healer){const ally=alliedActors(this.s).filter(v=>v.deployed&&v.hp>0&&this.canHeal(v,u)&&v.hp/v.maxHp<.7&&Math.max(Math.abs(v.x-u.x),Math.abs(v.y-u.y))<=1).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.uid-b.uid)[0];if(ally&&spendCoins(u,1))u.pendingAttackHeal={scale:cfg.bb?.healScale??bb.heal_scale??.25,requiresBelow:true};}
+   if(chosen.length){const timing=attackTiming(stats.baseAttackTime,stats.attackSpeed,windupSeconds(stats.baseAttackTime,p.attackWindup));u.attackCooldown=timing.frames;const hits=u.id==='char_1021_kroos2'&&u.kroosQuad?4:u.id==='char_427_vigil'&&active&&skillIndex===2?3:(attackCfg.hits??bb['attack@times']??bb.hit_count??bb.times??behavior.hits??1);u.lockId=chosen[0].uid;u.action={kind:healer?'heal':'damage',left:timing.windupFrames,targets:chosen.map(e=>e.uid),amount:stats.atk*(attackCfg.atkScale??bb.atk_scale??1),baseAmount:stats.atk,hits:Math.max(1,Math.min(12,hits)),extraProjectiles:behavior.returnProjectile?attackCfg.extraProjectiles||0:0,type:this.baseDamageType(u),enhanced:!!u.enhanced,storedEnergy:behavior.storage?(u.energy||0):0,energyScale:behavior.storage?(attackCfg.atkScale??bb.atk_scale??1):1};u.enhanced=false;}
   }
   tickLogic(this,dt);
   this.tickGarrisonStatusEvents();

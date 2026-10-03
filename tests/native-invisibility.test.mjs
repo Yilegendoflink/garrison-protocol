@@ -164,20 +164,40 @@ test('银灰的鹰眼视觉只在自己攻击范围内反隐，离开范围后�
  assert.equal(near.revealed,false,'走出射程后隐匿恢复（反隐窗口自动过期）');
 });
 
-test('伊内丝撤退后影哨留在原地继续反隐与减速',()=>{
- const b=liveBattle(['char_4087_ines']),ines=b.s.units[0];
- const near=probe(b,ines.x+1,ines.y,{invisible:true});
+test('伊内丝影哨对形态隐匿生效，并只覆盖撤退时的常态攻击格',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_04_b',skillIndex:1});deployNow(b);const ines=byId(b,'char_4087_ines');
+ ines.x=4;ines.y=2;ines.dir=1;
+ const baseRange=b.range(ines,false),inside=baseRange.find(c=>c.x!==ines.x||c.y!==ines.y);
+ const outside={x:ines.x+1,y:ines.y};
+ ines.sp=b.spCost(ines);b.activate(ines);
+ assert.ok(b.skillActive(ines),'测试需要在伊内丝 S2 扩大范围时撤退');
+ const skillOnly=b.range(ines,true).find(c=>!baseRange.some(g=>g.x===c.x&&g.y===c.y));
+ assert.ok(inside,'伊内丝常态攻击范围至少包含一个前方格');
+ assert.ok(!baseRange.some(c=>c.x===outside.x&&c.y===outside.y),'边角探针在常态范围的包围半径内、但不在实际范围内');
+ assert.ok(skillOnly,'S2 的扩大范围应提供一个常态范围之外的探针格');
+ const concealed=()=>({formInvisible:true,invisible:true,statuses:[{kind:'invisible',remaining:100,source:'native',value:1}]});
+ const near=probe(b,inside.x,inside.y,concealed()),offRange=probe(b,outside.x,outside.y,concealed()),skillOnlyEnemy=probe(b,skillOnly.x,skillOnly.y,concealed());
  for(let i=0;i<4;i++)b.step();
- assert.equal(near.revealed,true,'在攻击范围内的隐匿失效');
+ assert.equal(near.revealed,true,'常态攻击范围内的形态隐匿失效');
+ assert.equal(near.invisible,false,'反隐必须真正关闭形态自带隐匿');
  assert.ok(near.statuses.some(s=>s.kind==='sluggish'),'同时被减速');
+ assert.equal(offRange.revealed,false,'影哨不应把实际攻击范围扩成方形半径');
+ assert.equal(offRange.invisible,true,'常态范围外仍保留形态隐匿');
+ assert.equal(skillOnlyEnemy.revealed,true,'伊内丝部署中 S2 的技能范围正常反隐');
  commitExit(b,{target:ines,reason:'retreat'});
  b.step();
  assert.equal((b.s.revealSentries||[]).length,1,'撤退后留下 1 个影哨');
+ assert.deepEqual(b.s.revealSentries[0].cells,baseRange,'撤退影哨固定使用常态范围的格子和朝向');
  for(let i=0;i<10;i++)b.step();
- assert.equal(near.revealed,true,'影哨让反隐继续生效');
+ assert.equal(near.revealed,true,'撤退后的影哨继续反隐');
+ assert.equal(near.invisible,false,'影哨范围内形态隐匿保持失效');
+ assert.equal(skillOnlyEnemy.revealed,false,'撤退后的影哨不继承 S2 扩大的范围');
+ assert.equal(skillOnlyEnemy.invisible,true,'离开撤退影哨范围后 S2 范围内的形态隐匿恢复');
  near.x=ines.x+9;near.y=ines.y;
  for(let i=0;i<20;i++)b.step();
- assert.equal(near.revealed,false,'离开影哨范围后恢复隐匿');
+ assert.equal(near.revealed,false,'离开影哨范围后反隐窗口结束');
+ assert.equal(near.invisible,true,'离开后形态隐匿恢复');
+ assert.equal(offRange.invisible,true,'影哨范围外单位持续隐匿');
 });
 
 test('清明每 15 秒给半径 2 格内其他敌人 5 秒隐匿，自身不含、半径外不受影响',()=>{

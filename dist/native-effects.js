@@ -3,7 +3,7 @@ import {applyDamage,recoverHP,damage,attackTiming} from './combat.js';
 import {equipmentEvent,equipmentFatal,equipmentTick} from './native-equipment.js';
 import {allowsHighlandPlacement,branchTrait} from './native-branches.js';
 import {containsTarget} from './targeting.js';
-import {applyStatus,permissions,statusAttributeChanges,isIsolated,yinYangAttackScale} from './status.js';
+import {applyStatus,syncInvisibility,permissions,statusAttributeChanges,isIsolated,yinYangAttackScale} from './status.js';
 import {blackboard,resolveActiveTalents,nativeAttributes,bondBlackboard,bondLayerValue,bondValue,applyOwnedBonus} from './protocol.js';
 import {BOND_TEXT_CONSTANTS} from './native-bond-keys.js';
 import {gainSp,initSpOf} from './native-sp.js';
@@ -662,16 +662,16 @@ export function revealEnemy(battle,target,hold=.3){
 }
 // 伊内丝【影哨】：撤退后原地留下一个影哨，令「攻击范围内隐匿失效 + 移速-30%」继续生效，最多 1 个。
 function placeInesSentry(battle,u){
- const geo=battle.rangeGeometry?.(u),cells=geo?.cells||[];
- const radius=Math.max(1,cells.reduce((m,g)=>Math.max(m,Math.abs(g.col),Math.abs(g.row)),0));
+ const cells=(battle.range?.(u,false)||[]).map(({x,y})=>({x,y}));
  const kept=(battle.s.revealSentries||[]).filter(s=>s.fromUid!==u.uid);
- battle.s.revealSentries=[...kept,{fromUid:u.uid,x:u.x,y:u.y,radius}].slice(-1);
+ battle.s.revealSentries=[...kept,{fromUid:u.uid,x:u.x,y:u.y,cells}].slice(-1);
 }
 function syncReveals(battle){
  const now=battle.s.time,enemies=battle.s.enemies||[];
  for(const sentry of battle.s.revealSentries||[]){
   if(sentry.endsAt!=null&&now>sentry.endsAt)continue;
-  for(const e of enemies)if(e.hp>0&&!e.hidden&&Math.max(Math.abs(e.x-sentry.x),Math.abs(e.y-sentry.y))<=sentry.radius){
+  const cells=Array.isArray(sentry.cells)?sentry.cells.map(({x,y})=>[x,y]):null;
+  for(const e of enemies)if(e.hp>0&&!e.hidden&&(cells?containsTarget(cells,e):Math.max(Math.abs(e.x-sentry.x),Math.abs(e.y-sentry.y))<=sentry.radius)){
    revealEnemy(battle,e,.3);
    applyStatus(e,'sluggish',1,{source:sentry.fromUid,resistible:false});
   }
@@ -679,6 +679,7 @@ function syncReveals(battle){
  for(const e of enemies){
   if(Number(e.revealUntil)>now)e.revealed=true;
   else{e.revealed=false;e.revealUntil=null;}
+  syncInvisibility(e);
  }
 }
 
