@@ -451,7 +451,32 @@ export function operatorSkillStart(battle,u,ctx){
   const baseCount=talentCounts.length?Math.max(...talentCounts):1;
   const added=Number(bb['attack@cnt']??bb.attack_cnt??0);
   const total=Math.max(1,baseCount+(Number.isFinite(added)?added:0));
-  u.floatUnits=total;u.floatTarget=battle.targets(u)[0]?.uid??null;u.floatStartedAt=battle.s.time;u.floatOverdrive=has(text,/过载/);if(profile.charId==='char_1038_whitw2'){u.whitwEyeCount=u.floatUnits;u.whitwEyeScatter=Number(bb['attack@projectile_move_speed'])||1;u.whitwEyeRadius=Number(bb['attack@range_radius'])||.9;u.whitwEyeSlow=Math.abs(Number(bb['attack@move_speed'])||.3);u.whitwEyeMagic=Number(bb['attack@magic_atk_scale'])||1;u.whitwEyeTimes=Number(bb['attack@times'])||1;u.whitwEyeFear=Number(bb['attack@fear'])||2;battle.s.whitwEyes=(battle.s.whitwEyes||[]).filter(e=>e.ownerUid!==u.uid||e.skillCount===(u.skillCount??0));}}
+  const isLappland=profile.charId==='char_1038_whitw2';
+  u.floatUnits=total;
+  // 御械术师的浮游单元独立索敌，不把主人本人的普通攻击锁到其中一个目标。
+  u.floatTarget=isLappland?null:(battle.targets(u)[0]?.uid??null);
+  u.floatStartedAt=battle.s.time;
+  u.floatOverdrive=has(text,/过载/);
+  if(isLappland){
+   battle.s.whitwEyes??=[];
+   const skillCount=u.skillCount??0;
+   if(skillIndex===2){
+    // 只有 S3 使用自由飞行的特殊形态狼头（battle.s.whitwEyes）。
+    u.whitwFloaters=[];u.whitwFloatSkill=null;u.whitwEyeCount=u.floatUnits;
+    u.whitwEyeScatter=Number(bb['attack@projectile_move_speed'])||1;
+    u.whitwEyeRadius=Number(bb['attack@range_radius'])||.9;
+    u.whitwEyeSlow=Math.abs(Number(bb['attack@move_speed'])||.3);
+    u.whitwEyeMagic=Number(bb['attack@magic_atk_scale'])||1;
+    u.whitwEyeTimes=Number(bb['attack@times'])||1;
+    u.whitwEyeFear=Number(bb['attack@fear'])||2;
+   }else{
+    // S1/S2 是常规浮游单元：各自锁敌并走驭械术师普通法术弹道，不创建 S3 狼头实体。
+    u.whitwEyeCount=0;u.whitwFloatSkill=skillIndex;u.whitwFloatSkillCount=skillCount;
+    u.whitwFloaters=Array.from({length:u.floatUnits},(_,index)=>({index,targetUid:null,damageTarget:null,damageScale:0,nextAttackAt:battle.s.time}));
+    delete u.whitwEyeScatter;delete u.whitwEyeRadius;delete u.whitwEyeSlow;delete u.whitwEyeMagic;delete u.whitwEyeTimes;delete u.whitwEyeFear;
+   }
+  }
+ }
  const cost=costValueForText(config,text,'immediate'),immediateText=has(text,/立即获得|技能开启时立即获得/),genericGain=has(text,/获得.*费用|获得.*部署费用/);if(Number.isFinite(cost)&&(immediateText||genericGain)&&(!has(text,/下次攻击|每次|持续|逐渐|击杀|击倒|攻击时/ )||immediateText))battle.gainCost?.(cost);if(Number.isFinite(cost)&&has(text,/获得.*金币/))grantCoins(u,cost,config.coinCap);
  if(profile.charId==='char_1045_svash2'&&battle.adjustReserveCost){const eligible=v=>['WARRIOR','CASTER','SNIPER'].includes(battle.profile(v)?.profession);if(profile.skillIndex===0){const amount=Number(bb['svash2_s_1[deck].cost']);if(amount>0)battle.adjustReserveCost(-amount,{predicate:eligible});}else if(profile.skillIndex===1){const amount=Number(bb.cost);if(amount>0)battle.adjustReserveCost(-amount,{predicate:eligible});}else if(profile.skillIndex===2&&!u.svashCostSwapped){battle.swapReserveBaseCosts(eligible);u.svashCostSwapped=true;}}
  if(Number.isFinite(bb.hp_ratio)&&has(text,/生命/)&&has(text,/流失|损失/)&&!has(text,/每秒|逐渐|持续/)){const base=/当前生命/.test(text)?u.hp:u.maxHp;ctx.applyLoss(battle,{target:u,source:u,amount:base*Math.abs(bb.hp_ratio),minHp:1,cause:'loss'});}
@@ -785,7 +810,7 @@ export function periodicMods(battle,u,ctx){
  // 荒芜拉普兰德「终幕·浩劫」由眼睛实体自行飞行与攻击，见 native-effects 的 tickWhitwEyes
  if(u.id==='char_4013_kjera'&&battle.skillActive(u)&&u.floatUnits){const target=battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.invisible).sort((a,b)=>a.uid-b.uid)[0];if(target&&battle.s.time>=(u.kjeraNextAt||0)){const bb=skillBB(battle,u);u.kjeraNextAt=battle.s.time+1;for(let n=0;n<u.floatUnits;n++){ctx.dealDamage(battle,{source:u,target,amount:battle.stats(u).atk,type:'arts',cause:'skill',skill:true});if(Number(bb['attack@prob'])>0&&battle.economy.random()<Number(bb['attack@prob']))applyStatus(target,'cold',Number(bb['attack@cold'])||2.5,{source:u.uid,resistible:false});}}}
  if(u.id==='char_4146_nymph'&&battle.s.time>=(u.nymphNextAt||0)){u.nymphNextAt=battle.s.time+1;for(const e of battle.s.enemies.filter(e=>e.hp>0&&e.nymphSoul?.sourceUid===u.uid)){if(!elementBurstActive(e,'necrosis',battle.s.time)){delete e.nymphSoul;continue;}ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(e.nymphSoul.scale)||.4),type:'elemental',cause:'dot'});}}
- if(u.id==='char_1038_whitw2'){const talent=activeTalents(battle,u).find(t=>t.name==='头狼'),tb=talent&&talentValues(talent);if(talent&&battle.s.time-(u.deployAt||0)>=(Number(tb.interval)||20)*(Number(u.whitwTalentStage||0)+1)){u.whitwTalentStage=(u.whitwTalentStage||0)+1;if(u.whitwTalentStage>=3){u.floatUnits=(u.floatUnits||1)+1;if(u.id==='char_1038_whitw2')u.whitwEyeCount=u.floatUnits;}}}
+ if(u.id==='char_1038_whitw2'){const talent=activeTalents(battle,u).find(t=>t.name==='头狼'),tb=talent&&talentValues(talent);if(talent&&battle.s.time-(u.deployAt||0)>=(Number(tb.interval)||20)*(Number(u.whitwTalentStage||0)+1)){u.whitwTalentStage=(u.whitwTalentStage||0)+1;if(u.whitwTalentStage>=3){u.floatUnits=(u.floatUnits||1)+1;const idx=u.source?.skillIndex??battle.profile(u).skillIndex;if(idx===2&&battle.skillActive(u))u.whitwEyeCount=u.floatUnits;}}}
  if(u.id==='char_1047_halo2'){u.haloStay??={};const talent=activeTalents(battle,u).find(t=>t.name==='能源解析'),tb=talent&&talentValues(talent);if(talent)for(const e of battle.s.enemies.filter(e=>e.hp>0&&battle.inside(u,e,true))){u.haloStay[e.uid]=(u.haloStay[e.uid]||0)+1/30;const scale=u.haloStay[e.uid]>=(Number(tb.interval)||7)?Number(tb.damage_scale_max)||1.14:Number(tb.damage_scale)||1.1;applyStatus(e,'fragile',1.1,{source:u.uid,value:scale,resistible:false});}}
  if(u.id==='char_427_vigil'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2&&u.pendingVigilCost){const p=u.pendingVigilCost;if(battle.s.time>=p.nextAt&&p.remaining>0){battle.gainCost?.(Math.min(p.perTick,p.remaining));p.remaining-=p.perTick;p.nextAt+=p.interval;}}
  if(u.id==='char_1045_svash2'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2&&u.svashCostRemaining>0&&battle.s.time+1e-9>=u.svashCostAt){battle.gainCost?.(1);u.svashCostRemaining-=1;u.svashCostAt+=Number(skillBB(battle,u)['svash2_s_3[cost].interval'])||2;}

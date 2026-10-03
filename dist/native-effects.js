@@ -1,5 +1,5 @@
 import {startEnemyPush,startEnemyPull} from './native-shift.js';
-import {applyDamage,recoverHP,damage} from './combat.js';
+import {applyDamage,recoverHP,damage,attackTiming} from './combat.js';
 import {equipmentEvent,equipmentFatal,equipmentTick} from './native-equipment.js';
 import {allowsHighlandPlacement,branchTrait} from './native-branches.js';
 import {containsTarget} from './targeting.js';
@@ -13,6 +13,7 @@ import {collabDeploy,collabTick,collabEvent} from './native-collab.js';
 // S.E.E.S. 策略：结城理「每次击倒敌人或自身被击倒 → 【塔尔塔罗斯】层数 +N」（数值取 data.sees.numbers）。
 import {addTartarusLayers,makotoKillLayers,isSeesOperator} from './native-sees.js';
 import {FLIGHT_PRESETS,FLIGHT_MODES,stepFlight,faceTarget,setFlightVelocity,distanceBetween,ensureFlight,orbitStep,fanHeadings,randomPointInSquare} from './native-flight.js';
+import {TENTATIVE_PROJECTILE_SPEED} from './native-combat.js';
 
 export const BATTLE_SCHEMA_VERSION=1;
 export const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','field','attached','aura','guard','barrier','lock','stat']);
@@ -1427,6 +1428,7 @@ function onSkillStart(battle,u){
  if(u.id!=='char_143_ghost'&&/(?:技能结束后|持续时间结束后).*?(?:晕眩|眩晕)/s.test(skillText)&&Number(skillBBValue.stun)>0)applyStatus(u,'stun',Number(skillBBValue.stun),{source:u.uid,resistible:false});
  if(u.id==='char_4026_vulpis'&&idx===2&&u.vulpisKilled){applyStatus(u,'camouflage',1e9,{source:u.uid,resistible:false});u.vulpisKilled=false;}
  if(u.floatUnits){const elapsed=Math.max(0,battle.s.time-(u.floatStartedAt??battle.s.time));if(u.floatOverdrive&&elapsed>0)applyStatus(u,'stun',elapsed,{source:u.uid,resistible:false});u.floatUnits=0;u.floatTarget=null;u.floatStartedAt=null;u.floatOverdrive=false;}
+ if(u.id==='char_1038_whitw2'){u.whitwFloaters=[];u.whitwFloatSkill=null;u.whitwFloatSkillCount=null;u.whitwEyeCount=0;}
  if(u.damageProtection){
   const protection=u.damageProtection;u.damageProtection=null;
   if(protection.buffer>0){
@@ -1466,6 +1468,45 @@ function onOperatorExit(battle,u,reason){
 
 // 召唤物类型 → token id 的唯一映射（`native-session` 也用它取 token 的部署上限）。
 export const TOKEN_IDS={'skadi2-seaborn':'token_10017_skadi2_dedant','silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
+function whitwTargetable(e){return e.hp>0&&!e.hidden&&(!e.invisible||e.revealed||e.block!=null)&&!e.invulnerable&&!e.untargetable&&!permissions(e).sleeping;}
+function whitwNonmoving(e){return e.movingThisFrame!==true;}
+// 荒芜拉普兰德 S1/S2 的普通御械术师浮游单元：每枚单独索敌、独立累计同目标伤害，
+// 使用标准驭械术师法术弹道。S3 狼头是独立的自由飞行实体；PRTS 说明抵达目标后的攻击行为同普通浮游单元。
+export function tickWhitwFloaters(battle,dt){
+ const now=battle?.s?.time??0;
+ for(const owner of battle?.s?.units||[]){
+  if(owner.id!=='char_1038_whitw2'||!owner.deployed||owner.hp<=0||!battle.skillActive(owner))continue;
+  const skillIndex=owner.source?.skillIndex??owner.skillIndex??battle.profile(owner).skillIndex;
+  if(skillIndex!==0&&skillIndex!==1)continue;
+  const skillCount=owner.skillCount??0;
+  if(owner.whitwFloatSkillCount!==skillCount){owner.whitwFloatSkillCount=skillCount;owner.whitwFloatSkill=skillIndex;owner.whitwFloaters=[];}
+  owner.whitwFloatSkill=skillIndex;
+  owner.whitwFloaters??=[];
+  const count=Math.max(0,Math.trunc(Number(owner.floatUnits)||0));
+  while(owner.whitwFloaters.length<count)owner.whitwFloaters.push({index:owner.whitwFloaters.length,targetUid:null,damageTarget:null,damageScale:0,nextAttackAt:now});
+  owner.whitwFloaters.length=count;
+  const profile=battle.profile(owner),trait=branchTrait(profile).values,skill=profile.skill,bb=blackboard(skill?.blackboard);
+  const stats=battle.stats(owner),interval=attackTiming(Math.max(.1,Number(stats.baseAttackTime)||1.3),Number(stats.attackSpeed)||100).seconds;
+  const validTarget=e=>whitwTargetable(e)&&(skillIndex!==0||whitwNonmoving(e));
+  const candidates=skillIndex===0?(battle.s.enemies||[]).filter(validTarget):battle.targets(owner).filter(validTarget);
+  for(const floater of owner.whitwFloaters){
+   let target=(battle.s.enemies||[]).find(e=>e.uid===floater.targetUid&&validTarget(e));
+   if(!target){
+    floater.targetUid=null;
+    if(candidates.length){const pick=Math.min(candidates.length-1,Math.floor(Math.max(0,battle.economy.random())*candidates.length));target=candidates[pick];floater.targetUid=target.uid;}
+   }
+   if(!target||now+1e-9<floater.nextAttackAt)continue;
+   floater.nextAttackAt=now+interval;
+   const targetChanged=floater.damageTarget!==target.uid;
+   floater.damageScale=targetChanged?(Number(trait.init_atk_scale)||.2):Math.min(Number(trait.max_atk_scale)||1.1,(Number(floater.damageScale)||0)+(Number(trait.delta_atk_scale)||.15));
+   floater.damageTarget=target.uid;
+   const projectile={owner:owner.uid,target:target.uid,x:owner.x,y:owner.y,amount:stats.atk*floater.damageScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'funnel',antiAir:true,ownerDeployment:owner.deployAt,skill:true,whitwFloatIndex:floater.index};
+   if(skillIndex===1){projectile.whitwFearProb=Math.max(0,Math.min(1,Number(bb['attack@prob'])||0));projectile.whitwFear=Number(bb['attack@fear'])||1;}
+   battle.s.projectiles.push(projectile);
+   battle.emit('strike',{uid:owner.uid,x:owner.x,y:owner.y,targetX:target.x,targetY:target.y,branch:'funnel',style:'single',ranged:true,hit:0,type:'arts'});
+  }
+ }
+}
 // 荒芜拉普兰德「终幕·浩劫」的特种浮游单元（自由飞行实体，走 battle.s.whitwEyes）。
 // 注意：它和凛御银灰待部署区里的「风雪之眼」不是同一种东西——后者本期不实现（见 onOperatorDeploy 的注释）。
 // 完整流程见 PRTS：散开 1.3s（初速0.1/加速1.9/上限2.0）→ 索敌飞向（初速2.0/加速1.0/上限4.0/转向1/6每帧）
@@ -1511,10 +1552,11 @@ function whitwEyeTarget(battle,eye,owner){
  function whitwEyeOptions(u){return {count:u.whitwEyeCount||0,scatter:u.whitwEyeScatter??1,radius:u.whitwEyeRadius??.9,moveSlow:u.whitwEyeSlow??.3,magicScale:u.whitwEyeMagic??1,atkTimes:u.whitwEyeTimes??1,fear:u.whitwEyeFear??2};}
 export function tickWhitwEyes(battle,dt){
  const eyes=battle?.s?.whitwEyes;
- const unit=(battle?.s?.units||[]).find(u=>u.id==='char_1038_whitw2'&&u.deployed&&u.hp>0&&battle.skillActive(u));
+ const unit=(battle?.s?.units||[]).find(u=>u.id==='char_1038_whitw2'&&u.deployed&&u.hp>0&&battle.skillActive(u)&&(u.source?.skillIndex??u.skillIndex??battle.profile(u).skillIndex)===2);
  if(unit){
   const live=(eyes||[]).filter(e=>e.ownerUid===unit.uid&&e.skillCount===(unit.skillCount??0));
-  if(!live.length)spawnWhitwEyes(battle,unit,whitwEyeOptions(unit));
+  const missing=Math.max(0,Math.trunc(Number(unit.whitwEyeCount)||0)-live.length);
+  if(missing)spawnWhitwEyes(battle,unit,{...whitwEyeOptions(unit),count:missing});
  }
  if(!eyes?.length)return;
  const now=battle.s.time;

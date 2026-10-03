@@ -8508,7 +8508,32 @@ function operatorSkillStart(battle,u,ctx){
   const baseCount=talentCounts.length?Math.max(...talentCounts):1;
   const added=Number(bb['attack@cnt']??bb.attack_cnt??0);
   const total=Math.max(1,baseCount+(Number.isFinite(added)?added:0));
-  u.floatUnits=total;u.floatTarget=battle.targets(u)[0]?.uid??null;u.floatStartedAt=battle.s.time;u.floatOverdrive=has(text,/过载/);if(profile.charId==='char_1038_whitw2'){u.whitwEyeCount=u.floatUnits;u.whitwEyeScatter=Number(bb['attack@projectile_move_speed'])||1;u.whitwEyeRadius=Number(bb['attack@range_radius'])||.9;u.whitwEyeSlow=Math.abs(Number(bb['attack@move_speed'])||.3);u.whitwEyeMagic=Number(bb['attack@magic_atk_scale'])||1;u.whitwEyeTimes=Number(bb['attack@times'])||1;u.whitwEyeFear=Number(bb['attack@fear'])||2;battle.s.whitwEyes=(battle.s.whitwEyes||[]).filter(e=>e.ownerUid!==u.uid||e.skillCount===(u.skillCount??0));}}
+  const isLappland=profile.charId==='char_1038_whitw2';
+  u.floatUnits=total;
+  // 御械术师的浮游单元独立索敌，不把主人本人的普通攻击锁到其中一个目标。
+  u.floatTarget=isLappland?null:(battle.targets(u)[0]?.uid??null);
+  u.floatStartedAt=battle.s.time;
+  u.floatOverdrive=has(text,/过载/);
+  if(isLappland){
+   battle.s.whitwEyes??=[];
+   const skillCount=u.skillCount??0;
+   if(skillIndex===2){
+    // 只有 S3 使用自由飞行的特殊形态狼头（battle.s.whitwEyes）。
+    u.whitwFloaters=[];u.whitwFloatSkill=null;u.whitwEyeCount=u.floatUnits;
+    u.whitwEyeScatter=Number(bb['attack@projectile_move_speed'])||1;
+    u.whitwEyeRadius=Number(bb['attack@range_radius'])||.9;
+    u.whitwEyeSlow=Math.abs(Number(bb['attack@move_speed'])||.3);
+    u.whitwEyeMagic=Number(bb['attack@magic_atk_scale'])||1;
+    u.whitwEyeTimes=Number(bb['attack@times'])||1;
+    u.whitwEyeFear=Number(bb['attack@fear'])||2;
+   }else{
+    // S1/S2 是常规浮游单元：各自锁敌并走驭械术师普通法术弹道，不创建 S3 狼头实体。
+    u.whitwEyeCount=0;u.whitwFloatSkill=skillIndex;u.whitwFloatSkillCount=skillCount;
+    u.whitwFloaters=Array.from({length:u.floatUnits},(_,index)=>({index,targetUid:null,damageTarget:null,damageScale:0,nextAttackAt:battle.s.time}));
+    delete u.whitwEyeScatter;delete u.whitwEyeRadius;delete u.whitwEyeSlow;delete u.whitwEyeMagic;delete u.whitwEyeTimes;delete u.whitwEyeFear;
+   }
+  }
+ }
  const cost=costValueForText(config,text,'immediate'),immediateText=has(text,/立即获得|技能开启时立即获得/),genericGain=has(text,/获得.*费用|获得.*部署费用/);if(Number.isFinite(cost)&&(immediateText||genericGain)&&(!has(text,/下次攻击|每次|持续|逐渐|击杀|击倒|攻击时/ )||immediateText))battle.gainCost?.(cost);if(Number.isFinite(cost)&&has(text,/获得.*金币/))grantCoins(u,cost,config.coinCap);
  if(profile.charId==='char_1045_svash2'&&battle.adjustReserveCost){const eligible=v=>['WARRIOR','CASTER','SNIPER'].includes(battle.profile(v)?.profession);if(profile.skillIndex===0){const amount=Number(bb['svash2_s_1[deck].cost']);if(amount>0)battle.adjustReserveCost(-amount,{predicate:eligible});}else if(profile.skillIndex===1){const amount=Number(bb.cost);if(amount>0)battle.adjustReserveCost(-amount,{predicate:eligible});}else if(profile.skillIndex===2&&!u.svashCostSwapped){battle.swapReserveBaseCosts(eligible);u.svashCostSwapped=true;}}
  if(Number.isFinite(bb.hp_ratio)&&has(text,/生命/)&&has(text,/流失|损失/)&&!has(text,/每秒|逐渐|持续/)){const base=/当前生命/.test(text)?u.hp:u.maxHp;ctx.applyLoss(battle,{target:u,source:u,amount:base*Math.abs(bb.hp_ratio),minHp:1,cause:'loss'});}
@@ -8842,7 +8867,7 @@ function periodicMods(battle,u,ctx){
  // 荒芜拉普兰德「终幕·浩劫」由眼睛实体自行飞行与攻击，见 native-effects 的 tickWhitwEyes
  if(u.id==='char_4013_kjera'&&battle.skillActive(u)&&u.floatUnits){const target=battle.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.invisible).sort((a,b)=>a.uid-b.uid)[0];if(target&&battle.s.time>=(u.kjeraNextAt||0)){const bb=skillBB(battle,u);u.kjeraNextAt=battle.s.time+1;for(let n=0;n<u.floatUnits;n++){ctx.dealDamage(battle,{source:u,target,amount:battle.stats(u).atk,type:'arts',cause:'skill',skill:true});if(Number(bb['attack@prob'])>0&&battle.economy.random()<Number(bb['attack@prob']))applyStatus(target,'cold',Number(bb['attack@cold'])||2.5,{source:u.uid,resistible:false});}}}
  if(u.id==='char_4146_nymph'&&battle.s.time>=(u.nymphNextAt||0)){u.nymphNextAt=battle.s.time+1;for(const e of battle.s.enemies.filter(e=>e.hp>0&&e.nymphSoul?.sourceUid===u.uid)){if(!elementBurstActive(e,'necrosis',battle.s.time)){delete e.nymphSoul;continue;}ctx.dealDamage(battle,{source:u,target:e,amount:battle.stats(u).atk*(Number(e.nymphSoul.scale)||.4),type:'elemental',cause:'dot'});}}
- if(u.id==='char_1038_whitw2'){const talent=activeTalents(battle,u).find(t=>t.name==='头狼'),tb=talent&&talentValues(talent);if(talent&&battle.s.time-(u.deployAt||0)>=(Number(tb.interval)||20)*(Number(u.whitwTalentStage||0)+1)){u.whitwTalentStage=(u.whitwTalentStage||0)+1;if(u.whitwTalentStage>=3){u.floatUnits=(u.floatUnits||1)+1;if(u.id==='char_1038_whitw2')u.whitwEyeCount=u.floatUnits;}}}
+ if(u.id==='char_1038_whitw2'){const talent=activeTalents(battle,u).find(t=>t.name==='头狼'),tb=talent&&talentValues(talent);if(talent&&battle.s.time-(u.deployAt||0)>=(Number(tb.interval)||20)*(Number(u.whitwTalentStage||0)+1)){u.whitwTalentStage=(u.whitwTalentStage||0)+1;if(u.whitwTalentStage>=3){u.floatUnits=(u.floatUnits||1)+1;const idx=u.source?.skillIndex??battle.profile(u).skillIndex;if(idx===2&&battle.skillActive(u))u.whitwEyeCount=u.floatUnits;}}}
  if(u.id==='char_1047_halo2'){u.haloStay??={};const talent=activeTalents(battle,u).find(t=>t.name==='能源解析'),tb=talent&&talentValues(talent);if(talent)for(const e of battle.s.enemies.filter(e=>e.hp>0&&battle.inside(u,e,true))){u.haloStay[e.uid]=(u.haloStay[e.uid]||0)+1/30;const scale=u.haloStay[e.uid]>=(Number(tb.interval)||7)?Number(tb.damage_scale_max)||1.14:Number(tb.damage_scale)||1.1;applyStatus(e,'fragile',1.1,{source:u.uid,value:scale,resistible:false});}}
  if(u.id==='char_427_vigil'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2&&u.pendingVigilCost){const p=u.pendingVigilCost;if(battle.s.time>=p.nextAt&&p.remaining>0){battle.gainCost?.(Math.min(p.perTick,p.remaining));p.remaining-=p.perTick;p.nextAt+=p.interval;}}
  if(u.id==='char_1045_svash2'&&battle.skillActive(u)&&(u.source?.skillIndex??battle.profile(u).skillIndex)===2&&u.svashCostRemaining>0&&battle.s.time+1e-9>=u.svashCostAt){battle.gainCost?.(1);u.svashCostRemaining-=1;u.svashCostAt+=Number(skillBB(battle,u)['svash2_s_3[cost].interval'])||2;}
@@ -8862,7 +8887,7 @@ return {blackboardValues,talentValues,coinCapFor,grantCoins,spendCoins,coinGainA
 },
 "native-effects.js": function(load) {
 const {startEnemyPush,startEnemyPull} = load("native-shift.js");
-const {applyDamage,recoverHP,damage} = load("combat.js");
+const {applyDamage,recoverHP,damage,attackTiming} = load("combat.js");
 const {equipmentEvent,equipmentFatal,equipmentTick} = load("native-equipment.js");
 const {allowsHighlandPlacement,branchTrait} = load("native-branches.js");
 const {containsTarget} = load("targeting.js");
@@ -8876,6 +8901,7 @@ const {collabDeploy,collabTick,collabEvent} = load("native-collab.js");
 // S.E.E.S. 策略：结城理「每次击倒敌人或自身被击倒 → 【塔尔塔罗斯】层数 +N」（数值取 data.sees.numbers）。
 const {addTartarusLayers,makotoKillLayers,isSeesOperator} = load("native-sees.js");
 const {FLIGHT_PRESETS,FLIGHT_MODES,stepFlight,faceTarget,setFlightVelocity,distanceBetween,ensureFlight,orbitStep,fanHeadings,randomPointInSquare} = load("native-flight.js");
+const {TENTATIVE_PROJECTILE_SPEED} = load("native-combat.js");
 const BATTLE_SCHEMA_VERSION=1;
 const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','field','attached','aura','guard','barrier','lock','stat']);
 const ELEMENT_TYPES=new Set(['neural','burn','necrosis','corrosion','elemental']);
@@ -10289,6 +10315,7 @@ function onSkillStart(battle,u){
  if(u.id!=='char_143_ghost'&&/(?:技能结束后|持续时间结束后).*?(?:晕眩|眩晕)/s.test(skillText)&&Number(skillBBValue.stun)>0)applyStatus(u,'stun',Number(skillBBValue.stun),{source:u.uid,resistible:false});
  if(u.id==='char_4026_vulpis'&&idx===2&&u.vulpisKilled){applyStatus(u,'camouflage',1e9,{source:u.uid,resistible:false});u.vulpisKilled=false;}
  if(u.floatUnits){const elapsed=Math.max(0,battle.s.time-(u.floatStartedAt??battle.s.time));if(u.floatOverdrive&&elapsed>0)applyStatus(u,'stun',elapsed,{source:u.uid,resistible:false});u.floatUnits=0;u.floatTarget=null;u.floatStartedAt=null;u.floatOverdrive=false;}
+ if(u.id==='char_1038_whitw2'){u.whitwFloaters=[];u.whitwFloatSkill=null;u.whitwFloatSkillCount=null;u.whitwEyeCount=0;}
  if(u.damageProtection){
   const protection=u.damageProtection;u.damageProtection=null;
   if(protection.buffer>0){
@@ -10328,6 +10355,45 @@ function onOperatorExit(battle,u,reason){
 
 // 召唤物类型 → token id 的唯一映射（`native-session` 也用它取 token 的部署上限）。
 const TOKEN_IDS={'skadi2-seaborn':'token_10017_skadi2_dedant','silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
+function whitwTargetable(e){return e.hp>0&&!e.hidden&&(!e.invisible||e.revealed||e.block!=null)&&!e.invulnerable&&!e.untargetable&&!permissions(e).sleeping;}
+function whitwNonmoving(e){return e.movingThisFrame!==true;}
+// 荒芜拉普兰德 S1/S2 的普通御械术师浮游单元：每枚单独索敌、独立累计同目标伤害，
+// 使用标准驭械术师法术弹道。S3 狼头是独立的自由飞行实体；PRTS 说明抵达目标后的攻击行为同普通浮游单元。
+function tickWhitwFloaters(battle,dt){
+ const now=battle?.s?.time??0;
+ for(const owner of battle?.s?.units||[]){
+  if(owner.id!=='char_1038_whitw2'||!owner.deployed||owner.hp<=0||!battle.skillActive(owner))continue;
+  const skillIndex=owner.source?.skillIndex??owner.skillIndex??battle.profile(owner).skillIndex;
+  if(skillIndex!==0&&skillIndex!==1)continue;
+  const skillCount=owner.skillCount??0;
+  if(owner.whitwFloatSkillCount!==skillCount){owner.whitwFloatSkillCount=skillCount;owner.whitwFloatSkill=skillIndex;owner.whitwFloaters=[];}
+  owner.whitwFloatSkill=skillIndex;
+  owner.whitwFloaters??=[];
+  const count=Math.max(0,Math.trunc(Number(owner.floatUnits)||0));
+  while(owner.whitwFloaters.length<count)owner.whitwFloaters.push({index:owner.whitwFloaters.length,targetUid:null,damageTarget:null,damageScale:0,nextAttackAt:now});
+  owner.whitwFloaters.length=count;
+  const profile=battle.profile(owner),trait=branchTrait(profile).values,skill=profile.skill,bb=blackboard(skill?.blackboard);
+  const stats=battle.stats(owner),interval=attackTiming(Math.max(.1,Number(stats.baseAttackTime)||1.3),Number(stats.attackSpeed)||100).seconds;
+  const validTarget=e=>whitwTargetable(e)&&(skillIndex!==0||whitwNonmoving(e));
+  const candidates=skillIndex===0?(battle.s.enemies||[]).filter(validTarget):battle.targets(owner).filter(validTarget);
+  for(const floater of owner.whitwFloaters){
+   let target=(battle.s.enemies||[]).find(e=>e.uid===floater.targetUid&&validTarget(e));
+   if(!target){
+    floater.targetUid=null;
+    if(candidates.length){const pick=Math.min(candidates.length-1,Math.floor(Math.max(0,battle.economy.random())*candidates.length));target=candidates[pick];floater.targetUid=target.uid;}
+   }
+   if(!target||now+1e-9<floater.nextAttackAt)continue;
+   floater.nextAttackAt=now+interval;
+   const targetChanged=floater.damageTarget!==target.uid;
+   floater.damageScale=targetChanged?(Number(trait.init_atk_scale)||.2):Math.min(Number(trait.max_atk_scale)||1.1,(Number(floater.damageScale)||0)+(Number(trait.delta_atk_scale)||.15));
+   floater.damageTarget=target.uid;
+   const projectile={owner:owner.uid,target:target.uid,x:owner.x,y:owner.y,amount:stats.atk*floater.damageScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'funnel',antiAir:true,ownerDeployment:owner.deployAt,skill:true,whitwFloatIndex:floater.index};
+   if(skillIndex===1){projectile.whitwFearProb=Math.max(0,Math.min(1,Number(bb['attack@prob'])||0));projectile.whitwFear=Number(bb['attack@fear'])||1;}
+   battle.s.projectiles.push(projectile);
+   battle.emit('strike',{uid:owner.uid,x:owner.x,y:owner.y,targetX:target.x,targetY:target.y,branch:'funnel',style:'single',ranged:true,hit:0,type:'arts'});
+  }
+ }
+}
 // 荒芜拉普兰德「终幕·浩劫」的特种浮游单元（自由飞行实体，走 battle.s.whitwEyes）。
 // 注意：它和凛御银灰待部署区里的「风雪之眼」不是同一种东西——后者本期不实现（见 onOperatorDeploy 的注释）。
 // 完整流程见 PRTS：散开 1.3s（初速0.1/加速1.9/上限2.0）→ 索敌飞向（初速2.0/加速1.0/上限4.0/转向1/6每帧）
@@ -10373,10 +10439,11 @@ function whitwEyeTarget(battle,eye,owner){
  function whitwEyeOptions(u){return {count:u.whitwEyeCount||0,scatter:u.whitwEyeScatter??1,radius:u.whitwEyeRadius??.9,moveSlow:u.whitwEyeSlow??.3,magicScale:u.whitwEyeMagic??1,atkTimes:u.whitwEyeTimes??1,fear:u.whitwEyeFear??2};}
 function tickWhitwEyes(battle,dt){
  const eyes=battle?.s?.whitwEyes;
- const unit=(battle?.s?.units||[]).find(u=>u.id==='char_1038_whitw2'&&u.deployed&&u.hp>0&&battle.skillActive(u));
+ const unit=(battle?.s?.units||[]).find(u=>u.id==='char_1038_whitw2'&&u.deployed&&u.hp>0&&battle.skillActive(u)&&(u.source?.skillIndex??u.skillIndex??battle.profile(u).skillIndex)===2);
  if(unit){
   const live=(eyes||[]).filter(e=>e.ownerUid===unit.uid&&e.skillCount===(unit.skillCount??0));
-  if(!live.length)spawnWhitwEyes(battle,unit,whitwEyeOptions(unit));
+  const missing=Math.max(0,Math.trunc(Number(unit.whitwEyeCount)||0)-live.length);
+  if(missing)spawnWhitwEyes(battle,unit,{...whitwEyeOptions(unit),count:missing});
  }
  if(!eyes?.length)return;
  const now=battle.s.time;
@@ -10593,7 +10660,7 @@ function blockingActors(battle){
  return attackableAllies(battle.s,{includeInvisible:true}).filter(u=>u.canBlock!==false&&(u.kind!=='summon'||u.canBlock));
 }
 
-return {BATTLE_SCHEMA_VERSION,EFFECT_KINDS,ELEMENT_TYPES,emptySettle,ensureBattleShape,migrateBattle,validateBattle,getActor,enemyWineBuffs,operators,alliedActors,enemyActors,enemyOpponents,attackableAllies,lifeKey,chebyshev,activeTalentsOf,operatorSkillConfig,enqueue,drainQueue,commitExit,reviveActor,dealDamage,applyHeal,applyRegen,applyLoss,elementBurstActive,applyElementDamage,addDamageRedirect,queueDelayedDamage,addEffect,tickLogic,revealEnemy,settleEgirSwallow,tickDoll,zoneContains,thorn2AreaContains,effectStatMods,teleportActor,moveActor,canRelocateTo,nearbySpots,projectSpot,dispatch,grantShield,grantGuard,TOKEN_IDS,spawnWhitwEyes,tickWhitwEyes,spawnSummon,summonLifecycle,summonInRange,cathyDeviceValues,tickCathyDevices,newAttackId,blockingActors};
+return {BATTLE_SCHEMA_VERSION,EFFECT_KINDS,ELEMENT_TYPES,emptySettle,ensureBattleShape,migrateBattle,validateBattle,getActor,enemyWineBuffs,operators,alliedActors,enemyActors,enemyOpponents,attackableAllies,lifeKey,chebyshev,activeTalentsOf,operatorSkillConfig,enqueue,drainQueue,commitExit,reviveActor,dealDamage,applyHeal,applyRegen,applyLoss,elementBurstActive,applyElementDamage,addDamageRedirect,queueDelayedDamage,addEffect,tickLogic,revealEnemy,settleEgirSwallow,tickDoll,zoneContains,thorn2AreaContains,effectStatMods,teleportActor,moveActor,canRelocateTo,nearbySpots,projectSpot,dispatch,grantShield,grantGuard,TOKEN_IDS,tickWhitwFloaters,spawnWhitwEyes,tickWhitwEyes,spawnSummon,summonLifecycle,summonInRange,cathyDeviceValues,tickCathyDevices,newAttackId,blockingActors};
 },
 "native-environment.js": function(load) {
 const {dealDamage,alliedActors} = load("native-effects.js");
@@ -12884,7 +12951,7 @@ const {containsTarget} = load("targeting.js");
 const {remainingDistance,compareOperatorTargets,compareEnemyTargets,resolveBlocks,compileRoute,advanceEnemy,skillFlow,combineStat,emitEvent,pruneEvents,scheduleStrikes,dueStrikes,windupSeconds,TENTATIVE_PROJECTILE_SPEED,enemyBehaviorProfile,enemyTargetValid,enemyTargetInRange,enemyShouldHoldPosition,enemySpecialTraitId,enemyBleedingTraitId,ENEMY_MOVEMENT_POLICIES} = load("native-combat.js");
 const {skillWidensRange,rangeGeometry,directionOf} = load("protocol.js");
 const {operatorRegistry,attackModifier,attackPenetration,coinCapFor,coinGainAtSkillStart,grantCoins,spendCoins,moduleCostData,moduleRows,tokenCostFor} = load("native-operator-effects.js");
-const {settleEgirSwallow,tickDoll,enemyOpponents,enemyWineBuffs,ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,elementBurstActive,addEffect,commitExit,reviveActor,tickLogic,effectStatMods,summonLifecycle,tickCathyDevices,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,canRelocateTo,nearbySpots,spawnSummon,grantGuard,chebyshev} = load("native-effects.js");
+const {settleEgirSwallow,tickDoll,enemyOpponents,enemyWineBuffs,ensureBattleShape,migrateBattle,validateBattle,dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,elementBurstActive,addEffect,commitExit,reviveActor,tickLogic,tickWhitwFloaters,effectStatMods,summonLifecycle,tickCathyDevices,dispatch,newAttackId,attackableAllies,getActor,blockingActors,alliedActors,operatorSkillConfig,moveActor,teleportActor,canRelocateTo,nearbySpots,spawnSummon,grantGuard,chebyshev} = load("native-effects.js");
 // 路线寻路时「偏离本路线起点所在行」的每行代价（格）：只求最短格数会让两条出入口路线贴成一条，
 // 0.4 是「愿意多绕不到半格也不换道」的量级（见 NativeBattle.path 的注释与 tests/native-wave-lanes.test.mjs）。
 const LANE_ROW_PENALTY=0.4;
@@ -13100,7 +13167,7 @@ class NativeBattle {
   if(packet.ranged){this.s.projectiles.push(shot);if(packet.returns)u.pendingReturns=(u.pendingReturns||0)+1;}
   else this.impactNativeAttack(u,target,shot);
   if(packet.hit===0&&packet.storedEnergy)for(let n=0;n<packet.storedEnergy;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.baseAmount*Number(packet.energyScale||1),type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'mystic',antiAir:true,ownerDeployment:u.deployAt});
-  if(packet.drone&&packet.hit===0){const trait=branchTrait(this.profile(u)).values;u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;const count=Math.max(1,u.floatUnits||1);for(let n=0;n<count;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.amount*u.droneScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'funnel',antiAir:true,ownerDeployment:u.deployAt});}
+  if(packet.drone&&packet.hit===0&&!(u.id==='char_1038_whitw2'&&this.skillActive(u))){const trait=branchTrait(this.profile(u)).values;u.droneScale=u.droneTarget===target.uid?Math.min(trait.max_atk_scale??1.1,(u.droneScale??.2)+(trait.delta_atk_scale??.15)):(trait.init_atk_scale??.2);u.droneTarget=target.uid;const count=Math.max(1,u.floatUnits||1);for(let n=0;n<count;n++)this.s.projectiles.push({owner:u.uid,target:target.uid,x:u.x,y:u.y,amount:packet.amount*u.droneScale,type:'arts',speed:TENTATIVE_PROJECTILE_SPEED,style:'single',branch:'funnel',antiAir:true,ownerDeployment:u.deployAt});}
  }
  impactNativeAttack(u,target,packet){
   const p=this.profile(u);if(p.charId==='char_1047_halo2'&&packet.skill)packet.style='chain';const trait=branchTrait(p).values,eligible=e=>e.hp>0&&!e.invulnerable&&!permissions(e).sleeping&&(packet.antiAir||!e.flying||e.uid===target.uid);
@@ -13111,6 +13178,7 @@ class NativeBattle {
   const splash=packet.style==='splash'||packet.style==='aftershock'||packet.style==='hammer'||(packet.style==='fortress'&&target.block!==u.uid);
   const victims=splash?this.s.enemies.filter(e=>eligible(e)&&Math.hypot(e.x-target.x,e.y-target.y)<=packet.radius):[target];
   for(const e of victims){const scale=packet.style==='hammer'&&e.uid!==target.uid?(trait['attack@atk_scale_2']??.5):1;this.hit(u,e,packet.amount*scale,packet.type,{skill:packet.skill});}
+  if(packet.whitwFearProb>0&&target.hp>0&&this.economy.random()<packet.whitwFearProb)applyStatus(target,'fear',packet.whitwFear||1,{source:u.uid,resistible:false});
   if(packet.style==='aftershock')scheduleStrikes(this.s,1,{owner:u.uid,effectOnly:true,x:target.x,y:target.y,radius:packet.radius,type:packet.type,delay:2/30});
   if(packet.style==='aftershock')for(const e of victims)if(e.hp>0)scheduleStrikes(this.s,1,{owner:u.uid,target:e.uid,amount:packet.amount*(trait['attack@append_atk_scale']??.5),type:packet.type,skill:packet.skill,aftershock:true,delay:2/30});
   this.emit('impact',{x:target.x,y:target.y,radius:splash?packet.radius||0:0,style:packet.style,type:packet.type});
@@ -13748,7 +13816,7 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
    if(landed){u.raidBuffUntil=this.s.time+bondValue(this.params('raidShip'),'no_attack_duration',10);u.raidIdleSince=this.s.time;u.lastAttack=this.s.time;this.event(u,'deploy');dispatch(this,'deploy',{target:u,raid:true});this.emit('bond-raid',{uid:u.uid,x:u.x,y:u.y,targetUid:enemy.uid});}
   }
   step(){
-  if(this.s.finished)return;if(this.s.settle.fault)throw Error('战斗结算异常');if(!this.s.settle.queue.length){this.s.settle.byId={};this.s.settle.consumed=[];}const dt=1/FPS;this.s.frame++;this.s.time=this.s.frame/FPS;while(this.s.queue.length&&this.s.queue[0].at<=this.s.time)this.spawn(this.s.queue.shift());this.refreshEnemyCostEffects();this.tickCost(dt);
+  if(this.s.finished)return;if(this.s.settle.fault)throw Error('战斗结算异常');if(!this.s.settle.queue.length){this.s.settle.byId={};this.s.settle.consumed=[];}const dt=1/FPS;this.s.frame++;this.s.time=this.s.frame/FPS;while(this.s.queue.length&&this.s.queue[0].at<=this.s.time)this.spawn(this.s.queue.shift());const enemyFrameStarts=new Map(this.s.enemies.map(e=>[e.uid,{x:e.x,y:e.y}]));this.refreshEnemyCostEffects();this.tickCost(dt);
   for(const e of this.s.enemies){tickStatuses(e,dt);this.tickEnemyRevive(e);tickEnemyForm(this,e);tickEnemySkills(this,e,dt);tickEnemyTraits(this,e,dt);if(e.palsyCharges>0&&e.statusResistance>0&&this.s.time>=(e.palsyDecayAt||0)){e.palsyCharges--;e.palsyDecayAt=this.s.time+5;}if(e.artsWeak?.until<this.s.time)e.artsWeak=null;if(e.hp>0&&e.regen>0)e.hp=Math.min(e.maxHp,e.hp+e.regen*dt);if(e.hp>0&&!e.lowHpTriggered&&e.lowHpRatio>0&&e.hp/e.maxHp<=e.lowHpRatio){e.lowHpTriggered=true;if(e.lowHpAttackMultiplier>0)e.atk=e.baseAtk*e.lowHpAttackMultiplier;if(e.lowHpMoveMultiplier>0)e.speed=e.baseSpeed*e.lowHpMoveMultiplier;if(e.lowHpUnblockTime>0){e.unblockable=true;e.unblockableUntil=this.s.time+e.lowHpUnblockTime;}this.emit('enemy-phase',{uid:e.uid,x:e.x,y:e.y,phase:'low-hp'});}if(e.unblockableUntil!=null&&this.s.time>=e.unblockableUntil)e.unblockable=false;}tickMinerEngagements(this);tickMiners(this,dt);tickEnemyNeurotoxin(this);tickDeepWater(this);tickSandStorm(this);tickTerrainEffects(this);tickEnemyTransport(this);this.refreshEnemyAuras();this.tickEnemyDeathEye();this.tickEnemyInvisibleShield();this.flushEnemySpawns();
   for(const u of this.s.units){
    tickDoll(this,u);
@@ -13801,7 +13869,7 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
   tickEnemyParasites(this);
   for(const e of this.s.enemies)tickPompeiiExplosion(this,e,dt);
   for(const e of this.s.enemies)tickEnemyLancer(this,e);
-  for(const e of this.s.enemies){if(e.hp<=0||e.trainingDummy||e.carriedBy!=null)continue;tickEnemyForm(this,e);this.ensureEnemySelfField(e);tickEnemySkills(this,e,0);let control=permissions(e);const alive=attackableAllies(this.s,{includeInvisible:true});
+  for(const e of this.s.enemies){e.movingThisFrame=false;if(e.hp<=0||e.trainingDummy||e.carriedBy!=null)continue;tickEnemyForm(this,e);this.ensureEnemySelfField(e);tickEnemySkills(this,e,0);let control=permissions(e);const alive=attackableAllies(this.s,{includeInvisible:true});
    if(Number(e.burstUntil)>0&&this.s.time>=e.burstUntil)e.burstUntil=0;if(e.invisibleRecoverAt!=null&&this.s.time>=e.invisibleRecoverAt&&!e.action){e.formInvisible=true;e.invisible=true;e.invisibleRecoverAt=null;}
    if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.SCHEDULED_STOP){if(Number(e.stanceUntil)>0&&this.s.time>=e.stanceUntil)e.stanceUntil=0;if(!e.stanceUntil&&e.stanceInterval>0&&e.stanceDuration>0&&this.s.time>=e.nextStanceAt){e.stanceUntil=this.s.time+e.stanceDuration;e.nextStanceAt=this.s.time+e.stanceInterval;this.emit('enemy-stance',{uid:e.uid,x:e.x,y:e.y,until:e.stanceUntil});}}
    syncEnemyConcealMarker(e);
@@ -13809,10 +13877,12 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
    if(e.palsyCharges>0&&e.action&&(e.action.left<=1||this.s.time-(e.action.startedAt??this.s.time)>=2)){e.palsyCharges--;cancelEnemyCast(this,e);e.action=null;applyStatus(e,'tremble',.5,{source:'element-neural',resistible:false});control=permissions(e);}
    if((!control.attack||e.hidden||(e.action?.special?.index!=null&&(!control.skill||control.silenced)))&&e.action){cancelEnemyCast(this,e);e.action=null;}if(e.action&&--e.action.left<=0){const action=e.action,u=getActor(this.s,action.target);e.action=null;if(u&&u.hp>0||(action.targets||[]).some(id=>getActor(this.s,id)?.hp>0)){const special=action.special;if(special?.prefab==='DeathEye'){this.startEnemyDeathEye(e,u);}else{releaseEnemyAttack(this,e,action);if(special?.polluted){this.emit('enemy-skill',{uid:e.uid,x:u.x,y:u.y,skill:'PollutedRangedAtk',targetUid:u.uid});}}if(special){if(special.index!=null&&special.prefab!=='DeathEye'&&!e.enemyCast?.multiAttack)endEnemySkill(this,e);if(e.specialSkill?.spCost>0)e.skillAttackCount=0;e.nextSkillAt=this.s.time+(Number(e.specialSkill?.cooldown)>0?Number(e.specialSkill.cooldown):Infinity);e.firstAttackUsed=true;}e.lastAttackAt=this.s.time;if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE&&e.burstShots>0){e.burstFired=(e.burstFired||0)+1;if(e.burstFired>=e.burstShots){e.burstFired=0;e.burstUntil=this.s.time+(e.burstCooldown||0);}}}else if(action.special?.index!=null)cancelEnemyCast(this,e,{lostTarget:true});enemyTraitAfterAttack(this,e);}
    tickEnemyAttackContinuity(this,e,target);const special=control.skill&&!control.silenced?this.enemySpecialReady(e,target):null,specialOnly=Boolean(e.specialSkill?.prefab==='CrossAttack'&&e.range<=0),meleeScale=e.block===target?.uid&&e.meleeAttackScale>0?e.meleeAttackScale:1,preparedSpecial=special&&!special.polluted&&meleeScale!==1?{...special,scale:special.scale*meleeScale}:special;if(e.hp>0&&target&&e.canAttack&&control.attack&&!e.enemyCast&&!e.action&&!e.attackCooldown&&!Number(e.burstUntil)&&(!specialOnly||special)){if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE&&e.burstTarget!==target.uid){e.burstTarget=target.uid;e.burstFired=0;}enemyTraitBeforeAttack(this,e);const t=this.enemyAttackTiming(e);e.attackCooldown=t.frames;if(special?.index!=null)beginEnemySkill(this,e,e.enemySkills[special.index]);e.action={startedAt:this.s.time,left:t.windupFrames,target:target.uid,targetDeployGen:target.deployGen,ranged:e.ranged&&e.block!==target.uid,targets:attackTargets.slice(0,preparedSpecial?.targets??enemyAttackTargetCount(e)).map(t=>t.uid),special:preparedSpecial,scale:meleeScale,attackId:newAttackId(this)};}
-   const hold=e.formHold||!!(e.enemyCast?.holdsPosition||e.enemyCast?.victims||e.enemyCast?.spawn||e.enemyCast?.channel||e.enemyCast?.charge)||enemyShouldHoldPosition(e,{target:specialOnly&&!special?null:target,now:this.s.time}),beforeX=e.x,beforeY=e.y,beforeCmd=e.cmd,beforeHidden=e.hidden;const shiftMove=advanceEnemyShift(this,e,dt),fearMove=shiftMove??advanceEnemyFear(this,e,dt);let escaped=fearMove??advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),hold);paintDominion(this,e);enemyFacingAfterMove(this,e,beforeX);const progressed=e.cmd!==beforeCmd||Math.hypot(e.x-beforeX,e.y-beforeY)>1e-7||e.hidden!==beforeHidden;if(progressed){e.lastProgressAt=this.s.time;e.stallTime=0;}else if(!hold&&!e.block&&e.speed>0&&permissions(e).move&&e.route?.[e.cmd]?.kind==='move'){e.stallTime=(e.stallTime||0)+dt;if(e.stallTime>=(e.stallTimeout||2)){e.action=null;e.stanceUntil=0;e.burstUntil=0;e.stallTime=0;this.emit('enemy-recover',{uid:e.uid,x:e.x,y:e.y,reason:'movement-stall'});escaped=advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),false);}}
+   const hold=e.formHold||!!(e.enemyCast?.holdsPosition||e.enemyCast?.victims||e.enemyCast?.spawn||e.enemyCast?.channel||e.enemyCast?.charge)||enemyShouldHoldPosition(e,{target:specialOnly&&!special?null:target,now:this.s.time}),beforeX=e.x,beforeY=e.y,beforeCmd=e.cmd,beforeHidden=e.hidden;const shiftMove=advanceEnemyShift(this,e,dt),fearMove=shiftMove??advanceEnemyFear(this,e,dt);let escaped=fearMove??advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),hold);paintDominion(this,e);enemyFacingAfterMove(this,e,beforeX);const progressed=e.cmd!==beforeCmd||Math.hypot(e.x-beforeX,e.y-beforeY)>1e-7||e.hidden!==beforeHidden;if(progressed){e.lastProgressAt=this.s.time;e.stallTime=0;}else if(!hold&&!e.block&&e.speed>0&&permissions(e).move&&e.route?.[e.cmd]?.kind==='move'){e.stallTime=(e.stallTime||0)+dt;if(e.stallTime>=(e.stallTimeout||2)){e.action=null;e.stanceUntil=0;e.burstUntil=0;e.stallTime=0;this.emit('enemy-recover',{uid:e.uid,x:e.x,y:e.y,reason:'movement-stall'});escaped=advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),false);}}e.movingThisFrame=e.movingThisFrame||Math.hypot(e.x-beforeX,e.y-beforeY)>1e-7;
    if(escaped){this.s.leaks+=e.leak;e.escaped=true;if(this.s.finalBossId){this.s.timePenalty=(this.s.timePenalty||0)+1;this.s.limit=Math.max(this.s.time,this.s.limit-1);this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak,timePenalty:1});this.s.banner={text:'漏怪 −1 秒',life:1.4};commitExit(this,{target:e,reason:'leak'});}else{commitExit(this,{target:e,reason:'leak'});this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak});this.s.banner={text:'漏怪 −'+e.leak,life:1.4};}}
   }
   syncPassengerPositions(this);
+  for(const e of this.s.enemies){const start=enemyFrameStarts.get(e.uid);e.movingThisFrame=e.movingThisFrame||!!(start&&Math.hypot(e.x-start.x,e.y-start.y)>1e-7);}
+  tickWhitwFloaters(this,dt);
   for(const packet of dueStrikes(this.s))this.deliverStrike(packet);
   this.advanceNativeProjectiles(dt);tickEnemyProjectiles(this);
   if(this.s.banner){this.s.banner.life-=dt;if(this.s.banner.life<=0)this.s.banner=null;}
