@@ -1799,7 +1799,8 @@ const BRANCH_POLICIES={
  loopshooter:{returnProjectile:true,pending:['回旋轨迹与速度校准']},stalker:{style:'all',evasion:.5,taunt:-1},geek:{antiAir:true,hpDrain:.01},
  bearer:{blockZeroDuringSkill:true},agent:{antiAir:true},shotprotector:{antiAir:true},hookmaster:{antiAir:true,highland:true,pending:['位移力度与碰撞']},
  tactician:{antiAir:true,pending:['战术点与援军']},summoner:{damageType:'arts',antiAir:true,pending:['召唤物生命周期']},soulcaster:{damageType:'arts',antiAir:true,pending:['击杀召唤与召唤物索敌']},
- duelist:{spRequiresBlock:true,pending:['模组解除阻回的例外']},dollkeeper:{pending:['各模组替身专属例外']},skywalker:{pending:['起飞与空中阻挡']},skybreaker:{antiAir:true,airOnlyIdle:true,splashDuringSkill:1.1,pending:['起飞／降落']},
+ // PRTS 巡空者特性：起飞后可阻挡飞行敌人；阻挡容量仍使用干员自身阻挡数。
+ duelist:{spRequiresBlock:true,pending:['模组解除阻回的例外']},dollkeeper:{pending:['各模组替身专属例外']},skywalker:{blockFlyingWhileAirborne:true,pending:[]},skybreaker:{antiAir:true,airOnlyIdle:true,splashDuringSkill:1.1,pending:['起飞／降落']},
  supportiveranger:{antiAir:true,triggerEffect:true,pending:['触发型效果的逐条登记']},
  ritualist:{damageType:'arts',antiAir:true,pending:['元素损伤']},underminer:{damageType:'arts',antiAir:true},
  merchant:{},charger:{pending:['击杀回费与撤退费用返还']},traper:{antiAir:true,pending:['陷阱单位与部署条件']},alchemist:{pending:[]},counsellor:{pending:['待部署区支援']},mercenary:{pending:['部署费用强化']}
@@ -7929,25 +7930,25 @@ function compareEnemyTargets(a,b){
  return (b.tauntLevel||b.taunt||0)-(a.tauntLevel||a.taunt||0) || (b.deployAt||0)-(a.deployAt||0) || b.uid-a.uid;
 }
 function enemyBlockCost(e){return Math.max(1,e.blockCost||1);}
-function canStayBlocked(e,u,used,cap){
- if(!u||!e||e.hp<=0||e.flying||e.hidden||e.untargetable||e.unblockable)return false;
+function canStayBlocked(e,u,used,cap,canBlockEnemy=(_unit,enemy)=>!enemy.flying){
+ if(!u||!e||e.hp<=0||!canBlockEnemy(u,e)||e.hidden||e.untargetable||e.unblockable)return false;
  if(!permissions(e).beBlocked||!permissions(u).block||!u.deployed||u.hp<=0)return false;
  if(Math.hypot(u.x-e.x,u.y-e.y)>=.72)return false;
  return used+enemyBlockCost(e)<=cap;
 }
-function resolveBlocks(units,enemies,capOf){
+function resolveBlocks(units,enemies,capOf,canBlockEnemy=(_unit,enemy)=>!enemy.flying){
  const alive=units.filter(u=>u.hp>0&&u.deployed),used=new Map();
  for(const u of alive)used.set(u.uid,0);
  for(const e of enemies){
   if(e.hp<=0||e.trainingDummy){e.block=null;continue;}
-  const u=alive.find(x=>x.uid===e.block),cap=u?capOf(u):0,need=enemyBlockCost(e);
-  if(!canStayBlocked(e,u,used.get(u?.uid)||0,cap))e.block=null;
+  const u=alive.find(x=>x.uid===e.block),cap=u?capOf(u,e):0,need=enemyBlockCost(e);
+  if(!canStayBlocked(e,u,used.get(u?.uid)||0,cap,canBlockEnemy))e.block=null;
   else used.set(u.uid,(used.get(u.uid)||0)+need);
  }
- const seekers=enemies.filter(e=>e.hp>0&&!e.trainingDummy&&e.block==null&&!e.flying&&!e.hidden&&!e.untargetable&&!e.unblockable&&permissions(e).beBlocked).sort((a,b)=>a.uid-b.uid);
+ const seekers=enemies.filter(e=>e.hp>0&&!e.trainingDummy&&e.block==null&&!e.hidden&&!e.untargetable&&!e.unblockable&&permissions(e).beBlocked&&alive.some(u=>permissions(u).block&&canBlockEnemy(u,e))).sort((a,b)=>a.uid-b.uid);
  for(const e of seekers){
   const need=enemyBlockCost(e);
-  const u=alive.filter(x=>permissions(x).block&&Math.hypot(x.x-e.x,x.y-e.y)<.72&&(used.get(x.uid)||0)+need<=capOf(x)).sort((a,b)=>a.uid-b.uid)[0];
+  const u=alive.filter(x=>permissions(x).block&&canBlockEnemy(x,e)&&Math.hypot(x.x-e.x,x.y-e.y)<.72&&(used.get(x.uid)||0)+need<=capOf(x,e)).sort((a,b)=>a.uid-b.uid)[0];
   if(u){e.block=u.uid;used.set(u.uid,(used.get(u.uid)||0)+need);}
  }
 }
@@ -13867,6 +13868,11 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
    // 高台上的干员不阻挡：推击手／钩索师能部署到高台（allowsHighlandPlacement），站上去就只打不挡。
    if(this.map.grid[u.y]?.[u.x]?.heightType==='HIGHLAND')return 0;
    return u.kind==='summon'?u.blockCnt||0:this.stats(u).blockCnt||0;
+  },(u,e)=>{
+   // PRTS 巡空者：起飞后能阻挡空中敌人。飞行状态会释放地面阻挡；
+   // 只有分支明确带这项特性的干员才可阻挡空中敌人。
+   if(u.flying)return u.kind!=='summon'&&!!e.flying&&!!this.behavior(u).blockFlyingWhileAirborne;
+   return !e.flying;
   });
   tickEnemyParasites(this);
   for(const e of this.s.enemies)tickPompeiiExplosion(this,e,dt);

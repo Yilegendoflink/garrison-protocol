@@ -1051,6 +1051,14 @@ test('蒂比技能起飞并在九秒未受击后闪避一次攻击',()=>{
  const {b}=openBattle({chessId:'chess_char_2_13_b',skillIndex:0});deployNow(b);const u=b.s.units[0],e=enemy(b,{atk:100,damageType:'physical'});u.sp=b.spCost(u);b.activate(u);assert.equal(u.flying,true);b.s.time=9;const hp=u.hp;b.hurt(u,e);assert.equal(u.hp,hp);b.hurt(u,e);assert.ok(u.hp<hp);
 });
 
+test('蒂比起飞后释放地面阻挡，只阻挡两名飞行敌人',()=>{
+ const {b}=openBattle({chessId:'chess_char_2_13_b',skillIndex:0});deployNow(b);const u=b.s.units[0];
+ const ground=enemy(b,{x:u.x,y:u.y,hp:100000}),air=[0,1,2].map(()=>enemy(b,{x:u.x,y:u.y,hp:100000,flying:true}));
+ b.step();assert.equal(ground.block,u.uid);assert.ok(air.every(e=>e.block==null));
+ u.sp=b.spCost(u);b.activate(u);assert.equal(u.flying,true);b.step();
+ assert.equal(ground.block,null);assert.deepEqual(air.map(e=>e.block),[u.uid,u.uid,null]);
+});
+
 test('灰毫 S2 技能期间清零阻挡并保持远程攻击',()=>{
  const {b}=openBattle({chessId:'chess_char_2_18_b',skillIndex:1});deployNow(b);const u=b.s.units[0];u.sp=b.spCost(u);b.activate(u);assert.equal(b.stats(u).blockCnt,0);assert.equal(b.behavior(u).style,'fortress');
 });

@@ -405,25 +405,25 @@ export function compareEnemyTargets(a,b){
  return (b.tauntLevel||b.taunt||0)-(a.tauntLevel||a.taunt||0) || (b.deployAt||0)-(a.deployAt||0) || b.uid-a.uid;
 }
 export function enemyBlockCost(e){return Math.max(1,e.blockCost||1);}
-export function canStayBlocked(e,u,used,cap){
- if(!u||!e||e.hp<=0||e.flying||e.hidden||e.untargetable||e.unblockable)return false;
+export function canStayBlocked(e,u,used,cap,canBlockEnemy=(_unit,enemy)=>!enemy.flying){
+ if(!u||!e||e.hp<=0||!canBlockEnemy(u,e)||e.hidden||e.untargetable||e.unblockable)return false;
  if(!permissions(e).beBlocked||!permissions(u).block||!u.deployed||u.hp<=0)return false;
  if(Math.hypot(u.x-e.x,u.y-e.y)>=.72)return false;
  return used+enemyBlockCost(e)<=cap;
 }
-export function resolveBlocks(units,enemies,capOf){
+export function resolveBlocks(units,enemies,capOf,canBlockEnemy=(_unit,enemy)=>!enemy.flying){
  const alive=units.filter(u=>u.hp>0&&u.deployed),used=new Map();
  for(const u of alive)used.set(u.uid,0);
  for(const e of enemies){
   if(e.hp<=0||e.trainingDummy){e.block=null;continue;}
-  const u=alive.find(x=>x.uid===e.block),cap=u?capOf(u):0,need=enemyBlockCost(e);
-  if(!canStayBlocked(e,u,used.get(u?.uid)||0,cap))e.block=null;
+  const u=alive.find(x=>x.uid===e.block),cap=u?capOf(u,e):0,need=enemyBlockCost(e);
+  if(!canStayBlocked(e,u,used.get(u?.uid)||0,cap,canBlockEnemy))e.block=null;
   else used.set(u.uid,(used.get(u.uid)||0)+need);
  }
- const seekers=enemies.filter(e=>e.hp>0&&!e.trainingDummy&&e.block==null&&!e.flying&&!e.hidden&&!e.untargetable&&!e.unblockable&&permissions(e).beBlocked).sort((a,b)=>a.uid-b.uid);
+ const seekers=enemies.filter(e=>e.hp>0&&!e.trainingDummy&&e.block==null&&!e.hidden&&!e.untargetable&&!e.unblockable&&permissions(e).beBlocked&&alive.some(u=>permissions(u).block&&canBlockEnemy(u,e))).sort((a,b)=>a.uid-b.uid);
  for(const e of seekers){
   const need=enemyBlockCost(e);
-  const u=alive.filter(x=>permissions(x).block&&Math.hypot(x.x-e.x,x.y-e.y)<.72&&(used.get(x.uid)||0)+need<=capOf(x)).sort((a,b)=>a.uid-b.uid)[0];
+  const u=alive.filter(x=>permissions(x).block&&canBlockEnemy(x,e)&&Math.hypot(x.x-e.x,x.y-e.y)<.72&&(used.get(x.uid)||0)+need<=capOf(x,e)).sort((a,b)=>a.uid-b.uid)[0];
   if(u){e.block=u.uid;used.set(u.uid,(used.get(u.uid)||0)+need);}
  }
 }

@@ -2961,19 +2961,15 @@
       ],
       "wikiDetailSectionFound": true,
       "runtime": {
-        "pending": [
-          "起飞与空中阻挡"
-        ],
+        "blockFlyingWhileAirborne": true,
         "kind": "damage",
         "style": "single",
         "damageType": "physical",
         "antiAir": false,
         "attack": true,
-        "status": "partial"
+        "status": "base-implemented"
       },
-      "pending": [
-        "起飞与空中阻挡"
-      ],
+      "pending": [],
       "traitVariants": [
         {
           "charId": "char_4191_tippi",

@@ -940,6 +940,11 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
    // 高台上的干员不阻挡：推击手／钩索师能部署到高台（allowsHighlandPlacement），站上去就只打不挡。
    if(this.map.grid[u.y]?.[u.x]?.heightType==='HIGHLAND')return 0;
    return u.kind==='summon'?u.blockCnt||0:this.stats(u).blockCnt||0;
+  },(u,e)=>{
+   // PRTS 巡空者：起飞后能阻挡空中敌人。飞行状态会释放地面阻挡；
+   // 只有分支明确带这项特性的干员才可阻挡空中敌人。
+   if(u.flying)return u.kind!=='summon'&&!!e.flying&&!!this.behavior(u).blockFlyingWhileAirborne;
+   return !e.flying;
   });
   tickEnemyParasites(this);
   for(const e of this.s.enemies)tickPompeiiExplosion(this,e,dt);
