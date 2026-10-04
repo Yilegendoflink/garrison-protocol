@@ -13812,12 +13812,10 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
    if(this.s.time-lastAction<10&&!(cost>0&&u.sp>=cost))return;
    if(hasTarget)return;
    const candidates=this.s.enemies.filter(e=>e.hp>0&&!e.hidden&&!e.flying);if(!candidates.length)return;const maxLeak=Math.max(...candidates.map(e=>Number(e.leak)||0)),priority=candidates.filter(e=>(Number(e.leak)||0)===maxLeak),enemy=priority[Math.floor(this.economy.random()*priority.length)];
-   // 落点在敌人周围找：先四向、再逐圈外扩（nearbySpots），一直找到棋盘边界。
-   // 候选格必须「能部署该干员且没被别的干员／占格子的召唤物占了」；只找 3 圈在满编阵型里
-   // 会找不到落点而整个效果静默不触发，所以这里按距离枚举整张棋盘，取最近的那个空位。
+   // PRTS 记载为再部署至地面敌人「周围」；只检查敌人相邻的八格。
+   // 相邻格都不能部署时不触发位移，避免把突袭干员送到远离敌人的空地。
    let landed=false;
-   const reach=Math.max(this.map.rows||1,this.map.cols||1)+1;
-   for(const spot of nearbySpots(enemy,{maxRadius:reach})){
+   for(const spot of nearbySpots(enemy,{maxRadius:1})){
     if(Math.round(u.x)===spot.x&&Math.round(u.y)===spot.y)continue;
     if(!canRelocateTo(this,u,spot.x,spot.y))continue;
     if(!teleportActor(this,u,{...spot,source:u,mode:'raid-redeploy'}))continue;

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
-import {commitExit,dealDamage,dispatch,tickLogic,applyElementDamage,reviveActor,nearbySpots} from '../dist/native-effects.js';
+import {commitExit,dealDamage,dispatch,tickLogic,applyElementDamage,reviveActor,nearbySpots,canRelocateTo} from '../dist/native-effects.js';
 import {applyStatus} from '../dist/status.js';
 import {deployNow,enemy} from './effects-harness.mjs';
 import {NO_BOND_BAN} from './no-bond-ban.mjs';
@@ -104,7 +104,7 @@ test('突袭再部署不与干员／占格子的召唤物重合，四向被占�
  assert.ok(ru.raidBuffUntil>11,'邻格被占也要找得到落点，而不是不落');
  assert.ok(!(ru.x===e.x+1&&ru.y===e.y),'不能压在别的干员身上');
  assert.ok(!(ru.x===e.x-1&&ru.y===e.y),'不能压在占格子的召唤物上');
- assert.ok(Math.max(Math.abs(ru.x-e.x),Math.abs(ru.y-e.y))<=3,`落点要在敌人周围，实际 ${ru.x},${ru.y}`);
+ assert.ok(Math.max(Math.abs(ru.x-e.x),Math.abs(ru.y-e.y))<=1,`突袭应落在敌人相邻格，实际 ${ru.x},${ru.y}`);
 });
 test('突袭闲置位移在真实步进里满 10 秒才触发，并走公共位移链路',()=>{
  const {b}=start(uniqueBond('raidShip',2),{raidShip:50});
@@ -126,25 +126,22 @@ test('突袭位移会再次触发史尔特尔的部署时盟约效果',()=>{
  assert.notDeepEqual({x:ru.x,y:ru.y},from,'突袭应把史尔特尔重新部署到敌人附近');
  assert.equal(b.layers.raidShip,before+8,'重新部署再次触发史尔特尔的部署时效果');
 });
-test('突袭敌人周围全是占位时一路往外找落点，不压在任何人身上',()=>{
+test('突袭只落在敌人相邻格，相邻部署位全占时不跳到远处',()=>{
  const {b}=start(uniqueBond('raidShip',2),{raidShip:50});
  const ru=b.s.units[0],from={x:ru.x,y:ru.y};ru.sp=0;
  const e=enemy(b,{x:ru.x+6,y:ru.y,hp:1e6});
- // 用占格子的召唤物把敌人 3 圈内所有可部署格填满：落点必须找到更外面去
- const blocked=[];
- for(const spot of nearbySpots(e,{maxRadius:3})){
-  const tile=b.map.grid[spot.y]?.[spot.x];
-  if(!tile||tile.buildableType==='NONE'||tile.obstacle)continue;
-  if(spot.x===ru.x&&spot.y===ru.y)continue;
-  blocked.push(spot.x+','+spot.y);
+ // 把敌人周围所有本来可用的相邻格占满。
+ let blocked=0;
+ for(const spot of nearbySpots(e,{maxRadius:1})){
+  if(!canRelocateTo(b,ru,spot.x,spot.y))continue;
+  blocked++;
   b.s.summons.push({uid:b.s.nextId++,id:'probe-summon',kind:'summon',allied:true,canBlock:true,occupiesTile:true,x:spot.x,y:spot.y,hp:100,maxHp:100,deployed:true});
  }
- assert.ok(blocked.length>0,'测试需要先把近处填满');
- for(let i=0;i<12*30;i++)b.step();
- const landed=ru.x+','+ru.y;
- assert.notDeepEqual({x:ru.x,y:ru.y},from,'近处被占满也要找得到落点，而不是不位移');
- assert.ok(!blocked.includes(landed)&&!(ru.x===e.x&&ru.y===e.y),`落点不能在占位/敌人身上，实际 ${landed}`);
- assert.ok(Math.max(Math.abs(ru.x-e.x),Math.abs(ru.y-e.y))>3,`近处满了就该到更外面，实际 ${landed}`);
+ assert.ok(blocked>0,'测试需要先占住至少一个相邻落点');
+ ru.raidIdleSince=0;ru.lastAttack=0;ru.lastSkill=-Infinity;b.s.time=11;
+ b.tickBondIdle(ru,0);
+ assert.deepEqual({x:ru.x,y:ru.y},from,'相邻格没有合法落点时不应跳到远处空地');
+ assert.ok(!b.s.logicLog.some(x=>x.type==='move'&&x.uid===ru.uid&&x.mode==='raid-redeploy'));
 });
 test('卡西米尔部署卫戍识别 onstart，并在重新部署时重复叠层且遵守每场上限',()=>{
  const forbidden=new Set(['char_237_gravel','char_423_blemsh','char_430_fartth','char_1014_nearl2','char_4116_blkkgt']);
