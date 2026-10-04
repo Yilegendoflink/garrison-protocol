@@ -65,6 +65,13 @@ test('卫戍文本：时机标签变成前缀，其余内容标签照常保留',
  assert.equal(/[<>]/.test(garrisonText(rule)), false);
 });
 
+test('锏的基础与进阶卫戍描述分别保留获得时和部署时时机',()=>{
+ const rows=[['garrison_155_a',8,24],['garrison_155_b',16,48]];
+ for(const [id,amount,cap] of rows){
+  assert.equal(garrisonText(NATIVE_DATA.season.garrisonDataDict[id]),`【获得时】自身所属的盟约层数+${amount}\n【部署时】使自身已激活的盟约层数+${amount}（至多${cap}层）`);
+ }
+});
+
 test('构建产物里的展示文本也保留内容标签（策略／敌人／盟约／装备／干员技能）', async () => {
  const fs = await import('node:fs');
  // 策略：data/modes/alliance-lower/catalog.json 与 dist/protocol-data.js 都由 build-protocol 烘焙

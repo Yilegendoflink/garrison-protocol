@@ -703,10 +703,13 @@ function garrisonTimingLabel(rule){
  return GARRISON_TIMING_LABELS[rule?.eventType]||'';
 }
 function garrisonText(rule){
- const when=garrisonTimingLabel(rule);
- // 先把时机标签摘掉（它会变成前面的【…】前缀），再按富文本规则处理剩下的内容标签。
- const raw=String(rule?.garrisonDesc||rule?.description||'').replace(new RegExp(GARRISON_TIMING_TAG.source,'g'),m=>GARRISON_TIMING_TEXT.test(m.slice(1,-1))?'':m);
+ const source=String(rule?.garrisonDesc||rule?.description||''),tags=[...source.matchAll(GARRISON_TIMING_TAG)];
+ const hasTiming=tags.some(m=>GARRISON_TIMING_TEXT.test(m[1]));
+ // 时机标签写在正文对应效果前：保留每一处，避免多段特质被误显示成同一触发时机。
+ const raw=source.replace(new RegExp(GARRISON_TIMING_TAG.source,'g'),(m,tag)=>GARRISON_TIMING_TEXT.test(tag)?`【${tag}】`:m);
  const body=richText(raw).trim();
+ if(hasTiming)return body;
+ const when=garrisonTimingLabel(rule);
  return when?`【${when}】${body}`:body;
 }
 function talentCandidateOpen(candidate,status,potentialRank=0){
