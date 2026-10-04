@@ -7,7 +7,7 @@ import {operatorRegistry,skillConfig,statMods} from '../dist/native-operator-eff
 import {openBattle,deployNow,enemy,byId,steps,reps,blackboard} from './effects-harness.mjs';
 import {dealDamage,applyElementDamage,operatorSkillConfig,tickLogic} from '../dist/native-effects.js';
 import {moveActor} from '../dist/native-effects.js';
-import {applyStatus,effectiveWeight,tickStatuses} from '../dist/status.js';
+import {applyStatus,effectiveWeight,statusAttributeChanges,tickStatuses} from '../dist/status.js';
 
 test('every fixed operator has an adapter entry and every skill resolves a safe config',()=>{
  const registry=operatorRegistry(NATIVE_DATA);
@@ -33,6 +33,16 @@ test('individual skill adapters map namespaced values, status and battle resourc
  const u=byId(b,'char_102_texas'),e=enemy(b,{x:u.x,y:u.y,hp:100000,res:0}),funds=b.s.cost;
  u.sp=b.spCost(u);b.activate(u);
  assert.ok(e.hp<100000);assert.ok(e.statuses.some(s=>s.kind==='stun'));assert.ok(b.s.cost>funds);
+});
+
+test('凛御银灰 S2 单次斩击只施加寒冷，再次受寒冷才冻结',()=>{
+ const {b}=openBattle({chessId:'chess_char_5_14_a',skillIndex:1});deployNow(b);
+ const u=byId(b,'char_1045_svash2'),e=enemy(b,{x:u.x+1,y:u.y,hp:1e6,def:0,res:0});
+ u.sp=b.spCost(u);u.lastSkill=-1e9;b.activate(u);
+ assert.deepEqual(e.statuses.map(s=>s.kind),['cold'],'第一次斩击应只造成寒冷');
+ assert.equal(statusAttributeChanges(e).attackSpeed,-30,'寒冷应降低30攻速');
+ u.sp=b.spCost(u);u.lastSkill=-1e9;b.activate(u);
+ assert.deepEqual(e.statuses.map(s=>s.kind),['frozen'],'持续时间内再次受到寒冷才冻结');
 });
 
 test('安洁莉娜 S1 待机时攻击积攒技力，并自动开启后继续造成伤害',()=>{
