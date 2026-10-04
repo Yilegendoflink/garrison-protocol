@@ -36,11 +36,13 @@ test('static bosses spawn in the reserved 3x2 upper-right area and keep generic 
   assert.equal(boss.formHold,true,bossId+' 自缚站桩');
   assert.equal(boss.unblockable,true,bossId+' 不可阻挡');
   assert.equal(boss.canAttack,false,bossId+' 通用普攻关闭，攻击全部走逐名 tick');
-  assert.deepEqual(boss.hitRect,{length:2,width:3,offsetY:0},bossId+' 右上角 2列×3行占位与攻击范围');
+  assert.deepEqual(boss.hitRect,{length:4.95,width:2.95,offsetY:1},bossId+' 盟约版巨型受击矩形');
+  const range=b.range;b.range=()=>[{x:Math.floor(boss.x)+2,y:Math.round(boss.y)-1}];
+  assert.equal(b.inside({},boss,true),true,bossId+' 应被其大型受击矩形外沿的攻击范围选中');b.range=range;
   assert.equal(boss.spriteScale>2,true,bossId+' 放大表现');
   assert.equal(enemySprite(boss).key,finalBossConfig(NATIVE_DATA,bossId,'mode_single_normal').handbookEnemyId,bossId+' 使用本期图鉴头像映射');
   assert.ok(NATIVE_DATA.assets[enemySprite(boss).key],bossId+' 战斗头像资源存在');
-  const point=finalBossSpawnPoint(g.map,bossId);assert.equal(boss.x,point.x);assert.equal(boss.y,point.y);
+  const point=finalBossSpawnPoint(g.map,boss.id);assert.equal(boss.x,point.x);assert.equal(boss.y,point.y);
   assert.notDeepEqual([boss.x,boss.y],[boss.route[0].x,boss.route[0].y],bossId+' 不应站在红门出生点');
   for(let i=0;i<90;i++)b.step();
   assert.equal(boss.x,point.x);assert.equal(boss.y,point.y);

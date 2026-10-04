@@ -7410,9 +7410,9 @@ const AVAILABLE_FINAL_BOSS_IDS=Object.freeze(['boss_4','boss_5','boss_7']);
 // range 补齐档案缺省的攻击半径（两位 Boss 的攻击都是全场范围，PRTS 攻击半径 99）。
 // spriteScale 只管画布表现。
 const FINAL_BOSS_MECHANICS={
- 'enemy_1521_dslily':{hitRect:{length:2,width:3,offsetY:0},spriteScale:3,static:true,unblockable:true,range:99},
+ 'enemy_1521_dslily':{hitRect:{length:4.95,width:2.95,offsetY:1},spriteScale:3,static:true,unblockable:true,range:99},
  'enemy_2016_csphtm':{spriteScale:2.2},
- 'enemy_9033_acdeer':{hitRect:{length:2,width:3,offsetY:0},spriteScale:3,static:true,unblockable:true,shiftImmune:true,range:99},
+ 'enemy_9033_acdeer':{hitRect:{length:4.95,width:2.95,offsetY:1},spriteScale:3,static:true,unblockable:true,shiftImmune:true,range:99},
 };
 function finalBossMechanics(enemyId){return FINAL_BOSS_MECHANICS[enemyId]||null;}
 function finalBossPlacementArea(map,enemyId){
