@@ -407,8 +407,11 @@ test('profession aura target filters keep Star Ursus armor on defenders only',()
  assert.ok(b.stats(yak).def>b.profile(yak).attributes.def);assert.equal(b.stats(inside).parts.some(p=>p.src==='星熊'),false);
 });
 
-test('古米备用军粮 stores a one-shot heal on the next released attack',()=>{
- const {b}=openBattle([{chessId:'chess_char_1_10_b',skillIndex:0},reps.operators.yak]);deployNow(b);const gummy=b.s.units.find(u=>u.id==='char_196_sunbr'),yak=b.s.units.find(u=>u.id==='char_199_yak');yak.hp=yak.maxHp-200;gummy.sp=b.spCost(gummy);b.activate(gummy);assert.ok(gummy.pendingAttackHeal);const before=yak.hp;const e=enemy(b,{x:gummy.x+1,y:gummy.y,hp:1000,def:0});b.hit(gummy,e,50,'physical');assert.ok(yak.hp>before);assert.equal(gummy.pendingAttackHeal,null);
+test('古米 S1 仅在友方受伤时触发，并用一次单体治疗普攻代替攻击',()=>{
+ const {b}=openBattle({chessId:'chess_char_1_10_b',skillIndex:0});deployNow(b);const gummy=b.s.units[0],e1=enemy(b,{x:gummy.x+1,y:gummy.y,hp:10000,def:0,atk:0,block:gummy.uid}),e2=enemy(b,{x:gummy.x+2,y:gummy.y,hp:10000,def:0,atk:0,block:gummy.uid});gummy.sp=b.spCost(gummy);
+ b.step();assert.equal(gummy.skillCount,0,'没有受伤友方时，敌人不能触发 S1');assert.equal(gummy.pendingAttackHeal,null);gummy.action=null;gummy.attackCooldown=0;
+ gummy.hp-=900;const before=gummy.hp,enemyHp=[e1.hp,e2.hp];b.step();assert.equal(gummy.focusHeal,true);assert.ok(gummy.pendingAttackHeal?.gummyMode);assert.equal(gummy.action?.kind,'heal');assert.deepEqual(gummy.action.targets,[gummy.uid],'古米自身可被选为治疗目标，且一次只选一名友方');
+ for(let i=0;i<120&&gummy.pendingAttackHeal?.gummyMode;i++)b.step();assert.ok(gummy.hp>before,'古米应能自我治疗');assert.deepEqual([e1.hp,e2.hp],enemyHp,'治疗模式不攻击敌人');assert.equal(gummy.pendingAttackHeal,null);assert.equal(gummy.focusHeal,false,'完成一次治疗普攻后恢复通常攻击');
 });
 
 test('古米 S2 烹饪完成后切换为专注治疗',()=>{

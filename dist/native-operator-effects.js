@@ -489,7 +489,10 @@ export function operatorSkillStart(battle,u,ctx){
   // 范围与血量门槛交给消费端（native-battle 的攻击结算）：rangeId 让这次治疗按技能范围选目标，
   // 文案写「不足一半」的要有 50% 血量门槛。
   const below=has(text,/不足一半|不满一半|低于一半/);
-  u.pendingAttackHeal={scale:config.healScale,sourceUid:u.uid,rangeId:profile.skill?.rangeId||null,requiresBelow:below,belowRatio:below?.5:.7};
+  const gummyS1=profile.charId==='char_196_sunbr'&&skillIndex===0;
+  u.pendingAttackHeal={scale:config.healScale,sourceUid:u.uid,rangeId:profile.skill?.rangeId||null,requiresBelow:below,belowRatio:below?.5:.7,...(gummyS1?{gummyMode:true}:{})};
+  // PRTS：古米 S1 触发后切成治疗普攻，完成一次后再恢复攻击。
+  if(gummyS1)u.focusHeal=true;
   suppressDefault=true;
  }
  if(has(text,/下次治疗.*(?:额外)?回复目标最大生命值/)&&Number.isFinite(Number(bb.hp_ratio))){u.pendingHealBonus={ratio:Number(bb.hp_ratio),requiresBelowHalf:has(text,/不满一半|低于一半/)};suppressDefault=true;}
