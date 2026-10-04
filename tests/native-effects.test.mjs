@@ -1116,6 +1116,13 @@ test('缄默德克萨斯三种部署被动分别触发沉默持续伤害、落�
  const {b:b3}=openBattle({chessId:'chess_char_4_16_b',skillIndex:2}),w=b3.s.units[0],e3=enemy(b3,{x:w.x+1,y:w.y,hp:100000});b3.deploy(w);const hp=e3.hp;for(let i=0;i<40;i++)b3.step();assert.ok(e3.hp<hp);
 });
 
+test('缄默德克萨斯 S3 剑雨在技能持续时间结束后停止',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_16_b',skillIndex:2}),u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000});b.deploy(u);const duration=b.profile(u).skill.duration;
+ const skillHits=()=>logOf(b,'damage').filter(row=>row.targetUid===e.uid&&row.cause==='skill').length;
+ steps(b,duration*30);assert.ok(e.hp<100000,'持续时间内应当触发剑雨');assert.ok(Math.abs(b.s.time-duration)<1e-9);const endedHits=skillHits();
+ steps(b,90);assert.equal(skillHits(),endedHits,'持续时间结束后不应继续触发剑雨');
+});
+
 test('灵知 S3 冻结范围目标并在结束爆发，寒冷目标获得脆弱',()=>{
  const {b}=openBattle({chessId:'chess_char_4_13_b',skillIndex:2});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000});u.sp=b.spCost(u);b.activate(u);assert.ok(e.statuses.some(s=>s.kind==='frozen'));for(let i=0;i<2;i++)b.step();assert.ok(e.fragile>1);const hp=e.hp;u.skillLeft=.01;b.step();assert.ok(e.hp<hp);
 });
