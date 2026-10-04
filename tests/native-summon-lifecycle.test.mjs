@@ -4,7 +4,7 @@ import {NATIVE_DATA as data} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {enemy} from './effects-harness.mjs';
 import {NO_BOND_BAN} from './no-bond-ban.mjs';
-import {commitExit, spawnSummon, summonLifecycle} from '../dist/native-effects.js';
+import {commitExit, spawnSummon, summonLifecycle, tickLogic} from '../dist/native-effects.js';
 import {drawDollOverlay} from '../dist/native-fx.js';
 
 // 用户 2026-09-22 报障三项：
@@ -104,6 +104,17 @@ test('浊心斯卡蒂三技能：只对敌人造成真实伤害，友方与海�
   assert.equal(token.hp, before.token, '自己的海嗣不受伤');
   const lost = before.owner - owner.hp;
   assert.ok(Math.abs(lost - owner.maxHp * 0.05 * 3) < owner.maxHp * 0.02, `自身 3 秒约流失 15% 最大生命（实际 ${(lost / owner.maxHp * 100).toFixed(1)}%），没有第一秒双扣`);
+});
+
+test('浊心斯卡蒂 S3 的伤害范围覆盖最终 Boss 的大型受击矩形',()=>{
+  const {b,owner}=layout('chess_char_6_04_a');
+  b.s.enemies=[];owner.x=4;owner.y=4;
+  const cells=b.range(owner,true),edge=Math.max(...cells.map(c=>c.x)),row=cells.find(c=>c.x===edge).y;
+  const boss=enemy(b,{hp:1e6,x:edge+.7,y:row,hitRect:{length:2,width:3,offsetY:0}});
+  assert.equal(b.inside(owner,boss,true),true,'最终 Boss 的受击矩形与红蒂 S3 范围有重叠');
+  owner.sp=999;owner.lastSkill=-Infinity;b.activate(owner);
+  const hp=boss.hp;b.s.time=1;tickLogic(b,1);
+  assert.ok(boss.hp<hp,'受击矩形进入伤害范围时，Boss 应受到红蒂 S3 的真实伤害');
 });
 
 test('傀儡师替身：头像上要盖动态紫色特效（dollForm 期间才画）', () => {

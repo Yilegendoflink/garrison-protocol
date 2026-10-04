@@ -9745,7 +9745,7 @@ function bondPeriodic(battle,u){
 //    默认切比雪夫＝「周围 N 格」的方格。见 docs/SKILL_RANGE_AUDIT_2026-09-22.md。
 function zoneContains(battle,fx,a){
  if(!fx||!a)return false;
- if(fx.rangeUid){const owner=getActor(battle.s,fx.rangeUid);if(owner&&owner.deployed&&owner.hp>0){const cells=battle.range?.(owner,true);if(cells?.length)return containsTarget(cells.map(c=>[c.x,c.y]),a);}}
+ if(fx.rangeUid){const owner=getActor(battle.s,fx.rangeUid);if(owner&&owner.deployed&&owner.hp>0){if(typeof battle.inside==='function')return battle.inside(owner,a,true);const cells=battle.range?.(owner,true);if(cells?.length)return containsTarget(cells.map(c=>[c.x,c.y]),a);}}
  // 引星棘刺 S3「我的海疆」：判定区域由 3 个炼金单元的落点围成（点／宽 0.65 的直线／各边外扩 0.325 的多边形）。
  // PRTS 备注：处于区域中的**我方干员（不含装置）**阻挡敌人时，被阻挡的敌人视为处于区域内。
  const area=fx.values?.thorn2Area;
