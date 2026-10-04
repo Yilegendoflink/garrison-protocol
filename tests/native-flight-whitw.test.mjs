@@ -85,6 +85,46 @@ test('S2 三枚普通浮游单元各自索敌，10% 概率恐惧，不触发 S3 
  assert.ok(targets.every(e => !e.statuses?.some(s => s.kind === 'sluggish')), 'S2 不应套用 S3 的周围减速光环');
 });
 
+test('叙拉古盟约真伤可由荒芜拉普兰德 S1/S2 普通浮游单元触发', () => {
+ const profiles = Object.values(NATIVE_DATA.profiles).filter(p => p?.charId && p.bonds?.includes('siracusaShip') && !p.isGolden);
+ const unique = [];
+ for (const profile of profiles) if (!unique.some(row => row.charId === profile.charId)) unique.push(profile);
+ const lappland = unique.find(row => row.charId === 'char_1038_whitw2');
+ assert.ok(lappland, '荒芜拉普兰德应属于叙拉古');
+ const teammates = unique.filter(row => row.charId !== lappland.charId).slice(0, 5);
+ assert.equal(teammates.length, 5, '叙拉古盟约需要六名不同干员');
+
+ for (const skillIndex of [0, 1]) {
+  const roster = [{ chessId: lappland.chessId, skillIndex }, ...teammates.map(row => row.chessId)];
+  const { b } = openBattle(roster);
+  deployNow(b);
+  const u = byId(b, 'char_1038_whitw2');
+  assert.equal(b.rows.siracusaShip.count, 6);
+  assert.equal(b.owns(u, 'siracusaShip'), true);
+  const spot = (() => {
+   for (let y = 0; y < b.map.rows; y++) for (let x = 0; x < b.map.cols; x++) {
+    const valid = skillIndex === 0 ? Math.hypot(x - u.x, y - u.y) >= 5 : b.inside(u, { x, y }, true) && Math.hypot(x - u.x, y - u.y) > .5;
+    if (valid && !b.map.grid[y]?.[x]?.obstacle) return { x, y };
+   }
+   return null;
+  })();
+  assert.ok(spot, `S${skillIndex + 1} 应有浮游单元可攻击的位置`);
+  const target = enemy(b, { ...spot, hp: 1e9, atk: 0, def: 0, res: 0 });
+  for (const ally of b.s.units) if (ally !== u) ally.attackCooldown = 1e9;
+  u.attackCooldown = 1e9; // 隔离浮游单元，不让本体普通攻击代替验证。
+  u.sp = b.spCost(u);
+  b.s.siracusaPity = 720;
+  b.economy.random = () => 0;
+  b.activate(u);
+  advance(b, 5);
+
+  assert.ok(b.s.logicLog.some(row => row.type === 'damage' && row.cause === 'skill' && row.sourceUid === u.uid && row.targetUid === target.uid), `S${skillIndex + 1} 浮游单元应造成技能直接伤害`);
+  const proc = b.s.logicLog.find(row => row.type === 'damage' && row.cause === 'extra' && row.sourceUid === u.uid && row.targetUid === target.uid);
+  assert.ok(proc, `S${skillIndex + 1} 浮游单元命中应触发叙拉古真伤`);
+  assert.equal(proc.hp, 5000 + 50 * b.layers.siracusaShip);
+ }
+});
+
 test('散开阶段：1.3 秒内向外铺开，方向互不相同', () => {
  const { b, u } = whitwBattle(2);
  u.sp = b.spCost(u);
