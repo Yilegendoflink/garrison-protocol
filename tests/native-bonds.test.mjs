@@ -114,11 +114,14 @@ test('叙拉古6人盟约在攻击者阻挡敌人时仍能触发真伤和恐惧'
  assert.equal(e.statuses.find(status=>status.kind==='fear')?.remaining,3,'盟约触发时应同时恐惧目标3秒');
 });
 
-test('实际加载的浏览器包包含叙拉古技能命中与阻挡修复',async()=>{
+test('实际加载的浏览器包包含盟约规则修复',async()=>{
  for(const file of ['../dist/game.bundle.js','../dist/native.bundle.js']){
   const bundle=await readFile(new URL(file,import.meta.url),'utf8');
   assert.equal(bundle.includes("this.owns(u,'siracusaShip')&&!skill&&u.block==null"),false,`${file} 不应保留旧的排除条件`);
   assert.ok(bundle.includes("this.owns(u,'siracusaShip')){const b=this.params('siracusaShip')"),`${file} 应允许技能命中与阻挡中的攻击触发`);
+  assert.ok(bundle.includes('const skillReady=cost>0&&u.sp>=cost&&!this.skillActive(u)&&permissions(u).skill;'),`${file} 应接入突袭技能就绪后的单次再部署`);
+  assert.ok(bundle.includes('this.activate(u,{raid:true});u.raidReadySkillCount=u.skillCount===skillCount?skillCount:u.skillCount;'),`${file} 应在突袭再部署后释放就绪技能并防止重复位移`);
+  assert.ok(bundle.includes("this.s.time-u.lastSkill<3&&!raid))return;"),`${file} 应允许突袭效果立即释放刚就绪的技能`);
  }
 });
 
@@ -145,6 +148,25 @@ test('突袭闲置位移在真实步进里满 10 秒才触发，并走公共位�
  assert.ok(!(ru.x===e.x&&ru.y===e.y),'落点不能和敌人同格');
  assert.ok(ru.raidBuffUntil>=b.s.time,`位移后要拿到攻防加成窗口，实际 ${ru.raidBuffUntil}`);
  assert.ok(b.s.logicLog.some(x=>x.type==='move'&&x.uid===ru.uid&&x.mode==='raid-redeploy'),'位移走公共位移链路');
+});
+test('突袭技能就绪再部署后立即释放，不在悬浮怪落地期间反复横跳',()=>{
+ const skadi=Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId==='char_263_skadi'&&!s.isHidden).chessId;
+ const partner=uniqueBond('raidShip',2).find(id=>id!==skadi);
+ const {b}=start([skadi,partner],{raidShip:50}),ru=b.s.units.find(u=>u.id==='char_263_skadi'),from={x:ru.x,y:ru.y};
+ const cost=b.spCost(ru),skillCount=ru.skillCount;
+ const e=enemy(b,{x:ru.x+2,y:ru.y,hp:1e6,unblockable:true,enemyFormKind:'parrot',enemyForm:'grounded'});
+ ru.sp=cost;ru.lastAttack=0;b.s.time=11;ru.lastSkill=b.s.time-1;
+ assert.deepEqual(b.targets(ru),[],'悬浮怪落地但位于攻击范围外时没有普通目标');
+ b.tickBondIdle(ru,0);
+ assert.notDeepEqual({x:ru.x,y:ru.y},from,'技能就绪应再部署至地面敌人周围');
+ assert.equal(ru.skillCount,skillCount+1,'突袭再部署后应立即释放已就绪技能');
+ assert.equal(ru.sp,0,'释放技能后消耗对应技力');
+ assert.equal(ru.lastSkill,b.s.time,'突袭释放技能不应受普通手动技3秒间隔阻挡');
+ const after={x:ru.x,y:ru.y},moves=b.s.logicLog.filter(x=>x.type==='move'&&x.uid===ru.uid&&x.mode==='raid-redeploy').length;
+ b.tickBondIdle(ru,0);
+ assert.deepEqual({x:ru.x,y:ru.y},after,'同一技能就绪周期只能再部署一次');
+ assert.equal(b.s.logicLog.filter(x=>x.type==='move'&&x.uid===ru.uid&&x.mode==='raid-redeploy').length,moves);
+ assert.equal(e.flying,false,'回归对象模拟近地悬浮失效后的地面阶段');
 });
 test('突袭位移会再次触发史尔特尔的部署时盟约效果',()=>{
  const {b}=start(['chess_char_5_07_a','chess_char_1_18_a']);
