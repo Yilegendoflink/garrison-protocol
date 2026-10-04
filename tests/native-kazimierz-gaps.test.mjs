@@ -1,6 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {openBattle,enemy,byId,deployNow} from './effects-harness.mjs';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
+import {NativeSession} from '../dist/native-session.js';
+import {dealDamage} from '../dist/native-effects.js';
 import {statMods} from '../dist/native-operator-effects.js';
 
 // 卡西米尔盟约与相关干员的缺口回归（2026-09-23 第二轮）。
@@ -97,6 +99,45 @@ test('玛恩纳「无动于衷」：常驻嘲讽 +1，且反弹不依赖技能',
  b2.hurt(plain,foe2,{damageAmount:50,cause:'attack'});
  assert.equal(hp2-foe2.hp,0,'非卡西米尔干员被攻击不触发反弹');
  assert.ok(other&&mly2);
+});
+
+test('玛恩纳 S3 对范围内卡西米尔攻击附加一次真伤，阻挡与读档都不递归',()=>{
+ const {g,b}=openBattle([
+  {chessId:'chess_char_5_19_a',skillIndex:2},
+  'chess_char_1_19_a','chess_char_2_12_a','chess_char_2_18_a',
+  'chess_char_3_12_a','chess_char_3_17_a',
+ ]);
+ assert.equal(b.rows.kazimierzShip.count,6,'启用六名不同卡西米尔干员效果');
+ const mly=byId(b,'char_4064_mlynar'),blocker=byId(b,'char_237_gravel');
+ mly.x=4;mly.y=3;mly.dir=0;mly.sp=b.spCost(mly);b.activate(mly);
+ blocker.x=5;blocker.y=3;
+ const boss=enemy(b,{id:'boss-probe',x:5,y:3,hp:1e9,block:blocker.uid});
+ assert.equal(b.skillActive(mly),true,'玛恩纳 S3 开启');
+ assert.equal(b.inside(mly,boss,true),true,'Boss 位于玛恩纳 S3 范围内');
+ const scale=Number(b.profile(mly).skill.blackboard.find(x=>x.key==='atk_scale')?.value);
+ assert.ok(scale>0,'S3 黑板提供卡西米尔附伤倍率');
+ const atk=b.stats(mly).atk;
+ const hit=(battle,source,target)=>{
+  const before=target.hp;
+  assert.doesNotThrow(()=>dealDamage(battle,{source,target,amount:100,type:'physical',cause:'skill',skill:true}));
+  return before-target.hp;
+ };
+ assert.ok(Math.abs(hit(b,mly,boss)-(100+atk*scale))<1e-6,'本次伤害只附加一次 S3 真伤');
+ const distant=enemy(b,{id:'distant-probe',x:10,y:6,hp:1e6});
+ assert.equal(b.inside(mly,distant,true),false,'远处敌人不在玛恩纳 S3 范围');
+ const distantHp=distant.hp;
+ assert.doesNotThrow(()=>dealDamage(b,{source:blocker,target:distant,amount:100,type:'physical',cause:'attack'}));
+ assert.equal(distantHp-distant.hp,100,'范围外卡西米尔攻击不附加玛恩纳 S3 真伤');
+
+ const restored=NativeSession.restore(NATIVE_DATA,g.snapshot());
+ assert.ok(restored,'读档成功');
+ const rb=restored.battle,rmly=byId(rb,'char_4064_mlynar'),rblocker=byId(rb,'char_237_gravel'),rboss=rb.s.enemies.find(e=>e.id==='boss-probe');
+ assert.ok(rb&&rmly&&rblocker&&rboss,'读档保留玛恩纳、阻挡者与 Boss');
+ assert.ok(Math.abs(hit(rb,rmly,rboss)-(100+rb.stats(rmly).atk*scale))<1e-6,'读档后再次攻击仍只结算一次');
+
+ const hp=rboss.hp;
+ assert.doesNotThrow(()=>dealDamage(rb,{source:rboss,target:rblocker,amount:100,type:'physical',cause:'attack'}));
+ assert.ok(Math.abs((hp-rboss.hp)-rb.stats(rmly).atk*.15)<1e-6,'敌人攻击卡西米尔时只反弹一次玛恩纳天赋真伤');
 });
 
 test('条件式嘲讽天赋：技能开启时才生效（远牙「屏息」）',()=>{
