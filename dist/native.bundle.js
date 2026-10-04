@@ -8807,12 +8807,13 @@ function onEvent(battle,type,payload,ctx){
    if((has(text,/攻击力[-−]/)||has(text,/目标攻击力降低/))&&Number(bb.atk)<0)applyStatus(target,'attackDown',Number(bb.duration)||5,{source:source.uid,value:Number(bb.atk),resistible:false});
    if(has(text,/防御力[-−]/)&&Number(bb.def)<0)applyStatus(target,'defDown',Number(bb.duration)||5,{source:source.uid,value:Number(bb.def),resistible:false});
    if(has(text,/法术抗性[-−]/)&&Number(bb.magic_resistance)<0)applyStatus(target,'resDown',Number(bb.duration)||5,{source:source.uid,value:Number(bb.magic_resistance),resistible:false});
-  if(type==='after-damage'){const talentStatus=directStatus(text,{bb}),talentScale=Number(battle.profile(source)?.skill?.blackboard?.find?.(x=>x.key==='talent_scale')?.value),baseStatusProb=Number(bb.prob??bb.attack_prob??bb.buff_prob),statusProb=Number.isFinite(baseStatusProb)&&battle.skillActive(source)&&Number.isFinite(talentScale)?Math.min(1,baseStatusProb*talentScale):baseStatusProb,statusAllowed=!has(text,/概率|几率/ )||!Number.isFinite(statusProb)||battle.economy.random()<statusProb;let statusDuration=talentStatus?.duration;if(statusDuration&&battle.skillActive(source)&&Number.isFinite(talentScale))statusDuration*=talentScale;
+   if(type==='after-damage'){const talentStatus=directStatus(text,{bb}),talentScale=Number(battle.profile(source)?.skill?.blackboard?.find?.(x=>x.key==='talent_scale')?.value),baseStatusProb=Number(bb.prob??bb.attack_prob??bb.buff_prob),statusProb=Number.isFinite(baseStatusProb)&&battle.skillActive(source)&&Number.isFinite(talentScale)?Math.min(1,baseStatusProb*talentScale):baseStatusProb,dedicatedStatus=source.id==='char_4082_qiubai'&&['入隙','落英'].includes(talent.name),statusAllowed=!dedicatedStatus&&(!has(text,/概率|几率/ )||!Number.isFinite(statusProb)||battle.economy.random()<statusProb);let statusDuration=talentStatus?.duration;if(statusDuration&&battle.skillActive(source)&&Number.isFinite(talentScale))statusDuration*=talentScale;
    // 部署触发的天赋（文案写「部署后／部署时／入场时／落地时」）由部署路径自己结算一次，不能在每次命中时再挂一遍。
    // 虎狼丸「黑色猎犬」的黑板里就有裸 `fear` 键，旧逻辑让他的**每一次普通攻击**都附带 4 秒恐惧
    // （2026-09-27 由联动干员的回归发现）。技能文案不走这条天赋兜底，所以只影响天赋。
    // 伊内丝「影织」已在专用逻辑里按目标记录首次伤害；通用解析会把“首次造成伤害后”误当成每次命中触发。
-   if(talentStatus&&statusAllowed&&has(text,/攻击|命中|伤害|附带/)&&!has(text,/部署后|部署时|入场时|落地时/)&&!(source.id==='char_4087_ines'&&talent.name==='影织'))applyStatus(target,talentStatus.kind,statusDuration,{source:source.uid,resistible:false});
+    // 仇白「入隙」只是攻击条件；「落英」由专用逻辑按黑板概率与时长结算。
+    if(talentStatus&&statusAllowed&&has(text,/攻击|命中|伤害|附带/)&&!has(text,/部署后|部署时|入场时|落地时/)&&!(source.id==='char_4087_ines'&&talent.name==='影织')&&!dedicatedStatus)applyStatus(target,talentStatus.kind,statusDuration,{source:source.uid,resistible:false});
    // 天赋版「攻击附带元素损伤」只认**显式元素比例键**（ep_damage_ratio／element_damage_scale）。
    // 曾经把 `damage_scale`／`elementScale` 也当元素比例：焰影苇草天赋「灼痕」的 `damage_scale:1.15` 是
    // 【法术脆弱】的倍率，却被当成灼燃损伤——她因此**每次攻击**都挂 115% 攻击力的灼燃（2026-09-22 排查烛煌时发现，

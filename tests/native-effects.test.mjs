@@ -37,6 +37,15 @@ test('a distant enemy cannot be hit by an attached fireball',()=>{
  const {b}=openBattle([reps.operators.reed2,reps.operators.yak]);deployNow(b);const u=byId(b,'char_1020_reed2'),anchor=byId(b,'char_199_yak'),e=enemy(b,{x:anchor.x+10,y:anchor.y,hp:5000});
  addEffect(b,{kind:'attached',sourceUid:u.uid,anchorUid:anchor.uid,interval:1,nextAt:1,endsAt:2,radius:.8,values:{atk_scale:1}});b.s.time=1;tickLogic(b,1);assert.equal(e.hp,5000);
 });
+test('仇白入隙不再误施加束缚，落英只按20%概率施加1.5秒束缚',()=>{
+ const {b}=openBattle({chessId:'chess_char_6_15_a',skillIndex:2});deployNow(b);const u=byId(b,'char_4082_qiubai'),e=enemy(b,{x:u.x+1,y:u.y,hp:1e8});
+ let rolls=[.3,.1],count=0;b.economy.random=()=>{count++;return rolls.shift()??.99;};
+ dispatch(b,'after-damage',{source:u,target:e,cause:'attack',result:{total:1},event:{eventId:9001,attackId:9001}});
+ assert.equal(count,1,'每次攻击只掷一次落英概率');assert.equal(e.statuses.some(s=>s.kind==='root'),false,'未达到20%概率时不束缚');
+ rolls=[.1];count=0;dispatch(b,'after-damage',{source:u,target:e,cause:'attack',result:{total:1},event:{eventId:9002,attackId:9002}});
+ assert.equal(count,1,'成功触发时也只掷一次概率');assert.equal(e.statuses.find(s=>s.kind==='root')?.remaining,1.5,'束缚时长按黑板的1.5秒');
+ for(const file of ['dist/native.bundle.js','dist/game.bundle.js']){const bundle=fs.readFileSync(file,'utf8');assert.ok(bundle.includes("dedicatedStatus=source.id==='char_4082_qiubai'&&['入隙','落英'].includes(talent.name)"),`${file} must carry the Qiu Bai status guard`);assert.ok(bundle.includes('&&!dedicatedStatus)applyStatus(target,talentStatus.kind,statusDuration'),`${file} must skip generic status application for dedicated talents`);}
+});
 test('old shields migrate and future schemas are rejected',()=>{
  const {b}=openBattle(reps.operators.yak);const save=structuredClone(b.s);save.units[0].shield=123;delete save.units[0].shieldLayers;delete save.battleSchemaVersion;
  const migrated=migrateBattle(save);assert.equal(migrated.units[0].shieldLayers[0].remaining,123);
