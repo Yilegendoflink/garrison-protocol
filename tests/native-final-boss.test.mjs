@@ -37,8 +37,8 @@ test('static bosses spawn in the reserved 3x2 upper-right area and keep generic 
   assert.equal(boss.unblockable,true,bossId+' 不可阻挡');
   assert.equal(boss.canAttack,false,bossId+' 通用普攻关闭，攻击全部走逐名 tick');
   assert.deepEqual(boss.hitRect,{length:4.95,width:2.95,offsetY:1},bossId+' 盟约版巨型受击矩形');
-  const range=b.range;b.range=()=>[{x:Math.floor(boss.x)+2,y:Math.round(boss.y)-1}];
-  assert.equal(b.inside({},boss,true),true,bossId+' 应被其大型受击矩形外沿的攻击范围选中');b.range=range;
+  const range=b.range;b.range=()=>[{x:g.map.cols-3,y:0}];
+  assert.equal(b.inside({},boss,true),true,bossId+' 应被地图内、预留区左侧的攻击格选中');b.range=range;
   assert.equal(boss.spriteScale>2,true,bossId+' 放大表现');
   assert.equal(enemySprite(boss).key,finalBossConfig(NATIVE_DATA,bossId,'mode_single_normal').handbookEnemyId,bossId+' 使用本期图鉴头像映射');
   assert.ok(NATIVE_DATA.assets[enemySprite(boss).key],bossId+' 战斗头像资源存在');
@@ -68,7 +68,8 @@ test('static bosses reserve and target the upper-right 2-column by 3-row area',(
  for(const map of NATIVE_DATA.maps){
   const area=finalBossPlacementArea(map,'enemy_1521_dslily'),point=finalBossSpawnPoint(map,'enemy_1521_dslily');
   assert.deepEqual([area.firstColumn,area.firstRow,area.columns,area.rows],[map.cols-2,0,2,3],map.stageId+' upper-right footprint');
-  assert.deepEqual(point,{x:map.cols-1.5,y:1},map.stageId+' footprint center');
+  assert.deepEqual(point,{x:map.cols-1,y:1},map.stageId+' PRTS 范围锚定在最右列格心');
+  assert.equal(area.x,map.cols-1.5,map.stageId+' reserved footprint center remains independent');
   assert.deepEqual([area.left,area.right,area.top,area.bottom],[map.cols-2.5,map.cols-.5,-.5,2.5],map.stageId+' targetable preview bounds');
  }
 });

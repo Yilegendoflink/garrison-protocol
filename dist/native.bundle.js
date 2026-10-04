@@ -7407,8 +7407,9 @@ return {editorState,enemyRows,originalTypeIds,filterRows,renderWaveEditor,applyE
 // 逐名开放最终 Boss；未完成机制与路线验收的 Boss 不进入本局抽取池。
 const AVAILABLE_FINAL_BOSS_IDS=Object.freeze(['boss_4','boss_5','boss_7']);
 
-// 逐名战斗机制登记（数值来源：docs/FINAL_BOSS_4_5_7_PLAN_2026-09-28.md 与 PRTS 敌人页）。
-// hitRect＝固定站位的受击矩形；昆图斯与萨米各占地图右上角 2 列 × 3 行；
+// 逐名战斗机制登记（数值来源：盟约模式 PRTS 记录与对应敌人页）。
+// hitRect＝实际受击矩形，与右上角预留的部署区是不同概念；盟约版阿利斯泰尔与萨米均为长4.95×宽2.95、向上偏移1；
+// PRTS 的范围以最右列格心为 Boss 中心；预留部署区仍是右上角 2列×3行。
 // static＝自缚站桩（formHold，不沿环线移动）；unblockable＝不可阻挡；shiftImmune＝失衡免疫；
 // range 补齐档案缺省的攻击半径（两位 Boss 的攻击都是全场范围，PRTS 攻击半径 99）。
 // spriteScale 只管画布表现。
@@ -7426,7 +7427,7 @@ function finalBossPlacementArea(map,enemyId){
 function finalBossPlacementContains(area,x,y){return !!area&&x>=area.firstColumn&&x<area.firstColumn+area.columns&&y>=area.firstRow&&y<area.firstRow+area.rows;}
 function finalBossSpawnPoint(map,enemyId){
  const area=finalBossPlacementArea(map,enemyId);
- return area?{x:area.x,y:area.y}:null;
+ return area?{x:map.cols-1,y:area.y}:null;
 }
 
 const HP_FIELD={FUNNY:'bloodPoint',NORMAL:'bloodPointNormal',HARD:'bloodPointHard',ABYSS:'bloodPointAbyss'};
@@ -13388,7 +13389,7 @@ class NativeBattle {
  cellsForRangeId(u,rangeId){const grids=rangeId?this.data.ranges[rangeId]?.grids:null;return grids?.length?this.cellsForGrids(u,grids):null;}
  // forceSkill=true 时无视当前是否开技，一律按技能范围算：自动释放要看的是「开技后能不能打到」。
  rangeWithSkill(u,skill=false,forceSkill=false){const p=this.profile(u),sid=this.skillRangeId(u,skill,forceSkill),r=this.data.ranges[sid]||p.range,grids=r?.grids||[{row:0,col:1}];return {skill:sid!==p.rangeId,rangeId:sid,cells:this.cellsForGrids(u,grids)};}
- // 最终 Boss（昆图斯/萨米）的巨型受击矩形：格子按「格心落在矩形内」判定，与木桩 area 同一口径。
+ // 最终 Boss（阿利斯泰尔/萨米）的巨型受击矩形：格子按「格心落在矩形内」判定，与木桩 area 同一口径。
  // hitRect:{length,width,offsetY} 来自 PRTS「巨型单位」口径（长4.95×宽2.95、向上偏移1，本期覆盖）。
  hitAreaOf(e){if(e.trainingDummy&&e.area)return e.area;if(!e.hitRect)return null;const half=Number(e.hitRect.length)/2,halfW=Number(e.hitRect.width)/2,cy=e.y-(Number(e.hitRect.offsetY)||0);return {left:e.x-half,right:e.x+half,top:cy-halfW,bottom:cy+halfW};}
  hitAreaContains(area,cell){return cell.x>=area.left-1e-9&&cell.x<=area.right+1e-9&&cell.y>=area.top-1e-9&&cell.y<=area.bottom+1e-9;}

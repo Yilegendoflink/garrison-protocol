@@ -2,7 +2,8 @@
 export const AVAILABLE_FINAL_BOSS_IDS=Object.freeze(['boss_4','boss_5','boss_7']);
 
 // 逐名战斗机制登记（数值来源：盟约模式 PRTS 记录与对应敌人页）。
-// hitRect＝实际受击矩形，与右上角预留的部署区是不同概念；盟约版昆图斯与萨米均为长4.95×宽2.95、向上偏移1；
+// hitRect＝实际受击矩形，与右上角预留的部署区是不同概念；盟约版阿利斯泰尔与萨米均为长4.95×宽2.95、向上偏移1；
+// PRTS 的范围以最右列格心为 Boss 中心；预留部署区仍是右上角 2列×3行。
 // static＝自缚站桩（formHold，不沿环线移动）；unblockable＝不可阻挡；shiftImmune＝失衡免疫；
 // range 补齐档案缺省的攻击半径（两位 Boss 的攻击都是全场范围，PRTS 攻击半径 99）。
 // spriteScale 只管画布表现。
@@ -20,7 +21,7 @@ export function finalBossPlacementArea(map,enemyId){
 export function finalBossPlacementContains(area,x,y){return !!area&&x>=area.firstColumn&&x<area.firstColumn+area.columns&&y>=area.firstRow&&y<area.firstRow+area.rows;}
 export function finalBossSpawnPoint(map,enemyId){
  const area=finalBossPlacementArea(map,enemyId);
- return area?{x:area.x,y:area.y}:null;
+ return area?{x:map.cols-1,y:area.y}:null;
 }
 
 const HP_FIELD={FUNNY:'bloodPoint',NORMAL:'bloodPointNormal',HARD:'bloodPointHard',ABYSS:'bloodPointAbyss'};

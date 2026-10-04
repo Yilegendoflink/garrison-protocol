@@ -449,7 +449,7 @@ export class NativeBattle {
  cellsForRangeId(u,rangeId){const grids=rangeId?this.data.ranges[rangeId]?.grids:null;return grids?.length?this.cellsForGrids(u,grids):null;}
  // forceSkill=true 时无视当前是否开技，一律按技能范围算：自动释放要看的是「开技后能不能打到」。
  rangeWithSkill(u,skill=false,forceSkill=false){const p=this.profile(u),sid=this.skillRangeId(u,skill,forceSkill),r=this.data.ranges[sid]||p.range,grids=r?.grids||[{row:0,col:1}];return {skill:sid!==p.rangeId,rangeId:sid,cells:this.cellsForGrids(u,grids)};}
- // 最终 Boss（昆图斯/萨米）的巨型受击矩形：格子按「格心落在矩形内」判定，与木桩 area 同一口径。
+ // 最终 Boss（阿利斯泰尔/萨米）的巨型受击矩形：格子按「格心落在矩形内」判定，与木桩 area 同一口径。
  // hitRect:{length,width,offsetY} 来自 PRTS「巨型单位」口径（长4.95×宽2.95、向上偏移1，本期覆盖）。
  hitAreaOf(e){if(e.trainingDummy&&e.area)return e.area;if(!e.hitRect)return null;const half=Number(e.hitRect.length)/2,halfW=Number(e.hitRect.width)/2,cy=e.y-(Number(e.hitRect.offsetY)||0);return {left:e.x-half,right:e.x+half,top:cy-halfW,bottom:cy+halfW};}
  hitAreaContains(area,cell){return cell.x>=area.left-1e-9&&cell.x<=area.right+1e-9&&cell.y>=area.top-1e-9&&cell.y<=area.bottom+1e-9;}

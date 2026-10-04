@@ -47,16 +47,16 @@ function steps(b,seconds,seen=[]){
 
 test('巨型受击矩形：格心落在 4.95×2.95 上移1 矩形内的射程格即可选中本体',()=>{
  const g=game({operator:1}),b=g.battle,boss=bossOf(g),u=b.s.units[0];
- boss.x=Math.round(boss.x); // 对齐整数格心，隔离验证 ±2 的真实命中边界。
+ assert.equal(boss.x,g.map.cols-1,'Boss 中心锚定最右列格心');
  const rect=b.hitAreaOf(boss);
  assert.ok(Math.abs(rect.right-rect.left-4.95)<1e-9&&Math.abs(rect.bottom-rect.top-2.95)<1e-9);
  assert.ok(rect.top<boss.y-1&&rect.bottom>boss.y,'矩形向上偏移 1');
- // 近战「0-1」射程只含自身格：站在距离 2 的格子上时，自身格在矩形内但离本体中心 2 格——
- // 没有受击矩形时这种位置永远选不中，矩形生效的直接证据。
- u.x=boss.x+2;u.y=Math.round(boss.y)-1;
- assert.ok(b.targets(u).some(e=>e.uid===boss.uid),'距离 2 经矩形选中');
- u.x=boss.x+3;u.y=Math.round(boss.y)-1;
- assert.ok(!b.targets(u).some(e=>e.uid===boss.uid),'距离 3 超出矩形');
+ // 近战「0-1」射程只含自身格。用实际棋盘上预留区左侧两格作攻击点，
+ // 避免用不可达的地图外格验证矩形；再往左一格应超出受击区域。
+ u.x=g.map.cols-3;u.y=0;
+ assert.ok(b.targets(u).some(e=>e.uid===boss.uid),'地图内预留区左侧的格子经矩形选中');
+ u.x=g.map.cols-4;u.y=0;
+ assert.ok(!b.targets(u).some(e=>e.uid===boss.uid),'再向左一格超出矩形');
 });
 
 test('冰凌：普攻选中目标所在列并自最上方每0.2秒落下，物理伤害只落在该列',()=>{
