@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {applyStatus} from '../dist/status.js';
+import {applyStatus,tickStatuses} from '../dist/status.js';
 import {blackboard,resolveActiveTalents,resolveChess} from '../dist/protocol.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
@@ -83,6 +83,14 @@ test('damage protection buffers the deferred portion without changing damage typ
 test('reviveActor restores a defeated operator lifecycle and emits a combat event',()=>{
  const {b}=openBattle(reps.operators.yak);deployNow(b);const u=b.s.units[0];u.hp=0;commitExit(b,{target:u,reason:'knockdown'});assert.equal(u.deployed,false);
  assert.equal(reviveActor(b,u,{hpRatio:.4,reason:'test'}),true);assert.equal(u.deployed,true);assert.equal(u.hp,u.maxHp*.4);assert.equal(logOf(b,'revive').length,1);
+});
+
+test('伊内丝影织只在首次伤害每个敌人时束缚',()=>{
+ const {b}=openBattle({chessId:'chess_char_4_04_a',skillIndex:0});deployNow(b);const u=b.s.units[0],first=enemy(b,{x:u.x+1,y:u.y,hp:10000});
+ dealDamage(b,{source:u,target:first,amount:100,type:'physical'});assert.equal(first.statuses.find(s=>s.kind==='root')?.remaining,5);
+ tickStatuses(first,2);b.s.time+=2;dealDamage(b,{source:u,target:first,amount:100,type:'physical'});assert.equal(first.statuses.find(s=>s.kind==='root')?.remaining,3,'同一敌人再次受击不应刷新束缚');
+ tickStatuses(first,4);b.s.time+=4;dealDamage(b,{source:u,target:first,amount:100,type:'physical'});assert.equal(first.statuses.some(s=>s.kind==='root'),false,'束缚结束后也不应因后续普攻重新触发');
+ const second=enemy(b,{x:u.x+1,y:u.y+1,hp:10000});dealDamage(b,{source:u,target:second,amount:100,type:'physical'});assert.equal(second.statuses.find(s=>s.kind==='root')?.remaining,5,'首次命中另一名敌人仍应束缚');
 });
 
 test('Gavial S3 uses the shared delayed damage protection path',()=>{
