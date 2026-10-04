@@ -202,6 +202,7 @@ export class NativeSession extends NativeEconomy {
    // 升级只解锁更高阶的干员候选，不动装备商品槽：装备槽只按回合刷新（advanceRound 里的 fillItems）
    else if(type==='upgrade'){result=this.upgrade();}
    else if(type==='lock'){if(this.s.phase!=='prep')return false;this.s.locked=!this.s.locked;result=true;}
+   else if(type==='thaw-offer'){const index=args[0];if(this.s.phase!=='prep'||!Number.isInteger(index)||!this.s.offers[index]||!this.s.frozenSlots?.includes(index))return false;this.s.frozenSlots=this.s.frozenSlots.filter(i=>i!==index);result=true;}
   else if(type==='withdraw'){const u=this.s.units.find(u=>u.uid===args[0]);if(this.s.phase!=='prep'||!u?.position||this.handFull())return false;u.position=null;this.settleBondRewards();result=true;}
   else if(type==='withdrawSummon')result=this.withdrawSummonCard(args[0]);
    else if(type==='skill'){

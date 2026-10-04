@@ -1246,3 +1246,12 @@ html.native-need-rotate .native-briefing.native-briefing-v2{overflow:hidden}
 .native-game.is-supply-collapsed .native-shop>div:first-child .native-refresh-control{display:none}
 html.native-landscape-ui .native-shop{grid-template-rows:36px minmax(0,1fr)}
 html.native-landscape-ui .native-free-refresh-count{font-size:7px;line-height:8px}
+
+/* 梓兰特殊刷新留下的冻结干员可单独解冻，不再被全店冻结按钮遮住。 */
+.native-shop-card{position:relative;min-width:0;min-height:158px}
+.native-shop-card>[data-act="buy"]{width:100%;height:100%}
+.native-shop-card .native-thaw-offer{position:absolute;z-index:4;top:4px;left:4px;display:block;flex:none;width:auto;height:auto;min-height:0;margin:0;padding:3px 6px;border:1px solid #7de8ff;background:#102d38;color:#e3fbff;font-size:10px;line-height:1.2;box-shadow:0 1px 5px #0008}
+.native-shop-card .native-thaw-offer:hover{border-color:#fff;background:#1e5366;color:#fff}
+@media(max-width:600px){.native-shop-card{min-height:125px}.native-shop-card>[data-act="buy"]{min-height:125px}.native-shop-card .native-thaw-offer{top:2px;left:2px;padding:2px 4px;font-size:9px}}
+html.native-landscape-ui .native-shop-card{min-height:0;height:100%}
+html.native-landscape-ui .native-shop-card>[data-act="buy"]{min-height:0;height:100%}
