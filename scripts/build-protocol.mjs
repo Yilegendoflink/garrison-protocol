@@ -3,6 +3,7 @@ import {SERVER_GARRISON_TYPES} from '../dist/garrison.js';
 import {strategyCoverage} from '../dist/strategy.js';
 import {enemyBehaviorProfile} from '../dist/native-combat.js';
 import {applySeesContent,loadSeesContent} from './lib/sees-content.mjs';
+import {buildBossArena} from './lib/boss-arena.mjs';
 import fs from 'node:fs/promises';import crypto from 'node:crypto';import {resolveChess,buildPhasePlan,shopTerms,applyEnemyOverrides,richText} from '../dist/protocol.js';
 const data=JSON.parse(await fs.readFile('data/modes/alliance-lower/source.json','utf8')),base=JSON.parse(await fs.readFile('data/normalized/allianceLower.json','utf8')),behaviorConfig=JSON.parse(await fs.readFile('data/modes/alliance-lower/enemy-behavior-overrides.json','utf8'));const behaviorOverrides=behaviorConfig.overrides||{};const levelsManifest=JSON.parse(await fs.readFile('data/modes/alliance-lower/levels/manifest.json','utf8'));let previousReadiness={};try{previousReadiness=JSON.parse(await fs.readFile('data/modes/alliance-lower/readiness.json','utf8'));}catch{}
 // S.E.E.S. 策略内容（用户 2026-09-27 口径）：策略 band_sees ＋【塔尔塔罗斯】／【S.E.E.S.】两条盟约
@@ -43,8 +44,8 @@ const upperDoor=redDoors.reduce((a,b)=>b.y<a.y?b:a),lowerDoor=redDoors.find(p=>p
 if(!walk(upperDoor,blueDoor)||!walk(lowerDoor,blueDoor))throw Error('阵地缺少上下红门到蓝门的连续地面路线 '+s.stageId);
 const rawPosition=p=>({col:left+p.x,row:top-p.y});
 const makeDoorRoute=start=>({motionMode:'WALK',startPosition:rawPosition(start),endPosition:rawPosition(blueDoor),spawnRandomRange:{x:0,y:0},spawnOffset:{x:0,y:0},checkpoints:[],allowDiagonalMove:false,visitEveryTileCenter:false,visitEveryNodeCenter:false,visitEveryCheckPoint:false});
-const bossDoorRoutes=[makeDoorRoute(upperDoor),makeDoorRoute(lowerDoor)];
-maps.push({...s,devices,windSources,bossDoorRoutes,bossPatrolRoute:[start,...ring].map((p,index)=>({kind:'move',x:p.x,y:p.y,checkpointIndex:index})),viewport,rows:grid.length,cols:grid[0].length,origin:{row:top,col:left},grid,options:l.options,source:entry});}
+const bossDoorRoutes=[makeDoorRoute(upperDoor),makeDoorRoute(lowerDoor)],bossArena=buildBossArena(l,bb);
+maps.push({...s,devices,windSources,bossDoorRoutes,bossPatrolRoute:[start,...ring].map((p,index)=>({kind:'move',x:p.x,y:p.y,checkpointIndex:index})),bossArena,viewport,rows:grid.length,cols:grid[0].length,origin:{row:top,col:left},grid,options:l.options,source:entry});}
 const modes=Object.values(data.season.modeDataDict).map(m=>({...m,rounds:buildPhasePlan(data,m.modeId),shopLevels:[1,2,3,4,5,6].map(l=>({level:l,...shopTerms(data,m.modeId,l)}))}));
 // S.E.E.S. 策略清单（运行时读它）：bandId／两条盟约／四人／臂章／全部数值。
 // 阶级与数值取**注入后**的数据（数据改了运行时跟着改），名字取登记表——build-protocol 阶段还没有

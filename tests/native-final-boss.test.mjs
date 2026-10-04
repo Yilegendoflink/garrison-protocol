@@ -4,14 +4,16 @@ import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {buildPhasePlan,enemySprite} from '../dist/protocol.js';
 import {dealDamage} from '../dist/native-effects.js';
+import {blowerCells} from '../dist/native-environment.js';
 import {AVAILABLE_FINAL_BOSS_IDS,finalBossConfig,finalBossPlacementArea,finalBossSpawnPoint,rollFinalBoss} from '../dist/native-final-boss.js';
 
-function finalRound(g){g.s.round=buildPhasePlan(NATIVE_DATA,g.s.modeId).filter(t=>t.isBossTurn&&!t.isConditional).at(-1).round;}
+function finalRound(g){g.s.round=buildPhasePlan(NATIVE_DATA,g.s.modeId).filter(t=>t.isBossTurn&&!t.isConditional).at(-1).round;assert.equal(g.startPreparation(),true);}
 function game({mapId=NATIVE_DATA.maps[0].stageId,operator=false,seed=42}={}){
  const g=new NativeSession(NATIVE_DATA,{modeId:'mode_single_normal',bandId:'band_amiya',mapId,seed,bondBan:{bonds:[]},finalBossId:'boss_5'});
  g.s.rewardPending=null;g.s.rewardQueue=[];
+ finalRound(g);
  if(operator){g.s.funds=9999;const shop=Object.values(NATIVE_DATA.season.charShopChessDatas).find(x=>x.charId&&!x.isHidden);const u=g.gain(shop.chessId);assert.ok(u);let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(g.canDeploy(u.uid,x,y))placed=g.deploy(u.uid,x,y,0);assert.ok(placed);}
- finalRound(g);assert.ok(g.startBattle(),g.lastError||'Boss battle failed to start');return g;
+ assert.ok(g.startBattle(),g.lastError||'Boss battle failed to start');return g;
 }
 
 test('implemented final bosses 4/5/7 enter the weighted run roll and simulated hp defaults to 75% of coop hp',()=>{
@@ -29,7 +31,7 @@ test('implemented final bosses 4/5/7 enter the weighted run roll and simulated h
 test('static bosses spawn in the reserved 3x2 upper-right area and keep generic attacks closed',()=>{
  for(const bossId of ['boss_4','boss_7']){
   const g=new NativeSession(NATIVE_DATA,{modeId:'mode_single_normal',bandId:'band_amiya',mapId:NATIVE_DATA.maps[0].stageId,seed:42,bondBan:{bonds:[]},finalBossId:bossId});
-  g.s.round=buildPhasePlan(NATIVE_DATA,g.s.modeId).filter(t=>t.isBossTurn&&!t.isConditional).at(-1).round;
+  finalRound(g);
   assert.ok(g.startBattle());
   const b=g.battle,boss=b.s.enemies.find(e=>e.finalBoss);
   assert.equal(boss.finalBossHp,boss.maxHp);
@@ -64,13 +66,55 @@ test('every arena has two tile_start routes, a tile_end target, and a closed wal
  }
 });
 
+test('final boss maps use the paired PRTS boss crops and their own blower sources',()=>{
+ for(const map of NATIVE_DATA.maps){
+  const arena=map.bossArena;assert.ok(arena,map.stageId+' boss crop');
+  assert.deepEqual([arena.cols,arena.rows],[21,7],map.stageId+' joined leftBoss/rightBoss crop');
+  assert.deepEqual([arena.origin.col,arena.origin.row],[0,6],map.stageId+' boss crop origin');
+  assert.equal(arena.bossDoorRoutes.length,2,map.stageId+' two telin-to-end routes');
+  for(const route of arena.bossDoorRoutes){
+   const start={x:route.startPosition.col-arena.origin.col,y:arena.origin.row-route.startPosition.row};
+   const end={x:route.endPosition.col-arena.origin.col,y:arena.origin.row-route.endPosition.row};
+   assert.equal(arena.grid[start.y]?.[start.x]?.tileKey,'tile_telin',map.stageId+' boss entrance');
+   assert.equal(arena.grid[end.y]?.[end.x]?.tileKey,'tile_end',map.stageId+' boss exit');
+  }
+  assert.deepEqual([arena.bossPatrolRoute[0].x,arena.bossPatrolRoute[0].y],[arena.bossPatrolRoute.at(-1).x,arena.bossPatrolRoute.at(-1).y],map.stageId+' closed boss patrol');
+ }
+ const windMap=NATIVE_DATA.maps.find(map=>map.stageId==='act2autochess_m01'),arena=windMap.bossArena,field={...windMap,...arena};
+ assert.equal(windMap.windSources.length,8,'normal crop retains both rows of sources for normal play');
+ assert.equal(arena.windSources.length,4,'boss crop uses only the four row-6 sources');
+ assert.ok(arena.windSources.every(source=>source.y===0));
+ const cells=blowerCells(field);
+ for(const source of arena.windSources){
+  assert.equal(arena.grid[source.y][source.x].buildableType,'NONE','blower source itself is not deployable');
+  for(let step=1;step<=3;step++)assert.ok(cells.has(`${source.x},${source.y+step}`),`three airflow cells at ${source.x},${source.y+step}`);
+ }
+ assert.equal(cells.has('5,1'),true,'airflow cells retain the PRTS map tile’s deployment rule');
+ assert.equal(arena.grid[1][5].buildableType,'ALL');
+});
+
+test('final boss preparation switches to the boss map and restores it with saved placements cleared',()=>{
+ const g=new NativeSession(NATIVE_DATA,{modeId:'mode_single_normal',bandId:'band_amiya',mapId:'act2autochess_m01',seed:42,bondBan:{bonds:[]}});
+ const shop=Object.values(NATIVE_DATA.season.charShopChessDatas).find(row=>row.charId&&!row.isHidden),unit=g.gain(shop.chessId);
+ let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(g.canDeploy(unit.uid,x,y))placed=g.deploy(unit.uid,x,y,0);
+ assert.ok(placed,'normal-round placement');
+ const bossRound=buildPhasePlan(NATIVE_DATA,g.s.modeId).filter(turn=>turn.isBossTurn&&!turn.isConditional).at(-1).round;
+ g.s.round=bossRound-1;g.s.phase='intermission';
+ assert.equal(g.advanceRound(),true);
+ assert.equal(g.s.round,bossRound);assert.equal(g.s.mapVariant,'boss');assert.equal(g.map.cols,21);
+ assert.equal(g.s.units[0].position,null,'units return to the bench for the joined boss board');
+ assert.equal(g.canDeploy(unit.uid,5,1),true,'boss board accepts units on the actual airflow ground tile');
+ const restored=NativeSession.restore(NATIVE_DATA,g.snapshot());
+ assert.ok(restored);assert.equal(restored.map.cols,21);assert.equal(restored.s.mapVariant,'boss');
+});
+
 test('static bosses reserve and target the upper-right 2-column by 3-row area',()=>{
  for(const map of NATIVE_DATA.maps){
-  const area=finalBossPlacementArea(map,'enemy_1521_dslily'),point=finalBossSpawnPoint(map,'enemy_1521_dslily');
-  assert.deepEqual([area.firstColumn,area.firstRow,area.columns,area.rows],[map.cols-2,0,2,3],map.stageId+' upper-right footprint');
-  assert.deepEqual(point,{x:map.cols-1,y:1},map.stageId+' PRTS 范围锚定在最右列格心');
-  assert.equal(area.x,map.cols-1.5,map.stageId+' reserved footprint center remains independent');
-  assert.deepEqual([area.left,area.right,area.top,area.bottom],[map.cols-2.5,map.cols-.5,-.5,2.5],map.stageId+' targetable preview bounds');
+  const arena={...map,...map.bossArena},area=finalBossPlacementArea(arena,'enemy_1521_dslily'),point=finalBossSpawnPoint(arena,'enemy_1521_dslily');
+  assert.deepEqual([area.firstColumn,area.firstRow,area.columns,area.rows],[arena.cols-2,0,2,3],map.stageId+' upper-right footprint');
+  assert.deepEqual(point,{x:arena.cols-1,y:1},map.stageId+' PRTS 范围锚定在最右列格心');
+  assert.equal(area.x,arena.cols-1.5,map.stageId+' reserved footprint center remains independent');
+  assert.deepEqual([area.left,area.right,area.top,area.bottom],[arena.cols-2.5,arena.cols-.5,-.5,2.5],map.stageId+' targetable preview bounds');
  }
 });
 
@@ -89,11 +133,11 @@ test('Lucian skills get the final attack-cooldown frame and the blocked blink sp
   const g=game({operator:true}),b=g.battle,boss=b.s.enemies.find(e=>e.finalBoss),blocker=b.s.units[0],point=boss.route[2];
   blocker.x=point.x;blocker.y=point.y;boss.x=point.x;boss.y=point.y;boss.cmd=3;boss.block=blocker.uid;boss.action=null;boss.attackCooldown=1;
   boss.enemySkills.find(s=>s.prefab==='aoe').nextAt=1000;boss.enemySkills.find(s=>s.prefab==='blink').nextAt=0;
-  return {b,boss,blocker};
+  return {b,boss,blocker,point};
  };
- let {b,boss,blocker}=setup();b.step();assert.ok(boss.crownBlink);assert.equal(boss.block,null);
+ let {b,boss,blocker,point}=setup();b.step();assert.ok(boss.crownBlink);assert.equal(boss.block,null);
  for(let i=0;i<20;i++)b.step();assert.equal(b.s.enemies.filter(e=>e.id==='enemy_2017_csphts').length,1);
- const phantom=b.s.enemies.find(e=>e.id==='enemy_2017_csphts');assert.equal(phantom.x,8);assert.equal(phantom.y,0);assert.ok(blocker.hp>0);
+ const phantom=b.s.enemies.find(e=>e.id==='enemy_2017_csphts');assert.equal(phantom.x,point.x);assert.equal(phantom.y,point.y);assert.ok(blocker.hp>0);
  ({b,boss}=setup());boss.enemySkills.find(s=>s.prefab==='aoe').nextAt=0;boss.enemySkills.find(s=>s.prefab==='blink').nextAt=1000;b.step();assert.equal(boss.enemyCast?.phantomAoe,true);
 });
 

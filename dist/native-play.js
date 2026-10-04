@@ -754,7 +754,7 @@ function drawTerrainBadges(c,p,u,size){
 function drawTerrain(c,z,map){
  const now=performance.now()/1000;
  for(let y=0;y<map.rows;y++)for(let x=0;x<map.cols;x++){
-  const t=map.grid[y][x];if(t.zone)continue;const px=z.ox+x*z.tw+2,py=z.oy+y*z.th+2,w=z.tw-4,h=z.th-4,lift=tileLift(t,z),entry=t.tileKey.startsWith('tile_start'),goal=t.tileKey.startsWith('tile_end'),blocked=!!t.obstacle,fenced=isolatedPlatform(t),corridor=t.buildableType==='NONE'&&t.passableMask!=='NONE'&&!blocked;
+  const t=map.grid[y][x],px=z.ox+x*z.tw+2,py=z.oy+y*z.th+2,w=z.tw-4,h=z.th-4;if(t.zone){if(t.device)drawDeviceGlyph(c,t,px,py,w,h,t.direction);continue;}const lift=tileLift(t,z),entry=t.tileKey.startsWith('tile_start'),goal=t.tileKey.startsWith('tile_end'),blocked=!!t.obstacle,fenced=isolatedPlatform(t),corridor=t.buildableType==='NONE'&&t.passableMask!=='NONE'&&!blocked;
   c.fillStyle='#071216';c.fillRect(px,py+3,w,h);
   if(lift&&!blocked){const top=c.createLinearGradient(px,py,px+w,py+h-lift);top.addColorStop(0,'#a4b7bd');top.addColorStop(1,'#718b98');c.fillStyle=top;c.fillRect(px,py,w,h-lift);c.fillStyle='#314c5c';c.fillRect(px,py+h-lift,w,lift);c.strokeStyle='#d7e5e9';c.lineWidth=1.2;c.strokeRect(px+.5,py+.5,w-1,h-lift-1);c.strokeStyle='#182e3b';c.beginPath();c.moveTo(px,py+h);c.lineTo(px+w,py+h);c.stroke();c.fillStyle='#dce8eb';c.font=Math.max(8,Math.min(10,z.tw*.16))+'px sans-serif';c.textAlign='right';c.fillText('高台',px+w-3,py+h-2);}
   else{const special=TERRAIN_STYLE[t.tileKey];
