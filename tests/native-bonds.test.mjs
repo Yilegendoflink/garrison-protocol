@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {commitExit,dealDamage,dispatch,tickLogic,applyElementDamage,reviveActor,nearbySpots,canRelocateTo} from '../dist/native-effects.js';
@@ -102,6 +103,23 @@ test('叙拉古部署隐匿、卡西米尔阻挡周期伤害和突袭闲置再�
  assert.ok(sawTarget,'隐匿结束后恢复可选');
  const k=start(uniqueBond('kazimierzShip',6)).b,u=k.s.units[0],e=enemy(k,{x:u.x,y:u.y,hp:10000,block:u.uid,def:0,res:0});u.kazimierzNextAt=0;k.s.time=2;tickLogic(k,0);assert.ok(e.hp<10000&&e.statuses.some(x=>x.kind==='stun'));
  const r=start(uniqueBond('raidShip',2),{raidShip:50}).b,ru=r.s.units[0];ru.raidIdleSince=0;ru.sp=0;r.s.time=11;enemy(r,{x:ru.x+5,y:ru.y,hp:10000});r.tickBondIdle(ru,0);assert.ok(ru.raidBuffUntil>11);
+});
+
+test('叙拉古6人盟约在攻击者阻挡敌人时仍能触发真伤和恐惧',()=>{
+ const {b}=start(uniqueBond('siracusaShip',6)),u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:1e9,def:0,res:0});
+ assert.ok(u.siracusaInvisibleUntil>b.s.time,'6名叙拉古干员部署后应处于隐匿窗口');
+ u.block=e.uid;e.block=u.uid;b.economy.random=()=>0;
+ b.hit(u,e,100,'physical');
+ assert.ok(b.s.logicLog.some(row=>row.type==='damage'&&row.cause==='extra'&&row.targetUid===e.uid),'攻击者阻挡敌人时也应触发叙拉古追加真伤');
+ assert.equal(e.statuses.find(status=>status.kind==='fear')?.remaining,3,'盟约触发时应同时恐惧目标3秒');
+});
+
+test('实际加载的浏览器包包含叙拉古技能命中与阻挡修复',async()=>{
+ for(const file of ['../dist/game.bundle.js','../dist/native.bundle.js']){
+  const bundle=await readFile(new URL(file,import.meta.url),'utf8');
+  assert.equal(bundle.includes("this.owns(u,'siracusaShip')&&!skill&&u.block==null"),false,`${file} 不应保留旧的排除条件`);
+  assert.ok(bundle.includes("this.owns(u,'siracusaShip')){const b=this.params('siracusaShip')"),`${file} 应允许技能命中与阻挡中的攻击触发`);
+ }
 });
 
 test('突袭再部署不与干员／占格子的召唤物重合，四向被占就往外找',()=>{
