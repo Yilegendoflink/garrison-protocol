@@ -46,6 +46,20 @@ test('盟约调配奖励同样不重复',()=>{
  assert.equal(new Set(g.s.rewardPending.offers).size,3,'盟约奖励不应重复');
 });
 
+test('寻呼模块的盟约池不足三名时只展示可用的不同干员',()=>{
+ const g=new NativeSession(NATIVE_DATA,{seed:123,bondBan:NO_BOND_BAN});
+ g.s.level=4;
+ const owner=g.gain('chess_char_5_17_a'); // 山
+ assert.deepEqual(g.gainableBonds(owner,4),['investShip']);
+ g.gainItem('chess_item_4_01_e_a'); // 寻呼模块
+ const module=g.s.items.at(-1);
+ assert.equal(g.equip(module.uid,owner.uid),true,'装备寻呼模块应正常触发盟约特殊刷新');
+ const offers=g.s.rewardPending.offers;
+ assert.equal(offers.length,2,'盟约池只有两名干员时应展示两项');
+ const chars=offers.map(id=>NATIVE_DATA.season.charShopChessDatas[id].charId);
+ assert.deepEqual(new Set(chars),new Set(['char_4151_tinman','char_1033_swire2']),'应各自展示锡人和琳琅诗怀雅');
+});
+
 // 贾维【团伙行动】口径（用户 2026-09-19 确认）：主动刷新次数跨回合累计，每满 6 次发 1 名叙拉古干员，
 // 「每回合至多 2 名」只约束发放节奏——被上限挡住的份数留到之后回合补发，同一档里程碑不重复兑现。
 // 发放按 s.events 的 gain 计数（三合一合并会减少 s.units，不能拿干员数当发放数）。

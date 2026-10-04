@@ -105,13 +105,13 @@ export class NativeSession extends NativeEconomy {
  isOperatorBanned(chessId){return this.bondBanned(chessId);}
  eligible(){return Object.values(this.data.season.charShopChessDatas).filter(o=>operatorAllowed(this.data,o,this)&&!this.isOperatorBanned(o.chessId));}
  // 奖励候选之间不能重复：同一次奖励里出现的卡必须互不相同。
- // exclude 交给 drawFromPool 直接剔除，卡池确实不足时按顺序补位（不能因为去重让奖励变少）。
+ // 卡池可选项不足时少给几项，不用重复卡补足显示数量。
  drawDistinct(request,count,exclude=[]){
   const seen=[...exclude],offers=[];
   for(let i=0;i<count;i++){
    let id=null;
    try{id=this.drawFromPool({...request,exclude:seen});}catch{id=null;}
-   if(id==null){try{id=this.drawFromPool(request);}catch{break;}}
+   if(id==null)break;
    offers.push(id);seen.push(id);
   }
   return offers;
