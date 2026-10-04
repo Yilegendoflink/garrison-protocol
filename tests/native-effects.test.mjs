@@ -1215,7 +1215,8 @@ test('remaining operator adapters expose element, link, summon and shield lifecy
 });
 
 test('逐名适配覆盖被动撤回、狼影、心烛、雪山复起与链路状态',()=>{
- const ines=openBattle({chessId:'chess_char_4_04_a',skillIndex:2}).b;deployNow(ines);assert.equal(ines.s.units[0].deployed,false);assert.ok(ines.s.logicEffects.some(f=>f.talentOrSkillId==='ines-shadow'));
+ const ines=openBattle({chessId:'chess_char_4_04_a',skillIndex:2}).b,iu=ines.s.units[0];assert.equal(iu.deployed,false);assert.equal(iu.down,0,'S3 首次部署离场后应立即刷新再部署时间');assert.equal(iu.redeployPenalty,0,'首次特殊部署不增加后续再部署惩罚');assert.ok(ines.s.logicEffects.some(f=>f.talentOrSkillId==='ines-shadow'));
+ ines.step();assert.equal(iu.deployed,true,'S3 特殊首部署后的再部署应留在场上');assert.equal(iu.deployCount,2);assert.equal(ines.s.logicEffects.filter(f=>f.talentOrSkillId==='ines-shadow').length,1,'再部署不重复执行特殊首部署');for(let i=0;i<90;i++)ines.step();assert.equal(iu.deployed,true,'伊内丝 S3 不应再次进入离场/再部署循环');assert.equal(iu.deployCount,2);
  const dust=openBattle({chessId:'chess_char_4_25_a',skillIndex:0}).b;deployNow(dust);assert.equal(dust.s.summons.filter(s=>s.type==='cetsyr-dust').length,3);
  const sbell=openBattle({chessId:'chess_char_6_02_a',skillIndex:0}).b;deployNow(sbell);const su=sbell.s.units[0];dealDamage(sbell,{source:enemy(sbell,{atk:999999}),target:su,value:999999,type:'true'});assert.ok(su.hp>0&&su.sbellRevived);
  const mlyss=openBattle({chessId:'chess_char_6_11_a',skillIndex:0}).b;deployNow(mlyss);const mu=mlyss.s.units[0];mu.sp=mlyss.spCost(mu);mlyss.activate(mu);assert.ok(mlyss.s.summons.some(s=>s.type==='mlyss-fluid'));
