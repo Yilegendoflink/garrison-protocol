@@ -9,7 +9,7 @@ import {NO_BOND_BAN} from './no-bond-ban.mjs';
 
 const uniqueBond=(id,count)=>[...new Map(Object.values(NATIVE_DATA.season.charShopChessDatas).filter(s=>s.charId&&NATIVE_DATA.season.charChessDataDict[s.chessId].bondIds.includes(id)).map(s=>[s.charId,s.chessId])).values()].slice(0,count);
 function start(ids,layers={}){
- const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:1});g.s.funds=9999;g.s.capacity=16;for(const id of ids)g.gain(id);g.s.rewardPending=null;g.s.rewardQueue=[];
+ const g=new NativeSession(NATIVE_DATA,{bondBan:NO_BOND_BAN,seed:1});g.s.funds=9999;g.s.capacity=16;for(const spec of ids){const unit=g.gain(typeof spec==='string'?spec:spec.chessId);if(typeof spec==='object'&&spec.skillIndex!=null)unit.skillIndex=spec.skillIndex;}g.s.rewardPending=null;g.s.rewardQueue=[];
  for(const [id,n] of Object.entries(layers))g.s.bondLayers[id]=n;
  for(const u of g.s.units){let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++){if(g.s.units.some(v=>v.uid!==u.uid&&v.position?.x===x&&v.position?.y===y))continue;if(g.canDeploy(u.uid,x,y))placed=g.deploy(u.uid,x,y,0);}assert.ok(placed,'no tile for '+u.chessId);}
  assert.equal(g.perform('start'),true,g.lastError||'start failed');const b=g.battle;b.s.queue=[];b.s.limit=1e9;deployNow(b);return {g,b};
@@ -63,6 +63,16 @@ test('拉特兰盟约增加弹药并在6人消耗弹药后提高攻击',()=>{
 
 test('迅捷技能结束按概率回复技力，40层额外回复全体技力',()=>{
  const swifts=uniqueBond('swiftShip',2),{b}=start(swifts,{swiftShip:40}),u=b.s.units[0];u.skillCount=1;u.skillLeft=0;u.ammo=0;u.sp=0;b.economy.random=()=>0;dispatch(b,'skill-end',{target:u});assert.ok(u.sp>=12);
+});
+
+test('满层迅捷在锏S1与凛御银灰S2结束时触发技力返还',()=>{
+ const partner=Object.values(NATIVE_DATA.season.charShopChessDatas).find(s=>s.charId!=='char_4116_blkkgt'&&s.charId!=='char_1045_svash2'&&NATIVE_DATA.season.charChessDataDict[s.chessId]?.bondIds.includes('swiftShip'))?.chessId;assert.ok(partner,'需要第二名迅捷干员激活盟约');
+ for(const spec of [{chessId:'chess_char_6_19_a',charId:'char_4116_blkkgt',skillIndex:0,attackEnd:true},{chessId:'chess_char_5_14_a',charId:'char_1045_svash2',skillIndex:1}]){
+  const {b}=start([{chessId:spec.chessId,skillIndex:spec.skillIndex},partner],{swiftShip:40}),u=b.s.units.find(v=>v.id===spec.charId);assert.ok(u&&b.owns(u,'swiftShip'));b.economy.random=()=>0;
+  const end= b.emit.bind(b);let skillEnds=0;b.emit=(type,extra)=>{if(type==='skill-end'&&extra.uid===u.uid)skillEnds++;return end(type,extra);};enemy(b,{x:u.x+1,y:u.y,hp:1e9,def:0,res:0});u.sp=b.spCost(u);b.activate(u);
+  if(spec.attackEnd){assert.equal(skillEnds,0,'锏S1应等触发攻击结算后结束');for(let i=0;i<120;i++)b.step();assert.ok(skillEnds>0,'攻击回复的瞬时技能需要发出结束事件');assert.ok(u.skillCount>1,'返还的技力应能让锏S1继续触发');}
+  else{assert.equal(skillEnds,1,'凛御银灰S2的瞬时效果结算后应结束');assert.equal(u.sp,27,'40层时自身12技力与强化档15技力都应返还');}
+ }
 });
 
 test('坚守分摊非坚守伤害并对伤害来源反击施加脆弱',()=>{
