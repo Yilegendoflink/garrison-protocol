@@ -118,6 +118,14 @@ test('突袭闲置位移在真实步进里满 10 秒才触发，并走公共位�
  assert.ok(ru.raidBuffUntil>=b.s.time,`位移后要拿到攻防加成窗口，实际 ${ru.raidBuffUntil}`);
  assert.ok(b.s.logicLog.some(x=>x.type==='move'&&x.uid===ru.uid&&x.mode==='raid-redeploy'),'位移走公共位移链路');
 });
+test('突袭位移会再次触发史尔特尔的部署时盟约效果',()=>{
+ const {b}=start(['chess_char_5_07_a','chess_char_1_18_a']);
+ const ru=b.s.units.find(u=>u.id==='char_350_surtr'),before=b.layers.raidShip,from={x:ru.x,y:ru.y};
+ ru.raidIdleSince=0;ru.lastAttack=0;ru.lastSkill=-Infinity;ru.sp=0;b.s.time=11;
+ enemy(b,{x:ru.x+6,y:ru.y,hp:1e6});b.tickBondIdle(ru,0);
+ assert.notDeepEqual({x:ru.x,y:ru.y},from,'突袭应把史尔特尔重新部署到敌人附近');
+ assert.equal(b.layers.raidShip,before+8,'重新部署再次触发史尔特尔的部署时效果');
+});
 test('突袭敌人周围全是占位时一路往外找落点，不压在任何人身上',()=>{
  const {b}=start(uniqueBond('raidShip',2),{raidShip:50});
  const ru=b.s.units[0],from={x:ru.x,y:ru.y};ru.sp=0;
