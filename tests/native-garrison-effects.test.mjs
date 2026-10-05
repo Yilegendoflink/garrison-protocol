@@ -251,6 +251,24 @@ test('沉睡/晕眩触发：范围内敌人或干员进入沉睡或晕眩时加�
  assert.equal((b.layers.preciShip || 0) - beforeP, 1);
 });
 
+test('缇缇 S2 沉睡光环每 0.1 秒重复施加时叠盟约层数，且小睡不计入', () => {
+ const chessId = 'chess_char_5_02_b';
+ const {b} = openBattle({chessId, skillIndex: 1});
+ deployNow(b); patchActive(b);
+ const u = unitOf(b, chessId);
+ u.x = 3; u.y = 3; u.dir = 0;
+ const foe = enemy(b, {x: 4, y: 3, hp: 1e9});
+ const foe2 = enemy(b, {x: 4, y: 3, hp: 1e9});
+ b.step();
+ const beforeS = b.layers.sargonShip || 0, beforeP = b.layers.preciShip || 0;
+ u.sp = b.spCost(u); b.activate(u);
+ for (let i = 0; i < 30; i++) b.step();
+ assert.ok(foe.statuses.some(s => s.kind === 'sleep'), '敌人应持续处于沉睡');
+ assert.ok(foe2.statuses.some(s => s.kind === 'sleep'), '第二名敌人也应持续处于沉睡');
+ assert.equal((b.layers.sargonShip || 0) - beforeS, 40, '两名敌人各每 0.1 秒给萨尔贡叠 2 层');
+ assert.equal((b.layers.preciShip || 0) - beforeP, 40, '两名敌人各每 0.1 秒给精准叠 2 层');
+});
+
 test('送特质：check_bond_id 不匹配就不发（凛御银灰），匹配才发', () => {
  const silver = cardOf('凛御银灰'), other = cardOf('史尔特尔'), kjerag = cardOf('银灰');
  const b = battleOf(silver, other, kjerag);

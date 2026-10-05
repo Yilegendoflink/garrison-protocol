@@ -748,7 +748,7 @@ export class NativeBattle {
  }
  // 状态类卫戍：敌人进入冻结（初雪/银灰，以及凛御银灰转发出去的 garrison_29，check_ab_flag=16）
  // 与「范围内有敌人或干员进入沉睡或晕眩」（缇缇）。「范围内」= 持有者的攻击范围。
- // 缇缇的注记「同一单位每 0.05 秒仅能叠 1 次」按 (持有者, 特质) 节流。
+ // 缇缇的注记「同一单位每 0.05 秒仅能叠 1 次」按 (持有者, 特质, 目标单位) 节流。
  garrisonStatusEvent(actor,kind){
   if(!actor)return;
   for(const owner of this.s.units){
@@ -768,7 +768,7 @@ export class NativeBattle {
      prob=Number.isFinite(Number(b.prob))?Number(b.prob):1;
     }else if(key==='act2autochess_gar_event_allyenemy_sleepstun_inrange'){
      if(!(kind==='sleep'||kind==='stun'))continue;
-     this.garrisonStatusAt??=new Map();const tkey=owner.uid+':'+g.id;
+     this.garrisonStatusAt??=new Map();const tkey=owner.uid+':'+g.id+':'+actor.uid;
      if(this.s.time-(this.garrisonStatusAt.get(tkey)??-Infinity)<0.05)continue;
      this.garrisonStatusAt.set(tkey,this.s.time);
     }else continue;
@@ -780,7 +780,7 @@ export class NativeBattle {
  tickGarrisonStatusEvents(){
   this.garrisonStatusSeen??=new Map();
   const check=actor=>{
-   const kinds=new Set((actor.statuses||[]).map(s=>s.kind)),seen=this.garrisonStatusSeen.get(actor.uid);
+   const kinds=new Set((actor.statuses||[]).filter(s=>!(s.kind==='sleep'&&s.titiDoze)).map(s=>s.kind)),seen=this.garrisonStatusSeen.get(actor.uid);
    // 第一次见到某个单位时也照常判定：新出现的单位如果一上来就带冻结/沉睡/晕眩，同样算「进入」。
    for(const kind of kinds)if((kind==='frozen'||kind==='sleep'||kind==='stun')&&(!seen||!seen.has(kind)))this.garrisonStatusEvent(actor,kind);
    this.garrisonStatusSeen.set(actor.uid,kinds);
