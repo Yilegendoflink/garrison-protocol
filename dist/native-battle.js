@@ -80,6 +80,21 @@ export class NativeBattle {
   if(boss.enemyId==='enemy_9033_acdeer'){actor.madnessResist=Number(actor.enemyTalent?.['Madness.damage_resistance'])||0;}
   if(boss.enemyId==='enemy_1521_dslily'){actor.dslilyForm=1;actor.dslilySpawnAt=this.s.time;}
  }
+ clearEndedRoundEntities(){
+  const s=this.s;if(!s)return false;
+  // 休整期保留干员棋盘与结算快照，但结束的战斗不应留下仍会活动的单位、弹道或生成队列。
+  for(const key of ['enemies','summons','whitwEyes','projectiles','enemyProjectiles','pendingEnemySpawns','logicEffects','effects','events','strikes','queue'])s[key]=[];
+  s.banner=null;
+  if(s.settle){s.settle.queue=[];s.settle.byId={};}
+  delete s.minerEngagements;delete s.nextMinerEngagementAt;
+  for(const u of s.units||[]){
+   if(u.whitwFloaters)u.whitwFloaters=[];
+   if(u.whitwEyeCount!=null)u.whitwEyeCount=0;
+   if(u.summonRespawns)u.summonRespawns={};
+   u.pendingReturns=0;
+  }
+  return true;
+ }
  spawnMineCamp(config){return spawnMineCamp(this,config);}
  toggleMineCamp(uid){return toggleMineCamp(this,uid);}
  mineCampReady(camp){return mineCampReady(this,camp);}
