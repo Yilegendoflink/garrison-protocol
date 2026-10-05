@@ -86,14 +86,14 @@ export class NativeEconomy extends PreparationState {
   }}
  }
  hasGarrison(u,event){return this.data.season.charChessDataDict[u.chessId].garrisonIds.some(id=>this.data.season.garrisonDataDict[id].eventType===event);}
- triggerGarrisons(event,unit,{effectOwner=unit}={}){
+ triggerGarrisons(event,unit,{effectOwner=unit,ignoreCondition=false}={}){
   const key=unit.uid+':'+event;if(this.triggerChain.includes(key)){if(this.manualPreview)return;throw Error('Cyclic garrison trigger '+key);}this.triggerChain.push(key);
   try{
    // 「获得时」类特质每次触发几次读原表 bond_layer_char_garrison_bonus 行（event/count）；
    // 「达到100层再+1次」原表没有阈值字段（该行 layer=0），只写在盟约文案里 → BOND_TEXT_CONSTANTS.investShip。
    const investBB=bondEffectBlackboard(this.data,'investShip','bond_layer_char_garrison_bonus'),investActive=!!this.bonds().investShip?.active,investCount=bondValue(investBB,'count',2);
    const repeat=investActive&&event===String(investBB.event||'SERVER_GAIN')?((this.s.bondLayers.investShip||0)>=BOND_TEXT_CONSTANTS.investShip.powerLayer?investCount+BOND_TEXT_CONSTANTS.investShip.powerCountAdd:investCount):1;
-   for(let i=0;i<repeat;i++)for(const id of this.data.season.charChessDataDict[unit.chessId].garrisonIds){const rule=this.data.season.garrisonDataDict[id];if(rule.eventType===event){runGarrison(this,effectOwner,rule,event);this.s.events.push({type:'garrison',id,uid:effectOwner.uid,event});}}
+   for(let i=0;i<repeat;i++)for(const id of this.data.season.charChessDataDict[unit.chessId].garrisonIds){const rule=this.data.season.garrisonDataDict[id];if(rule.eventType===event){runGarrison(this,effectOwner,rule,event,{conditionUnit:unit,ignoreCondition});this.s.events.push({type:'garrison',id,uid:effectOwner.uid,event});}}
   }finally{this.triggerChain.pop();}
  }
  onOperatorGained(unit){

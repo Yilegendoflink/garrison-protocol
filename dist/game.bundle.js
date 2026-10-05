@@ -1530,16 +1530,19 @@ const handlers={
  SERVER_MOST_BOND:(c,u)=>{const rows=Object.entries(c.bonds()),max=Math.max(...rows.map(([,b])=>b.count));const bonds=rows.filter(([,b])=>b.count===max&&max>0).map(([id])=>id).filter(id=>c.bondHasCandidates?.(id)??true);if(bonds.length)draw(c,{kind:'operator',bond:c.pick(bonds)},1);},
  SERVER_TRIGGER_ANOTHER:(c,u,p)=>{let target;if(p.scope==='front')target=at(c,front(u));else if(p.scope==='farright')target=board(c).filter(v=>c.hasGarrison(v,p.event)).sort((a,b)=>a.position.y-b.position.y||b.position.x-a.position.x)[0];else throw Error('Unsupported garrison scope '+p.scope);if(target)c.triggerGarrisons(p.event,target);},
  SERVER_TRIGGER_FRONT_COUNT:(c,u,p)=>{for(let i=1;i<=p.count;i++){const target=at(c,front(u,i));if(target)c.triggerGarrisons(p.event,target);}},
- SERVER_FRONT_SAME_EFFECT_PREP_START:(c,u)=>{const target=at(c,front(u));if(target)c.triggerGarrisons('SERVER_PREP_START',target,{effectOwner:u});},
- SERVER_FRONT_SAME_EFFECT_PREP_FIN:(c,u)=>{const target=at(c,front(u));if(target)c.triggerGarrisons('SERVER_PREP_FIN',target,{effectOwner:u});},
+ SERVER_FRONT_SAME_EFFECT_PREP_START:(c,u)=>{const target=at(c,front(u));if(target)c.triggerGarrisons('SERVER_PREP_START',target,{effectOwner:u,ignoreCondition:true});},
+ SERVER_FRONT_SAME_EFFECT_PREP_FIN:(c,u)=>{const target=at(c,front(u));if(target)c.triggerGarrisons('SERVER_PREP_FIN',target,{effectOwner:u,ignoreCondition:true});},
  SERVER_SELL_CHESS_GAIN_SPECIAL_GOODS:(c,u,p)=>c.rewardFromPool(p['pool'+c.s.level]||p.max_pool,3,1)
 };
 const SERVER_GARRISON_TYPES=Object.keys(handlers);
-function runGarrison(c,unit,rule,event){
+function runGarrison(c,unit,rule,event,{conditionUnit=unit,ignoreCondition=false}={}){
  const p=Object.fromEntries((rule.blackboard||[]).map(e=>[e.key,e.valueStr??e.value]));
- if(p.conditionkey==='character_target_inboard'&&!unit.position)return;
- if(p.conditionkey==='character_same_row'&&(!unit.position||board(c).filter(v=>v.position.y===unit.position.y).length<p.check_count))return;
- if(p.conditionkey&&!['character_target_inboard','character_same_row'].includes(p.conditionkey))throw Error('Unsupported garrison condition '+p.conditionkey);
+ // 白面鸮复制的是卫戍效果本身，不复制原效果的触发条件。
+ if(!ignoreCondition){
+  if(p.conditionkey==='character_target_inboard'&&!conditionUnit?.position)return;
+  if(p.conditionkey==='character_same_row'&&(!conditionUnit?.position||board(c).filter(v=>v.position.y===conditionUnit.position.y).length<p.check_count))return;
+  if(p.conditionkey&&!['character_target_inboard','character_same_row'].includes(p.conditionkey))throw Error('Unsupported garrison condition '+p.conditionkey);
+ }
  const fn=handlers[rule.effectType];if(!fn)throw Error('Unsupported garrison effect '+rule.effectType);return fn(c,unit,p,event);
 }
 
@@ -1688,14 +1691,14 @@ class NativeEconomy extends PreparationState {
   }}
  }
  hasGarrison(u,event){return this.data.season.charChessDataDict[u.chessId].garrisonIds.some(id=>this.data.season.garrisonDataDict[id].eventType===event);}
- triggerGarrisons(event,unit,{effectOwner=unit}={}){
+ triggerGarrisons(event,unit,{effectOwner=unit,ignoreCondition=false}={}){
   const key=unit.uid+':'+event;if(this.triggerChain.includes(key)){if(this.manualPreview)return;throw Error('Cyclic garrison trigger '+key);}this.triggerChain.push(key);
   try{
    // 「获得时」类特质每次触发几次读原表 bond_layer_char_garrison_bonus 行（event/count）；
    // 「达到100层再+1次」原表没有阈值字段（该行 layer=0），只写在盟约文案里 → BOND_TEXT_CONSTANTS.investShip。
    const investBB=bondEffectBlackboard(this.data,'investShip','bond_layer_char_garrison_bonus'),investActive=!!this.bonds().investShip?.active,investCount=bondValue(investBB,'count',2);
    const repeat=investActive&&event===String(investBB.event||'SERVER_GAIN')?((this.s.bondLayers.investShip||0)>=BOND_TEXT_CONSTANTS.investShip.powerLayer?investCount+BOND_TEXT_CONSTANTS.investShip.powerCountAdd:investCount):1;
-   for(let i=0;i<repeat;i++)for(const id of this.data.season.charChessDataDict[unit.chessId].garrisonIds){const rule=this.data.season.garrisonDataDict[id];if(rule.eventType===event){runGarrison(this,effectOwner,rule,event);this.s.events.push({type:'garrison',id,uid:effectOwner.uid,event});}}
+   for(let i=0;i<repeat;i++)for(const id of this.data.season.charChessDataDict[unit.chessId].garrisonIds){const rule=this.data.season.garrisonDataDict[id];if(rule.eventType===event){runGarrison(this,effectOwner,rule,event,{conditionUnit:unit,ignoreCondition});this.s.events.push({type:'garrison',id,uid:effectOwner.uid,event});}}
   }finally{this.triggerChain.pop();}
  }
  onOperatorGained(unit){
