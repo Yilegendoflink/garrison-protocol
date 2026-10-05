@@ -67,6 +67,17 @@ test('阿戈尔复活与不屈同时触发：消耗复活名额、下一次免�
  applyLoss(b,{target:u,amount:u.hp});assert.equal(u.egirRevived,true);assert.equal(b.s.bondEgirReviveCount,1);assert.equal(u.knockdownCount,1);assert.equal(u.deployed,false);assert.equal(u.down,0);assert.equal(b.deploymentCost(u),0);
  b.step();assert.equal(u.deployed,true);assert.equal(b.s.cost,0);assert.equal(u.egirRevived,true);
 });
+test('阿戈尔盟约复活只作用于阿戈尔干员，非阿戈尔退场不消耗复活名额',()=>{
+ const {b}=openBattle([...unique('egirShip',5),'chess_char_1_05_a']);
+ const other=b.s.units.find(u=>!b.owns(u,'egirShip')),egir=b.s.units.find(u=>b.owns(u,'egirShip'));
+ assert.ok(other);assert.ok(egir);assert.equal(b.rows.egirShip.count,5);
+ for(const [i,u] of b.s.units.entries()){u.x=i*3;u.y=10;u.hp=u.maxHp=20000;u.deployed=true;u.downed=false;u.down=0;u.exitLife=null;u.knockdownCount=0;u.egirRevived=false;u.indomFreeDeploy=false;}
+ b.s.bondEgirReviveCount=0;
+ applyLoss(b,{target:other,amount:other.hp});
+ assert.notEqual(other.egirRevived,true);assert.equal(other.deployed,false);assert.ok(other.down>0);assert.equal(b.s.bondEgirReviveCount,0);
+ applyLoss(b,{target:egir,amount:egir.hp});
+ assert.equal(egir.egirRevived,true);assert.equal(egir.down,0);assert.equal(b.s.bondEgirReviveCount,1);
+});
 test('阿戈尔复活重新触发部署事件；第四人及同一人第二次不能再占名额',()=>{
  const b=arena('egirShip',5);const events=[];const event=b.event.bind(b);b.event=(u,k,...args)=>{events.push([u.uid,k]);return event(u,k,...args);};
  for(const u of b.s.units.slice(0,4))applyLoss(b,{target:u,amount:u.hp});
