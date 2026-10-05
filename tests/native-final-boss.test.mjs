@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {NativeSession} from '../dist/native-session.js';
 import {buildPhasePlan,enemySprite} from '../dist/protocol.js';
 import {dealDamage} from '../dist/native-effects.js';
-import {blowerCells} from '../dist/native-environment.js';
 import {AVAILABLE_FINAL_BOSS_IDS,finalBossConfig,finalBossPlacementArea,finalBossSpawnPoint,rollFinalBoss} from '../dist/native-final-boss.js';
 
 function finalRound(g){g.s.round=buildPhasePlan(NATIVE_DATA,g.s.modeId).filter(t=>t.isBossTurn&&!t.isConditional).at(-1).round;assert.equal(g.startPreparation(),true);}
@@ -28,7 +28,7 @@ test('implemented final bosses 4/5/7 enter the weighted run roll and simulated h
  assert.equal(finalBossConfig(NATIVE_DATA,'boss_7','mode_single_abyss').hp,3000000);
 });
 
-test('static bosses spawn in the reserved 3x2 upper-right area and keep generic attacks closed',()=>{
+test('static bosses spawn in the reserved J1-K3 area and keep generic attacks closed',()=>{
  for(const bossId of ['boss_4','boss_7']){
   const g=new NativeSession(NATIVE_DATA,{modeId:'mode_single_normal',bandId:'band_amiya',mapId:NATIVE_DATA.maps[0].stageId,seed:42,bondBan:{bonds:[]},finalBossId:bossId});
   finalRound(g);
@@ -38,9 +38,13 @@ test('static bosses spawn in the reserved 3x2 upper-right area and keep generic 
   assert.equal(boss.formHold,true,bossId+' 自缚站桩');
   assert.equal(boss.unblockable,true,bossId+' 不可阻挡');
   assert.equal(boss.canAttack,false,bossId+' 通用普攻关闭，攻击全部走逐名 tick');
-  assert.deepEqual(boss.hitRect,{length:4.95,width:2.95,offsetY:1},bossId+' 盟约版巨型受击矩形');
-  const range=b.range;b.range=()=>[{x:g.map.cols-3,y:0}];
-  assert.equal(b.inside({},boss,true),true,bossId+' 应被地图内、预留区左侧的攻击格选中');b.range=range;
+  assert.deepEqual(boss.hitRect,{length:2,width:3,offsetX:.5,offsetY:0},bossId+' J1-K3 2×3 受击范围');
+  const preview=finalBossPlacementArea(g.map,boss.id),hitbox=b.hitAreaOf(boss);
+  assert.deepEqual([hitbox.left,hitbox.right,hitbox.top,hitbox.bottom],[preview.left,preview.right,preview.top,preview.bottom],bossId+' 战斗判定与备战预览一致');
+  const range=b.range;
+  for(const x of [g.map.cols-2,g.map.cols-1])for(const y of [0,1,2]){b.range=()=>[{x,y}];assert.equal(b.inside({},boss,true),true,bossId+` ${x},${y} 属于 J1-K3`);}
+  for(const [x,y] of [[g.map.cols-3,0],[g.map.cols-2,3],[g.map.cols-1,3]]){b.range=()=>[{x,y}];assert.equal(b.inside({},boss,true),false,bossId+` ${x},${y} 在 J1-K3 外`);}
+  b.range=range;
   assert.equal(boss.spriteScale>2,true,bossId+' 放大表现');
   assert.equal(enemySprite(boss).key,finalBossConfig(NATIVE_DATA,bossId,'mode_single_normal').handbookEnemyId,bossId+' 使用本期图鉴头像映射');
   assert.ok(NATIVE_DATA.assets[enemySprite(boss).key],bossId+' 战斗头像资源存在');
@@ -66,55 +70,32 @@ test('every arena has two tile_start routes, a tile_end target, and a closed wal
  }
 });
 
-test('final boss maps use the paired PRTS boss crops and their own blower sources',()=>{
- for(const map of NATIVE_DATA.maps){
-  const arena=map.bossArena;assert.ok(arena,map.stageId+' boss crop');
-  assert.deepEqual([arena.cols,arena.rows],[21,7],map.stageId+' joined leftBoss/rightBoss crop');
-  assert.deepEqual([arena.origin.col,arena.origin.row],[0,6],map.stageId+' boss crop origin');
-  assert.equal(arena.bossDoorRoutes.length,2,map.stageId+' two telin-to-end routes');
-  for(const route of arena.bossDoorRoutes){
-   const start={x:route.startPosition.col-arena.origin.col,y:arena.origin.row-route.startPosition.row};
-   const end={x:route.endPosition.col-arena.origin.col,y:arena.origin.row-route.endPosition.row};
-   assert.equal(arena.grid[start.y]?.[start.x]?.tileKey,'tile_telin',map.stageId+' boss entrance');
-   assert.equal(arena.grid[end.y]?.[end.x]?.tileKey,'tile_end',map.stageId+' boss exit');
-  }
-  assert.deepEqual([arena.bossPatrolRoute[0].x,arena.bossPatrolRoute[0].y],[arena.bossPatrolRoute.at(-1).x,arena.bossPatrolRoute.at(-1).y],map.stageId+' closed boss patrol');
- }
- const windMap=NATIVE_DATA.maps.find(map=>map.stageId==='act2autochess_m01'),arena=windMap.bossArena,field={...windMap,...arena};
- assert.equal(windMap.windSources.length,8,'normal crop retains both rows of sources for normal play');
- assert.equal(arena.windSources.length,4,'boss crop uses only the four row-6 sources');
- assert.ok(arena.windSources.every(source=>source.y===0));
- const cells=blowerCells(field);
- for(const source of arena.windSources){
-  assert.equal(arena.grid[source.y][source.x].buildableType,'NONE','blower source itself is not deployable');
-  for(let step=1;step<=3;step++)assert.ok(cells.has(`${source.x},${source.y+step}`),`three airflow cells at ${source.x},${source.y+step}`);
- }
- assert.equal(cells.has('5,1'),true,'airflow cells retain the PRTS map tile’s deployment rule');
- assert.equal(arena.grid[1][5].buildableType,'ALL');
-});
-
-test('final boss preparation switches to the boss map and restores it with saved placements cleared',()=>{
- const g=new NativeSession(NATIVE_DATA,{modeId:'mode_single_normal',bandId:'band_amiya',mapId:'act2autochess_m01',seed:42,bondBan:{bonds:[]}});
+test('final boss preparation keeps the selected original map and previews the J1-K3 hitbox',()=>{
+ const g=new NativeSession(NATIVE_DATA,{modeId:'mode_single_normal',bandId:'band_amiya',mapId:'act2autochess_m01',seed:42,bondBan:{bonds:[]},finalBossId:'boss_4'});
+ const original=g.map,originalGrid=JSON.stringify(g.map.grid);
  const shop=Object.values(NATIVE_DATA.season.charShopChessDatas).find(row=>row.charId&&!row.isHidden),unit=g.gain(shop.chessId);
  let placed=false;for(let y=0;y<g.map.rows&&!placed;y++)for(let x=0;x<g.map.cols&&!placed;x++)if(g.canDeploy(unit.uid,x,y))placed=g.deploy(unit.uid,x,y,0);
  assert.ok(placed,'normal-round placement');
+ const placement={...unit.position};
  const bossRound=buildPhasePlan(NATIVE_DATA,g.s.modeId).filter(turn=>turn.isBossTurn&&!turn.isConditional).at(-1).round;
  g.s.round=bossRound-1;g.s.phase='intermission';
  assert.equal(g.advanceRound(),true);
- assert.equal(g.s.round,bossRound);assert.equal(g.s.mapVariant,'boss');assert.equal(g.map.cols,21);
- assert.equal(g.s.units[0].position,null,'units return to the bench for the joined boss board');
- assert.equal(g.canDeploy(unit.uid,5,1),true,'boss board accepts units on the actual airflow ground tile');
+ assert.equal(g.s.round,bossRound);assert.equal(g.map,original,'Boss round must keep the selected map object');assert.equal(g.s.mapVariant,undefined);
+ assert.deepEqual([g.map.cols,g.map.rows],[11,7]);assert.equal(JSON.stringify(g.map.grid),originalGrid);assert.deepEqual(unit.position,placement,'existing placements remain on the unchanged map');
+ const area=g.finalBossPrepArea();assert.deepEqual([area.firstColumn,area.firstRow,area.columns,area.rows],[9,0,2,3]);
+ assert.deepEqual([area.left,area.right,area.top,area.bottom],[8.5,10.5,-.5,2.5],'hitbox preview covers J1-K3');
+ const play=fs.readFileSync('dist/native-play.js','utf8');assert.ok(play.includes('drawFinalBossPlacementPreview(c,z,g.finalBossPrepArea())'));assert.ok(play.includes("w<88?'J1-K3':'Boss 判定 · J1-K3'"));
  const restored=NativeSession.restore(NATIVE_DATA,g.snapshot());
- assert.ok(restored);assert.equal(restored.map.cols,21);assert.equal(restored.s.mapVariant,'boss');
+ assert.ok(restored);assert.equal(restored.map.cols,11);assert.equal(restored.map.rows,7);assert.equal(restored.s.mapVariant,undefined);
 });
 
-test('static bosses reserve and target the upper-right 2-column by 3-row area',()=>{
+test('static boss preview and collision are the exact upper-right J1-K3 area on the original maps',()=>{
  for(const map of NATIVE_DATA.maps){
-  const arena={...map,...map.bossArena},area=finalBossPlacementArea(arena,'enemy_1521_dslily'),point=finalBossSpawnPoint(arena,'enemy_1521_dslily');
-  assert.deepEqual([area.firstColumn,area.firstRow,area.columns,area.rows],[arena.cols-2,0,2,3],map.stageId+' upper-right footprint');
-  assert.deepEqual(point,{x:arena.cols-1,y:1},map.stageId+' PRTS 范围锚定在最右列格心');
-  assert.equal(area.x,arena.cols-1.5,map.stageId+' reserved footprint center remains independent');
-  assert.deepEqual([area.left,area.right,area.top,area.bottom],[arena.cols-2.5,arena.cols-.5,-.5,2.5],map.stageId+' targetable preview bounds');
+  const area=finalBossPlacementArea(map,'enemy_1521_dslily'),point=finalBossSpawnPoint(map,'enemy_1521_dslily');
+  assert.deepEqual([map.cols,map.rows],[11,7],map.stageId+' original field remains 11×7');
+  assert.deepEqual([area.firstColumn,area.firstRow,area.columns,area.rows],[9,0,2,3],map.stageId+' J1-K3 footprint');
+  assert.deepEqual(point,{x:10,y:1},map.stageId+' Boss center remains anchored in K2');
+  assert.deepEqual([area.left,area.right,area.top,area.bottom],[8.5,10.5,-.5,2.5],map.stageId+' preview bounds');
  }
 });
 

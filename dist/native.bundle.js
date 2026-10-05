@@ -7406,15 +7406,15 @@ return {editorState,enemyRows,originalTypeIds,filterRows,renderWaveEditor,applyE
 const AVAILABLE_FINAL_BOSS_IDS=Object.freeze(['boss_4','boss_5','boss_7']);
 
 // 逐名战斗机制登记（数值来源：盟约模式 PRTS 记录与对应敌人页）。
-// hitRect＝实际受击矩形，与右上角预留的部署区是不同概念；盟约版阿利斯泰尔与萨米均为长4.95×宽2.95、向上偏移1；
-// PRTS 的范围以最右列格心为 Boss 中心；预留部署区仍是右上角 2列×3行。
+// 固定巨型 Boss 的中心锚在原地图 K2；受击矩形向左偏半格，覆盖原坐标 J1–K3（2列×3行）。
+// 该范围同时用于最终回合备战预览和部署限制，不替换原始战场地图。
 // static＝自缚站桩（formHold，不沿环线移动）；unblockable＝不可阻挡；shiftImmune＝失衡免疫；
 // range 补齐档案缺省的攻击半径（两位 Boss 的攻击都是全场范围，PRTS 攻击半径 99）。
 // spriteScale 只管画布表现。
 const FINAL_BOSS_MECHANICS={
- 'enemy_1521_dslily':{hitRect:{length:4.95,width:2.95,offsetY:1},spriteScale:3,static:true,unblockable:true,range:99},
+ 'enemy_1521_dslily':{hitRect:{length:2,width:3,offsetX:.5,offsetY:0},spriteScale:3,static:true,unblockable:true,range:99},
  'enemy_2016_csphtm':{spriteScale:2.2},
- 'enemy_9033_acdeer':{hitRect:{length:4.95,width:2.95,offsetY:1},spriteScale:3,static:true,unblockable:true,shiftImmune:true,range:99},
+ 'enemy_9033_acdeer':{hitRect:{length:2,width:3,offsetX:.5,offsetY:0},spriteScale:3,static:true,unblockable:true,shiftImmune:true,range:99},
 };
 function finalBossMechanics(enemyId){return FINAL_BOSS_MECHANICS[enemyId]||null;}
 function finalBossPlacementArea(map,enemyId){
@@ -13399,9 +13399,9 @@ class NativeBattle {
  cellsForRangeId(u,rangeId){const grids=rangeId?this.data.ranges[rangeId]?.grids:null;return grids?.length?this.cellsForGrids(u,grids):null;}
  // forceSkill=true 时无视当前是否开技，一律按技能范围算：自动释放要看的是「开技后能不能打到」。
  rangeWithSkill(u,skill=false,forceSkill=false){const p=this.profile(u),sid=this.skillRangeId(u,skill,forceSkill),r=this.data.ranges[sid]||p.range,grids=r?.grids||[{row:0,col:1}];return {skill:sid!==p.rangeId,rangeId:sid,cells:this.cellsForGrids(u,grids)};}
- // 最终 Boss（阿利斯泰尔/萨米）的巨型受击矩形：格子按「格心落在矩形内」判定，与木桩 area 同一口径。
- // hitRect:{length,width,offsetY} 来自 PRTS「巨型单位」口径（长4.95×宽2.95、向上偏移1，本期覆盖）。
- hitAreaOf(e){if(e.trainingDummy&&e.area)return e.area;if(!e.hitRect)return null;const half=Number(e.hitRect.length)/2,halfW=Number(e.hitRect.width)/2,cy=e.y-(Number(e.hitRect.offsetY)||0);return {left:e.x-half,right:e.x+half,top:cy-halfW,bottom:cy+halfW};}
+ // 最终 Boss 受击矩形与备战预览一致：格心按是否落在 J1–K3 的矩形内判定。
+ // hitRect:{length,width,offsetX,offsetY}；offsetX 用于保留 Boss 在 K 列的原始中心锚。
+ hitAreaOf(e){if(e.trainingDummy&&e.area)return e.area;if(!e.hitRect)return null;const half=Number(e.hitRect.length)/2,halfW=Number(e.hitRect.width)/2,cx=e.x-(Number(e.hitRect.offsetX)||0),cy=e.y-(Number(e.hitRect.offsetY)||0);return {left:cx-half,right:cx+half,top:cy-halfW,bottom:cy+halfW};}
  hitAreaContains(area,cell){return cell.x>=area.left-1e-9&&cell.x<=area.right+1e-9&&cell.y>=area.top-1e-9&&cell.y<=area.bottom+1e-9;}
  inside(u,e,skill=(u.skillLeft>0||u.ammo>0)){if(e.hidden)return false;const cells=this.range(u,skill),area=this.hitAreaOf(e);if(area){for(const cell of cells)if(this.hitAreaContains(area,cell))return true;return false;}return containsTarget(cells.map(g=>[g.x,g.y]),e);}
  // 自动释放专用：技能开启后这次攻击能不能真的打到它。
@@ -13999,7 +13999,7 @@ const namedPickList=(rows,weights,keyOf)=>rows.flatMap(row=>Array(Math.max(1,Mat
 
 class NativeSession extends NativeEconomy {
  constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,bondBan=null,egg325=false,cat=false,playerId='local',teamPeers=[],teamTransport=null,finalBossId=null,finalBossHpMultiplier=DEFAULT_FINAL_BOSS_HP_MULTIPLIER}={}){
-  const map=data.maps.find(m=>m.stageId===mapId)||data.maps.find(m=>m.weight>0);super(data,modeId,{bandId,board:map,seed,manualPreview:true,playerId,teamPeers,cat});this.baseMap=map;this.bossMap=map.bossArena?{...map,...map.bossArena,sourceMap:map}:map;this.map=map;this.teamTransport=teamTransport;this.battle=null;this.s.mapId=map.stageId;this.s.itemOffers=[];this.s.summonCards=[];this.s.capacity=8;this.s.passiveIncome=0;this.s.history=[];this.s.runResult=null;this.s.frozenSlots=[];this.s.roundDecisions=[];this.s.enemyModifiers=[];this.s.operatorModifiers=[];this.s.commands=[];
+  const map=data.maps.find(m=>m.stageId===mapId)||data.maps.find(m=>m.weight>0);super(data,modeId,{bandId,board:map,seed,manualPreview:true,playerId,teamPeers,cat});this.baseMap=map;this.map=map;this.teamTransport=teamTransport;this.battle=null;this.s.mapId=map.stageId;this.s.itemOffers=[];this.s.summonCards=[];this.s.capacity=8;this.s.passiveIncome=0;this.s.history=[];this.s.runResult=null;this.s.frozenSlots=[];this.s.roundDecisions=[];this.s.enemyModifiers=[];this.s.operatorModifiers=[];this.s.commands=[];
   // 本局禁用的盟约（固定禁用的全部 + 随机抽中的 3 核心 + 4 附加）在开局定死，随存档保存；
   // 干员只有在「所属盟约全部被禁」时才被禁用。
   // 禁用方案默认取协议自定义「禁用方案」页配置的那份（localStorage；未配置时是默认方案：投资人固定不被随机禁用）；
@@ -14204,7 +14204,7 @@ class NativeSession extends NativeEconomy {
  takeFangTransfers(){const pending=this.s.transferOutbox.filter(r=>!r.sent);for(const r of pending)r.sent=true;return structuredClone(pending);}
  receiveFangTransfer(record){if(!record?.transferId||record.recipientId!==this.s.playerId||!this.data.profiles[record.chessId]||this.s.strategyClaims[`fang:received:${record.transferId}`]||this.s.transferInbox.some(r=>r.transferId===record.transferId))return false;this.s.transferInbox.push(structuredClone(record));return true;}
  applyTransferInbox(){const due=[],keep=[];for(const record of this.s.transferInbox||[])(record.dueRound??0)<=this.s.round?due.push(record):keep.push(record);this.s.transferInbox=keep;for(const record of due){if(this.s.strategyClaims[`fang:received:${record.transferId}`])continue;const unit=this.gain(record.chessId);this.s.strategyClaims[`fang:received:${record.transferId}`]=1;if(!unit)continue;unit.bondIds=[...(record.bondIds||this.ownBonds(unit))];unit.skillIndex=record.skillIndex??unit.skillIndex;unit.equipment=(record.equipment||[]).map(i=>({uid:++this.s.seq,chessId:i.chessId}));}}
- activateRoundMap({restore=false,variant=null}={}){const bossRound=this.s.round===finalBossRound(this.data,this.s.modeId),useBoss=variant==='boss'||(variant===null&&bossRound),target=useBoss?this.bossMap:this.baseMap;if(target!==this.map){this.map=target;this.board=target;if(useBoss&&!restore){for(const unit of this.s.units||[])unit.position=null;for(const card of this.s.summonCards||[])card.position=null;this.s.events.push({type:'boss-arena-ready',round:this.s.round,mapId:this.s.mapId});}}if(useBoss)this.s.mapVariant='boss';else delete this.s.mapVariant;return this.map;}
+ activateRoundMap(){this.map=this.baseMap;this.board=this.baseMap;delete this.s.mapVariant;return this.map;}
  startPreparation(){this.activateRoundMap();const result=super.startPreparation();if(result){this.applyTransferInbox();if(this.s.bandId==='band_amedic'&&!this.s.strategyClaims.touchReserve){const u=this.gain('chess_virtual_prepared_medic');this.s.strategyClaims.touchReserve=1;if(u)u.touchReserve=true;}}return result;}
   // 获得干员是本回合「获得过几名干员」的唯一登记点：天师古鼎的攻速叠层（战斗期）与资金（备战期）都读它。
   // 禁用盟约的干员在**所有**渠道都拿不到（用户 2026-09-22 口径）：商店抽取靠 eligible() 过滤，
@@ -14352,14 +14352,14 @@ class NativeSession extends NativeEconomy {
   if(!Array.isArray(s.units)||s.units.length>500||!Array.isArray(s.items)||s.items.length>1000||s.items.some(i=>!item(i))||(s.stock!==undefined&&(typeof s.stock!=='object'||s.stock===null||Object.values(s.stock).some(v=>!integer(v,0,99999))))||s.units.some(u=>!integer(u.uid,1,Number.MAX_SAFE_INTEGER)||!data.profiles[u.chessId]||u.charId!==data.profiles[u.chessId].charId||!integer(u.dir,0,3)||!Array.isArray(u.equipment)||u.equipment.length>2||u.equipment.some(i=>!item(i))||(u.purchases!==undefined&&(typeof u.purchases!=='object'||u.purchases===null||Object.values(u.purchases).some(v=>!integer(v,1,9999))))||(u.position!==null&&(!integer(u.position?.x,0,s.mapVariant==='boss'?20:10)||!integer(u.position?.y,0,6)))))return null;
   if(!Array.isArray(s.offers)||s.offers.some(id=>id!==null&&!data.profiles[id])||!Array.isArray(s.itemOffers)||s.itemOffers.some(id=>id!==null&&!data.season.trapChessDataDict[id])||!Array.isArray(s.history))return null;
   if(record.battle&&(!Array.isArray(record.battle.units)||!Array.isArray(record.battle.enemies)||!n(record.battle.frame)||!n(record.battle.time)))return null;
-  const c=Object.create(NativeSession.prototype);c.data=data;c.baseMap=data.maps.find(m=>m.stageId===s.mapId);c.bossMap=c.baseMap.bossArena?{...c.baseMap,...c.baseMap.bossArena,sourceMap:c.baseMap}:c.baseMap;c.map=s.mapVariant==='boss'?c.bossMap:c.baseMap;c.board=c.map;c.manualPreview=true;c.triggerChain=[];c.poolDraw=request=>c.drawFromPool(request);c.battle=null;c.s=s;c.s.finalBossId??=rollFinalBoss(data,s.modeId,s.randomState);c.s.finalBossHpMultiplier=normalizeFinalBossHpMultiplier(c.s.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER);if(c.s.cat)c.s.funds=INFINITE_FUNDS;ensureStock(data,c.s);c.s.playerId??='local';c.s.teamPeers??=[];c.s.transferInbox??=[];c.s.transferOutbox??=[];
+  const c=Object.create(NativeSession.prototype);c.data=data;c.baseMap=data.maps.find(m=>m.stageId===s.mapId);const keepLegacyBossBattle=s.mapVariant==='boss'&&s.phase==='battle'&&!!record.battle;c.bossMap=keepLegacyBossBattle&&c.baseMap.bossArena?{...c.baseMap,...c.baseMap.bossArena,sourceMap:c.baseMap}:c.baseMap;c.map=keepLegacyBossBattle?c.bossMap:c.baseMap;c.board=c.map;c.manualPreview=true;c.triggerChain=[];c.poolDraw=request=>c.drawFromPool(request);c.battle=null;c.s=s;if(!keepLegacyBossBattle)delete c.s.mapVariant;c.s.finalBossId??=rollFinalBoss(data,s.modeId,s.randomState);c.s.finalBossHpMultiplier=normalizeFinalBossHpMultiplier(c.s.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER);if(c.s.cat)c.s.funds=INFINITE_FUNDS;ensureStock(data,c.s);c.s.playerId??='local';c.s.teamPeers??=[];c.s.transferInbox??=[];c.s.transferOutbox??=[];
   // 旧存档没有盟约禁用记录：按「本局不额外禁用」补齐（`bonds:[]`），不动玩家已经买到的干员。
   // 禁用方案（fixed／never）不参与判定，只用于简报／弹窗标注「固定禁用还是随机抽中」，缺字段时补当前方案。
   // 旧存档里的 `exempt`（v2 的不禁用名单）直接忽略：判定只看 bonds 与干员自己的盟约。
   const restoredBan=s.bondBan?normalizeBondBan(s.bondBan,data):normalizeBondBan({},data);
   c.s.bondBan=s.bondBan
    ?{bonds:s.bondBan.bonds.slice(),always:restoredBan.always,never:restoredBan.never}
-   :{bonds:[],always:restoredBan.always,never:restoredBan.never};c.sanitizeBannedOffers();if(!c.s.waveRoster?.version)c.s.waveRoster=createWaveRoster({random:()=>c.random(),data,modeId:c.s.modeId});let migrated=false;for(const u of c.s.units)if(u.position&&c.map.grid[u.position.y][u.position.x].buildableType==='NONE'){u.position=null;migrated=true;}
+   :{bonds:[],always:restoredBan.always,never:restoredBan.never};c.sanitizeBannedOffers();if(!c.s.waveRoster?.version)c.s.waveRoster=createWaveRoster({random:()=>c.random(),data,modeId:c.s.modeId});let migrated=false;for(const u of c.s.units)if(u.position&&(!c.map.grid[u.position.y]?.[u.position.x]||c.map.grid[u.position.y][u.position.x].buildableType==='NONE')){u.position=null;migrated=true;}for(const card of c.s.summonCards||[])if(card.position&&(!c.map.grid[card.position.y]?.[card.position.x]||c.map.grid[card.position.y][card.position.x].buildableType==='NONE')){card.position=null;migrated=true;}
   // 旧存档里装备曾把 giveBondId 直接叠进 u.bondIds（「装了不融冰就算谢拉格」那类误判），读档时按新口径重算一次。
   for(const u of c.s.units)c.refreshEquipmentBonds(u);
   // 读档时按「战前准备」的默认技能补齐没写过档位的副本、并把同名干员对齐到同一个技能
@@ -16579,11 +16579,11 @@ const {RANDOM_MAP_ID} = load("protocol.js");
 const CAT_MODE_ID='mode_cat_all';
 
 const NATIVE_CHANGELOG={
- version:'0.9-d',publishedAt:'2026-10-05T13:02:36+08:00',displayTime:'2026-10-05 13:02 (UTC+8)',dateLabel:'10.05',
+ version:'0.9-d',publishedAt:'2026-10-05T13:19:16+08:00',displayTime:'2026-10-05 13:19 (UTC+8)',dateLabel:'10.05',
  preview:[
   {topic:'突袭与控制',summary:'修复突袭干员反复再部署、错误跳位，以及伊内丝和仇白的重复控制问题。'},
   {topic:'技能与盟约',summary:'修正多名干员技能的目标、持续时间和效果触发；校正阿戈尔复活对象。'},
-  {topic:'最终 Boss',summary:'按资料修正 Boss 判定范围与场地，并阻止余 S2 移动最终 Boss。'},
+  {topic:'最终 Boss',summary:'保留原战场，巨型 Boss 判定覆盖 J1-K3 并显示预览；余 S2 不再移动最终 Boss。'},
   {topic:'策略与商店',summary:'寻呼模块不再补重复选项；梓兰冻结按钮统一冻结或解冻全店。'},
   {topic:'数据同步',summary:'同步运行时与素材数据。'}
  ],
@@ -16606,8 +16606,8 @@ const NATIVE_CHANGELOG={
    '修正卡西米尔阻挡真伤递归触发并造成栈溢出的问题。'
   ]},
   {title:'最终 Boss 与战场',items:[
-   '按资料记录扩大并右移最终 Boss 判定范围；浊心斯卡蒂 S3 的伤害判定也能覆盖 Boss。',
-   '最终 Boss 战使用对应的专属场地地图。',
+   '校正巨型 Boss 在原图的 J1-K3 受击范围；浊心斯卡蒂 S3 的伤害判定也能覆盖 Boss。',
+   '最终 Boss 战沿用玩家选择的原始战场；巨型 Boss 以原图 K2 为中心锚，受击判定覆盖 J1-K3（2×3），备战期显示对应预览。',
    '余 S2 不再吸动最终 Boss。'
   ]},
   {title:'策略、商店与资料',items:[
@@ -17415,7 +17415,7 @@ function drawFinalBossPlacementPreview(c,z,area){
  c.save();c.fillStyle='#efb85b35';c.fillRect(x,y,w,h);c.strokeStyle='#ffd17a';c.lineWidth=2.5;c.strokeRect(x+1,y+1,w-2,h-2);c.strokeStyle='#ffd17a88';c.lineWidth=1;
  for(let col=1;col<area.columns;col++){c.beginPath();c.moveTo(x+col*z.tw,y);c.lineTo(x+col*z.tw,y+h);c.stroke();}
  c.beginPath();c.moveTo(x,y+z.th);c.lineTo(x+w,y+z.th);c.stroke();
- c.fillStyle='#102127e8';c.fillRect(x+4,y+4,w-8,Math.min(17,z.th*.36));c.fillStyle='#ffe2a8';c.font='bold '+Math.max(9,Math.min(12,z.tw*.2))+'px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(w<88?'BOSS 2×3':'最终 Boss · 2列×3行',x+w/2,y+4+Math.min(17,z.th*.36)/2);c.restore();
+ c.fillStyle='#102127e8';c.fillRect(x+4,y+4,w-8,Math.min(17,z.th*.36));c.fillStyle='#ffe2a8';c.font='bold '+Math.max(9,Math.min(12,z.tw*.2))+'px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(w<88?'J1-K3':'Boss 判定 · J1-K3',x+w/2,y+4+Math.min(17,z.th*.36)/2,w-10);c.restore();
 }
 function draw(){
  if(!canvas||state.view!=='game'||!state.game)return;const g=state.game,z=geometry(),dpr=Math.min(2,window.devicePixelRatio||1);if(canvas.width!==Math.round(z.r.width*dpr)||canvas.height!==Math.round(z.r.height*dpr)){canvas.width=Math.round(z.r.width*dpr);canvas.height=Math.round(z.r.height*dpr);}const c=canvas.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,z.r.width,z.r.height);const point=(x,y)=>({x:z.ox+(x+.5)*z.tw,y:z.oy+(y+.5)*z.th});c.fillStyle='#111f23';c.fillRect(0,0,z.r.width,z.r.height);

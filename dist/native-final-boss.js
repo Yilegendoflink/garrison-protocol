@@ -2,15 +2,15 @@
 export const AVAILABLE_FINAL_BOSS_IDS=Object.freeze(['boss_4','boss_5','boss_7']);
 
 // 逐名战斗机制登记（数值来源：盟约模式 PRTS 记录与对应敌人页）。
-// hitRect＝实际受击矩形，与右上角预留的部署区是不同概念；盟约版阿利斯泰尔与萨米均为长4.95×宽2.95、向上偏移1；
-// PRTS 的范围以最右列格心为 Boss 中心；预留部署区仍是右上角 2列×3行。
+// 固定巨型 Boss 的中心锚在原地图 K2；受击矩形向左偏半格，覆盖原坐标 J1–K3（2列×3行）。
+// 该范围同时用于最终回合备战预览和部署限制，不替换原始战场地图。
 // static＝自缚站桩（formHold，不沿环线移动）；unblockable＝不可阻挡；shiftImmune＝失衡免疫；
 // range 补齐档案缺省的攻击半径（两位 Boss 的攻击都是全场范围，PRTS 攻击半径 99）。
 // spriteScale 只管画布表现。
 export const FINAL_BOSS_MECHANICS={
- 'enemy_1521_dslily':{hitRect:{length:4.95,width:2.95,offsetY:1},spriteScale:3,static:true,unblockable:true,range:99},
+ 'enemy_1521_dslily':{hitRect:{length:2,width:3,offsetX:.5,offsetY:0},spriteScale:3,static:true,unblockable:true,range:99},
  'enemy_2016_csphtm':{spriteScale:2.2},
- 'enemy_9033_acdeer':{hitRect:{length:4.95,width:2.95,offsetY:1},spriteScale:3,static:true,unblockable:true,shiftImmune:true,range:99},
+ 'enemy_9033_acdeer':{hitRect:{length:2,width:3,offsetX:.5,offsetY:0},spriteScale:3,static:true,unblockable:true,shiftImmune:true,range:99},
 };
 export function finalBossMechanics(enemyId){return FINAL_BOSS_MECHANICS[enemyId]||null;}
 export function finalBossPlacementArea(map,enemyId){

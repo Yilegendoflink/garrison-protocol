@@ -777,7 +777,7 @@ function drawFinalBossPlacementPreview(c,z,area){
  c.save();c.fillStyle='#efb85b35';c.fillRect(x,y,w,h);c.strokeStyle='#ffd17a';c.lineWidth=2.5;c.strokeRect(x+1,y+1,w-2,h-2);c.strokeStyle='#ffd17a88';c.lineWidth=1;
  for(let col=1;col<area.columns;col++){c.beginPath();c.moveTo(x+col*z.tw,y);c.lineTo(x+col*z.tw,y+h);c.stroke();}
  c.beginPath();c.moveTo(x,y+z.th);c.lineTo(x+w,y+z.th);c.stroke();
- c.fillStyle='#102127e8';c.fillRect(x+4,y+4,w-8,Math.min(17,z.th*.36));c.fillStyle='#ffe2a8';c.font='bold '+Math.max(9,Math.min(12,z.tw*.2))+'px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(w<88?'BOSS 2×3':'最终 Boss · 2列×3行',x+w/2,y+4+Math.min(17,z.th*.36)/2);c.restore();
+ c.fillStyle='#102127e8';c.fillRect(x+4,y+4,w-8,Math.min(17,z.th*.36));c.fillStyle='#ffe2a8';c.font='bold '+Math.max(9,Math.min(12,z.tw*.2))+'px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(w<88?'J1-K3':'Boss 判定 · J1-K3',x+w/2,y+4+Math.min(17,z.th*.36)/2,w-10);c.restore();
 }
 function draw(){
  if(!canvas||state.view!=='game'||!state.game)return;const g=state.game,z=geometry(),dpr=Math.min(2,window.devicePixelRatio||1);if(canvas.width!==Math.round(z.r.width*dpr)||canvas.height!==Math.round(z.r.height*dpr)){canvas.width=Math.round(z.r.width*dpr);canvas.height=Math.round(z.r.height*dpr);}const c=canvas.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,z.r.width,z.r.height);const point=(x,y)=>({x:z.ox+(x+.5)*z.tw,y:z.oy+(y+.5)*z.th});c.fillStyle='#111f23';c.fillRect(0,0,z.r.width,z.r.height);

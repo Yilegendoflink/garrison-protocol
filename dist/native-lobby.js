@@ -3,11 +3,11 @@ import {RANDOM_MAP_ID} from './protocol.js';
 const CAT_MODE_ID='mode_cat_all';
 
 export const NATIVE_CHANGELOG={
- version:'0.9-d',publishedAt:'2026-10-05T13:02:36+08:00',displayTime:'2026-10-05 13:02 (UTC+8)',dateLabel:'10.05',
+ version:'0.9-d',publishedAt:'2026-10-05T13:19:16+08:00',displayTime:'2026-10-05 13:19 (UTC+8)',dateLabel:'10.05',
  preview:[
   {topic:'突袭与控制',summary:'修复突袭干员反复再部署、错误跳位，以及伊内丝和仇白的重复控制问题。'},
   {topic:'技能与盟约',summary:'修正多名干员技能的目标、持续时间和效果触发；校正阿戈尔复活对象。'},
-  {topic:'最终 Boss',summary:'按资料修正 Boss 判定范围与场地，并阻止余 S2 移动最终 Boss。'},
+  {topic:'最终 Boss',summary:'保留原战场，巨型 Boss 判定覆盖 J1-K3 并显示预览；余 S2 不再移动最终 Boss。'},
   {topic:'策略与商店',summary:'寻呼模块不再补重复选项；梓兰冻结按钮统一冻结或解冻全店。'},
   {topic:'数据同步',summary:'同步运行时与素材数据。'}
  ],
@@ -30,8 +30,8 @@ export const NATIVE_CHANGELOG={
    '修正卡西米尔阻挡真伤递归触发并造成栈溢出的问题。'
   ]},
   {title:'最终 Boss 与战场',items:[
-   '按资料记录扩大并右移最终 Boss 判定范围；浊心斯卡蒂 S3 的伤害判定也能覆盖 Boss。',
-   '最终 Boss 战使用对应的专属场地地图。',
+   '校正巨型 Boss 在原图的 J1-K3 受击范围；浊心斯卡蒂 S3 的伤害判定也能覆盖 Boss。',
+   '最终 Boss 战沿用玩家选择的原始战场；巨型 Boss 以原图 K2 为中心锚，受击判定覆盖 J1-K3（2×3），备战期显示对应预览。',
    '余 S2 不再吸动最终 Boss。'
   ]},
   {title:'策略、商店与资料',items:[
