@@ -89,6 +89,26 @@ test('final boss preparation keeps the selected original map and previews the J1
  assert.ok(restored);assert.equal(restored.map.cols,11);assert.equal(restored.map.rows,7);assert.equal(restored.s.mapVariant,undefined);
 });
 
+test('reinforcements spawn on original-map red doors and legacy paired-map saves return to Boss preparation',()=>{
+ const g=game({mapId:'act2autochess_m01',operator:true}),b=g.battle;
+ for(const routeIndex of [0,1]){
+  const q=b.s.queue.find(row=>row.route===routeIndex);assert.ok(q);
+  b.spawn(q);const add=b.s.enemies.at(-1),cell=g.map.grid[add.y]?.[add.x];
+  assert.equal(cell?.tileKey,'tile_start',`route ${routeIndex} must spawn on the red door`);
+  assert.notEqual(cell?.tileKey,'tile_end',`route ${routeIndex} must not spawn by the blue door`);
+ }
+
+ const legacy=g.snapshot();legacy.s.mapVariant='boss';legacy.s.units[0].position={x:18,y:2};
+ legacy.battle.units[0].x=18;
+ const restored=NativeSession.restore(NATIVE_DATA,legacy);
+ assert.ok(restored,'legacy paired-map battle save remains loadable');
+ assert.equal(restored.map.cols,11);assert.equal(restored.map.rows,7);
+ assert.equal(restored.s.phase,'prep');assert.equal(restored.battle,null);
+ assert.equal(restored.s.mapVariant,undefined);assert.equal(restored.s.legacyBossBattleRestarted,true);
+ assert.ok(restored.s.units.every(unit=>unit.position===null),'legacy placements are cleared for redeployment on the original map');
+ assert.ok((restored.s.summonCards||[]).every(card=>card.position===null),'legacy summon placements are cleared with the map');
+});
+
 test('static boss preview and collision are the exact upper-right J1-K3 area on the original maps',()=>{
  for(const map of NATIVE_DATA.maps){
   const area=finalBossPlacementArea(map,'enemy_1521_dslily'),point=finalBossSpawnPoint(map,'enemy_1521_dslily');

@@ -82,7 +82,7 @@ function readSave(key){try{const raw=localStorage.getItem(key);return raw?JSON.p
 function savedView(){try{return sessionStorage.getItem(VIEW_SAVE)||'lobby';}catch{return 'lobby';}}
 function rememberView(view){try{sessionStorage.setItem(VIEW_SAVE,view);}catch{}}
 function restoreSavedGame(){for(const key of [CHECKPOINT_SAVE,SAVE]){const record=readSave(key),game=record&&NativeSession.restore(data,record);if(game)return {game,record};}return null;}
-try{const restored=restoreSavedGame();if(restored){state.game=restored.game;state.paused=true;state.expiresAt=restored.record.expiresAt??null;if(savedView()==='game'){state.view='game';enterPlayChrome();}}}catch{}
+try{const restored=restoreSavedGame();if(restored){state.game=restored.game;state.paused=true;state.expiresAt=restored.record.expiresAt??null;if(restored.game.s.legacyBossBattleRestarted){delete restored.game.s.legacyBossBattleRestarted;notice('旧版最终 Boss 战场已切回原图；本回合已退回战前部署，请重新部署并开战。');}if(savedView()==='game'){state.view='game';enterPlayChrome();}}}catch{}
 const profile=u=>{const base=data.profiles[u.chessId],selected=base?.skillChoices?.[u.source?.skillIndex??u.skillIndex];return selected?{...base,...selected}:base;};
 // 战绩档案区的样式（dist/native-archive.css）随功能单独一个文件，启动时挂一次 <link>。
 (function ensureArchiveStyles(){try{if(document.getElementById('native-archive-css'))return;const link=document.createElement('link');link.id='native-archive-css';link.rel='stylesheet';link.href='./native-archive.css';document.head.append(link);}catch{}})();
