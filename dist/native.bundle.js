@@ -17217,10 +17217,16 @@ function commitPreview(){
 function insideRect(r,x,y){return !!r&&x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}
 function overCanvas(x,y){return canvas?.isConnected&&insideRect(canvas.getBoundingClientRect(),x,y);}
 function overBench(x,y){return ['.native-bench','.native-bench-label'].some(selector=>insideRect(root.querySelector(selector)?.getBoundingClientRect(),x,y));}
-function handSlotAt(x,y){const slot=document.elementFromPoint(x,y)?.closest?.('.native-hand-slot[data-hand-slot]');return slot&&root.contains(slot)?Number(slot.dataset.handSlot):null;}
+function handSlotAt(x,y){const slots=root.querySelectorAll('.native-hand-slot[data-hand-slot]');for(const slot of slots){const r=slot.getBoundingClientRect();if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom)return Number(slot.dataset.handSlot);}return null;}
 function moveHandCardToSlot(kind,uid,target){const game=state.game;if(!game||game.s.phase!=='prep'||!Number.isSafeInteger(target)||target<0)return false;const cards=game.syncHandSlots(),card=cards.find(item=>item.uid===uid&&handCardKind(game,item)===kind);if(!card||target>=HAND_LIMIT&&card.handSlot<HAND_LIMIT)return false;const occupant=cards.find(item=>item.handSlot===target),source=card.handSlot;if(card===occupant)return true;card.handSlot=target;if(occupant)occupant.handSlot=source;game.syncHandSlots();return true;}
 function overShop(x,y){const shop=document.getElementById('native-supply-shop');if(!shop||!shop.offsetParent)return false;return insideRect(shop.getBoundingClientRect(),x,y);}
-function overUnitCard(x,y){const el=document.elementFromPoint(x,y)?.closest?.('[data-act="select"]');if(!el)return null;const uid=Number(el.dataset.uid);return state.game?.s.units.find(u=>u.uid===uid)||null;}
+function overUnitCard(x,y){
+ // Pointer capture can make elementFromPoint report the dragged item on some browsers.
+ // Classify hand drops by the slot geometry first, so item→operator drops equip instead
+ // of accidentally entering the cross-type hand-slot reorder path.
+ const slot=handSlotAt(x,y),game=state.game;if(slot!==null&&game){const card=game.syncHandSlots().find(item=>item.handSlot===slot);if(card&&game.s.units.includes(card))return card;}
+ const el=document.elementFromPoint(x,y)?.closest?.('[data-act="select"]');if(!el)return null;const uid=Number(el.dataset.uid);return game?.s.units.find(u=>u.uid===uid)||null;
+}
 // 装备落点也包含棋盘上已部署的干员（召唤物与召唤卡不算）
 function equipDropTarget(x,y){const u=overUnitCard(x,y);if(u)return u;if(!overCanvas(x,y))return null;const hit=unitAtPointer(x,y);if(!hit||hit.kind||hit.summon||hit.summonCard)return null;return state.game?.s.units.find(v=>v.uid===hit.uid)||null;}
 // 装备到干员（点击流程与拖放流程共用）。槽位已满时弹出摧毁选择。
