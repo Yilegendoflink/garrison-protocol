@@ -13029,6 +13029,21 @@ class NativeBattle {
   if(boss.enemyId==='enemy_9033_acdeer'){actor.madnessResist=Number(actor.enemyTalent?.['Madness.damage_resistance'])||0;}
   if(boss.enemyId==='enemy_1521_dslily'){actor.dslilyForm=1;actor.dslilySpawnAt=this.s.time;}
  }
+ clearEndedRoundEntities(){
+  const s=this.s;if(!s)return false;
+  // 休整期保留干员棋盘与结算快照，但结束的战斗不应留下仍会活动的单位、弹道或生成队列。
+  for(const key of ['enemies','summons','whitwEyes','projectiles','enemyProjectiles','pendingEnemySpawns','logicEffects','effects','events','strikes','queue'])s[key]=[];
+  s.banner=null;
+  if(s.settle){s.settle.queue=[];s.settle.byId={};}
+  delete s.minerEngagements;delete s.nextMinerEngagementAt;
+  for(const u of s.units||[]){
+   if(u.whitwFloaters)u.whitwFloaters=[];
+   if(u.whitwEyeCount!=null)u.whitwEyeCount=0;
+   if(u.summonRespawns)u.summonRespawns={};
+   u.pendingReturns=0;
+  }
+  return true;
+ }
  spawnMineCamp(config){return spawnMineCamp(this,config);}
  toggleMineCamp(uid){return toggleMineCamp(this,uid);}
  mineCampReady(camp){return mineCampReady(this,camp);}
@@ -14279,7 +14294,7 @@ class NativeSession extends NativeEconomy {
  resolveTurn(turn){if(!turn?.isBossTurn||turn.isConditional)return turn;const finals=buildPhasePlan(this.data,this.s.modeId).filter(t=>t.isBossTurn&&!t.isConditional);if(turn.round!==finals.at(-1)?.round)return turn;const config=finalBossConfig(this.data,this.s.finalBossId,this.s.modeId,this.s.finalBossHpMultiplier);return {...turn,finalBossId:this.s.finalBossId,finalBoss:config,finalBossHp:config.hp};}
  startBattle(){if(this.s.phase!=='prep'||this.s.rewardPending)return false;this.syncSummonCards();this.syncHandSlots();const area=this.finalBossPrepArea();if(area&&[...this.s.units.filter(u=>u.position),...(this.s.summonCards||[]).filter(c=>c.position)].some(actor=>finalBossPlacementContains(area,actor.position.x,actor.position.y)))throw Error('昆图斯／萨米的意志将占据右上角 2 列 × 3 行，请先移开该区域的干员和召唤物。');this.applyTouchReplacement();this.settleTartarusRound();const ok=this.beginBattle();if(!ok)return false;if(this.s.phase==='prep')return true;const turn=this.resolveTurn(buildPhasePlan(this.data,this.s.modeId).find(t=>t.round===this.s.round));this.battle=new NativeBattle(this.data,this,this.map,turn);return true;}
  bondLayerSnapshot(){const visible=id=>seesRun(this)||id!==SEES_BOND_ID&&id!==TARTARUS_BOND_ID,ids=new Set([...Object.keys(this.data.season.bondInfoDict||{}),SEES_BOND_ID,TARTARUS_BOND_ID,...Object.keys(this.s.bondLayers||{})]);return [...ids].filter(visible).map(id=>{const value=Number(this.s.bondLayers?.[id]);return {id,name:this.data.season.bondInfoDict[id]?.name||id,layers:Number.isFinite(value)?Math.max(0,Math.floor(value)):0};});}
- finishCurrentBattle(){if(!this.battle?.s.finished||this.s.phase!=='battle')return;const r=this.battle.s.result;r.finalBondLayers=this.bondLayerSnapshot();this.s.history.push(r);if(r.kind==='final-boss'){this.s.runResult=r;if(r.reason!=='boss-killed')this.s.hp=0;this.s.phase='finished';}else{const loss=Math.min(ROUND_LEAK_CAP,r.leaks);this.s.hp=Math.max(0,this.s.hp-loss);this.finishBattle({success:this.s.hp>0,leaks:r.leaks});this.s.lastBattle.loss=loss;if(!this.s.hp)this.s.runResult=r;}this.applyPostBattleTransforms();}
+ finishCurrentBattle(){if(!this.battle?.s.finished||this.s.phase!=='battle')return;const r=this.battle.s.result;r.finalBondLayers=this.bondLayerSnapshot();this.s.history.push(r);if(r.kind==='final-boss'){this.s.runResult=r;if(r.reason!=='boss-killed')this.s.hp=0;this.s.phase='finished';}else{const loss=Math.min(ROUND_LEAK_CAP,r.leaks);this.s.hp=Math.max(0,this.s.hp-loss);this.finishBattle({success:this.s.hp>0,leaks:r.leaks});this.s.lastBattle.loss=loss;if(!this.s.hp)this.s.runResult=r;}this.applyPostBattleTransforms();if(this.s.phase==='intermission')this.battle.clearEndedRoundEntities();}
  tick(){if(this.s.phase==='battle'&&this.battle){this.battle.step();this.finishCurrentBattle();}}
  advanceRound(){if(this.s.phase!=='intermission')return false;const locked=this.s.locked,oldOffers=locked?this.s.offers.slice():null,oldItems=locked?this.s.itemOffers.slice():null;this.s.prepApplied=false;const ok=this.nextRound(locked?[]:this.rollOffers());if(!ok)return false;if(locked){const refillOffers=this.rollOffers();this.s.offers=Array.from({length:this.terms().operatorSlots},(_,i)=>oldOffers[i]??refillOffers[i]);const refillItems=Array.from({length:this.terms().itemSlots},()=>this.drawFromPool({kind:'item',shop:true}));this.s.itemOffers=Array.from({length:this.terms().itemSlots},(_,i)=>oldItems[i]??refillItems[i]);}else this.fillItems();this.addFunds(this.s.passiveIncome);this.applyProjectionUpgrades();
   // 进入新回合只做「按持有者/类型对账」，**不重置已放置的召唤物卡**：召唤物留在原位跨回合存在，
@@ -14352,7 +14367,7 @@ class NativeSession extends NativeEconomy {
   if(!Array.isArray(s.units)||s.units.length>500||!Array.isArray(s.items)||s.items.length>1000||s.items.some(i=>!item(i))||(s.stock!==undefined&&(typeof s.stock!=='object'||s.stock===null||Object.values(s.stock).some(v=>!integer(v,0,99999))))||s.units.some(u=>!integer(u.uid,1,Number.MAX_SAFE_INTEGER)||!data.profiles[u.chessId]||u.charId!==data.profiles[u.chessId].charId||!integer(u.dir,0,3)||!Array.isArray(u.equipment)||u.equipment.length>2||u.equipment.some(i=>!item(i))||(u.purchases!==undefined&&(typeof u.purchases!=='object'||u.purchases===null||Object.values(u.purchases).some(v=>!integer(v,1,9999))))||(u.position!==null&&(!integer(u.position?.x,0,s.mapVariant==='boss'?20:10)||!integer(u.position?.y,0,6)))))return null;
   if(!Array.isArray(s.offers)||s.offers.some(id=>id!==null&&!data.profiles[id])||!Array.isArray(s.itemOffers)||s.itemOffers.some(id=>id!==null&&!data.season.trapChessDataDict[id])||!Array.isArray(s.history))return null;
   if(record.battle&&(!Array.isArray(record.battle.units)||!Array.isArray(record.battle.enemies)||!n(record.battle.frame)||!n(record.battle.time)))return null;
-  const c=Object.create(NativeSession.prototype);c.data=data;c.baseMap=data.maps.find(m=>m.stageId===s.mapId);const keepLegacyBossBattle=s.mapVariant==='boss'&&s.phase==='battle'&&!!record.battle;c.bossMap=keepLegacyBossBattle&&c.baseMap.bossArena?{...c.baseMap,...c.baseMap.bossArena,sourceMap:c.baseMap}:c.baseMap;c.map=keepLegacyBossBattle?c.bossMap:c.baseMap;c.board=c.map;c.manualPreview=true;c.triggerChain=[];c.poolDraw=request=>c.drawFromPool(request);c.battle=null;c.s=s;if(!keepLegacyBossBattle)delete c.s.mapVariant;c.s.finalBossId??=rollFinalBoss(data,s.modeId,s.randomState);c.s.finalBossHpMultiplier=normalizeFinalBossHpMultiplier(c.s.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER);if(c.s.cat)c.s.funds=INFINITE_FUNDS;ensureStock(data,c.s);c.s.playerId??='local';c.s.teamPeers??=[];c.s.transferInbox??=[];c.s.transferOutbox??=[];
+  const c=Object.create(NativeSession.prototype);c.data=data;c.baseMap=data.maps.find(m=>m.stageId===s.mapId);const restartLegacyBossBattle=s.mapVariant==='boss'&&s.phase==='battle'&&!!record.battle;c.bossMap=c.baseMap;c.map=c.baseMap;c.board=c.map;c.manualPreview=true;c.triggerChain=[];c.poolDraw=request=>c.drawFromPool(request);c.battle=null;c.s=s;delete c.s.mapVariant;if(restartLegacyBossBattle){c.s.phase='prep';c.s.legacyBossBattleRestarted=true;for(const unit of c.s.units)unit.position=null;for(const card of c.s.summonCards||[])card.position=null;record.battle=null;}c.s.finalBossId??=rollFinalBoss(data,s.modeId,s.randomState);c.s.finalBossHpMultiplier=normalizeFinalBossHpMultiplier(c.s.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER);if(c.s.cat)c.s.funds=INFINITE_FUNDS;ensureStock(data,c.s);c.s.playerId??='local';c.s.teamPeers??=[];c.s.transferInbox??=[];c.s.transferOutbox??=[];
   // 旧存档没有盟约禁用记录：按「本局不额外禁用」补齐（`bonds:[]`），不动玩家已经买到的干员。
   // 禁用方案（fixed／never）不参与判定，只用于简报／弹窗标注「固定禁用还是随机抽中」，缺字段时补当前方案。
   // 旧存档里的 `exempt`（v2 的不禁用名单）直接忽略：判定只看 bonds 与干员自己的盟约。
@@ -14364,7 +14379,7 @@ class NativeSession extends NativeEconomy {
   for(const u of c.s.units)c.refreshEquipmentBonds(u);
   // 读档时按「战前准备」的默认技能补齐没写过档位的副本、并把同名干员对齐到同一个技能
   // （存档里显式写下的档位优先，不会被配置覆盖）。
-  applyPrepSkills(data,c.s.units);if(migrated&&record.battle){const deployed=new Set(c.s.units.filter(u=>u.position).map(u=>u.uid));record.battle.units=record.battle.units.filter(u=>deployed.has(u.uid));}if(record.battle){const turn=c.resolveTurn(buildPhasePlan(data,c.s.modeId).find(t=>t.round===c.s.round));if(turn.finalBossId&&record.battle.benchmark)c.battle=new NativeBattle(data,c,c.map,turn);else{c.battle=NativeBattle.restore(data,c,c.map,turn,record.battle);if(!c.battle)return null;}}return c;
+  applyPrepSkills(data,c.s.units);if(migrated&&record.battle){const deployed=new Set(c.s.units.filter(u=>u.position).map(u=>u.uid));record.battle.units=record.battle.units.filter(u=>deployed.has(u.uid));}if(record.battle){const turn=c.resolveTurn(buildPhasePlan(data,c.s.modeId).find(t=>t.round===c.s.round));if(turn.finalBossId&&record.battle.benchmark)c.battle=new NativeBattle(data,c,c.map,turn);else{c.battle=NativeBattle.restore(data,c,c.map,turn,record.battle);if(!c.battle)return null;}}if(c.battle&&['prep','intermission','decision'].includes(c.s.phase))c.battle.clearEndedRoundEntities();return c;
  }
 }
 
@@ -16678,11 +16693,13 @@ const mobilePlay=()=>matchMedia('(hover:none) and (pointer:coarse)').matches;
 const iosMobile=()=>/iPhone|iPad|iPod/i.test(navigator.platform)||/iPhone|iPad|iPod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
 function syncPlayChrome(){
  const fullscreenButton=document.querySelector('[data-act="fullscreen"]');
- if(fullscreenButton)fullscreenButton.hidden=!mobilePlay()||iosMobile()||!!(document.fullscreenElement||document.webkitFullscreenElement)||!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
+ const androidApp=typeof window.GarrisonAndroid?.postMessage==='function';
+ if(fullscreenButton)fullscreenButton.hidden=androidApp||!mobilePlay()||iosMobile()||!!(document.fullscreenElement||document.webkitFullscreenElement)||!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
  const locked=document.documentElement.classList.contains('native-play-lock');
  const compact=matchMedia('(orientation:landscape) and (max-height:600px) and (max-width:1100px)').matches;
  const need=locked&&matchMedia('(orientation:portrait)').matches;
- document.documentElement.classList.toggle('native-landscape-ui',locked||compact);
+ document.documentElement.classList.toggle('native-android-app',androidApp);
+ document.documentElement.classList.toggle('native-landscape-ui',androidApp||locked||compact);
  document.documentElement.classList.toggle('native-need-rotate',need);
  const app=document.getElementById('app');
  if(!app)return;
@@ -16692,6 +16709,7 @@ function syncPlayChrome(){
  syncHandScrollControls();
 }
 async function enterPlayChrome(){
+ if(window.GarrisonAndroid?.postMessage){document.documentElement.classList.add('native-play-lock');syncPlayChrome();window.GarrisonAndroid.postMessage(JSON.stringify({type:'play-mode',active:true}));return;}
  if(!mobilePlay()||iosMobile())return;
  document.documentElement.classList.add('native-play-lock');
  syncPlayChrome();
@@ -16701,6 +16719,7 @@ async function enterPlayChrome(){
  syncPlayChrome();
 }
 async function leavePlayChrome(){
+ if(window.GarrisonAndroid?.postMessage){document.documentElement.classList.remove('native-play-lock','native-need-rotate');window.GarrisonAndroid.postMessage(JSON.stringify({type:'play-mode',active:false}));syncPlayChrome();return;}
  document.documentElement.classList.remove('native-play-lock','native-need-rotate');
  try{screen.orientation?.unlock?.();}catch{}
  try{if(document.fullscreenElement||document.webkitFullscreenElement)await (document.exitFullscreen||document.webkitExitFullscreen).call(document);}catch{}
@@ -16720,7 +16739,7 @@ function readSave(key){try{const raw=localStorage.getItem(key);return raw?JSON.p
 function savedView(){try{return sessionStorage.getItem(VIEW_SAVE)||'lobby';}catch{return 'lobby';}}
 function rememberView(view){try{sessionStorage.setItem(VIEW_SAVE,view);}catch{}}
 function restoreSavedGame(){for(const key of [CHECKPOINT_SAVE,SAVE]){const record=readSave(key),game=record&&NativeSession.restore(data,record);if(game)return {game,record};}return null;}
-try{const restored=restoreSavedGame();if(restored){state.game=restored.game;state.paused=true;state.expiresAt=restored.record.expiresAt??null;if(savedView()==='game'){state.view='game';enterPlayChrome();}}}catch{}
+try{const restored=restoreSavedGame();if(restored){state.game=restored.game;state.paused=true;state.expiresAt=restored.record.expiresAt??null;if(restored.game.s.legacyBossBattleRestarted){delete restored.game.s.legacyBossBattleRestarted;notice('旧版最终 Boss 战场已切回原图；本回合已退回战前部署，请重新部署并开战。');}if(savedView()==='game'){state.view='game';enterPlayChrome();}}}catch{}
 const profile=u=>{const base=data.profiles[u.chessId],selected=base?.skillChoices?.[u.source?.skillIndex??u.skillIndex];return selected?{...base,...selected}:base;};
 // 战绩档案区的样式（dist/native-archive.css）随功能单独一个文件，启动时挂一次 <link>。
 (function ensureArchiveStyles(){try{if(document.getElementById('native-archive-css'))return;const link=document.createElement('link');link.id='native-archive-css';link.rel='stylesheet';link.href='./native-archive.css';document.head.append(link);}catch{}})();
@@ -17066,15 +17085,15 @@ function action(button,anchor=null){const a=button.dataset.act,g=state.game,uid=
  // 导出存档（用户 2026-09-27 需求）：大厅与对局顶栏共用一个入口。
  // 有对局时导出的是**原来的对局存档**（多带一份战绩档案，NativeSession.restore 会忽略额外字段），
  // 没有对局时只导出战绩档案；两种都能被下面的导入功能读回来。
- if(a==='export'){const archive=archiveWithPrepSkills(archiveNow()),record=exportRecord(g||null,archive,{expiresAt:g?state.expiresAt:null}),stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'),url=URL.createObjectURL(new Blob([JSON.stringify(record,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-save-'+stamp+'.json';link.click();URL.revokeObjectURL(url);notice(g?`已导出对局存档＋战绩档案（${archive.runs.length} 场）。`:`已导出战绩档案（${archive.runs.length} 场，当前没有进行中的对局）。`);return;}
- if(a==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{if(input.files[0].size>10e6)throw Error('存档文件过大');const record=JSON.parse(await input.files[0].text()),incoming=archiveFromRecord(record);let game=null;if(record&&record.s){game=NativeSession.restore(data,record);if(!game)throw Error('存档版本、数据或有效期不匹配');}if(!game&&!incoming)throw Error('这个 JSON 既不是对局存档，也没有战绩档案');
+   if(a==='export'){const archive=archiveWithPrepSkills(archiveNow()),record=exportRecord(g||null,archive,{expiresAt:g?state.expiresAt:null}),stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'),fileName='garrison-save-'+stamp+'.json',payload=JSON.stringify(record,null,2);if(window.GarrisonAndroid?.postMessage){window.GarrisonAndroid.postMessage(JSON.stringify({type:'export',fileName,json:payload}));return;}const url=URL.createObjectURL(new Blob([payload],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download=fileName;link.click();URL.revokeObjectURL(url);notice(g?`已导出对局存档＋战绩档案（${archive.runs.length} 场）。`:`已导出战绩档案（${archive.runs.length} 场，当前没有进行中的对局）。`);return;}
+  if(a==='import'){const importText=async text=>{try{if(new Blob([text]).size>10e6)throw Error('存档文件过大');const record=JSON.parse(text),incoming=archiveFromRecord(record);let game=null;if(record&&record.s){game=NativeSession.restore(data,record);if(!game)throw Error('存档版本、数据或有效期不匹配');}if(!game&&!incoming)throw Error('这个 JSON 既不是对局存档，也没有战绩档案');
   // 档案与对局存档分开合并：同 id 的场次以导入的为准，其余按时间合并，最多留 10 场。
   // 技能覆盖实际使用独立的 localStorage 键；导入档案时也写回那里，才能影响战前准备与新局。
   const mergedRaw=incoming?mergeArchives(archiveWithPrepSkills(archiveNow()),record.archive):null;
   if(mergedRaw)mergedRaw.prepSkills=savePrepSkills(mergedRaw.prepSkills,data);
   const merged=mergedRaw?saveArchive(archiveStorage(),mergedRaw):null;state.archive=merged;
   if(game){state.game=game;state.view='game';state.paused=true;save();saveCheckpoint();enterPlayChrome();notice(merged?`已恢复对局，并导入战绩档案（${merged.runs.length} 场）。`:'已恢复对局。');}else{state.view='lobby';leavePlayChrome();notice(`已导入战绩档案 ${merged.runs.length} 场（文件里没有对局存档）。`);}
-  render();}catch(e){notice(e.message);}};input.click();return;}
+    render();}catch(e){notice(e.message);}};window.__garrisonImportCallback=importText;if(window.GarrisonAndroid?.postMessage){window.GarrisonAndroid.postMessage(JSON.stringify({type:'import'}));return;}const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{if(input.files[0])await importText(await input.files[0].text());};input.click();return;}
  if(!g)return;
  if(a==='pause'){state.paused=!state.paused;render();return;}if(a==='speed'){state.speed=Number(button.dataset.speed);render();return;}
  if(a==='mute'){state.muted=!state.muted;savePreference('garrison-mute',state.muted?'1':'0');if(!state.muted)unlockAudio();render();return;}
@@ -17472,8 +17491,8 @@ function draw(){
   c.fillStyle='#e9fff7';c.font='10px sans-serif';c.textAlign='center';c.fillText(s.name||s.type,p.x,p.y-size*.65);
   });
  }
- if(g.battle&&g.s.phase!=='prep')for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),sprite=enemySprite(e),size=z.tw*.55*sprite.scale,im=formTintedImage(img(sprite.key),sprite.tint&&!state.reduceFx?sprite.tint:null);if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);drawFrostOverlay(c,e,{x:p.x-20,y:p.y-20,w:40,h:40},{reduceFx:state.reduceFx});}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{drawElementRing(c,p.x,p.y-(e.flying?15:0),e,size);drawFrostOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx});drawConcealOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx,time:g.battle.s.time,image:im});c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);drawTerrainBadges(c,{x:p.x,y:p.y-(e.flying?15:0)},e,size);});}if(g.battle.s.whitwEyes?.some(x=>x.targetUid===e.uid)){const y=p.y-size*.8-(e.flying?15:0);c.save();c.strokeStyle='#ff4f5e';c.fillStyle='#ff4f5e';c.lineWidth=2;c.beginPath();c.ellipse(p.x,y,7,4.5,0,0,Math.PI*2);c.stroke();c.beginPath();c.arc(p.x,y,2,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(p.x-11,y);c.lineTo(p.x-8,y);c.moveTo(p.x+8,y);c.lineTo(p.x+11,y);c.stroke();c.restore();}}
- if(g.battle)drawWhitwEyes(c,point,z,g.battle,{reduceFx:state.reduceFx});
+ if(g.battle&&battleBoardVisible(g.s.phase))for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),sprite=enemySprite(e),size=z.tw*.55*sprite.scale,im=formTintedImage(img(sprite.key),sprite.tint&&!state.reduceFx?sprite.tint:null);if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);drawFrostOverlay(c,e,{x:p.x-20,y:p.y-20,w:40,h:40},{reduceFx:state.reduceFx});}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{drawElementRing(c,p.x,p.y-(e.flying?15:0),e,size);drawFrostOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx});drawConcealOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx,time:g.battle.s.time,image:im});c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);drawTerrainBadges(c,{x:p.x,y:p.y-(e.flying?15:0)},e,size);});}if(g.battle.s.whitwEyes?.some(x=>x.targetUid===e.uid)){const y=p.y-size*.8-(e.flying?15:0);c.save();c.strokeStyle='#ff4f5e';c.fillStyle='#ff4f5e';c.lineWidth=2;c.beginPath();c.ellipse(p.x,y,7,4.5,0,0,Math.PI*2);c.stroke();c.beginPath();c.arc(p.x,y,2,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(p.x-11,y);c.lineTo(p.x-8,y);c.moveTo(p.x+8,y);c.lineTo(p.x+11,y);c.stroke();c.restore();}}
+ if(g.battle&&battleBoardVisible(g.s.phase))drawWhitwEyes(c,point,z,g.battle,{reduceFx:state.reduceFx});
  if(g.battle&&g.s.phase==='battle')drawFx(c,point,z,g.battle,{reduceFx:state.reduceFx,formatText:eggOn()?rewrite325Text:null});
   if(drag?.moved&&overCanvas(drag.x,drag.y)){const cell=cellAt(drag.x,drag.y);if(g.map.grid[cell.y]?.[cell.x]){const can=drag.kind==='summon-card'?g.canDeploySummonCard(drag.uid,cell.x,cell.y):g.canDeploy(drag.uid,cell.x,cell.y);c.strokeStyle=can?'#78f1bd':'#f88c78';c.lineWidth=3;c.strokeRect(z.ox+cell.x*z.tw+2,z.oy+cell.y*z.th+2,z.tw-4,z.th-4);}}
  if(state.preview){const p=point(state.preview.x,state.preview.y);c.fillStyle='#08151195';c.fillRect(0,0,z.r.width,z.r.height);c.strokeStyle='#70e4c1';c.lineWidth=2;c.beginPath();c.moveTo(p.x,p.y-62);c.lineTo(p.x+62,p.y);c.lineTo(p.x,p.y+62);c.lineTo(p.x-62,p.y);c.closePath();c.stroke();c.fillStyle='#e9fff7';c.font='bold 32px sans-serif';c.fillText(state.preview.dir===null?'✥':['→','↓','←','↑'][state.preview.dir],p.x,p.y+10);}

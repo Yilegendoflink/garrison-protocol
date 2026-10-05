@@ -16693,11 +16693,13 @@ const mobilePlay=()=>matchMedia('(hover:none) and (pointer:coarse)').matches;
 const iosMobile=()=>/iPhone|iPad|iPod/i.test(navigator.platform)||/iPhone|iPad|iPod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
 function syncPlayChrome(){
  const fullscreenButton=document.querySelector('[data-act="fullscreen"]');
- if(fullscreenButton)fullscreenButton.hidden=!mobilePlay()||iosMobile()||!!(document.fullscreenElement||document.webkitFullscreenElement)||!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
+ const androidApp=typeof window.GarrisonAndroid?.postMessage==='function';
+ if(fullscreenButton)fullscreenButton.hidden=androidApp||!mobilePlay()||iosMobile()||!!(document.fullscreenElement||document.webkitFullscreenElement)||!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
  const locked=document.documentElement.classList.contains('native-play-lock');
  const compact=matchMedia('(orientation:landscape) and (max-height:600px) and (max-width:1100px)').matches;
  const need=locked&&matchMedia('(orientation:portrait)').matches;
- document.documentElement.classList.toggle('native-landscape-ui',locked||compact);
+ document.documentElement.classList.toggle('native-android-app',androidApp);
+ document.documentElement.classList.toggle('native-landscape-ui',androidApp||locked||compact);
  document.documentElement.classList.toggle('native-need-rotate',need);
  const app=document.getElementById('app');
  if(!app)return;
@@ -16707,6 +16709,7 @@ function syncPlayChrome(){
  syncHandScrollControls();
 }
 async function enterPlayChrome(){
+ if(window.GarrisonAndroid?.postMessage){document.documentElement.classList.add('native-play-lock');syncPlayChrome();window.GarrisonAndroid.postMessage(JSON.stringify({type:'play-mode',active:true}));return;}
  if(!mobilePlay()||iosMobile())return;
  document.documentElement.classList.add('native-play-lock');
  syncPlayChrome();
@@ -16716,6 +16719,7 @@ async function enterPlayChrome(){
  syncPlayChrome();
 }
 async function leavePlayChrome(){
+ if(window.GarrisonAndroid?.postMessage){document.documentElement.classList.remove('native-play-lock','native-need-rotate');window.GarrisonAndroid.postMessage(JSON.stringify({type:'play-mode',active:false}));syncPlayChrome();return;}
  document.documentElement.classList.remove('native-play-lock','native-need-rotate');
  try{screen.orientation?.unlock?.();}catch{}
  try{if(document.fullscreenElement||document.webkitFullscreenElement)await (document.exitFullscreen||document.webkitExitFullscreen).call(document);}catch{}
@@ -17081,15 +17085,15 @@ function action(button,anchor=null){const a=button.dataset.act,g=state.game,uid=
  // 导出存档（用户 2026-09-27 需求）：大厅与对局顶栏共用一个入口。
  // 有对局时导出的是**原来的对局存档**（多带一份战绩档案，NativeSession.restore 会忽略额外字段），
  // 没有对局时只导出战绩档案；两种都能被下面的导入功能读回来。
- if(a==='export'){const archive=archiveWithPrepSkills(archiveNow()),record=exportRecord(g||null,archive,{expiresAt:g?state.expiresAt:null}),stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'),url=URL.createObjectURL(new Blob([JSON.stringify(record,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-save-'+stamp+'.json';link.click();URL.revokeObjectURL(url);notice(g?`已导出对局存档＋战绩档案（${archive.runs.length} 场）。`:`已导出战绩档案（${archive.runs.length} 场，当前没有进行中的对局）。`);return;}
- if(a==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{if(input.files[0].size>10e6)throw Error('存档文件过大');const record=JSON.parse(await input.files[0].text()),incoming=archiveFromRecord(record);let game=null;if(record&&record.s){game=NativeSession.restore(data,record);if(!game)throw Error('存档版本、数据或有效期不匹配');}if(!game&&!incoming)throw Error('这个 JSON 既不是对局存档，也没有战绩档案');
+   if(a==='export'){const archive=archiveWithPrepSkills(archiveNow()),record=exportRecord(g||null,archive,{expiresAt:g?state.expiresAt:null}),stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'),fileName='garrison-save-'+stamp+'.json',payload=JSON.stringify(record,null,2);if(window.GarrisonAndroid?.postMessage){window.GarrisonAndroid.postMessage(JSON.stringify({type:'export',fileName,json:payload}));return;}const url=URL.createObjectURL(new Blob([payload],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download=fileName;link.click();URL.revokeObjectURL(url);notice(g?`已导出对局存档＋战绩档案（${archive.runs.length} 场）。`:`已导出战绩档案（${archive.runs.length} 场，当前没有进行中的对局）。`);return;}
+  if(a==='import'){const importText=async text=>{try{if(new Blob([text]).size>10e6)throw Error('存档文件过大');const record=JSON.parse(text),incoming=archiveFromRecord(record);let game=null;if(record&&record.s){game=NativeSession.restore(data,record);if(!game)throw Error('存档版本、数据或有效期不匹配');}if(!game&&!incoming)throw Error('这个 JSON 既不是对局存档，也没有战绩档案');
   // 档案与对局存档分开合并：同 id 的场次以导入的为准，其余按时间合并，最多留 10 场。
   // 技能覆盖实际使用独立的 localStorage 键；导入档案时也写回那里，才能影响战前准备与新局。
   const mergedRaw=incoming?mergeArchives(archiveWithPrepSkills(archiveNow()),record.archive):null;
   if(mergedRaw)mergedRaw.prepSkills=savePrepSkills(mergedRaw.prepSkills,data);
   const merged=mergedRaw?saveArchive(archiveStorage(),mergedRaw):null;state.archive=merged;
   if(game){state.game=game;state.view='game';state.paused=true;save();saveCheckpoint();enterPlayChrome();notice(merged?`已恢复对局，并导入战绩档案（${merged.runs.length} 场）。`:'已恢复对局。');}else{state.view='lobby';leavePlayChrome();notice(`已导入战绩档案 ${merged.runs.length} 场（文件里没有对局存档）。`);}
-  render();}catch(e){notice(e.message);}};input.click();return;}
+    render();}catch(e){notice(e.message);}};window.__garrisonImportCallback=importText;if(window.GarrisonAndroid?.postMessage){window.GarrisonAndroid.postMessage(JSON.stringify({type:'import'}));return;}const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{if(input.files[0])await importText(await input.files[0].text());};input.click();return;}
  if(!g)return;
  if(a==='pause'){state.paused=!state.paused;render();return;}if(a==='speed'){state.speed=Number(button.dataset.speed);render();return;}
  if(a==='mute'){state.muted=!state.muted;savePreference('garrison-mute',state.muted?'1':'0');if(!state.muted)unlockAudio();render();return;}

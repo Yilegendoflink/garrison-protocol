@@ -1252,3 +1252,9 @@ html.native-landscape-ui .native-free-refresh-count{font-size:7px;line-height:8p
 @media(max-width:600px){.native-shop-card{min-height:125px}.native-shop-card>[data-act="buy"]{min-height:125px}}
 html.native-landscape-ui .native-shop-card{min-height:0;height:100%}
 html.native-landscape-ui .native-shop-card>[data-act="buy"]{min-height:0;height:100%}
+
+/* Android WebView shell: avoid browser-like bounce/highlight and use the full app viewport. */
+html.native-android-app,html.native-android-app body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+html.native-android-app body,html.native-android-app #app{min-height:100dvh}
+html.native-android-app .native-lobby,html.native-android-app .native-game{max-width:none}
+html.native-android-app button,html.native-android-app select,html.native-android-app a{-webkit-tap-highlight-color:transparent}
