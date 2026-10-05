@@ -1123,6 +1123,13 @@ test('缄默德克萨斯 S3 剑雨在技能持续时间结束后停止',()=>{
  steps(b,90);assert.equal(skillHits(),endedHits,'持续时间结束后不应继续触发剑雨');
 });
 
+test('余 S2 仍伤害最终 BOSS，但不把它传送到自身位置',()=>{
+ const {b}=openBattle({chessId:'chess_char_6_03_a',skillIndex:1});deployNow(b);const u=b.s.units[0],boss=enemy(b,{x:u.x+1,y:u.y,hp:100000,finalBoss:true}),regular=enemy(b,{x:u.x+2,y:u.y,hp:100000});
+ const bossPosition=[boss.x,boss.y];u.sp=b.spCost(u);b.activate(u);
+ assert.ok(boss.hp<100000,'最终 BOSS 仍受余 S2 伤害');assert.deepEqual([boss.x,boss.y],bossPosition,'最终 BOSS 保持原位');
+ assert.deepEqual([regular.x,regular.y],[u.x,u.y],'普通敌人仍会被传送至余所在位置');
+});
+
 test('灵知 S3 冻结范围目标并在结束爆发，寒冷目标获得脆弱',()=>{
  const {b}=openBattle({chessId:'chess_char_4_13_b',skillIndex:2});deployNow(b);const u=b.s.units[0],e=enemy(b,{x:u.x+1,y:u.y,hp:100000});u.sp=b.spCost(u);b.activate(u);assert.ok(e.statuses.some(s=>s.kind==='frozen'));for(let i=0;i<2;i++)b.step();assert.ok(e.fragile>1);const hp=e.hp;u.skillLeft=.01;b.step();assert.ok(e.hp<hp);
 });
