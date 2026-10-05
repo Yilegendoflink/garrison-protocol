@@ -195,14 +195,14 @@ export class NativeSession extends NativeEconomy {
   if(next.length!==cur.length||next.some(id=>!cur.includes(id)))u.bondIds=next;
  }
   // 装备的合成（整备区优先取材料、合成结果进整备区）只在 NativeEconomy.gainItem 实现一份，这里不要再覆盖。
+ shopAllFrozen(){if(this.s.locked)return true;const offers=this.s.offers||[],items=this.s.itemOffers||[],frozen=new Set(this.s.frozenSlots||[]),liveOffers=offers.map((id,i)=>id?i:-1).filter(i=>i>=0);return (liveOffers.length>0||items.some(Boolean))&&!items.some(Boolean)&&liveOffers.every(i=>frozen.has(i));}
  perform(type,...args){
   const before=structuredClone(this.s);let result;
   try{
    if(type==='refresh'){const frozen=this.s.frozenSlots?.slice()||[],previous=this.s.offers.slice(),offers=this.rollOffers(this.s.forcedRefresh?.bond);for(const index of frozen)if(previous[index])offers[index]=previous[index];if(frozen.length){const free=offers.map((_,i)=>i).filter(i=>!frozen.includes(i));if(free.length>1)offers[free[1]]=offers[free[0]];}result=this.refresh(offers);if(result)this.fillItems();}
    // 升级只解锁更高阶的干员候选，不动装备商品槽：装备槽只按回合刷新（advanceRound 里的 fillItems）
    else if(type==='upgrade'){result=this.upgrade();}
-   else if(type==='lock'){if(this.s.phase!=='prep')return false;this.s.locked=!this.s.locked;result=true;}
-   else if(type==='thaw-offer'){const index=args[0];if(this.s.phase!=='prep'||!Number.isInteger(index)||!this.s.offers[index]||!this.s.frozenSlots?.includes(index))return false;this.s.frozenSlots=this.s.frozenSlots.filter(i=>i!==index);result=true;}
+   else if(type==='lock'){if(this.s.phase!=='prep')return false;if(this.shopAllFrozen()){this.s.locked=false;this.s.frozenSlots=[];}else this.s.locked=true;result=true;}
   else if(type==='withdraw'){const u=this.s.units.find(u=>u.uid===args[0]);if(this.s.phase!=='prep'||!u?.position||this.handFull())return false;u.position=null;this.settleBondRewards();result=true;}
   else if(type==='withdrawSummon')result=this.withdrawSummonCard(args[0]);
    else if(type==='skill'){
