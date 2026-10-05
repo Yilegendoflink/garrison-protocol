@@ -9215,7 +9215,7 @@ function runFatalProtection(battle,target,wouldDie,event){
   if(t){const base=Math.abs(Number(t.values.cost)||5),times=target.merchantRescueCount||0,cost=base*Math.pow(Number(t.values.cost_multi)||2,times);if(battle.spendCost?.(cost,{considerNegativeCost:true})){target.merchantRescueCount=times+1;target.hp=target.maxHp*(Number(t.values.hp_ratio)||.7);log(battle,'fatal-cost-save',{uid:target.uid,cost,hp:target.hp,eventId:event.eventId});return true;}}
  }
  const egirBB=bondParam(battle,'egirShip');
- if(target.kind!=='summon'&&battle.s.units.includes(target)&&battle.on?.('egirShip')&&battle.rows?.egirShip?.count>=bondValue(egirBB,'power_bond_char_cnt',5)&&!target.egirRevived&&((battle.s.bondEgirReviveCount||0)<bondValue(egirBB,'max_free_respawn_cnt',3))){
+ if(target.kind!=='summon'&&battle.s.units.includes(target)&&battle.on?.('egirShip')&&battle.owns?.(target,'egirShip')&&battle.rows?.egirShip?.count>=bondValue(egirBB,'power_bond_char_cnt',5)&&!target.egirRevived&&((battle.s.bondEgirReviveCount||0)<bondValue(egirBB,'max_free_respawn_cnt',3))){
   target.egirRevived=true;target.indomFreeDeploy=true;battle.s.bondEgirReviveCount=(battle.s.bondEgirReviveCount||0)+1;log(battle,'bond-revive',{uid:target.uid,bond:'egirShip',count:battle.s.bondEgirReviveCount,eventId:event.eventId});return false;
  }
  if(typeof battle.fatalHook==='function')return battle.fatalHook(target,event);
@@ -14130,14 +14130,14 @@ class NativeSession extends NativeEconomy {
   if(next.length!==cur.length||next.some(id=>!cur.includes(id)))u.bondIds=next;
  }
   // 装备的合成（整备区优先取材料、合成结果进整备区）只在 NativeEconomy.gainItem 实现一份，这里不要再覆盖。
+ shopAllFrozen(){if(this.s.locked)return true;const offers=this.s.offers||[],items=this.s.itemOffers||[],frozen=new Set(this.s.frozenSlots||[]),liveOffers=offers.map((id,i)=>id?i:-1).filter(i=>i>=0);return (liveOffers.length>0||items.some(Boolean))&&!items.some(Boolean)&&liveOffers.every(i=>frozen.has(i));}
  perform(type,...args){
   const before=structuredClone(this.s);let result;
   try{
    if(type==='refresh'){const frozen=this.s.frozenSlots?.slice()||[],previous=this.s.offers.slice(),offers=this.rollOffers(this.s.forcedRefresh?.bond);for(const index of frozen)if(previous[index])offers[index]=previous[index];if(frozen.length){const free=offers.map((_,i)=>i).filter(i=>!frozen.includes(i));if(free.length>1)offers[free[1]]=offers[free[0]];}result=this.refresh(offers);if(result)this.fillItems();}
    // 升级只解锁更高阶的干员候选，不动装备商品槽：装备槽只按回合刷新（advanceRound 里的 fillItems）
    else if(type==='upgrade'){result=this.upgrade();}
-   else if(type==='lock'){if(this.s.phase!=='prep')return false;this.s.locked=!this.s.locked;result=true;}
-   else if(type==='thaw-offer'){const index=args[0];if(this.s.phase!=='prep'||!Number.isInteger(index)||!this.s.offers[index]||!this.s.frozenSlots?.includes(index))return false;this.s.frozenSlots=this.s.frozenSlots.filter(i=>i!==index);result=true;}
+   else if(type==='lock'){if(this.s.phase!=='prep')return false;if(this.shopAllFrozen()){this.s.locked=false;this.s.frozenSlots=[];}else this.s.locked=true;result=true;}
   else if(type==='withdraw'){const u=this.s.units.find(u=>u.uid===args[0]);if(this.s.phase!=='prep'||!u?.position||this.handFull())return false;u.position=null;this.settleBondRewards();result=true;}
   else if(type==='withdrawSummon')result=this.withdrawSummonCard(args[0]);
    else if(type==='skill'){
@@ -16579,60 +16579,41 @@ const {RANDOM_MAP_ID} = load("protocol.js");
 const CAT_MODE_ID='mode_cat_all';
 
 const NATIVE_CHANGELOG={
- version:'0.9-b',publishedAt:'2026-10-02T11:49:04+08:00',displayTime:'2026-10-02 11:49 (UTC+8)',dateLabel:'10.02',
+ version:'0.9-d',publishedAt:'2026-10-05T13:02:36+08:00',displayTime:'2026-10-05 13:02 (UTC+8)',dateLabel:'10.05',
  preview:[
-  {topic:'战斗修复',summary:'敌方范围伤害不再命中处于隐匿状态的干员。'},
-  {topic:'技能优化',summary:'修复号角 S2 自动开启延迟与弹药计数显示问题。'},
-  {topic:'回合结算',summary:'修复塔尔塔罗斯层数结算与干员发放受阻问题。'},
-  {topic:'商店操作',summary:'升级增加二次确认；刷新按钮显示剩余免费次数。'},
-  {topic:'简报优化',summary:'调整禁用干员入口位置并改善页面滚动。'}
+  {topic:'突袭与控制',summary:'修复突袭干员反复再部署、错误跳位，以及伊内丝和仇白的重复控制问题。'},
+  {topic:'技能与盟约',summary:'修正多名干员技能的目标、持续时间和效果触发；校正阿戈尔复活对象。'},
+  {topic:'最终 Boss',summary:'按资料修正 Boss 判定范围与场地，并阻止余 S2 移动最终 Boss。'},
+  {topic:'策略与商店',summary:'寻呼模块不再补重复选项；梓兰冻结按钮统一冻结或解冻全店。'},
+  {topic:'数据同步',summary:'同步运行时与素材数据。'}
  ],
  sections:[
-  {title:'战斗与面板',items:[
-   '修正偶发无法关闭“查看战况”窗口的问题。',
-   '让浊心斯卡蒂“鼓舞”提供的面板属性加成正确显示；伤害结算原本正常。',
-   '修正伊内丝一技能未阻挡时、能天使一技能偶发的自动开启延迟。',
-   '修正干员详情中的出售键、关闭键重叠，以及关闭键压住页眉分割线。'
+  {title:'突袭、部署与控制',items:[
+   '突袭再部署只选择目标地面敌人相邻的地块；相邻格不可部署时不再跳到远处空地。',
+   '修正突袭干员在无有效目标、近地悬浮敌人附近及技能就绪时反复横跳或重复再部署的问题。',
+   '补充突袭干员重新部署时触发部署效果的回归验证。',
+   '修复伊内丝 S3 反复进入再部署的问题；她对同一敌人不再每次普攻都重复束缚。',
+   '仇白的停顿效果不再因重复触发而无限延长。'
   ]},
-  {title:'盟约与干员获得',items:[
-   '奇迹盟约达到100层时补发20资金；跨过清账时点的奖励顺延至下次整备。',
-   '拉普兰德的首次刷新判定从本形态获得时开始追踪；回合内购买或三合一后刷新也会触发。',
-   '特殊途径获得或转换干员时触发获得时效果；突变细胞转化缪缪会正常获得对应装备。',
-   '突变细胞转化后的干员会正常参与三合一并产生进阶奖励。',
-   '携带变形同构体时，干员详情会显示转成的盟约，盟约效果继续正常生效。'
+  {title:'技能与盟约效果',items:[
+   '古米 S1 修正为单体治疗，不再错误攻击敌人或按群攻处理。',
+   '修正异格德克萨斯 S3 持续时间过长的问题。',
+   '异格银灰 S2 按减速效果结算，不再直接冻结敌人。',
+   '叙拉古盟约的恐惧效果恢复；荒芜拉普兰德浮游单元可以正常触发真伤。',
+   '瞬发技能也能正确触发迅捷盟约效果；缇缇 S2 的沉睡刷新会按实际触发叠加卫戍层数。',
+   '锏的卫戍效果说明保留正确的触发时机标记。',
+   '阿戈尔盟约的复活只作用于阿戈尔干员，非阿戈尔单位退场不再占用复活名额。',
+   '修正卡西米尔阻挡真伤递归触发并造成栈溢出的问题。'
   ]},
-  {title:'商店与策略',items:[
-   '调整维式重锤商店资格：基础版可进常规池，带词条的特殊版走对应专属池。',
-   '突变细胞不再出现在商店刷新结果中。',
-   '各难度有决策日程时，首次策略决策固定为悬赏；后续决策保持随机。'
+  {title:'最终 Boss 与战场',items:[
+   '按资料记录扩大并右移最终 Boss 判定范围；浊心斯卡蒂 S3 的伤害判定也能覆盖 Boss。',
+   '最终 Boss 战使用对应的专属场地地图。',
+   '余 S2 不再吸动最终 Boss。'
   ]},
-  {title:'地图与模式',items:[
-   '绝境和终极随机地图池仅排除 act1autochess_m01，其他地图及手动选择不受影响。',
-   '修复325模式数字效果切出后无法解除的问题；切换到其他模式后关闭，底层使用终极难度。',
-   '调整首页提示，尝试解决325模式不易被发现的问题。'
-  ]},
-  {title:'整备区、显示与部署',items:[
-   '保留整备区卡牌原有槽位；基础区有几个空位就下放几张溢出卡，不强制压缩手牌。',
-   '临时手牌格只在发生溢出时显示，数量不限；桌面支持横向滚动，手机端用左右翻动箭头查看溢出卡。',
-   '手机端翻动箭头每次移动约半个卡槽，避免与干员拖动操作冲突。',
-   '增高手机版整备区卡槽以完整显示头像；调整已满提示的布局，避免遮挡左翻按钮。',
-   '进阶干员详情名旁标注“进阶”，手牌头像使用金色底色，手机版同步；实装道具图标。',
-   '干员不能再放置到已存在的凯瑟琳支援装置格；装置仍不占部署名额。'
-  ]},
-  {title:'战斗与技能',items:[
-   '敌方范围伤害不再命中处于隐匿状态的干员，覆盖地面区域伤害、炮击落点和范围溅射。',
-   '自动释放策略按技能档位匹配，号角 S2 不再误用重装 S1 的受击触发条件；技力就绪且存在有效目标时及时开启。',
-   '弹药计数读取战斗中的实际弹药状态：技能开启且仍有弹药时显示，技能关闭或弹药耗尽后隐藏。'
-  ]},
-  {title:'结算与商店操作',items:[
-   '塔尔塔罗斯发放档位受 264 层上限约束；暂时无候选或干员发放失败时，资金换层结算保留，未发档位可重试。',
-   '干员发放触发三合一奖励时，先处理奖励再继续剩余发放。',
-   '商店升级改为双击确认；期间执行其他操作会取消确认。',
-   '免费刷新次数大于 0 时，在刷新按钮下方显示剩余次数；次数为 0 时不显示。'
-  ]},
-  {title:'简报与页面滚动',items:[
-   '将“查看本局被禁用的干员”按钮移到盟约区标题下方，避免长列表把按钮挤出可视区域。',
-   '简报内容区支持滚动与键盘聚焦，改善窄屏和 Safari 页面中的查看体验。'
+  {title:'策略、商店与资料',items:[
+   '寻呼模块候选少于三名时只显示实际候选，不再用重复干员补足选项。',
+   '梓兰策略的冻结槽继续保留；商店同时有冻结卡和未冻结卡时，冻结按钮会冻结全店；全店冻结后按钮解冻所有卡，不提供单卡解冻。',
+   '同步运行时与素材数据。'
   ]}
  ]
 };
@@ -16925,7 +16906,7 @@ function render(){
  if(state.view==='briefing'){root.innerHTML=renderBriefingScreen();renderModal();return;}
   if(state.view==='prepare'){const p=prepState(),listScroll=root.querySelector('#prep-list')?.scrollLeft??p.listScrollLeft??0;root.innerHTML=renderPreparePage(data,p,{esc,avatar});const list=root.querySelector('#prep-list');if(list)list.scrollLeft=listScroll;if(p.scroll)window.scrollTo(0,p.scroll);renderModal();return;}
  if(state.view==='editor'){const oldNav=root.querySelector('.wave-ed-temps'),navTop=oldNav?.scrollTop||0,navLeft=oldNav?.scrollLeft||0;root.innerHTML=renderWaveEditor(data,state.waveTable,state.editor);const nav=root.querySelector('.wave-ed-temps');if(nav){nav.scrollTop=navTop;nav.scrollLeft=navLeft;}const search=document.getElementById('ed-search'),catalog=document.getElementById('ed-catalog');if(search&&state.editor.keepSearch){search.focus();try{search.setSelectionRange(state.editor.caret,state.editor.caret);}catch{}}state.editor.keepSearch=false;if(catalog)catalog.scrollTop=state.editor.scroll||0;const dialog=root.querySelector('#wave-ed-test');if(dialog){dialog.showModal();const close=()=>{state.editor.sample=null;render();root.querySelector('.wave-ed-current [data-act=ed-roll]')?.focus();};dialog.addEventListener('cancel',e=>{e.preventDefault();close();});dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();}});}renderModal();return;}
- const g=state.game,s=g.s,turn=currentTurn(),rows=g.bonds(),handLayout=handView(g);root.innerHTML=`<main class="native-game${s.phase==='battle'?' is-battle':''}${state.supplyCollapsed?' is-supply-collapsed':''}${state.sandbox?' is-sandbox':''}">${dossier()}<header class="native-top"><button data-act="home">‹ 大厅</button><strong>卫戍协议 / 盟约下半</strong><button class="native-mobile-info" data-act="field-info">战况 / 设置</button><button data-act="limits">已知差异</button><button data-act="branches">分支规则</button><button class="native-ban-entry" data-act="ban-list">禁用名单</button><button data-act="export">导出存档</button></header><div class="native-workspace"><aside class="native-bonds">${bondSidebarHtml(g,rows)}</aside><section class="native-field"><div class="native-field-caption"><b>${state.sandbox?(s.phase==='battle'?'技能测试':'测试配置'):s.phase==='battle'?(turn.isBossTurn?'最终 Boss':'自动作战'):s.phase==='prep'?'阵地休整':s.phase==='finished'?'模拟结束':'回合结算'}</b><span id="native-wave-progress">${deployCount(s)} / ${s.capacity} 部署</span>${s.phase==='battle'&&!state.sandbox?battleBar():''}</div><div class="native-terrain-legend" aria-label="地块图例">${terrainLegend(g.map)}</div><div class="native-board"><canvas id="native-canvas" tabindex="0" aria-label="战场棋盘，先选位置再拖动朝向确认"></canvas><span class="native-cost" title="战斗费用余额，与商店资金独立"><small>Cost 费用</small><output id="native-cost-balance" aria-label="战斗费用余额">—</output></span></div><div class="native-facing" ${state.preview?'':'hidden'}><span class="native-facing-tip">拖动选择朝向，松手确认；中心松手取消。</span>${[0,1,2,3].map((d)=>`<button data-act="aim" data-dir="${d}">${['→','↓','←','↑'][d]}</button>`).join('')}<button data-act="place-confirm">确认放置</button><button data-act="cancel">取消</button></div><div class="native-controls"><button data-act="fullscreen" hidden>打开全屏</button><button data-act="pause" ${s.phase!=='battle'?'disabled':''}>${state.paused?'继续':'暂停'}</button>${[1,2,4].map(n=>`<button data-act="speed" data-speed="${n}" class="${state.speed===n?'chosen':''}">${n}×</button>`).join('')}<button data-act="mute">${state.muted?'声音关':'声音开'}</button><label>音量 <input id="native-volume" aria-label="战斗音量" type="range" min="0" max="1" step="0.05" value="${state.volume}" style="width:72px"></label><button data-act="reduce-fx">${state.reduceFx?'动效少':'动效'}</button>${s.phase==='prep'?(state.sandbox?'<button class="native-primary" data-act="sandbox-start">开始测试 →</button>':'<button class="native-primary" data-act="start">准备完毕 →</button>'):s.phase==='intermission'?'<button class="native-primary" data-act="next">进入下一回合 →</button>':s.phase==='finished'?'<button data-act="result">查看伤害报告</button><button data-act="home">回到大厅</button>':''}</div><div class="native-bench-label${g.handFull()?' is-over':''}" id="native-hand-label">整备区 ${g.handLength()} / ${HAND_LIMIT} ${g.handFull()?'<em class="native-hand-warn">已满，出售或部署清出空余后才能购买</em>':''}<span id="native-drop-hint" aria-live="polite">拖动卡片换格；场上干员拖回此处</span></div><div class="native-bench" id="native-hand" data-layout="${handLayout.signature}" aria-label="整备区">${handLayout.html}</div></section><aside class="native-detail">${state.sandbox?sandboxDetail():waveIntel()}${detail()}<h3>${esc(data.common.bandDataDict[s.bandId].bandName)}</h3><p>${esc(plain(data.season.bandDataListDict[s.bandId].bandDesc))}</p><p>${turn.isBossTurn?`本局最终 Boss：${esc(finalBossConfig(data,s.finalBossId,s.modeId).enemyProfile.name||s.finalBossId)}。倒计时 100 秒 + 开战时剩余生命；30 名增援每 3 秒从上下红门进入，Boss 击破立即胜利。`:'最终回合按随机 Boss 作战，本体击破立即获胜。'}</p><div id="native-combat-stats"></div></aside></div><div class="native-status" id="native-status"></div><section class="native-shop" id="native-supply-shop"><div><h2>调度中心 ${s.level}</h2><button class="native-supply-toggle" data-act="supply-toggle" aria-controls="native-supply-shop" aria-expanded="${!state.supplyCollapsed}">${state.supplyCollapsed?'展开商店 ▴':'收起商店 ▾'}</button><button data-act="upgrade" ${s.phase!=='prep'?'disabled':''}>升级 ${catOn()?'ALL':(g.terms().upgradeCost??'MAX')} ◆</button><span class="native-refresh-control"><button data-act="refresh" ${s.phase!=='prep'?'disabled':''}${s.forcedRefresh?` title="特殊刷新：此次刷新出现的干员优先为${esc(data.season.bondInfoDict[s.forcedRefresh.bond]?.name||'指定盟约')}干员"`:''}>${s.forcedRefresh?`特殊刷新${s.forcedRefresh.count>1?` ×${s.forcedRefresh.count}`:''}`:'刷新'} ${s.freeRefresh?'免费':catOn()?'ALL':'1 ◆'}</button></span>${catOn()?'<button data-act="stockview" title="查看各干员剩余库存">库存</button>':''}<button data-act="lock" ${s.phase!=='prep'?'disabled':''}>${s.locked?'❄ 已冻结':'冻结'}</button>${s.rewardPending?.tier?'<span class="native-reward-shop-hint">三合一奖励选择中 · 点击候选卡片预览，再次点击确认</span>':''}${g.handFull()?'<span class="native-reward-shop-hint is-over" title="召唤物卡、干员与装备一起占整备区格">整备区已满，暂不可购入干员／装备</span>':''}</div><div class="native-shop-cards">${shopCards(g,s)}</div></section></main>`;canvas=document.getElementById('native-canvas');syncFreeRefreshCount();syncPlayChrome();updateHud();fitWaveFaces();draw();renderModal();showRequired();syncQuickSell();
+ const g=state.game,s=g.s,turn=currentTurn(),rows=g.bonds(),handLayout=handView(g);root.innerHTML=`<main class="native-game${s.phase==='battle'?' is-battle':''}${state.supplyCollapsed?' is-supply-collapsed':''}${state.sandbox?' is-sandbox':''}">${dossier()}<header class="native-top"><button data-act="home">‹ 大厅</button><strong>卫戍协议 / 盟约下半</strong><button class="native-mobile-info" data-act="field-info">战况 / 设置</button><button data-act="limits">已知差异</button><button data-act="branches">分支规则</button><button class="native-ban-entry" data-act="ban-list">禁用名单</button><button data-act="export">导出存档</button></header><div class="native-workspace"><aside class="native-bonds">${bondSidebarHtml(g,rows)}</aside><section class="native-field"><div class="native-field-caption"><b>${state.sandbox?(s.phase==='battle'?'技能测试':'测试配置'):s.phase==='battle'?(turn.isBossTurn?'最终 Boss':'自动作战'):s.phase==='prep'?'阵地休整':s.phase==='finished'?'模拟结束':'回合结算'}</b><span id="native-wave-progress">${deployCount(s)} / ${s.capacity} 部署</span>${s.phase==='battle'&&!state.sandbox?battleBar():''}</div><div class="native-terrain-legend" aria-label="地块图例">${terrainLegend(g.map)}</div><div class="native-board"><canvas id="native-canvas" tabindex="0" aria-label="战场棋盘，先选位置再拖动朝向确认"></canvas><span class="native-cost" title="战斗费用余额，与商店资金独立"><small>Cost 费用</small><output id="native-cost-balance" aria-label="战斗费用余额">—</output></span></div><div class="native-facing" ${state.preview?'':'hidden'}><span class="native-facing-tip">拖动选择朝向，松手确认；中心松手取消。</span>${[0,1,2,3].map((d)=>`<button data-act="aim" data-dir="${d}">${['→','↓','←','↑'][d]}</button>`).join('')}<button data-act="place-confirm">确认放置</button><button data-act="cancel">取消</button></div><div class="native-controls"><button data-act="fullscreen" hidden>打开全屏</button><button data-act="pause" ${s.phase!=='battle'?'disabled':''}>${state.paused?'继续':'暂停'}</button>${[1,2,4].map(n=>`<button data-act="speed" data-speed="${n}" class="${state.speed===n?'chosen':''}">${n}×</button>`).join('')}<button data-act="mute">${state.muted?'声音关':'声音开'}</button><label>音量 <input id="native-volume" aria-label="战斗音量" type="range" min="0" max="1" step="0.05" value="${state.volume}" style="width:72px"></label><button data-act="reduce-fx">${state.reduceFx?'动效少':'动效'}</button>${s.phase==='prep'?(state.sandbox?'<button class="native-primary" data-act="sandbox-start">开始测试 →</button>':'<button class="native-primary" data-act="start">准备完毕 →</button>'):s.phase==='intermission'?'<button class="native-primary" data-act="next">进入下一回合 →</button>':s.phase==='finished'?'<button data-act="result">查看伤害报告</button><button data-act="home">回到大厅</button>':''}</div><div class="native-bench-label${g.handFull()?' is-over':''}" id="native-hand-label">整备区 ${g.handLength()} / ${HAND_LIMIT} ${g.handFull()?'<em class="native-hand-warn">已满，出售或部署清出空余后才能购买</em>':''}<span id="native-drop-hint" aria-live="polite">拖动卡片换格；场上干员拖回此处</span></div><div class="native-bench" id="native-hand" data-layout="${handLayout.signature}" aria-label="整备区">${handLayout.html}</div></section><aside class="native-detail">${state.sandbox?sandboxDetail():waveIntel()}${detail()}<h3>${esc(data.common.bandDataDict[s.bandId].bandName)}</h3><p>${esc(plain(data.season.bandDataListDict[s.bandId].bandDesc))}</p><p>${turn.isBossTurn?`本局最终 Boss：${esc(finalBossConfig(data,s.finalBossId,s.modeId).enemyProfile.name||s.finalBossId)}。倒计时 100 秒 + 开战时剩余生命；30 名增援每 3 秒从上下红门进入，Boss 击破立即胜利。`:'最终回合按随机 Boss 作战，本体击破立即获胜。'}</p><div id="native-combat-stats"></div></aside></div><div class="native-status" id="native-status"></div><section class="native-shop" id="native-supply-shop"><div><h2>调度中心 ${s.level}</h2><button class="native-supply-toggle" data-act="supply-toggle" aria-controls="native-supply-shop" aria-expanded="${!state.supplyCollapsed}">${state.supplyCollapsed?'展开商店 ▴':'收起商店 ▾'}</button><button data-act="upgrade" ${s.phase!=='prep'?'disabled':''}>升级 ${catOn()?'ALL':(g.terms().upgradeCost??'MAX')} ◆</button><span class="native-refresh-control"><button data-act="refresh" ${s.phase!=='prep'?'disabled':''}${s.forcedRefresh?` title="特殊刷新：此次刷新出现的干员优先为${esc(data.season.bondInfoDict[s.forcedRefresh.bond]?.name||'指定盟约')}干员"`:''}>${s.forcedRefresh?`特殊刷新${s.forcedRefresh.count>1?` ×${s.forcedRefresh.count}`:''}`:'刷新'} ${s.freeRefresh?'免费':catOn()?'ALL':'1 ◆'}</button></span>${catOn()?'<button data-act="stockview" title="查看各干员剩余库存">库存</button>':''}<button data-act="lock" ${s.phase!=='prep'?'disabled':''}>${g.shopAllFrozen()?'解冻':'冻结'}</button>${s.rewardPending?.tier?'<span class="native-reward-shop-hint">三合一奖励选择中 · 点击候选卡片预览，再次点击确认</span>':''}${g.handFull()?'<span class="native-reward-shop-hint is-over" title="召唤物卡、干员与装备一起占整备区格">整备区已满，暂不可购入干员／装备</span>':''}</div><div class="native-shop-cards">${shopCards(g,s)}</div></section></main>`;canvas=document.getElementById('native-canvas');syncFreeRefreshCount();syncPlayChrome();updateHud();fitWaveFaces();draw();renderModal();showRequired();syncQuickSell();
  }finally{painting=false;paint325();}
 }
 function waveIntel(){
@@ -16950,7 +16931,7 @@ function itemIcon(id){const item=itemRecord(id),file=item&&data.assets[item.id];
 function itemEffect(id){const trap=data.season.trapChessDataDict[id],info=data.season.effectInfoDataDict[trap?.effectId];return info?{name:info.effectName,desc:plain(info.effectDesc)}:{name:itemName(id),desc:''};}
 function inspectSame(kind,key){const inv=state.inspect;return !!inv&&inv.kind===kind&&(inv.uid??inv.index)===key;}
 function rewardShopCards(reward){return (reward?.offers||[]).map((id,i)=>{const p=data.profiles[id],bonds=(p?.bonds||[]).map(id=>data.season.bondInfoDict[id]?.name||id).join(' / ')||'无盟约';return p?`<button data-act="reward" data-index="${i}" class="native-reward-shop-card ${inspectSame('reward',i)?'chosen':''}">${avatar(p.charId)}<strong>${esc(p.name)}</strong><small>三合一奖励候选</small><p>${esc(bonds)}<br><span>点击预览，再次点击选择</span></p></button>`:'';}).join('');}
- function shopCards(g,s){if(s.rewardPending?.tier){g.ensureRewards();return rewardShopCards(s.rewardPending);}const slotFrozen=i=>(s.frozenSlots||[]).includes(i),frozen=i=>s.locked||slotFrozen(i),mergeReady=id=>{const chess=data.season.charChessDataDict[id];return !!chess?.upgradeChessId&&s.units.filter(u=>u.chessId===id).length+1>=chess.upgradeNum;};return s.offers.map((id,i)=>id?`<div class="native-shop-card"><button data-act="buy" data-index="${i}" class="${inspectSame('shop',i)?'chosen ':''}${mergeReady(id)?'native-shop-merge-ready ':''}${frozen(i)?'native-shop-frozen':''}"${mergeReady(id)?' title="购买后触发三合一"':''}>${avatar(data.profiles[id].charId)}<strong>${esc(data.profiles[id].name)}</strong><small>${data.profiles[id].rank} 阶 · ${g.price(id)} ◆</small><p>${g.ownBonds({chessId:id}).map(b=>data.season.bondInfoDict[b].name).join(' / ')}</p></button>${slotFrozen(i)?`<button class="native-thaw-offer" data-act="thaw-offer" data-index="${i}" aria-label="解冻${esc(data.profiles[id].name)}" title="解冻此卡并允许后续刷新替换">解冻</button>`:''}</div>`:'<div class="native-empty">已调配</div>').join('')+s.itemOffers.map((id,i)=>id?`<button data-act="buyItem" data-index="${i}" class="${inspectSame('shopItem',i)?'chosen ':''}${s.locked?'native-shop-frozen':''}">${itemIcon(id)}<strong>${esc(itemName(id))}</strong><small>${data.season.trapChessDataDict[id].purchasePrice} ◆</small></button>`:'<div class="native-empty">已调配</div>').join('');}
+ function shopCards(g,s){if(s.rewardPending?.tier){g.ensureRewards();return rewardShopCards(s.rewardPending);}const frozen=i=>s.locked||(s.frozenSlots||[]).includes(i),mergeReady=id=>{const chess=data.season.charChessDataDict[id];return !!chess?.upgradeChessId&&s.units.filter(u=>u.chessId===id).length+1>=chess.upgradeNum;};return s.offers.map((id,i)=>id?`<div class="native-shop-card"><button data-act="buy" data-index="${i}" class="${inspectSame('shop',i)?'chosen ':''}${mergeReady(id)?'native-shop-merge-ready ':''}${frozen(i)?'native-shop-frozen':''}"${mergeReady(id)?' title="购买后触发三合一"':''}>${avatar(data.profiles[id].charId)}<strong>${esc(data.profiles[id].name)}</strong><small>${data.profiles[id].rank} 阶 · ${g.price(id)} ◆</small><p>${g.ownBonds({chessId:id}).map(b=>data.season.bondInfoDict[b].name).join(' / ')}</p></button></div>`:'<div class="native-empty">已调配</div>').join('')+s.itemOffers.map((id,i)=>id?`<button data-act="buyItem" data-index="${i}" class="${inspectSame('shopItem',i)?'chosen ':''}${s.locked?'native-shop-frozen':''}">${itemIcon(id)}<strong>${esc(itemName(id))}</strong><small>${data.season.trapChessDataDict[id].purchasePrice} ◆</small></button>`:'<div class="native-empty">已调配</div>').join('');}
 function syncFreeRefreshCount(){const button=root.querySelector('.native-shop [data-act="refresh"]');if(!button)return;let control=button.parentElement;if(!control?.classList.contains('native-refresh-control')){control=document.createElement('span');control.className='native-refresh-control';button.before(control);control.append(button);}let label=control.querySelector('.native-free-refresh-count'),remaining=Math.max(0,Math.floor(Number(state.game?.s?.freeRefresh)||0));if(remaining){if(!label){label=document.createElement('small');label.className='native-free-refresh-count';label.setAttribute('aria-live','polite');control.append(label);}label.textContent=`剩余 ${remaining} 次`;}else label?.remove();}
 function inspectTarget(){
  const g=state.game,inv=state.inspect;if(!g||!inv)return null;
@@ -17108,7 +17089,7 @@ function action(button,anchor=null){const a=button.dataset.act,g=state.game,uid=
  if(a==='stockview'){modal(stockPanel());return;}
  if(a==='destroy'||a==='destroyEquip'){const slot=Number(button.dataset.slot),fromEquip=state.inspect?.kind==='equip',name=itemName(a==='destroy'?g.s.items.find(i=>i.uid===uid)?.chessId:g.s.units.find(u=>u.uid===uid)?.equipment?.[slot]?.chessId);if(!g.perform(a,uid,slot)){notice('当前阶段无法销毁装备。');return;}if(state.item===uid)state.item=null;state.inspect=fromEquip?{kind:'unit',uid}:null;notice('已销毁 '+name+'。');save();render();return;}
  if(a==='bond-info'){modal(bondModalHtml(button.dataset.id),{bond:button.dataset.id});return;}if(a==='aim'){if(state.preview){state.preview.dir=Number(button.dataset.dir);draw();}return;}if(a==='cancel'){state.preview=null;render();return;}if(a==='place-confirm'){commitPreview();return;}
- let ok;const handWasFull=g.handFull();if(a==='buy'||a==='buyItem'){const kind=a==='buy'?'shop':'shopItem',index=Number(button.dataset.index);if(!inspectSame(kind,index)){state.inspect={kind,index};state.selected=null;state.item=null;render();return;}if(g.s.phase!=='prep'){notice('当前阶段不能购买');return;}ok=g.perform(a,index);if(ok){state.inspect=null;if(a==='buy')state.selected=g.s.units.at(-1)?.uid??null;}}else if(a==='thaw-offer'){ok=g.perform(a,Number(button.dataset.index));}else if(a==='reward'){const reward=g.s.rewardPending,index=Number(button.dataset.index),id=reward?.tier?reward.offers?.[index]:button.dataset.id;if(reward?.tier&&!inspectSame('reward',index)){state.inspect={kind:'reward',index};state.selected=null;state.item=null;render();return;}ok=id?g.perform(reward?.kind==='bounty'?'bounty':'takePromotion',id):false;if(ok&&reward?.kind==='bounty')saveCheckpoint();state.modal=null;if(ok)state.inspect=null;}else if(a==='decision'){ok=g.perform(a,button.dataset.id);state.modal=null;}else if(a==='sell'){state.quickSell=null;ok=g.perform(a,uid);if(ok){state.selected=null;state.inspect=null;}}else if(a==='withdraw'||a==='mineCommand'){ok=g.perform(a,uid);}else if(['upgrade','refresh','lock','start','next'].includes(a)){ok=g.perform(a);if(a==='start'){state.paused=false;resetFxClock();unlockAudio();attachZoneVisual(g.battle);}state.preview=null;if(a==='refresh')state.inspect=null;}else return;
+ let ok;const handWasFull=g.handFull();if(a==='buy'||a==='buyItem'){const kind=a==='buy'?'shop':'shopItem',index=Number(button.dataset.index);if(!inspectSame(kind,index)){state.inspect={kind,index};state.selected=null;state.item=null;render();return;}if(g.s.phase!=='prep'){notice('当前阶段不能购买');return;}ok=g.perform(a,index);if(ok){state.inspect=null;if(a==='buy')state.selected=g.s.units.at(-1)?.uid??null;}}else if(a==='reward'){const reward=g.s.rewardPending,index=Number(button.dataset.index),id=reward?.tier?reward.offers?.[index]:button.dataset.id;if(reward?.tier&&!inspectSame('reward',index)){state.inspect={kind:'reward',index};state.selected=null;state.item=null;render();return;}ok=id?g.perform(reward?.kind==='bounty'?'bounty':'takePromotion',id):false;if(ok&&reward?.kind==='bounty')saveCheckpoint();state.modal=null;if(ok)state.inspect=null;}else if(a==='decision'){ok=g.perform(a,button.dataset.id);state.modal=null;}else if(a==='sell'){state.quickSell=null;ok=g.perform(a,uid);if(ok){state.selected=null;state.inspect=null;}}else if(a==='withdraw'||a==='mineCommand'){ok=g.perform(a,uid);}else if(['upgrade','refresh','lock','start','next'].includes(a)){ok=g.perform(a);if(a==='start'){state.paused=false;resetFxClock();unlockAudio();attachZoneVisual(g.battle);}state.preview=null;if(a==='refresh')state.inspect=null;}else return;
  if(!ok)notice(handWasFull&&(a==='buy'||a==='buyItem')?'整备区已满：先部署、出售或装备清出空余，才能购入干员／装备':g.lastError||'当前资金、位置或阶段不允许此操作');if(ok&&(a==='next'||a==='decision'))saveCheckpoint();save();render();if(g.s.phase==='finished')showResult();
 }
 function handCards(game){if(game.s.phase==='prep')game.syncSummonCards?.();return game.syncHandSlots?.()||game.hand();}
