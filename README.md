@@ -45,7 +45,9 @@ S.E.E.S. 联动四人（虎狼丸／埃癸斯／岳羽由加莉／结城理）�
 
 ## 本地运行与构建
 
-直接打开根目录 `index.html`，或运行 `npm run dev` 后访问 http://127.0.0.1:5502 。开发需要 Node.js 22+（Pages 使用 24）。`npm run build` 只编译；推送 `main` 会自动部署 Pages，工作流不运行测试。
+直接打开根目录 `index.html`，或运行 `npm run dev` 后访问 http://127.0.0.1:5502 。开发需要 Node.js 22+（Pages 使用 24）。`npm run build` 会构建网页并生成 Android 预缓存清单；推送 `main` 会自动部署 Pages，工作流不运行测试。
+
+Android WebView 客户端在独立的 [`app/`](app/README.md) Gradle 工作区中，打开远程网页源并可预缓存离线资源；它不把游戏资源打包进 APK。
 
 ## 源码入口
 

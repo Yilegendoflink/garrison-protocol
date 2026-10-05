@@ -2,6 +2,7 @@
 light3d-test-ca.crt
 node_modules/
 *.tmp
+dist/android-assets.json
 data/**/database.sqlite
 data/**/database.sqlite.metadata.json
 artifacts/browser-profile/
