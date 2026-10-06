@@ -49,6 +49,17 @@ npm run online:cf:tail
 
 `wrangler.jsonc` 中的 `ONLINE_ALLOWED_ORIGINS` 默认包含 GitHub Pages 正式来源、Cloudflare Pages 预览项目 `strongholdonlinepreview.pages.dev`（含 `online` 分支别名）和本地开发来源。自定义网页域名时，把精确的 `https://` 来源追加到该逗号分隔变量，再重新部署。不要将 API token 写入配置文件；Wrangler 登录凭证保存在本机。
 
+### Cloudflare Realtime TURN
+
+联机客户端优先使用 Cloudflare STUN；房间进入点对点连接阶段后，客户端会向 Worker 的 `/turn/ice-servers` 请求 TURN ICE 配置，Worker 验证房间成员票据后才向 Cloudflare Realtime 签发 12 小时的临时凭据。只有信令 Worker 部署了以下 secrets 后，中继才会启用；未配置时客户端会提示并回退到 STUN：
+
+```powershell
+npx wrangler secret put TURN_KEY_ID
+npx wrangler secret put TURN_KEY_SECRET
+```
+
+`TURN_KEY_ID` 是 Cloudflare Realtime TURN key 的 UID，`TURN_KEY_SECRET` 是创建该 key 时返回的 bearer key。TURN key 需要服务端保管，不能写进网页、`wrangler.jsonc` 或 Git。创建 TURN key 时使用 Cloudflare API token 的 `Calls Write` 权限；Workers 部署仍用 Wrangler 本地 OAuth。凭据签发接口仅接受允许列表中的网页 Origin、已开始联机房间的有效成员票据，并按成员和来源 IP 限速。Cloudflare Realtime 的 1,000 GB 月免费额度由 TURN 与 SFU 共用，超出额度后 Cloudflare 会按其 Realtime 定价计费。
+
 Cloudflare 版使用 Durable Objects SQLite，因此状态会跨 Worker 休眠保留；房间与匹配队列按 MVP 生命周期规则管理。`server/cloudflare/` 是 Cloudflare 专用入口，原有 `npm run online:server` Node 服务仍可用于本机或自托管部署。
 
 ## WebSocket 协议

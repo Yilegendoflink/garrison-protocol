@@ -236,6 +236,34 @@ export class GameRoomDO extends DurableObject {
     }
   }
 
+  async authorizeTurnCredentials(sessionToken) {
+    try {
+      if (typeof sessionToken !== 'string' || sessionToken.length < 48 || sessionToken.length > 128) {
+        throw new ServiceError('INVALID_SESSION', '成员票据无效或已过期。');
+      }
+      const separator = sessionToken.indexOf('.');
+      const code = separator > 0 ? sessionToken.slice(0, separator).toUpperCase() : '';
+      if (!isValidRoomCode(code)) throw new ServiceError('INVALID_SESSION', '成员票据无效或已过期。');
+      const tokenHash = await hashToken(sessionToken);
+      const state = this.#load();
+      const room = state?.room;
+      if (!room || room.code !== code || room.phase !== 'signaling') {
+        throw new ServiceError('TURN_NOT_READY', '房间尚未进入点对点连接阶段。');
+      }
+      const player = room.players.find(entry => entry.tokenHash === tokenHash);
+      if (!player || !player.online) throw new ServiceError('INVALID_SESSION', '成员票据无效或已过期。');
+      const now = Date.now();
+      if (now - (player.turnCredentialIssuedAt || 0) < 60_000) {
+        throw new ServiceError('TURN_RATE_LIMITED', 'TURN 凭据刚刚签发，请稍后重试。');
+      }
+      player.turnCredentialIssuedAt = now;
+      this.#save(state);
+      return {ok: true, playerId: player.id};
+    } catch (error) {
+      return failed(error);
+    }
+  }
+
   async createMatchedRoom(code, matches) {
     try {
       if (!isValidRoomCode(code) || !Array.isArray(matches) || matches.length < 2 || matches.length > MAX_ROOM_PLAYERS) {
