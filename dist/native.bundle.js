@@ -20393,6 +20393,8 @@ class OnlineRoomClient {
     this.pendingCommand = null;
     this.peerConnections = new Map();
     this.peerIceQueues = new Map();
+    this.iceServers = null;
+    this.iceServersPromise = null;
     this.state = {connection: 'idle', room: null, player: null, peers: {}, coop: null, error: null, notice: null};
   }
 
@@ -20620,6 +20622,50 @@ class OnlineRoomClient {
       if (room && typeof RTCPeerConnection === 'undefined') this.state.error = '当前浏览器不支持 WebRTC，无法建立点对点连接。';
       return;
     }
+    void this.#ensureIceServers().then(() => this.#createPeerConnections());
+  }
+
+  async #ensureIceServers() {
+    if (this.iceServers) return this.iceServers;
+    if (!this.iceServersPromise) {
+      this.iceServersPromise = (async () => {
+        try {
+          const endpoint = new URL(this.url);
+          if (endpoint.protocol !== 'wss:') throw new Error('当前信令服务未配置 Cloudflare TURN 凭据接口');
+          endpoint.protocol = 'https:';
+          endpoint.pathname = '/turn/ice-servers';
+          endpoint.search = '';
+          endpoint.hash = '';
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {'Authorization': `Bearer ${this.sessionToken}`}
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+          if (!Array.isArray(payload.iceServers) || !payload.iceServers.some(server => {
+            const urls = Array.isArray(server?.urls) ? server.urls : [server?.urls];
+            return urls.some(value => typeof value === 'string' && /^turns?:/i.test(value));
+          })) throw new Error('服务端没有返回有效的 TURN 配置');
+          this.iceServers = [...payload.iceServers, {urls: 'stun:stun.l.google.com:19302'}];
+          this.state.notice = 'Cloudflare TURN 中继已启用';
+        } catch (error) {
+          this.iceServers = [
+            {urls: 'stun:stun.cloudflare.com:3478'},
+            {urls: 'stun:stun.l.google.com:19302'}
+          ];
+          this.state.notice = `TURN暂不可用，正在尝试 STUN 直连（${error.message || error}）`;
+        }
+        this.#changed();
+        return this.iceServers;
+      })().finally(() => { this.iceServersPromise = null; });
+    }
+    return this.iceServersPromise;
+  }
+
+  #createPeerConnections() {
+    const room = this.state.room;
+    const localId = this.state.player?.id;
+    if (!room || room.phase !== 'signaling' || !localId || !this.iceServers) return;
     for (const player of room.players || []) {
       if (player.id === localId || !player.online || this.peerConnections.has(player.id)) continue;
       const initiator = localId.localeCompare(player.id) < 0;
@@ -20628,10 +20674,7 @@ class OnlineRoomClient {
   }
 
   #createPeer(player, initiator) {
-    const pc = new RTCPeerConnection({iceServers: [
-      {urls: 'stun:stun.cloudflare.com:3478'},
-      {urls: 'stun:stun.l.google.com:19302'}
-    ]});
+    const pc = new RTCPeerConnection({iceServers: this.iceServers});
     const entry = {pc, channel: null, status: 'connecting', pendingIce: []};
     this.peerConnections.set(player.id, entry);
     this.state.peers[player.id] = {name: player.name, online: player.online, connection: 'connecting'};
@@ -20687,6 +20730,7 @@ class OnlineRoomClient {
     const roomPlayer = this.state.room?.players?.find(player => player.id === playerId) || {id: playerId, name: playerName, online: true};
     let entry = this.peerConnections.get(playerId);
     if (!entry) {
+      await this.#ensureIceServers();
       this.#createPeer(roomPlayer, false);
       entry = this.peerConnections.get(playerId);
     }
@@ -20757,8 +20801,8 @@ function renderOnlinePanel({online = {}, data, esc = escapeHtml, onlineRun = nul
   let body;
   if (!room) {
     body = `<label class="native-online-field">玩家昵称<input id="online-player-name" maxlength="24" autocomplete="nickname" value="${escape(playerName)}"></label><label class="native-online-field">信令服务地址<input id="online-server-url" spellcheck="false" value="${escape(serverUrl)}" placeholder="ws://主机地址:5503/ws"></label><label class="native-online-field">联机难度<select id="online-mode">${modeOptions}</select></label><label class="native-online-check"><input id="online-allow-underfilled" type="checkbox" checked><span>允许 2–3 人开局</span></label><div class="native-online-actions"><button class="native-primary" data-act="online-create">创建配对房间</button></div><div class="native-online-join"><label class="native-online-field">输入 6 位配对码<input id="online-room-code" maxlength="6" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="例如 A2BCD3"></label><button data-act="online-join">加入房间</button></div><p class="native-online-hint">创建后把配对码发给队友。最多 4 人；开始后会通过点对点数据通道交换联防支援。</p>`;
-  } else {
-    body = `<div class="native-online-room-code"><span>配对码</span><strong>${escape(room.code)}</strong><button data-act="online-copy">复制</button></div><p class="native-online-room-meta">${escape(modeName(data, room.modeId))} · ${room.players?.length || 0}/${room.maxPlayers || MAX_ROOM_PLAYERS} 人 · ${waiting ? '等待准备' : allConnected ? '点对点连接完成' : '建立点对点连接中'}</p><ul class="native-online-roster">${peerRows}</ul>${waiting && host ? `<div class="native-online-settings"><label class="native-online-field">联机难度<select id="online-room-mode">${modes.map(mode => `<option value="${escape(mode.modeId)}" ${mode.modeId === room.modeId ? 'selected' : ''}>${escape(mode.name)}</option>`).join('')}</select></label><label class="native-online-check"><input id="online-room-underfilled" type="checkbox" ${room.allowUnderfilledStart ? 'checked' : ''}><span>允许 2–3 人开局</span></label><button data-act="online-settings">应用房间设置</button></div>` : ''}${waiting ? `<p class="native-online-hint">${escape(minimumWarning)}</p><div class="native-online-actions"><button data-act="online-ready" class="${player?.ready ? '' : 'native-primary'}">${player?.ready ? '取消准备' : '准备就绪'}</button>${host ? `<button data-act="online-start" ${readyCount < room.players.length || room.players.length < 2 || (!room.allowUnderfilledStart && room.players.length < MAX_ROOM_PLAYERS) ? 'disabled' : ''}>开始联机</button>` : ''}<button data-act="online-leave">离开房间</button></div>` : `<p class="native-online-hint">${allConnected ? '数据通道已建立。每位玩家拥有独立阵地，盟约转让通过点对点通道送达。' : `点对点连接 ${Object.values(online.peers || {}).filter(peer => peer.connection === 'connected').length}/${Math.max(0, (room.players?.length || 1) - 1)}。跨运营商或严格 NAT 环境需要 TURN；当前 MVP 尚未接入 TURN。`}</p><div class="native-online-actions">${allConnected ? `<button class="native-primary" data-act="online-enter">${hasGame && onlineRun ? '继续联机对局' : '进入联机对局'}</button>` : ''}<button data-act="online-leave">离开房间</button></div>`}`;
+   } else {
+    body = `<div class="native-online-room-code"><span>配对码</span><strong>${escape(room.code)}</strong><button data-act="online-copy">复制</button></div><p class="native-online-room-meta">${escape(modeName(data, room.modeId))} · ${room.players?.length || 0}/${room.maxPlayers || MAX_ROOM_PLAYERS} 人 · ${waiting ? '等待准备' : allConnected ? '点对点连接完成' : '建立点对点连接中'}</p><ul class="native-online-roster">${peerRows}</ul>${waiting && host ? `<div class="native-online-settings"><label class="native-online-field">联机难度<select id="online-room-mode">${modes.map(mode => `<option value="${escape(mode.modeId)}" ${mode.modeId === room.modeId ? 'selected' : ''}>${escape(mode.name)}</option>`).join('')}</select></label><label class="native-online-check"><input id="online-room-underfilled" type="checkbox" ${room.allowUnderfilledStart ? 'checked' : ''}><span>允许 2–3 人开局</span></label><button data-act="online-settings">应用房间设置</button></div>` : ''}${waiting ? `<p class="native-online-hint">${escape(minimumWarning)}</p><div class="native-online-actions"><button data-act="online-ready" class="${player?.ready ? '' : 'native-primary'}">${player?.ready ? '取消准备' : '准备就绪'}</button>${host ? `<button data-act="online-start" ${readyCount < room.players.length || room.players.length < 2 || (!room.allowUnderfilledStart && room.players.length < MAX_ROOM_PLAYERS) ? 'disabled' : ''}>开始联机</button>` : ''}<button data-act="online-leave">离开房间</button></div>` : `<p class="native-online-hint">${allConnected ? '数据通道已建立。每位玩家拥有独立阵地，盟约转让通过点对点通道送达。' : `点对点连接 ${Object.values(online.peers || {}).filter(peer => peer.connection === 'connected').length}/${Math.max(0, (room.players?.length || 1) - 1)}。严格 NAT 或防火墙环境可能需要 TURN；客户端会优先使用 Cloudflare STUN，并在服务可用时启用 TURN 中继。`}</p><div class="native-online-actions">${allConnected ? `<button class="native-primary" data-act="online-enter">${hasGame && onlineRun ? '继续联机对局' : '进入联机对局'}</button>` : ''}<button data-act="online-leave">离开房间</button></div>`}`;
   }
   return `<section class="native-home-card native-online-card"><div class="native-card-heading"><div><span class="native-eyebrow">CO-OP / PAIRING CODE</span><h2>联机协作</h2></div><span class="native-card-index">03</span></div><p class="native-online-status"><i class="${connected ? 'is-online' : ''}"></i>${escape(connectionText)}${online.notice ? ` · ${escape(online.notice)}` : ''}</p>${error}${body}</section>`;
 }
