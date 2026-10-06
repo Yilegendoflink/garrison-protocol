@@ -132,6 +132,9 @@ export class OnlineRoomClient {
   setReady(ready) { return this.#send('room.ready', {ready}); }
   setSettings(settings) { return this.#send('room.set-settings', settings); }
   start(mapId = 'random') { return this.#send('room.start', {mapId}); }
+  setStrategyAvailability(strategies) { return this.#send('coop.strategy.availability', {strategies}); }
+  chooseStrategy(bandId) { return this.#send('coop.strategy.choose', {bandId}); }
+  readyForBattle(round) { return this.#send('coop.prep.ready', {round}); }
   reportBattle(result) { return this.#send('coop.battle.report', result); }
   reportJointDefense(result) { return this.#send('coop.joint-defense.report', result); }
   readyNextRound(round) { return this.#send('coop.round.ready', {round}); }
@@ -203,14 +206,18 @@ export class OnlineRoomClient {
         this.#handleSignal(message.fromPlayerId, message.fromName, message.signalType, message.data);
         break;
       case 'coop.progress':
-        this.state.coop = {...(this.state.coop || {}), progress: message};
+        this.state.coop = {...(this.state.coop || {}), progress: message, ...message};
         this.onCoopEvent(message);
         break;
+      case 'coop.strategy.state':
+      case 'coop.strategy.complete':
+      case 'coop.prep.started':
+      case 'coop.battle.started':
       case 'coop.joint-defense.started':
       case 'coop.round.advance':
       case 'coop.round.begin':
       case 'coop.game.finished':
-        this.state.coop = {...(this.state.coop || {}), lastEvent: message};
+        this.state.coop = {...(this.state.coop || {}), stage: message.type.slice('coop.'.length), lastEvent: message, ...message};
         this.onCoopEvent(message);
         break;
       case 'room.left':

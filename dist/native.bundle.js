@@ -13501,7 +13501,7 @@ class NativeBattle {
   };
   return compileRoute(route,to,!flying,bfs);
  }
-  spawn(q,placement=null){if(q.id==='enemy_3010_mcreep')return spawnMiner(this,q,placement);const raw=this.level.enemyProfiles[q.id]||this.data.enemies[q.id]||this.data.enemyDependencies?.[q.id];if(!raw)throw Error('缺少敌人数据 '+q.id);const a={...raw.attributes};for(const e of this.economy.s.enemyModifiers||[])for(const[k,v]of Object.entries(blackboard(e.blackboard))){const key={max_hp:'maxHp',atk:'atk',def:'def',magic_resistance:'magicResistance'}[k];if(key)a[key]=e.key.endsWith('_mul')?a[key]*v:a[key]+v;}const scale=this.s.benchmark?{atk:1,hp:1,moveSpeed:1}:this.combatScale||{atk:1,hp:1,moveSpeed:1},flying=placement?(placement.flying??raw.motion==='FLY'):(raw.motion==='FLY'||this.level.routes[q.route].motionMode==='FLY'),route=placement?.route||this.path(this.level.routes[q.route],flying),pos=placement?{x:placement.x,y:placement.y}:route[0],cmd=Number.isInteger(placement?.cmd)?placement.cmd:0,behavior=enemyBehaviorProfile(raw),initialShield=behavior.initialShield,baseResistance=Number(a.magicResistance)||0,countHp=behavior.hitCountHp?Math.max(1,Math.floor(Number(raw.attributes?.maxHp)||a.maxHp)):a.maxHp*scale.hp;this.s.enemies.push({uid:this.s.nextId++,id:q.id,routeIndex:q.route??0,name:raw.name,tags:raw.tags||raw.categories||[],categories:raw.categories||[],x:pos.x,y:pos.y,hp:countHp,maxHp:countHp,baseMaxHp:countHp,atk:a.atk*scale.atk,baseAtk:a.atk*scale.atk,weight:a.massLevel??0,blockCost:a.blockCnt||behavior.blockCost||1,baseDef:Number(a.def)||0,baseRes:baseResistance,def:Number(a.def)||0,res:baseResistance,damageResistance:0,elementResistance:Number(a.epDamageResistance)||0,elementDamageResistance:(Number(a.epResistance)||0)/100,speed:(a.moveSpeed||0)*scale.moveSpeed,baseSpeed:(a.moveSpeed||0)*scale.moveSpeed,interval:a.baseAttackTime||1,attackSpeed:a.attackSpeed||100,regen:a.hpRecoveryPerSec||0,canAttack:raw.applyWay!=='NONE',baseCanAttack:raw.applyWay!=='NONE',ranged:raw.applyWay==='RANGED'||raw.applyWay==='ALL',range:raw.rangeRadius||0,damageType:enemyBaseDamageType(raw),flying,route,routeDiagonal:placement?.routeDiagonal??!!this.level.routes[q.route??0]?.allowDiagonalMove,cmd,cmdLeft:null,segment:0,progress:remainingDistance({route,cmd,x:pos.x,y:pos.y}),block:null,hidden:false,invisible:behavior.initialInvisible,baseInvisible:behavior.initialInvisible,formInvisible:behavior.initialInvisible,untargetable:false,formHold:false,revivePhase:null,revivePhaseUntil:0,unblockable:behavior.initialUnblockable,baseUnblockable:behavior.initialUnblockable,leak:raw.lifePointReduce??1,costEffects:raw.costEffects||[],statuses:[],immunities:{stun:a.stunImmune,silence:a.silenceImmune,frozen:a.frozenImmune,sleep:a.sleepImmune,levitate:a.levitateImmune,fear:a.fearedImmune,terror:a.terrorImmune,tremble:a.palsyImmune,root:a.attractImmune},shield:initialShield,shieldLayers:initialShield?[{id:'enemy-initial-shield',remaining:initialShield,max:initialShield}]:[],barriers:[],deployGen:0,exitLife:null,attackCooldown:0,action:null,movementPolicy:behavior.movementPolicy,attackWhileMoving:behavior.attackWhileMoving,burstShots:behavior.burstShots,burstDuration:behavior.burstDuration,burstCooldown:behavior.burstCooldown,stanceInterval:behavior.stanceInterval,stanceDuration:behavior.stanceDuration,attackStunEvery:behavior.attackStunEvery,attackStunDuration:behavior.attackStunDuration,attackElement:behavior.attackElement,attackElementScale:behavior.attackElementScale,deathExplosion:behavior.deathExplosion,aura:behavior.aura,randomPoolEligible:behavior.randomPoolEligible,complexity:behavior.complexity,specialSkill:behavior.specialSkill,specialAtkScale:behavior.specialAtkScale,firstAttackSplash:behavior.firstAttackSplash,meleeAttackScale:behavior.meleeAttackScale,pollutedDamage:behavior.pollutedDamage,lowHpRatio:behavior.lowHpRatio,lowHpAttackMultiplier:behavior.lowHpAttackMultiplier,lowHpMoveMultiplier:behavior.lowHpMoveMultiplier,lowHpUnblockTime:behavior.lowHpUnblockTime,burstFired:0,burstUntil:0,stanceUntil:0,nextStanceAt:this.s.time+(behavior.stanceInterval||0),lastProgressAt:this.s.time,stallTime:0,lastAttackAt:-Infinity,attackCount:0,skillAttackCount:0,specialReady:false,firstAttackUsed:false,invisibleRecoverAt:null,nextSkillAt:behavior.specialSkill&&Number.isFinite(behavior.specialSkill.initCooldown)&&behavior.specialSkill.initCooldown>=0?this.s.time+behavior.specialSkill.initCooldown:Infinity,lowHpTriggered:false,enemyDeathHandled:false,bountyReward:q.bountyReward,derived:!!q.derived,
+  spawn(q,placement=null){if(q.id==='enemy_3010_mcreep')return spawnMiner(this,q,placement);const raw=this.level.enemyProfiles[q.id]||this.data.enemies[q.id]||this.data.enemyDependencies?.[q.id];if(!raw)throw Error('缺少敌人数据 '+q.id);const a={...raw.attributes};for(const e of this.economy.s.enemyModifiers||[])for(const[k,v]of Object.entries(blackboard(e.blackboard))){const key={max_hp:'maxHp',atk:'atk',def:'def',magic_resistance:'magicResistance'}[k];if(key)a[key]=e.key.endsWith('_mul')?a[key]*v:a[key]+v;}const scale=this.s.benchmark?{atk:1,hp:1,moveSpeed:1}:this.combatScale||{atk:1,hp:1,moveSpeed:1},flying=placement?(placement.flying??raw.motion==='FLY'):(raw.motion==='FLY'||this.level.routes[q.route].motionMode==='FLY'),route=placement?.route||this.path(this.level.routes[q.route],flying),pos=placement?{x:placement.x,y:placement.y}:route[0],cmd=Number.isInteger(placement?.cmd)?placement.cmd:0,behavior=enemyBehaviorProfile(raw),initialShield=behavior.initialShield,baseResistance=Number(a.magicResistance)||0,countHp=behavior.hitCountHp?Math.max(1,Math.floor(Number(raw.attributes?.maxHp)||a.maxHp)):a.maxHp*scale.hp;this.s.enemies.push({uid:this.s.nextId++,id:q.id,routeIndex:q.route??0,name:raw.name,tags:raw.tags||raw.categories||[],categories:raw.categories||[],x:pos.x,y:pos.y,hp:countHp,maxHp:countHp,baseMaxHp:countHp,atk:a.atk*scale.atk,baseAtk:a.atk*scale.atk,weight:a.massLevel??0,blockCost:a.blockCnt||behavior.blockCost||1,baseDef:Number(a.def)||0,baseRes:baseResistance,def:Number(a.def)||0,res:baseResistance,damageResistance:0,elementResistance:Number(a.epDamageResistance)||0,elementDamageResistance:(Number(a.epResistance)||0)/100,speed:(a.moveSpeed||0)*scale.moveSpeed,baseSpeed:(a.moveSpeed||0)*scale.moveSpeed,interval:a.baseAttackTime||1,attackSpeed:a.attackSpeed||100,regen:a.hpRecoveryPerSec||0,canAttack:raw.applyWay!=='NONE',baseCanAttack:raw.applyWay!=='NONE',ranged:raw.applyWay==='RANGED'||raw.applyWay==='ALL',range:raw.rangeRadius||0,damageType:enemyBaseDamageType(raw),flying,route,routeDiagonal:placement?.routeDiagonal??!!this.level.routes[q.route??0]?.allowDiagonalMove,cmd,cmdLeft:null,segment:0,progress:remainingDistance({route,cmd,x:pos.x,y:pos.y}),block:null,hidden:false,invisible:behavior.initialInvisible,baseInvisible:behavior.initialInvisible,formInvisible:behavior.initialInvisible,untargetable:false,formHold:false,revivePhase:null,revivePhaseUntil:0,unblockable:behavior.initialUnblockable,baseUnblockable:behavior.initialUnblockable,leak:raw.lifePointReduce??1,costEffects:raw.costEffects||[],statuses:[],immunities:{stun:a.stunImmune,silence:a.silenceImmune,frozen:a.frozenImmune,sleep:a.sleepImmune,levitate:a.levitateImmune,fear:a.fearedImmune,terror:a.terrorImmune,tremble:a.palsyImmune,root:a.attractImmune},shield:initialShield,shieldLayers:initialShield?[{id:'enemy-initial-shield',remaining:initialShield,max:initialShield}]:[],barriers:[],deployGen:0,exitLife:null,attackCooldown:0,action:null,movementPolicy:behavior.movementPolicy,attackWhileMoving:behavior.attackWhileMoving,burstShots:behavior.burstShots,burstDuration:behavior.burstDuration,burstCooldown:behavior.burstCooldown,stanceInterval:behavior.stanceInterval,stanceDuration:behavior.stanceDuration,attackStunEvery:behavior.attackStunEvery,attackStunDuration:behavior.attackStunDuration,attackElement:behavior.attackElement,attackElementScale:behavior.attackElementScale,deathExplosion:behavior.deathExplosion,aura:behavior.aura,randomPoolEligible:behavior.randomPoolEligible,complexity:behavior.complexity,specialSkill:behavior.specialSkill,specialAtkScale:behavior.specialAtkScale,firstAttackSplash:behavior.firstAttackSplash,meleeAttackScale:behavior.meleeAttackScale,pollutedDamage:behavior.pollutedDamage,lowHpRatio:behavior.lowHpRatio,lowHpAttackMultiplier:behavior.lowHpAttackMultiplier,lowHpMoveMultiplier:behavior.lowHpMoveMultiplier,lowHpUnblockTime:behavior.lowHpUnblockTime,burstFired:0,burstUntil:0,stanceUntil:0,nextStanceAt:this.s.time+(behavior.stanceInterval||0),lastProgressAt:this.s.time,stallTime:0,lastAttackAt:-Infinity,attackCount:0,skillAttackCount:0,specialReady:false,firstAttackUsed:false,invisibleRecoverAt:null,nextSkillAt:behavior.specialSkill&&Number.isFinite(behavior.specialSkill.initCooldown)&&behavior.specialSkill.initCooldown>=0?this.s.time+behavior.specialSkill.initCooldown:Infinity,lowHpTriggered:false,enemyDeathHandled:false,bountyReward:q.bountyReward,failedPlayerId:q.failedPlayerId,derived:!!q.derived,
   attackZone:behavior.attackZone||null,selfField:behavior.selfField||null,deathZone:behavior.deathZone||null,bleeding:behavior.bleeding||null,statusResistance:Number(behavior.statusResistance)||0,hitCountHp:!!behavior.hitCountHp,hitCountTypes:behavior.hitCountTypes||null,spriteScale:Number(behavior.spriteScale)||1,deadSpawn:behavior.deadSpawn||null,revive:behavior.revive||null,daggers:behavior.daggers?behavior.daggers.count:0,daggerAtkAdd:behavior.daggers?behavior.daggers.atkAdd:0,daggerPerAttack:behavior.daggers?behavior.daggers.perAttack||1:1,daggersUsed:0,taunt:Number(a.tauntLevel)||0});initEnemySkills(this.s.enemies.at(-1),raw,this.s.time);initEnemyTraits(this,this.s.enemies.at(-1),raw);initEnemyForm(this,this.s.enemies.at(-1));initEnemyTransport(this.s.enemies.at(-1));paintDominion(this,this.s.enemies.at(-1));}
   refreshEnemyAuras(){
    for(const u of alliedActors(this.s))u.enemyAttackSpeedMod=0;
@@ -13933,7 +13933,7 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
    if((!control.attack||e.hidden||(e.action?.special?.index!=null&&(!control.skill||control.silenced)))&&e.action){cancelEnemyCast(this,e);e.action=null;}if(e.action&&--e.action.left<=0){const action=e.action,u=getActor(this.s,action.target);e.action=null;if(u&&u.hp>0||(action.targets||[]).some(id=>getActor(this.s,id)?.hp>0)){const special=action.special;if(special?.prefab==='DeathEye'){this.startEnemyDeathEye(e,u);}else{releaseEnemyAttack(this,e,action);if(special?.polluted){this.emit('enemy-skill',{uid:e.uid,x:u.x,y:u.y,skill:'PollutedRangedAtk',targetUid:u.uid});}}if(special){if(special.index!=null&&special.prefab!=='DeathEye'&&!e.enemyCast?.multiAttack)endEnemySkill(this,e);if(e.specialSkill?.spCost>0)e.skillAttackCount=0;e.nextSkillAt=this.s.time+(Number(e.specialSkill?.cooldown)>0?Number(e.specialSkill.cooldown):Infinity);e.firstAttackUsed=true;}e.lastAttackAt=this.s.time;if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE&&e.burstShots>0){e.burstFired=(e.burstFired||0)+1;if(e.burstFired>=e.burstShots){e.burstFired=0;e.burstUntil=this.s.time+(e.burstCooldown||0);}}}else if(action.special?.index!=null)cancelEnemyCast(this,e,{lostTarget:true});enemyTraitAfterAttack(this,e);}
    tickEnemyAttackContinuity(this,e,target);const special=control.skill&&!control.silenced?this.enemySpecialReady(e,target):null,specialOnly=Boolean(e.specialSkill?.prefab==='CrossAttack'&&e.range<=0),meleeScale=e.block===target?.uid&&e.meleeAttackScale>0?e.meleeAttackScale:1,preparedSpecial=special&&!special.polluted&&meleeScale!==1?{...special,scale:special.scale*meleeScale}:special;if(e.hp>0&&target&&e.canAttack&&control.attack&&!e.enemyCast&&!e.action&&!e.attackCooldown&&!Number(e.burstUntil)&&(!specialOnly||special)){if(e.movementPolicy===ENEMY_MOVEMENT_POLICIES.BURST_THEN_MOVE&&e.burstTarget!==target.uid){e.burstTarget=target.uid;e.burstFired=0;}enemyTraitBeforeAttack(this,e);const t=this.enemyAttackTiming(e);e.attackCooldown=t.frames;if(special?.index!=null)beginEnemySkill(this,e,e.enemySkills[special.index]);e.action={startedAt:this.s.time,left:t.windupFrames,target:target.uid,targetDeployGen:target.deployGen,ranged:e.ranged&&e.block!==target.uid,targets:attackTargets.slice(0,preparedSpecial?.targets??enemyAttackTargetCount(e)).map(t=>t.uid),special:preparedSpecial,scale:meleeScale,attackId:newAttackId(this)};}
    const hold=e.formHold||!!(e.enemyCast?.holdsPosition||e.enemyCast?.victims||e.enemyCast?.spawn||e.enemyCast?.channel||e.enemyCast?.charge)||enemyShouldHoldPosition(e,{target:specialOnly&&!special?null:target,now:this.s.time}),beforeX=e.x,beforeY=e.y,beforeCmd=e.cmd,beforeHidden=e.hidden;const shiftMove=advanceEnemyShift(this,e,dt),fearMove=shiftMove??advanceEnemyFear(this,e,dt);let escaped=fearMove??advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),hold);paintDominion(this,e);enemyFacingAfterMove(this,e,beforeX);const progressed=e.cmd!==beforeCmd||Math.hypot(e.x-beforeX,e.y-beforeY)>1e-7||e.hidden!==beforeHidden;if(progressed){e.lastProgressAt=this.s.time;e.stallTime=0;}else if(!hold&&!e.block&&e.speed>0&&permissions(e).move&&e.route?.[e.cmd]?.kind==='move'){e.stallTime=(e.stallTime||0)+dt;if(e.stallTime>=(e.stallTimeout||2)){e.action=null;e.stanceUntil=0;e.burstUntil=0;e.stallTime=0;this.emit('enemy-recover',{uid:e.uid,x:e.x,y:e.y,reason:'movement-stall'});escaped=advanceEnemy(e,dt,kind=>this.emit(kind,{uid:e.uid,x:e.x,y:e.y}),false);}}e.movingThisFrame=e.movingThisFrame||Math.hypot(e.x-beforeX,e.y-beforeY)>1e-7;
-   if(escaped){this.s.leaks+=e.leak;e.escaped=true;if(!e.nonPrimary)this.s.leakedEnemies.push({id:e.id,route:e.routeIndex??0});if(this.s.finalBossId){this.s.timePenalty=(this.s.timePenalty||0)+1;this.s.limit=Math.max(this.s.time,this.s.limit-1);this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak,timePenalty:1});this.s.banner={text:'漏怪 −1 秒',life:1.4};commitExit(this,{target:e,reason:'leak'});}else{commitExit(this,{target:e,reason:'leak'});this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak});this.s.banner={text:'漏怪 −'+e.leak,life:1.4};}}
+   if(escaped){this.s.leaks+=e.leak;e.escaped=true;if(!e.nonPrimary)this.s.leakedEnemies.push({id:e.id,route:e.routeIndex??0,loss:e.leak,...(e.failedPlayerId?{failedPlayerId:e.failedPlayerId}:{})});if(this.s.finalBossId){this.s.timePenalty=(this.s.timePenalty||0)+1;this.s.limit=Math.max(this.s.time,this.s.limit-1);this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak,timePenalty:1});this.s.banner={text:'漏怪 −1 秒',life:1.4};commitExit(this,{target:e,reason:'leak'});}else{commitExit(this,{target:e,reason:'leak'});this.emit('leak',{uid:e.uid,x:e.x,y:e.y,leak:e.leak});this.s.banner={text:'漏怪 −'+e.leak,life:1.4};}}
   }
   syncPassengerPositions(this);
   for(const e of this.s.enemies){const start=enemyFrameStarts.get(e.uid);e.movingThisFrame=e.movingThisFrame||!!(start&&Math.hypot(e.x-start.x,e.y-start.y)>1e-7);}
@@ -13946,7 +13946,7 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
   else if(this.s.benchmark){if(this.s.time>=this.s.limit)this.finish('timeout');}
   else if((!this.s.queue.some(q=>this.isPrimaryEnemy(q.id))&&!this.s.enemies.some(e=>!e.nonPrimary)&&!this.s.pendingEnemySpawns?.some(row=>this.isPrimaryEnemy(row.q.id)))||this.s.time>=this.s.limit||Math.min(ROUND_LEAK_CAP,this.s.leaks)>=this.economy.s.hp)this.finish(this.s.finalBossId?'timeout':'complete');
  }
- finish(reason='manual'){if(this.s.finished)return;this.s.finished=true;const totalDamage=Object.values(this.s.damage).reduce((a,b)=>a+b,0),elapsed=Math.max(0,this.s.time),bucketCount=Math.ceil(elapsed),samplesFor=uid=>Array.from({length:bucketCount},(_,i)=>{const width=i===bucketCount-1&&elapsed-i>0?elapsed-i:1;return (Number(this.s.damageTimeline?.[uid]?.[i])||0)/width;}),units=this.s.units.map(u=>({uid:u.uid,id:u.id,damage:u.damage||0,healing:u.healing||0,dpsSamples:samplesFor(u.uid)}));if(this.s.finalBossId){const meta=this.data.finalBosses[this.s.finalBossId];this.s.result={kind:'final-boss',bossId:this.s.finalBossId,bossName:this.turn.finalBoss?.enemyProfile?.name||meta?.profiles?.[this.economy.s.modeId]?.name||meta?.enemyId||this.s.finalBossId,reason,success:reason==='boss-killed',elapsed,totalDamage,dps:elapsed>0?totalDamage/elapsed:0,timePenalty:this.s.timePenalty||0,kills:this.s.kills,leaks:this.s.leaks,units};}else {const failedEnemies=[...(this.s.leakedEnemies||[]),...(this.s.enemies||[]).filter(e=>this.isPrimaryEnemy(e.id)&&e.hp>0).map(e=>({id:e.id,route:e.routeIndex??0}))];this.s.result={kind:'battle',elapsed,kills:this.s.kills,leaks:this.s.leaks+(this.s.time>=this.s.limit?this.s.enemies.reduce((n,e)=>n+e.leak,0):0),failedEnemies,units,totalDamage};}}
+ finish(reason='manual'){if(this.s.finished)return;this.s.finished=true;const totalDamage=Object.values(this.s.damage).reduce((a,b)=>a+b,0),elapsed=Math.max(0,this.s.time),bucketCount=Math.ceil(elapsed),samplesFor=uid=>Array.from({length:bucketCount},(_,i)=>{const width=i===bucketCount-1&&elapsed-i>0?elapsed-i:1;return (Number(this.s.damageTimeline?.[uid]?.[i])||0)/width;}),units=this.s.units.map(u=>({uid:u.uid,id:u.id,damage:u.damage||0,healing:u.healing||0,dpsSamples:samplesFor(u.uid)}));if(this.s.finalBossId){const meta=this.data.finalBosses[this.s.finalBossId];this.s.result={kind:'final-boss',bossId:this.s.finalBossId,bossName:this.turn.finalBoss?.enemyProfile?.name||meta?.profiles?.[this.economy.s.modeId]?.name||meta?.enemyId||this.s.finalBossId,reason,success:reason==='boss-killed',elapsed,totalDamage,dps:elapsed>0?totalDamage/elapsed:0,timePenalty:this.s.timePenalty||0,kills:this.s.kills,leaks:this.s.leaks,units};}else {const failedEnemies=[...(this.s.leakedEnemies||[]),...(this.s.enemies||[]).filter(e=>this.isPrimaryEnemy(e.id)&&e.hp>0).map(e=>({id:e.id,route:e.routeIndex??0,loss:e.leak,...(e.failedPlayerId?{failedPlayerId:e.failedPlayerId}:{})}))];this.s.result={kind:'battle',elapsed,kills:this.s.kills,leaks:this.s.leaks+(this.s.time>=this.s.limit?this.s.enemies.reduce((n,e)=>n+e.leak,0):0),failedEnemies,units,totalDamage};}}
 }
 
 return {enemyBaseDamageType,NativeBattle};
@@ -14309,7 +14309,7 @@ class NativeSession extends NativeEconomy {
     if(!enemy||typeof enemy.id!=='string'||!this.data.enemies[enemy.id]&&!this.data.enemyDependencies?.[enemy.id])throw Error('联防敌人资料不存在：'+String(enemy?.id||''));
     const raw=this.data.enemies[enemy.id]||this.data.enemyDependencies?.[enemy.id],flying=raw.motion==='FLY';
     const route=Number.isSafeInteger(enemy.route)&&routes[enemy.route]?enemy.route:Math.max(0,routes.findIndex(candidate=>(candidate.motionMode==='FLY')===flying));
-    return {id:enemy.id,route,at:index*1.25,jointDefense:true};
+    return {id:enemy.id,route,loss:enemy.loss??1,failedPlayerId:enemy.failedPlayerId,at:index*1.25,jointDefense:true};
    });
    battle.s.queue=queue;battle.s.total=queue.length;battle.s.limit=Math.max(90,queue.length*8+25);battle.s.finalBossId=null;
    this.battle=battle;this.s.phase='battle';this.s.coopStage='joint-defense';this.s.coopStageRound=this.s.round;return true;
@@ -14322,7 +14322,7 @@ class NativeSession extends NativeEconomy {
     this.s.coopDefenseResult={leaks:r.leaks,failedEnemies:r.failedEnemies||[]};this.s.coopStage='joint-defense-complete';this.s.phase='intermission';this.applyPostBattleTransforms();this.battle.clearEndedRoundEntities();return;
    }
    if(r.kind==='final-boss'){this.s.runResult=r;if(r.reason!=='boss-killed')this.s.hp=0;this.s.phase='finished';}
-   else{const loss=Math.min(ROUND_LEAK_CAP,r.leaks);this.s.hp=Math.max(0,this.s.hp-loss);this.finishBattle({success:this.s.hp>0,leaks:r.leaks});this.s.lastBattle.loss=loss;if(!this.s.hp)this.s.runResult=r;}
+   else{const loss=Math.min(ROUND_LEAK_CAP,r.leaks);if(!this.s.onlineCoop)this.s.hp=Math.max(0,this.s.hp-loss);this.finishBattle({success:this.s.onlineCoop||this.s.hp>0,leaks:r.leaks});this.s.lastBattle.loss=this.s.onlineCoop?0:loss;if(!this.s.hp&&!this.s.onlineCoop)this.s.runResult=r;}
    this.applyPostBattleTransforms();if(this.s.phase==='intermission')this.battle.clearEndedRoundEntities();
   }
  tick(){if(this.s.phase==='battle'&&this.battle){this.battle.step();this.finishCurrentBattle();}}
@@ -16791,7 +16791,7 @@ function createOnlineClient(serverUrl=state.online.serverUrl){
  if(previousUrl!==normalized)try{localStorage.removeItem('garrison-online-session');}catch{}
  onlineClient?.dispose();
  state.online.serverUrl=normalized;savePreference('garrison-online-url',normalized);
- onlineClient=new OnlineRoomClient({url:normalized,sessionToken,onChange:snapshot=>{state.online={...state.online,...snapshot,serverUrl:normalized};if(state.view==='lobby')render();},onPeerMessage:(fromPlayerId,message)=>handleOnlinePeerMessage(fromPlayerId,message),onCoopEvent:handleCoopEvent});
+ onlineClient=new OnlineRoomClient({url:normalized,sessionToken,onChange:snapshot=>{state.online={...state.online,...snapshot,serverUrl:normalized};if(state.online.room?.phase==='signaling'&&!state.onlineRun)beginOnlineBriefing();else if(state.view==='lobby')render();else syncOnlineHud();},onPeerMessage:(fromPlayerId,message)=>handleOnlinePeerMessage(fromPlayerId,message),onCoopEvent:handleCoopEvent});
  state.online={...state.online,...onlineClient.snapshot(),serverUrl:normalized};return onlineClient;
 }
 function refreshOnlineTeamPeers(){
@@ -16825,7 +16825,7 @@ function coopWaitModal(title,description){
 function submitCoopBattleResult(g){
  const run=state.onlineRun;if(!run||run.reportedBattleRound===g.s.round)return;
  run.reportedBattleRound=g.s.round;run.waitingForServer='battle';
- const result=g.battle?.s?.result||g.s.history.at(-1)||{},failedEnemies=(result.failedEnemies||[]).slice(0,256).map(enemy=>({id:enemy.id,route:enemy.route??0}));
+ const result=g.battle?.s?.result||g.s.history.at(-1)||{},failedEnemies=(result.failedEnemies||[]).slice(0,256).map(enemy=>({id:enemy.id,route:enemy.route??0,loss:enemy.loss??1}));
  onlineClient?.reportBattle({round:g.s.round,leaks:Math.max(0,Number(result.leaks??g.s.lastBattle?.leaks)||0),failedEnemies,eliminated:g.s.hp<=0});
  coopWaitModal('等待队友完成本轮作战',`第 ${g.s.round} 回合战果已提交，服务端会统一判断是否进入联防。`);
 }
@@ -16833,18 +16833,45 @@ function submitCoopDefenseResult(g){
  const run=state.onlineRun;if(!run||run.reportedDefenseRound===g.s.round)return;
  run.reportedDefenseRound=g.s.round;run.waitingForServer='defense';
  const result=g.s.coopDefenseResult||{leaks:0};
- onlineClient?.reportJointDefense({round:g.s.round,leaks:Math.max(0,Number(result.leaks)||0),eliminated:g.s.hp<=0});
+ const failedEnemies=(result.failedEnemies||[]).slice(0,256).map(enemy=>({id:enemy.id,route:enemy.route??0,loss:enemy.loss??1,failedPlayerId:enemy.failedPlayerId}));
+ onlineClient?.reportJointDefense({round:g.s.round,leaks:Math.max(0,Number(result.leaks)||0),failedEnemies,eliminated:g.s.hp<=0});
  coopWaitModal('等待联防结算',`第 ${g.s.round} 回合联防结果已提交，等待其他防守玩家。`);
 }
 function handleCoopEvent(message){
- const run=state.onlineRun,g=state.game;if(!run||!g)return;
+ const run=state.onlineRun,g=state.game;if(!run)return;
  if(message.type==='coop.progress'){
-  if(run.waitingForServer==='battle')coopWaitModal('等待队友完成本轮作战',`第 ${g.s.round} 回合战果已提交，等待队伍汇总。`);
-  else if(run.waitingForServer==='defense')coopWaitModal('等待联防结算',`第 ${g.s.round} 回合联防结果已提交，等待其他防守玩家。`);
-  else if(run.waitingForServer==='boss')coopWaitModal('联机对局结束中','已到 Boss 阶段，本局按联机 MVP 规则直接结束。');
-  else if(run.waitingForServer==='ready')coopWaitModal('等待队友继续',`已确认继续第 ${g.s.round+1} 回合，等待其他存活玩家。`);
+  run.coopProgress=message;run.coopStage=message.stage||run.coopStage;run.strategyChoices=message.strategyChoices||run.strategyChoices||{};run.prepReadyPlayers=message.prepReadyPlayers||run.prepReadyPlayers||[];
+  if(message.currentPlayerId)run.strategyState={...(run.strategyState||{}),currentPlayerId:message.currentPlayerId,order:message.strategyOrder||run.strategyState?.order,strategies:run.strategyChoices,deadlineAt:message.deadlineAt};
+  if(state.view==='briefing')render();else syncOnlineHud();
+  if(g&&run.waitingForServer==='battle')coopWaitModal('等待其他玩家完成战斗',`第 ${g.s.round} 回合战果已提交，等待全队战斗结束。`);
+  else if(g&&run.waitingForServer==='defense')coopWaitModal('等待联防结算',`第 ${g.s.round} 回合联防结果已提交，等待其他防守玩家。`);
   return;
  }
+ if(message.type==='coop.strategy.state'){
+  run.coopStage='strategy-selection';run.strategyState=message;run.strategyDeadlineAt=message.deadlineAt;run.strategyChoices=message.strategies||{};
+  if(state.view==='briefing')render();return;
+ }
+ if(message.type==='coop.strategy.complete'){
+  run.coopStage='countdown';run.strategyState=message;run.strategyDeadlineAt=message.countdownDeadlineAt;run.strategyChoices=message.strategies||{};
+  if(state.view==='briefing')render();return;
+ }
+ if(message.type==='coop.prep.started'){
+  run.coopStage='prep';run.prepDeadlineAt=message.deadlineAt;run.prepReadyPlayers=[];run.coopProgress={stage:'prep',completedPlayers:[],expectedPlayers:message.activePlayers||[],prepReadyPlayers:[],deadlineAt:message.deadlineAt};run.strategyChoices=message.strategies||run.strategyChoices||{};
+  if(!g){beginOnlineSession(message);return;}
+  if(g.s.phase==='intermission'&&run.playerId&&(message.activePlayers||[]).includes(run.playerId)){
+   if(!g.perform('next')){notice(g.lastError||'未能进入下一回合整备。');return;}
+  }
+  g.s.coopStage='prep';run.waitingForServer=null;state.paused=false;state.modal=null;save();saveCheckpoint();render();publishOnlineStatus(true);return;
+ }
+ if(message.type==='coop.battle.started'){
+  run.coopStage='battle';run.waitingForServer=null;run.prepDeadlineAt=null;run.prepReadyPlayers=[];
+  if(g?.s.phase==='prep'){
+   if(g.perform('start')){g.s.coopStage='battle';state.paused=false;state.modal=null;resetFxClock();unlockAudio();attachZoneVisual(g.battle);save();render();publishOnlineStatus(true);}
+   else notice(g.lastError||'未能自动进入战斗。');
+  }
+  return;
+ }
+ if(!g)return;
  if(message.type==='coop.joint-defense.started'){
   run.waitingForServer=null;run.coopStage='joint-defense';run.defenders=message.defenders||[];
   state.modal=null;renderModal();
@@ -16860,10 +16887,16 @@ function handleCoopEvent(message){
   return;
  }
  if(message.type==='coop.round.advance'){
-  run.waitingForServer=null;run.coopStage='advance';run.eliminatedPlayers=message.eliminatedPlayers||[];
-  const active=(onlineClient?.state.room?.players||state.online.room?.players||[]).some(player=>player.id===run.playerId)&&!run.eliminatedPlayers.includes(run.playerId);
-  const summary=message.outcome==='all-perfect'?'全队完美通关。':message.outcome==='no-perfect-defender'?'本轮没有完美通关者，跳过联防。':message.success?'联防成功，漏怪已清除。':`联防漏怪 ${Number(message.defenseLeaks)||0}。`;
-  modal(`<h2>第 ${g.s.round} 回合结算</h2><p>${esc(summary)}</p>${active?'<button class="native-primary" data-act="coop-next">全员结算后继续 →</button>':'<p>本局生命已用尽，等待队伍完成后续结算。</p>'}`);
+  run.waitingForServer=null;run.coopStage=message.nextStage||'advance';run.eliminatedPlayers=message.eliminatedPlayers||[];
+  const playerId=run.playerId,active=(message.activePlayers||[]).includes(playerId),remaining=message.hpRemaining?.[playerId],loss=message.hpLosses?.[playerId]||0;
+  if(Number.isFinite(remaining))g.s.hp=Math.max(0,remaining);
+  const summary=message.outcome==='all-perfect'?'全队完美通关。':message.outcome==='no-perfect-defender'?'没有可联防的完美阵地。':message.success?'联防成功，漏怪已清除。':message.outcome==='joint-defense-complete'?`联防结束，本玩家生命 -${loss}。`:`本轮生命 -${loss}。`;
+  if(active&&message.nextStage==='prep'){
+   if(g.s.phase==='intermission'&&!g.perform('next')){notice(g.lastError||'未能进入下一回合整备。');return;}
+   g.s.coopStage='prep';run.coopStage='prep';run.prepDeadlineAt=message.deadlineAt;run.prepReadyPlayers=[];run.coopProgress={stage:'prep',completedPlayers:[],expectedPlayers:message.activePlayers||[],prepReadyPlayers:[],deadlineAt:message.deadlineAt};state.modal=null;state.paused=false;notice(`第 ${message.previousRound} 回合结算：${summary} 当前生命 ${remaining}。`);save();saveCheckpoint();render();publishOnlineStatus(true);
+  }else{
+   state.paused=true;coopWaitModal('本轮结算 · 等待队伍',`${summary} 当前生命 ${remaining??g.s.hp}。`);save();render();
+  }
   return;
  }
  if(message.type==='coop.round.begin'){
@@ -16890,23 +16923,29 @@ function deriveOnlinePlayerSeed(seed,playerId){let hash=(Number(seed)||1)>>>0;fo
 function onlineConnectionsReady(room,player){return !!room&&room.phase==='signaling'&&!!player&&(room.players||[]).every(member=>member.id===player.id||onlineClient?.state.peers?.[member.id]?.connection==='connected');}
 function beginOnlineBriefing(){
  const room=onlineClient?.state.room||state.online.room,player=onlineClient?.state.player||state.online.player;
- if(!room||room.phase!=='signaling'||!player){notice('当前没有可开始的联机房间。');return;}
- if(!onlineConnectionsReady(room,player)){notice('仍有队友尚未建立点对点连接。');return;}
+ if(!room||room.phase!=='signaling'||!player)return;
+ if(state.onlineRun?.sessionId===room.sessionId)return;
  const baseSeed=(Number(room.sessionSeed)||1)>>>0,modeId=room.modeId,seed=deriveOnlinePlayerSeed(baseSeed,player.id);
  const mapId=resolveMapId(data,room.mapId||RANDOM_MAP_ID,waveRng(baseSeed),modeId),banConfig=loadBondBan(data);
  const sharedBonds=bondBanIds(data,baseSeed,banConfig);
  state.draft={modeId,mapId,seed,sharedSeed:baseSeed,playerId:player.id,teamPeers:(room.players||[]).filter(member=>member.id!==player.id).map(member=>({playerId:member.id,name:member.name,bondCounts:onlinePeerStatuses.get(member.id)?.bondCounts||{}})),online:true,roomCode:room.code,sessionId:room.sessionId,finalBossId:rollFinalBoss(data,modeId,baseSeed),roster:createWaveRoster({random:waveRng((baseSeed^0x57a4c319)>>>0||1),data,modeId}),bondBan:{bonds:sharedBonds,always:banConfig.always,never:banConfig.never},egg325:false,cat:false};
- state.onlineRun=null;state.bondBanBlocks=0;state.view='briefing';rememberView('lobby');state.strategyDraft=null;state.modal=null;render();
+ state.onlineRun={roomCode:room.code,sessionId:room.sessionId,sessionSeed:baseSeed,playerId:player.id,coopStage:'strategy-availability',strategyChoices:{},strategyAvailabilitySent:false,waitingForServer:null};
+ state.bondBanBlocks=0;state.view='briefing';rememberView('lobby');state.strategyDraft=null;state.modal=null;
+ const strategies=visibleBands(data,archiveNow()).map(row=>({id:row.bandId,hp:Math.max(1,Math.floor(Number(data.season.bandDataListDict[row.bandId]?.totalHp)||1))}));
+ state.onlineRun.strategyAvailabilitySent=onlineClient?.setStrategyAvailability(strategies)??false;
+ render();
 }
-function beginOnlineSession(){
+function beginOnlineSession(phaseEvent={}){
  const draft=state.draft;if(!draft?.online)return;
- const room=onlineClient?.state.room,player=onlineClient?.state.player;if(!onlineConnectionsReady(room,player)){notice('点对点连接已中断，请返回联机大厅重新连接。');state.view='lobby';render();return;}
+ const room=onlineClient?.state.room,player=onlineClient?.state.player;if(!room||room.phase!=='signaling'||!player){notice('联机信令已断开，无法开始整备。');return;}
+ const strategy=phaseEvent.strategies?.[player.id]||state.onlineRun?.strategyChoices?.[player.id];
+ if(strategy?.id)state.band=strategy.id;
  state.lastChoiceContent=null;enterPlayChrome();state.supplyCollapsed=false;
  try{
   const transport={send:record=>onlineClient?.sendPeerMessage({type:'team.fang',record},record.recipientId)??false};
-  state.game=new NativeSession(data,{modeId:draft.modeId,bandId:guardedBandId(),mapId:draft.mapId,seed:draft.seed,waveRoster:draft.roster,bondBan:draft.bondBan,egg325:false,cat:false,playerId:draft.playerId,teamPeers:draft.teamPeers,teamTransport:transport,finalBossId:draft.finalBossId,finalBossHpMultiplier:state.waveTable?.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER});
-  state.game.s.onlineCoop=true;state.game.s.coopStage='battle';
-  state.onlineRun={roomCode:draft.roomCode,sessionId:draft.sessionId,sessionSeed:draft.sharedSeed,playerId:draft.playerId,coopStage:'battle',reportedBattleRound:null,reportedDefenseRound:null,waitingForServer:null};state.view='game';rememberView('game');state.draft=null;state.paused=false;state.expiresAt=null;state.resultUnitUid=null;state.selected=state.summonSelected=state.item=state.inspect=state.preview=state.modal=null;
+  state.game=new NativeSession(data,{modeId:draft.modeId,bandId:strategy?.id||guardedBandId(),mapId:draft.mapId,seed:draft.seed,waveRoster:draft.roster,bondBan:draft.bondBan,egg325:false,cat:false,playerId:draft.playerId,teamPeers:draft.teamPeers,teamTransport:transport,finalBossId:draft.finalBossId,finalBossHpMultiplier:state.waveTable?.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER});
+  state.game.s.onlineCoop=true;state.game.s.coopStage='prep';
+  state.onlineRun={...(state.onlineRun||{}),roomCode:draft.roomCode,sessionId:draft.sessionId,sessionSeed:draft.sharedSeed,playerId:draft.playerId,coopStage:'prep',reportedBattleRound:null,reportedDefenseRound:null,waitingForServer:null,prepDeadlineAt:phaseEvent.deadlineAt||state.onlineRun?.prepDeadlineAt||null,strategyChoices:phaseEvent.strategies||state.onlineRun?.strategyChoices||{}};state.view='game';rememberView('game');state.draft=null;state.paused=false;state.expiresAt=null;state.resultUnitUid=null;state.selected=state.summonSelected=state.item=state.inspect=state.preview=state.modal=null;
   refreshOnlineTeamPeers();save();saveCheckpoint();render();flushOnlineTransfers();publishOnlineStatus(true);
  }catch(error){notice(error.message);}
 }
@@ -16939,9 +16978,9 @@ async function handleOnlineAction(button){
 }
 root.addEventListener('click',event=>{
  const button=event.target.closest?.('[data-act]');if(!button)return;
- if(button.dataset.act==='begin'&&state.draft?.online){event.preventDefault();event.stopImmediatePropagation();beginOnlineSession();return;}
- if(button.dataset.act==='coop-next'&&state.onlineRun){event.preventDefault();event.stopImmediatePropagation();const run=state.onlineRun,round=state.game?.s.round;if(run.readyRound===round)return;run.readyRound=round;run.waitingForServer='ready';onlineClient?.readyNextRound(round);coopWaitModal('等待队友继续',`已确认继续第 ${round+1} 回合，等待其他存活玩家。`);return;}
- if(button.dataset.act==='next'&&state.onlineRun){event.preventDefault();event.stopImmediatePropagation();notice('联机回合需要在队伍结算提示中统一继续。');return;}
+ if(button.dataset.act==='online-strategy-pick'&&state.onlineRun){event.preventDefault();event.stopImmediatePropagation();onlineClient?.chooseStrategy(button.dataset.id);return;}
+ if(button.dataset.act==='coop-prep-ready'&&state.onlineRun){event.preventDefault();event.stopImmediatePropagation();const run=state.onlineRun;if((run.prepReadyPlayers||[]).includes(run.playerId))return;run.prepReadyPlayers=[...(run.prepReadyPlayers||[]),run.playerId];onlineClient?.readyForBattle(state.game?.s.round);syncOnlineHud();return;}
+ if((button.dataset.act==='start'||button.dataset.act==='next')&&state.onlineRun){event.preventDefault();event.stopImmediatePropagation();notice('联机阶段由全队准备状态自动推进。');return;}
  if(!button.dataset.act.startsWith('online-'))return;
  event.preventDefault();event.stopImmediatePropagation();void handleOnlineAction(button);
 },true);
@@ -16949,6 +16988,7 @@ root.addEventListener('click',()=>{if(state.view==='game')setTimeout(()=>publish
 root.addEventListener('pointerup',()=>{if(state.view==='game')setTimeout(()=>publishOnlineStatus(),0);});
 window.addEventListener('resize',()=>{if(state.view==='lobby')positionLobbyUpdateCard();});
 let canvas,seesScreenFxCanvas=null,seesScreenFxWasActive=false,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0,dossierDismissedAt=0,runtimeFault=null;
+setInterval(syncOnlineHud,250);
 function readSave(key){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):null;}catch{return null;}}
 function savedView(){try{return sessionStorage.getItem(VIEW_SAVE)||'lobby';}catch{return 'lobby';}}
 function rememberView(view){try{sessionStorage.setItem(VIEW_SAVE,view);}catch{}}
@@ -17079,6 +17119,30 @@ function updateBondLive(){
 }
 function strategyInfo(id){const b=data.season.bandDataListDict[id],common=data.common.bandDataDict[id];return {id,name:common?.bandName||id,desc:plain(b?.bandDesc||''),hp:b?.totalHp??'—'};}
 function decorateStrategyCatalog(){for(const button of root.querySelectorAll('.native-strategy-catalog button')){const c=strategyCoverageById[button.dataset.id]||{status:'partial',statusLabel:'待核对',gapNote:'尚未建立效果覆盖记录'},span=button.querySelector('span');if(!span)continue;const status=document.createElement('small');status.className=`native-strategy-completeness ${c.status}`;status.textContent=c.statusLabel;status.title=c.gapNote||c.statusLabel;span.prepend(status);if(c.gapNote){const gap=document.createElement('em');gap.className='native-strategy-gap';gap.textContent='缺口：'+c.gapNote;span.append(gap);}}}
+function coopPlayerRows(stage=state.onlineRun?.coopStage){
+ const room=onlineClient?.state.room||state.online.room,run=state.onlineRun,progress=run?.coopProgress||onlineClient?.state.coop?.progress||{},players=room?.players||[],choices=run?.strategyChoices||progress.strategyChoices||{},completed=new Set(progress.completedPlayers||[]),ready=new Set(progress.prepReadyPlayers||progress.completedPlayers||[]),current=run?.strategyState?.currentPlayerId||progress.currentPlayerId||null;
+ const rows=Array.from({length:4},(_,index)=>{const player=players[index];if(!player)return `<li class="native-coop-player is-empty"><b>玩家 ${index+1}</b><span>等待加入</span><small>—</small></li>`;const choice=choices[player.id],strategy=choice?.id?strategyInfo(choice.id):null;let status='等待中';if(stage==='strategy-availability')status=(progress.completedPlayers||[]).includes(player.id)?'策略列表已提交':'同步策略列表';else if(['strategy-selection','countdown'].includes(stage))status=choice?choice.automatic?'超时随机选择':'已选择':current===player.id?'正在选择':'等待选择';else if(stage==='prep')status=ready.has(player.id)?'已准备':'整备中';else if(stage==='battle'||stage==='joint-defense')status=completed.has(player.id)?'已完成战斗':'战斗中';else if(stage==='finished')status='已结束';return `<li class="native-coop-player${current===player.id?' is-current':''}"><span><b>${esc(player.name||'玩家')}</b><small title="${esc(player.id)}">ID ${esc(player.id)}</small></span><em>${esc(status)}</em><strong>${strategy?`${esc(strategy.name)}${choice.automatic?' · 随机':''}`:'策略待选'}</strong></li>`;});
+ return `<ol class="native-coop-roster" aria-label="联机玩家状态">${rows.join('')}</ol>`;
+}
+function onlineStrategySection(){
+ const run=state.onlineRun,progress=run?.coopProgress||onlineClient?.state.coop?.progress||{},players=onlineClient?.state.room?.players||state.online.room?.players||[],used=new Set(Object.values(run?.strategyChoices||progress.strategyChoices||{}).map(choice=>choice.id)),current=run?.strategyState?.currentPlayerId||progress.currentPlayerId,own=run?.playerId,currentTurn=current===own,ids=visibleBands(data,archiveNow()).map(row=>row.bandId),cards=ids.map(id=>strategyInfo(id)).filter(row=>row.name);
+ const picks=currentTurn?`<div class="native-online-strategy-picks" aria-label="可选策略">${cards.map(strategy=>{const claimed=used.has(strategy.id);return `<button data-act="online-strategy-pick" data-id="${esc(strategy.id)}" ${claimed?'disabled':''} class="${claimed?'is-claimed':''}"><span class="native-strategy-card-art">${avatar(strategy.id)||'<span class="native-strategy-placeholder" aria-hidden="true">◈</span>'}</span><span><b>${esc(strategy.name)}</b><small>初始生命 ${strategy.hp}</small><p>${esc(strategy.desc)}</p></span>${claimed?'<em>已被选择</em>':''}</button>`;}).join('')}</div>`:'';
+const deadline=run?.strategyDeadlineAt||progress.deadlineAt||run?.strategyState?.countdownDeadlineAt;
+ const stage=run?.coopStage||progress.stage,copy=stage==='strategy-availability'?'正在收集各玩家可用策略。':stage==='countdown'?'全员策略已确定，游戏即将自动进入整备阶段。':currentTurn?'轮到你选择策略。':`正在等待 ${esc(players.find(player=>player.id===current)?.name||'队友')} 选择策略。`;
+ return `<section class="briefing-strategy-section online-briefing-strategies"><header class="briefing-section-head"><div><span>02 / STARTING PLAN</span><h2>初始策略 · 依序选择</h2></div><small class="coop-turn-clock" id="coop-countdown" data-deadline-at="${Number(deadline)||0}"></small></header><p class="native-online-turn-copy">${copy}</p>${coopPlayerRows(stage)}${picks}</section>`;
+}
+function syncOnlineHud(){
+ const clock=document.getElementById('coop-countdown');if(clock){const deadline=Number(clock.dataset.deadlineAt)||0;clock.textContent=deadline?`${Math.max(0,Math.ceil((deadline-Date.now())/1000))} 秒`:'等待开始';}
+ const roster=document.querySelector('.native-coop-roster');if(roster&&state.view==='game')roster.outerHTML=coopPlayerRows(state.onlineRun?.coopStage);
+ const ready=document.querySelector('[data-act="coop-prep-ready"]');if(ready&&state.onlineRun){const done=(state.onlineRun.prepReadyPlayers||[]).includes(state.onlineRun.playerId);ready.disabled=done;ready.textContent=done?'已准备，等待队友':'我已准备';}
+}
+function renderOnlineGamePanel(){
+ const run=state.onlineRun,g=state.game;if(!run||!g)return '';
+ const prep=run.coopStage==='prep',canReady=prep&&g.s.phase==='prep',battleDone=(run.coopProgress?.completedPlayers||[]).includes(run.playerId),deadline=prep?(run.prepDeadlineAt||0):0;
+ const summary=prep?`整备阶段 · 最多 90 秒${deadline?` · 剩余 <b id="coop-countdown" data-deadline-at="${deadline}">${Math.max(0,Math.ceil((deadline-Date.now())/1000))} 秒</b>`:''}`:g.s.phase==='battle'?(battleDone?'正在等待其他玩家完成战斗':'战斗进行中'):g.s.phase==='intermission'?'等待全队结算':'联机对局';
+ const ready=(run.prepReadyPlayers||[]).includes(run.playerId);
+ return `<section class="native-coop-live"><header><b>${summary}</b>${canReady?`<button class="native-primary" data-act="coop-prep-ready" ${ready?'disabled':''}>${ready?'已准备，等待队友':'我已准备'}</button>`:''}</header>${coopPlayerRows(prep?'prep':run.coopStage)}</section>`;
+}
 // 作战前简报的「盟约缺席情况」与「被禁干员」弹窗。判定与 HTML 片段都在 `native-bond-ban.js`
 // 里（那边能在 Node 里直接断言渲染结果），这里只注入转义／头像并挂到动作上。
 function bondBanBriefing(d){return bondBanBriefingHtml(data,d?.bondBan,{esc});}
@@ -17111,9 +17175,9 @@ function renderBriefingScreen(){
 <div class="briefing-content" role="region" aria-label="模拟简报内容，可滚动" tabindex="0">
 <section class="briefing-title"><div><span class="native-eyebrow">MISSION SUMMARY</span><h1>模拟简报</h1><p>确认本局特训、初始策略与盟约限制后，进入模拟。</p></div><aside class="briefing-final-boss"><span class="native-eyebrow">FINAL ENCOUNTER</span><div class="briefing-final-main">${avatar(boss.handbookEnemyId)}<div><small>最终 BOSS · 血量 ${Math.round(boss.hpMultiplier*100)}%</small><b>${esc(bossName)}</b></div></div></aside></section>
 <section class="briefing-overview"><section class="briefing-training"><header class="briefing-section-head"><div><span>01 / BATTLE CONDITIONS</span><h2>本局特训</h2></div><small>${tags.length} 项生效</small></header><div class="briefing-training-grid">${tags.length?tags.map((tag,index)=>`<article class="briefing-training-card"><span class="briefing-training-index">${String(index+1).padStart(2,'0')}</span><div><h3>${esc(tag.name)}</h3><small>${esc(tag.id)}</small><p>${esc(tag.desc)}</p></div></article>`).join(''):'<p class="briefing-empty">本局没有额外特训。</p>'}</div></section><aside class="briefing-map-card"><div class="briefing-map-copy"><span class="native-eyebrow">BATTLEFIELD</span><h2>本局战场</h2><b>${esc(mapLabel)}</b><small>${map?esc(map.stageId):'地图数据缺失'}</small></div><div class="briefing-map-preview">${mapThumb}</div></aside></section>
-<section class="briefing-strategy-section"><header class="briefing-section-head"><div><span>02 / STARTING PLAN</span><h2>初始策略</h2></div><button class="briefing-choose-strategy" data-act="strategy-select">更换策略 <span aria-hidden="true">→</span></button></header><article class="briefing-selected-strategy"><div class="briefing-strategy-art">${avatar(strategy.id)||'<span class="native-strategy-placeholder" aria-hidden="true">◈</span>'}</div><div class="briefing-strategy-copy"><span class="native-eyebrow">SELECTED STRATEGY</span><h3>${esc(strategy.name)}</h3><p>${esc(strategy.desc)}</p><small>初始生命 <b>${strategy.hp}</b></small></div></article></section>
+${d.online?onlineStrategySection():`<section class="briefing-strategy-section"><header class="briefing-section-head"><div><span>02 / STARTING PLAN</span><h2>初始策略</h2></div><button class="briefing-choose-strategy" data-act="strategy-select">更换策略 <span aria-hidden="true">→</span></button></header><article class="briefing-selected-strategy"><div class="briefing-strategy-art">${avatar(strategy.id)||'<span class="native-strategy-placeholder" aria-hidden="true">◈</span>'}</div><div class="briefing-strategy-copy"><span class="native-eyebrow">SELECTED STRATEGY</span><h3>${esc(strategy.name)}</h3><p>${esc(strategy.desc)}</p><small>初始生命 <b>${strategy.hp}</b></small></div></article></section>`}
 ${bondMarkup?`<section class="briefing-bond-section"><span class="native-eyebrow">03 / COVENANT STATUS</span>${bondMarkup}</section>`:''}
-</div><footer class="briefing-actions"><button class="native-primary native-begin" data-act="begin">进入模拟 <span aria-hidden="true">→</span></button></footer></main>`;
+</div><footer class="briefing-actions">${d.online?`<span class="native-online-auto-start">${state.onlineRun?.coopStage==='countdown'?'5 秒后自动进入整备阶段':'房间内玩家按随机顺序选择策略'}</span>`:'<button class="native-primary native-begin" data-act="begin">进入模拟 <span aria-hidden="true">→</span></button>'}</footer></main>`;
 }
 // 已选策略可能因为「关掉 S.E.E.S. 标记」而变得不可见：这时回落到列表里的第一个，
 // 别把一个本局不该存在的策略带进简报与对局（`state.band` 只在选择时才写）。
@@ -17139,6 +17203,7 @@ function render(){
   if(state.view==='prepare'){const p=prepState(),listScroll=root.querySelector('#prep-list')?.scrollLeft??p.listScrollLeft??0;root.innerHTML=renderPreparePage(data,p,{esc,avatar});const list=root.querySelector('#prep-list');if(list)list.scrollLeft=listScroll;if(p.scroll)window.scrollTo(0,p.scroll);renderModal();return;}
  if(state.view==='editor'){const oldNav=root.querySelector('.wave-ed-temps'),navTop=oldNav?.scrollTop||0,navLeft=oldNav?.scrollLeft||0;root.innerHTML=renderWaveEditor(data,state.waveTable,state.editor);const nav=root.querySelector('.wave-ed-temps');if(nav){nav.scrollTop=navTop;nav.scrollLeft=navLeft;}const search=document.getElementById('ed-search'),catalog=document.getElementById('ed-catalog');if(search&&state.editor.keepSearch){search.focus();try{search.setSelectionRange(state.editor.caret,state.editor.caret);}catch{}}state.editor.keepSearch=false;if(catalog)catalog.scrollTop=state.editor.scroll||0;const dialog=root.querySelector('#wave-ed-test');if(dialog){dialog.showModal();const close=()=>{state.editor.sample=null;render();root.querySelector('.wave-ed-current [data-act=ed-roll]')?.focus();};dialog.addEventListener('cancel',e=>{e.preventDefault();close();});dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();}});}renderModal();return;}
  const g=state.game,s=g.s,turn=currentTurn(),rows=g.bonds(),handLayout=handView(g);root.innerHTML=`<main class="native-game${s.phase==='battle'?' is-battle':''}${state.supplyCollapsed?' is-supply-collapsed':''}${state.sandbox?' is-sandbox':''}">${dossier()}<header class="native-top"><button data-act="home">‹ 大厅</button><strong>卫戍协议 / 盟约下半</strong><button class="native-mobile-info" data-act="field-info">战况 / 设置</button><button data-act="limits">已知差异</button><button data-act="branches">分支规则</button><button class="native-ban-entry" data-act="ban-list">禁用名单</button><button data-act="export">导出存档</button></header><div class="native-workspace"><aside class="native-bonds">${bondSidebarHtml(g,rows)}</aside><section class="native-field"><div class="native-field-caption"><b>${state.sandbox?(s.phase==='battle'?'技能测试':'测试配置'):s.phase==='battle'?(turn.isBossTurn?'最终 Boss':'自动作战'):s.phase==='prep'?'阵地休整':s.phase==='finished'?'模拟结束':'回合结算'}</b><span id="native-wave-progress">${deployCount(s)} / ${s.capacity} 部署</span>${s.phase==='battle'&&!state.sandbox?battleBar():''}</div><div class="native-terrain-legend" aria-label="地块图例">${terrainLegend(g.map)}</div><div class="native-board"><canvas id="native-canvas" tabindex="0" aria-label="战场棋盘，先选位置再拖动朝向确认"></canvas><span class="native-cost" title="战斗费用余额，与商店资金独立"><small>Cost 费用</small><output id="native-cost-balance" aria-label="战斗费用余额">—</output></span></div><div class="native-facing" ${state.preview?'':'hidden'}><span class="native-facing-tip">拖动选择朝向，松手确认；中心松手取消。</span>${[0,1,2,3].map((d)=>`<button data-act="aim" data-dir="${d}">${['→','↓','←','↑'][d]}</button>`).join('')}<button data-act="place-confirm">确认放置</button><button data-act="cancel">取消</button></div><div class="native-controls"><button data-act="fullscreen" hidden>打开全屏</button><button data-act="pause" ${s.phase!=='battle'?'disabled':''}>${state.paused?'继续':'暂停'}</button>${[1,2,4].map(n=>`<button data-act="speed" data-speed="${n}" class="${state.speed===n?'chosen':''}">${n}×</button>`).join('')}<button data-act="mute">${state.muted?'声音关':'声音开'}</button><label>音量 <input id="native-volume" aria-label="战斗音量" type="range" min="0" max="1" step="0.05" value="${state.volume}" style="width:72px"></label><button data-act="reduce-fx">${state.reduceFx?'动效少':'动效'}</button>${s.phase==='prep'?(state.sandbox?'<button class="native-primary" data-act="sandbox-start">开始测试 →</button>':'<button class="native-primary" data-act="start">准备完毕 →</button>'):s.phase==='intermission'?'<button class="native-primary" data-act="next">进入下一回合 →</button>':s.phase==='finished'?'<button data-act="result">查看伤害报告</button><button data-act="home">回到大厅</button>':''}</div><div class="native-bench-label${g.handFull()?' is-over':''}" id="native-hand-label">整备区 ${g.handLength()} / ${HAND_LIMIT} ${g.handFull()?'<em class="native-hand-warn">已满，出售或部署清出空余后才能购买</em>':''}<span id="native-drop-hint" aria-live="polite">拖动卡片换格；场上干员拖回此处</span></div><div class="native-bench" id="native-hand" data-layout="${handLayout.signature}" aria-label="整备区">${handLayout.html}</div></section><aside class="native-detail">${state.sandbox?sandboxDetail():waveIntel()}${detail()}<h3>${esc(data.common.bandDataDict[s.bandId].bandName)}</h3><p>${esc(plain(data.season.bandDataListDict[s.bandId].bandDesc))}</p><p>${turn.isBossTurn?`本局最终 Boss：${esc(finalBossConfig(data,s.finalBossId,s.modeId).enemyProfile.name||s.finalBossId)}。倒计时 100 秒 + 开战时剩余生命；30 名增援每 3 秒从上下红门进入，Boss 击破立即胜利。`:'最终回合按随机 Boss 作战，本体击破立即获胜。'}</p><div id="native-combat-stats"></div></aside></div><div class="native-status" id="native-status"></div><section class="native-shop" id="native-supply-shop"><div><h2>调度中心 ${s.level}</h2><button class="native-supply-toggle" data-act="supply-toggle" aria-controls="native-supply-shop" aria-expanded="${!state.supplyCollapsed}">${state.supplyCollapsed?'展开商店 ▴':'收起商店 ▾'}</button><button data-act="upgrade" ${s.phase!=='prep'?'disabled':''}>升级 ${catOn()?'ALL':(g.terms().upgradeCost??'MAX')} ◆</button><span class="native-refresh-control"><button data-act="refresh" ${s.phase!=='prep'?'disabled':''}${s.forcedRefresh?` title="特殊刷新：此次刷新出现的干员优先为${esc(data.season.bondInfoDict[s.forcedRefresh.bond]?.name||'指定盟约')}干员"`:''}>${s.forcedRefresh?`特殊刷新${s.forcedRefresh.count>1?` ×${s.forcedRefresh.count}`:''}`:'刷新'} ${s.freeRefresh?'免费':catOn()?'ALL':'1 ◆'}</button></span>${catOn()?'<button data-act="stockview" title="查看各干员剩余库存">库存</button>':''}<button data-act="lock" ${s.phase!=='prep'?'disabled':''}>${g.shopAllFrozen()?'解冻':'冻结'}</button>${s.rewardPending?.tier?'<span class="native-reward-shop-hint">三合一奖励选择中 · 点击候选卡片预览，再次点击确认</span>':''}${g.handFull()?'<span class="native-reward-shop-hint is-over" title="召唤物卡、干员与装备一起占整备区格">整备区已满，暂不可购入干员／装备</span>':''}</div><div class="native-shop-cards">${shopCards(g,s)}</div></section></main>`;canvas=document.getElementById('native-canvas');syncFreeRefreshCount();syncPlayChrome();updateHud();fitWaveFaces();draw();renderModal();showRequired();syncQuickSell();
+ if(state.onlineRun&&state.game){const controls=root.querySelector('.native-controls');if(state.game.s.phase==='prep'){controls?.querySelector('[data-act="start"]')?.remove();}if(state.game.s.phase==='intermission')controls?.querySelector('[data-act="next"]')?.remove();root.querySelector('.native-field-caption')?.insertAdjacentHTML('afterend',renderOnlineGamePanel());}
  }finally{painting=false;paint325();}
 }
 function waveIntel(){
@@ -20480,6 +20545,9 @@ class OnlineRoomClient {
   setReady(ready) { return this.#send('room.ready', {ready}); }
   setSettings(settings) { return this.#send('room.set-settings', settings); }
   start(mapId = 'random') { return this.#send('room.start', {mapId}); }
+  setStrategyAvailability(strategies) { return this.#send('coop.strategy.availability', {strategies}); }
+  chooseStrategy(bandId) { return this.#send('coop.strategy.choose', {bandId}); }
+  readyForBattle(round) { return this.#send('coop.prep.ready', {round}); }
   reportBattle(result) { return this.#send('coop.battle.report', result); }
   reportJointDefense(result) { return this.#send('coop.joint-defense.report', result); }
   readyNextRound(round) { return this.#send('coop.round.ready', {round}); }
@@ -20551,14 +20619,18 @@ class OnlineRoomClient {
         this.#handleSignal(message.fromPlayerId, message.fromName, message.signalType, message.data);
         break;
       case 'coop.progress':
-        this.state.coop = {...(this.state.coop || {}), progress: message};
+        this.state.coop = {...(this.state.coop || {}), progress: message, ...message};
         this.onCoopEvent(message);
         break;
+      case 'coop.strategy.state':
+      case 'coop.strategy.complete':
+      case 'coop.prep.started':
+      case 'coop.battle.started':
       case 'coop.joint-defense.started':
       case 'coop.round.advance':
       case 'coop.round.begin':
       case 'coop.game.finished':
-        this.state.coop = {...(this.state.coop || {}), lastEvent: message};
+        this.state.coop = {...(this.state.coop || {}), stage: message.type.slice('coop.'.length), lastEvent: message, ...message};
         this.onCoopEvent(message);
         break;
       case 'room.left':

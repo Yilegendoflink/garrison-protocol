@@ -1283,6 +1283,36 @@ html.native-landscape-ui .native-shop-card>[data-act="buy"]{min-height:0;height:
 .native-online-roster li small{margin-top:4px;color:#91b6ad;font-size:10px}
 .native-online-roster li em{color:#e6b88e;font-size:10px;font-style:normal}
 .native-online-roster li em.is-ready{color:#79dcb7}
+.native-coop-roster{display:grid;gap:0;list-style:none;margin:10px 0;padding:0;border-top:1px solid #244a47}
+.native-coop-player{display:grid;grid-template-columns:minmax(110px,1fr) minmax(86px,.8fr) minmax(100px,1fr);align-items:center;gap:10px;padding:9px 8px;border-bottom:1px solid #244a47;color:#d8ebe3;font-size:12px}
+.native-coop-player>span,.native-coop-player>span small{display:block;min-width:0;overflow-wrap:anywhere}
+.native-coop-player>span small{margin-top:3px;color:#769d93;font:10px ui-monospace,monospace}
+.native-coop-player em{color:#9eb8af;font-size:10px;font-style:normal}
+.native-coop-player strong{color:#f0d18a;font-size:11px;font-weight:600;text-align:right}
+.native-coop-player.is-current{background:#143638;box-shadow:inset 2px 0 #79dcb7}
+.native-coop-player.is-current em{color:#79dcb7}
+.native-coop-player.is-empty{opacity:.48}
+.native-online-turn-copy{margin:8px 0;color:#91b6ad;font-size:12px;line-height:1.7}
+.coop-turn-clock{color:#f0d18a;font-variant-numeric:tabular-nums}
+.native-online-strategy-picks{display:grid;gap:8px;max-height:44vh;overflow:auto;margin-top:10px;padding-right:4px}
+.native-online-strategy-picks>button{position:relative;display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:center;padding:10px;text-align:left;color:#e8f4ef;background:#0b1c1e;border:1px solid #315c57}
+.native-online-strategy-picks>button:disabled{opacity:.5;cursor:not-allowed}
+.native-online-strategy-picks>button.is-claimed{border-color:#38534e}
+.native-online-strategy-picks .native-strategy-card-art{width:58px;height:58px;display:grid;place-items:center;background:#132a2b}
+.native-online-strategy-picks .native-strategy-card-art img{max-width:100%;max-height:100%;object-fit:contain}
+.native-online-strategy-picks b,.native-online-strategy-picks small{display:block}
+.native-online-strategy-picks small{margin-top:3px;color:#f0d18a}
+.native-online-strategy-picks p{margin:5px 0 0;color:#91b6ad;font-size:10px;line-height:1.5}
+.native-online-strategy-picks em{position:absolute;right:8px;top:8px;color:#79dcb7;font-size:10px;font-style:normal}
+.native-online-auto-start{color:#91b6ad;font-size:12px}
+.native-coop-live{margin:8px 0 12px;padding:10px 12px;background:#0c2021;border:1px solid #2b5754}
+.native-coop-live>header{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#d8ebe3;font-size:12px}
+.native-coop-live>header b{font-weight:600}
+.native-coop-live>header button{margin:0;padding:7px 12px}
+.native-coop-live .native-coop-roster{margin-bottom:0}
+.native-coop-live .native-coop-player{padding:7px 4px;font-size:11px}
+.native-coop-live .native-coop-player strong{font-size:10px}
+@media(max-width:600px){.native-coop-player{grid-template-columns:minmax(82px,1fr) minmax(66px,.7fr) minmax(80px,1fr);gap:6px;padding:8px 4px;font-size:10px}.native-coop-player>span small{font-size:9px}.native-coop-player em{font-size:9px}.native-coop-player strong{font-size:9px}.native-coop-live{padding:8px}}
 .native-online-settings{padding:10px 0;border-top:1px solid #244a47}
 .native-online-settings .native-online-field{margin-top:0}
 .native-online-card .native-online-settings>button{width:100%}

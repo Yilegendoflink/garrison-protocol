@@ -356,7 +356,7 @@ export class NativeSession extends NativeEconomy {
     if(!enemy||typeof enemy.id!=='string'||!this.data.enemies[enemy.id]&&!this.data.enemyDependencies?.[enemy.id])throw Error('联防敌人资料不存在：'+String(enemy?.id||''));
     const raw=this.data.enemies[enemy.id]||this.data.enemyDependencies?.[enemy.id],flying=raw.motion==='FLY';
     const route=Number.isSafeInteger(enemy.route)&&routes[enemy.route]?enemy.route:Math.max(0,routes.findIndex(candidate=>(candidate.motionMode==='FLY')===flying));
-    return {id:enemy.id,route,at:index*1.25,jointDefense:true};
+    return {id:enemy.id,route,loss:enemy.loss??1,failedPlayerId:enemy.failedPlayerId,at:index*1.25,jointDefense:true};
    });
    battle.s.queue=queue;battle.s.total=queue.length;battle.s.limit=Math.max(90,queue.length*8+25);battle.s.finalBossId=null;
    this.battle=battle;this.s.phase='battle';this.s.coopStage='joint-defense';this.s.coopStageRound=this.s.round;return true;
@@ -369,7 +369,7 @@ export class NativeSession extends NativeEconomy {
     this.s.coopDefenseResult={leaks:r.leaks,failedEnemies:r.failedEnemies||[]};this.s.coopStage='joint-defense-complete';this.s.phase='intermission';this.applyPostBattleTransforms();this.battle.clearEndedRoundEntities();return;
    }
    if(r.kind==='final-boss'){this.s.runResult=r;if(r.reason!=='boss-killed')this.s.hp=0;this.s.phase='finished';}
-   else{const loss=Math.min(ROUND_LEAK_CAP,r.leaks);this.s.hp=Math.max(0,this.s.hp-loss);this.finishBattle({success:this.s.hp>0,leaks:r.leaks});this.s.lastBattle.loss=loss;if(!this.s.hp)this.s.runResult=r;}
+   else{const loss=Math.min(ROUND_LEAK_CAP,r.leaks);if(!this.s.onlineCoop)this.s.hp=Math.max(0,this.s.hp-loss);this.finishBattle({success:this.s.onlineCoop||this.s.hp>0,leaks:r.leaks});this.s.lastBattle.loss=this.s.onlineCoop?0:loss;if(!this.s.hp&&!this.s.onlineCoop)this.s.runResult=r;}
    this.applyPostBattleTransforms();if(this.s.phase==='intermission')this.battle.clearEndedRoundEntities();
   }
  tick(){if(this.s.phase==='battle'&&this.battle){this.battle.step();this.finishCurrentBattle();}}
