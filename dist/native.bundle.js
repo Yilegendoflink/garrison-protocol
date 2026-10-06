@@ -20626,7 +20626,10 @@ class OnlineRoomClient {
   }
 
   #createPeer(player, initiator) {
-    const pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]});
+    const pc = new RTCPeerConnection({iceServers: [
+      {urls: 'stun:stun.cloudflare.com:3478'},
+      {urls: 'stun:stun.l.google.com:19302'}
+    ]});
     const entry = {pc, channel: null, status: 'connecting', pendingIce: []};
     this.peerConnections.set(player.id, entry);
     this.state.peers[player.id] = {name: player.name, online: player.online, connection: 'connecting'};

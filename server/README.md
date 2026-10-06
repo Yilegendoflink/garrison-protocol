@@ -134,7 +134,7 @@ Cloudflare 版使用 Durable Objects SQLite，因此状态会跨 Worker 休眠�
 
 当前 DataChannel 由客户端彼此信任，各自战斗由本地客户端模拟；服务器只验证回合编号、身份和报告格式，不能防止伪造战果。联防和回合推进由服务器统一协调，但不校验敌人是否真实漏过。MVP 暂不支持整备／特殊选择计时与超时随机决策、共享 Boss 血量、跨端存档恢复或防作弊。联机 UI 会等待所有点对点连接建立后才允许进入模拟。
 
-ICE 当前配置 Google STUN；跨运营商或严格 NAT 环境需要 TURN 中继，当前 MVP 尚未提供 TURN 服务配置入口。部署到同一局域网时，应让网页和服务端端口均可达，并把网页来源加入 `ONLINE_ALLOWED_ORIGINS`。
+ICE 当前并行使用 Cloudflare 和 Google STUN；跨运营商或严格 NAT／防火墙环境仍可能需要 TURN 中继，当前 MVP 尚未提供 TURN 服务配置入口。部署到同一局域网时，应让网页和服务端端口均可达，并把网页来源加入 `ONLINE_ALLOWED_ORIGINS`。
 
 ### 规则钩子
 
