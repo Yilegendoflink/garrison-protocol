@@ -39,7 +39,7 @@ S.E.E.S. 联动四人（虎狼丸／埃癸斯／岳羽由加莉／结城理）�
 - 112 名均有适配层入口，不等于技能／天赋／模组已逐项对照。能力状态表里 `verified` 只覆盖抽样场景。
 - 特殊召唤站位选择、精确动作释放帧、部分敌人特殊能力、地图环境／装置动态破坏仍有缺口。
 - 战斗盟约、复杂策略、特殊刷新／冻结、道具和机变仍在补；不要把侧栏盟约计数当成效果已全部执行。
-- 同盟联机和完整甄选／助战档案尚未接入。
+- 联机基本 MVP 已接入主大厅：可创建／加入配对码房间、准备、建立 WebRTC DataChannel 并进入多人难度对局。各玩家仍运行独立阵地和战斗；服务端权威阶段推进、共享联防与 Boss 血量、超时决策和断线恢复尚未实现，详情见 [联机规格与开发计划](docs/ONLINE_MULTIPLAYER_SPEC_AND_PLAN.md)。
 
 页面「已知差异」也会提示这些范围。手动反馈时请导出存档并附复现步骤。
 
@@ -47,11 +47,13 @@ S.E.E.S. 联动四人（虎狼丸／埃癸斯／岳羽由加莉／结城理）�
 
 直接打开根目录 `index.html`，或运行 `npm run dev` 后访问 http://127.0.0.1:5502 。开发需要 Node.js 22+（Pages 使用 24）。`npm run build` 会构建网页并生成 Android 预缓存清单；推送 `main` 会自动部署 Pages，工作流不运行测试。
 
+启动联机服务：另开终端运行 `npm run online:server`，再从大厅的“联机协作”卡片创建房间并把 6 位配对码发给队友。服务默认监听 `0.0.0.0:5503`；局域网或公网网页来源要加入 `ONLINE_ALLOWED_ORIGINS`，部署参数见 [服务端运行说明](server/README.md)。
+
 Android WebView 客户端在独立的 [`app/`](app/README.md) Gradle 工作区中，打开远程网页源并可预缓存离线资源；它不把游戏资源打包进 APK。
 
 ## 源码入口
 
-- `dist/native-play.js`、`dist/native-lobby.js`、`dist/native.css`：大厅、战前准备、对局与两段式部署。
+- `dist/native-play.js`、`dist/native-lobby.js`、`dist/native-online.js`、`dist/native.css`：大厅、联机房间界面、战前准备、对局与两段式部署。
 - `dist/native-session.js`：主对局、商店、装备、阶段与存档。
 - `dist/native-economy.js`、`dist/garrison.js`、`dist/strategy.js`：运营事件。
 - `dist/native-battle.js`、`dist/native-combat.js`、`dist/native-effects.js`、`dist/native-operator-effects.js`：战斗循环、结算与逐名适配。
@@ -68,7 +70,7 @@ Android WebView 客户端在独立的 [`app/`](app/README.md) Gradle 工作区�
 - 补全最终BOSS战
 - 实装小人动画和更精致的特效
 - 支持自定义追加原创干员、盟约、敌人、BOSS
-- 支持联机（有可能吗？）
+- 完成权威联机阶段推进、超时选择／联防协调、共享 Boss 血量和断线恢复
 
 ## 来源
 
