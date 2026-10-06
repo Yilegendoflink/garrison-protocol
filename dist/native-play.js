@@ -27,6 +27,8 @@ import {EGG_BASE_MODE,EGG_MODE_ID,apply325Display,egg325Active,format325,rewrite
 // S.E.E.S. 策略（用户 2026-09-27 口径）：解锁标记决定策略列表里能不能看到它，本局选了它才会带进卡池。
 import {visibleBands,isSeesBand,bondPanelCount,SEES_BOND_ID,TARTARUS_BOND_ID,freeDeploy} from './native-sees.js';
 
+// render() can be reached by startup callbacks; initialize this flag before any runtime state.
+let painting=false;
 const CAT_MODE_ID='mode_cat_all',CAT_BASE_MODE='mode_single_normal';
 let upgradeConfirm=false;
 const data=NATIVE_DATA,root=document.getElementById('app'),strategyCoverageById=Object.fromEntries(strategyCoverage(data).map(x=>[x.id,x])),SAVE='garrison-native-manual-v1',CHECKPOINT_SAVE='garrison-native-safe-v1',VIEW_SAVE='garrison-native-view-v1';
@@ -309,7 +311,6 @@ function notice(s){const t=document.getElementById('toast');t.textContent=eggOn(
 function currentTurn(){return buildPhasePlan(data,state.game.s.modeId).find(t=>t.round===state.game.s.round);}
 function modal(html,meta=null){state.modal=html;state.modalMeta=meta;renderModal();}
 function showUpdateLog(){const log=NATIVE_CHANGELOG;modal(`<h2>更新日志</h2><div class="native-changelog-meta"><b>${esc(log.version)}</b><time datetime="${esc(log.publishedAt)}">${esc(log.displayTime)}</time></div><p class="native-changelog-intro">本期功能更新与修复记录。</p>${log.sections.map(section=>`<section class="native-changelog-section"><h3>${changelogHtml(section.title)}</h3><ul>${section.items.map(item=>`<li>${changelogHtml(item)}</li>`).join('')}</ul></section>`).join('')}`);}
-let painting=false;
 function eggOn(){return egg325Active(state);}
 // 海猫模式：整备资金视为无限，界面上以彩色 ALL 代替金额。
 function catOn(){return !!(state.draft?.cat||state.game?.s?.cat);}
