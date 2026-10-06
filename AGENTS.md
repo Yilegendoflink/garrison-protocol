@@ -51,6 +51,15 @@
 - `native-fx.js`：**只画特效**。`s.events` 会裁剪过期，禁止当规则执行依据
 - `scripts/build-native.mjs`：把固定历史库编进客户端
 
+## Android WebView 客户端
+
+- Android 工程是仓库内独立 Gradle 根目录 `app/`；Pages 仍只发布 `dist/`，不把 Android 代码打进网页。
+- 内置来源为 `https://yilegendoflink.github.io/garrison-protocol/` 和 `https://stronghold-protocol-web.pages.dev/`。首页新标记为 `meta[name="garrison-app-id"]=garrison-protocol` 与 `meta[name="garrison-app-shell"]=1`；自定义源缺标记就拒绝加载。过渡期只有这两个固定内置域可退回旧首页签名（标题、`boot-screen`、`app`、`native.bundle.js`）。标记只识别兼容页面，不是密码学授权证明。
+- `app/scripts/build-android-assets.mjs` 在 `npm run build` 末尾生成 `dist/android-assets.json`，供 Android 客户端按来源预缓存并校验静态资源。每个打开过的资源也会进入按来源隔离的 App 私有磁盘缓存；不要把 WebView 内建 HTTP 缓存当长期缓存。App 首次启动要求选择来源，之后自动打开上次来源；网页打开后后台比较清单并缓存变化资源，完整校验后切换为本地资源，不重载当前网页。也可在 App 设置中手动触发，页面源需提供同格式 manifest。
+- 原生与页面使用 `WebViewCompat.addWebMessageListener`，限制到合法 HTTPS 来源的主 frame；不要改回无来源限制的 `addJavascriptInterface`。允许的消息仅有对局横屏/沉浸式切换、存档导入/导出。网页检测到该桥后设置 `html.native-android-app`，供 Android 专属 CSS 使用；普通浏览器不设置此类。
+- Android Activity 全程隐藏系统状态栏，普通设置页保留导航栏，对局时进入沉浸模式同时隐藏导航栏；变更窗口焦点或从外部文件选择器返回时重新应用栏位策略。
+- Android WebView 的 `localStorage` 与 Chrome 浏览器存档隔离；换来源后同样是独立网页存档。存档迁移走既有 JSON 导入/导出和 Android Storage Access Framework。
+
 ## 对局 UI 交互约定（`native-play.js`）
 
 - **整备区装备拖放**：`pointerdown` 在 `[data-act="item"]` 上起拖（`drag.kind==='item'`、`from:'hand'`），落点由 `overUnitCard` 找干员卡；点击流程（先点装备再点干员）与拖放共用 `equipItemOnUnit(uid,itemUid)`，槽位满时它弹摧毁选择（`data-act="replace"` + `data-slot`）。

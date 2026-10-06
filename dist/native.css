@@ -1287,3 +1287,8 @@ html.native-landscape-ui .native-shop-card>[data-act="buy"]{min-height:0;height:
 .native-online-settings .native-online-field{margin-top:0}
 .native-online-card .native-online-settings>button{width:100%}
 @media(max-width:600px){.native-online-card{padding:15px}.native-online-card .native-card-heading h2{font-size:17px}.native-online-card .native-online-join{grid-template-columns:1fr}.native-online-card .native-online-join>button{width:100%}.native-online-room-code strong{font-size:20px}.native-online-card .native-online-actions button{flex-basis:100%}}
+/* Android WebView shell: avoid browser-like bounce/highlight and use the full app viewport. */
+html.native-android-app,html.native-android-app body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+html.native-android-app body,html.native-android-app #app{min-height:100dvh}
+html.native-android-app .native-lobby,html.native-android-app .native-game{max-width:none}
+html.native-android-app button,html.native-android-app select,html.native-android-app a{-webkit-tap-highlight-color:transparent}

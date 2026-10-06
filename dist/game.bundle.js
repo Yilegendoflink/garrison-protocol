@@ -1530,16 +1530,19 @@ const handlers={
  SERVER_MOST_BOND:(c,u)=>{const rows=Object.entries(c.bonds()),max=Math.max(...rows.map(([,b])=>b.count));const bonds=rows.filter(([,b])=>b.count===max&&max>0).map(([id])=>id).filter(id=>c.bondHasCandidates?.(id)??true);if(bonds.length)draw(c,{kind:'operator',bond:c.pick(bonds)},1);},
  SERVER_TRIGGER_ANOTHER:(c,u,p)=>{let target;if(p.scope==='front')target=at(c,front(u));else if(p.scope==='farright')target=board(c).filter(v=>c.hasGarrison(v,p.event)).sort((a,b)=>a.position.y-b.position.y||b.position.x-a.position.x)[0];else throw Error('Unsupported garrison scope '+p.scope);if(target)c.triggerGarrisons(p.event,target);},
  SERVER_TRIGGER_FRONT_COUNT:(c,u,p)=>{for(let i=1;i<=p.count;i++){const target=at(c,front(u,i));if(target)c.triggerGarrisons(p.event,target);}},
- SERVER_FRONT_SAME_EFFECT_PREP_START:(c,u)=>{const target=at(c,front(u));if(target)c.triggerGarrisons('SERVER_PREP_START',target,{effectOwner:u});},
- SERVER_FRONT_SAME_EFFECT_PREP_FIN:(c,u)=>{const target=at(c,front(u));if(target)c.triggerGarrisons('SERVER_PREP_FIN',target,{effectOwner:u});},
+ SERVER_FRONT_SAME_EFFECT_PREP_START:(c,u)=>{const target=at(c,front(u));if(target)c.triggerGarrisons('SERVER_PREP_START',target,{effectOwner:u,ignoreCondition:true});},
+ SERVER_FRONT_SAME_EFFECT_PREP_FIN:(c,u)=>{const target=at(c,front(u));if(target)c.triggerGarrisons('SERVER_PREP_FIN',target,{effectOwner:u,ignoreCondition:true});},
  SERVER_SELL_CHESS_GAIN_SPECIAL_GOODS:(c,u,p)=>c.rewardFromPool(p['pool'+c.s.level]||p.max_pool,3,1)
 };
 const SERVER_GARRISON_TYPES=Object.keys(handlers);
-function runGarrison(c,unit,rule,event){
+function runGarrison(c,unit,rule,event,{conditionUnit=unit,ignoreCondition=false}={}){
  const p=Object.fromEntries((rule.blackboard||[]).map(e=>[e.key,e.valueStr??e.value]));
- if(p.conditionkey==='character_target_inboard'&&!unit.position)return;
- if(p.conditionkey==='character_same_row'&&(!unit.position||board(c).filter(v=>v.position.y===unit.position.y).length<p.check_count))return;
- if(p.conditionkey&&!['character_target_inboard','character_same_row'].includes(p.conditionkey))throw Error('Unsupported garrison condition '+p.conditionkey);
+ // 白面鸮复制的是卫戍效果本身，不复制原效果的触发条件。
+ if(!ignoreCondition){
+  if(p.conditionkey==='character_target_inboard'&&!conditionUnit?.position)return;
+  if(p.conditionkey==='character_same_row'&&(!conditionUnit?.position||board(c).filter(v=>v.position.y===conditionUnit.position.y).length<p.check_count))return;
+  if(p.conditionkey&&!['character_target_inboard','character_same_row'].includes(p.conditionkey))throw Error('Unsupported garrison condition '+p.conditionkey);
+ }
  const fn=handlers[rule.effectType];if(!fn)throw Error('Unsupported garrison effect '+rule.effectType);return fn(c,unit,p,event);
 }
 
@@ -1688,14 +1691,14 @@ class NativeEconomy extends PreparationState {
   }}
  }
  hasGarrison(u,event){return this.data.season.charChessDataDict[u.chessId].garrisonIds.some(id=>this.data.season.garrisonDataDict[id].eventType===event);}
- triggerGarrisons(event,unit,{effectOwner=unit}={}){
+ triggerGarrisons(event,unit,{effectOwner=unit,ignoreCondition=false}={}){
   const key=unit.uid+':'+event;if(this.triggerChain.includes(key)){if(this.manualPreview)return;throw Error('Cyclic garrison trigger '+key);}this.triggerChain.push(key);
   try{
    // 「获得时」类特质每次触发几次读原表 bond_layer_char_garrison_bonus 行（event/count）；
    // 「达到100层再+1次」原表没有阈值字段（该行 layer=0），只写在盟约文案里 → BOND_TEXT_CONSTANTS.investShip。
    const investBB=bondEffectBlackboard(this.data,'investShip','bond_layer_char_garrison_bonus'),investActive=!!this.bonds().investShip?.active,investCount=bondValue(investBB,'count',2);
    const repeat=investActive&&event===String(investBB.event||'SERVER_GAIN')?((this.s.bondLayers.investShip||0)>=BOND_TEXT_CONSTANTS.investShip.powerLayer?investCount+BOND_TEXT_CONSTANTS.investShip.powerCountAdd:investCount):1;
-   for(let i=0;i<repeat;i++)for(const id of this.data.season.charChessDataDict[unit.chessId].garrisonIds){const rule=this.data.season.garrisonDataDict[id];if(rule.eventType===event){runGarrison(this,effectOwner,rule,event);this.s.events.push({type:'garrison',id,uid:effectOwner.uid,event});}}
+   for(let i=0;i<repeat;i++)for(const id of this.data.season.charChessDataDict[unit.chessId].garrisonIds){const rule=this.data.season.garrisonDataDict[id];if(rule.eventType===event){runGarrison(this,effectOwner,rule,event,{conditionUnit:unit,ignoreCondition});this.s.events.push({type:'garrison',id,uid:effectOwner.uid,event});}}
   }finally{this.triggerChain.pop();}
  }
  onOperatorGained(unit){
@@ -14186,7 +14189,7 @@ class NativeSession extends NativeEconomy {
   if(this.s.phase!=='prep')return false;const item=this.s.items.find(i=>i.uid===itemUid),u=this.s.units.find(u=>u.uid===unitUid);if(!item||!u)return false;const originalChessId=u.chessId,def=this.data.season.trapChessDataDict[item.chessId],effects=this.data.season.effectBuffInfoDataDict[def.effectId]||[];let consumed=false;
   if(def.itemType==='MAGIC'){const effect=effects.find(e=>e.key==='trap_create_self_choice'||e.key==='trap_copy_front_char');if(effect?.key==='trap_create_self_choice'){this.s.rewardPending={kind:'bounty',choice:1,offers:bountyOffers(this.data,this.s.randomState^itemUid)};consumed=true;}if(effect?.key==='trap_copy_front_char'){const copy=this.gain(u.chessId);copy.equipment=(u.equipment||[]).map(i=>({uid:++this.s.seq,chessId:i.chessId}));copy.bondIds=[...this.ownBonds(u)];consumed=true;}if(consumed){this.s.items=this.s.items.filter(i=>i.uid!==itemUid);return true;}}
   for(const e of effects){const p=blackboard(e.blackboard);if(e.key==='equip_destory_gain_random_coin'){this.addFunds(p.min+Math.floor(this.random()*(p.max-p.min+1)));consumed=true;}if(e.key==='use_equip_gain_coin_when_next_round_start'){this.s.nextRoundBonus+=p.count;consumed=true;}if(e.key==='gain_coin_when_round_start'){this.s.passiveIncome+=p.count;consumed=true;}if(e.key==='use_equip_reward_char_chess_bond_layer'){for(const b of this.ownBonds(u))this.addLayers(b,p.layer,false);consumed=true;}if(e.key==='equip_destory_deployment_cnt_change'){this.s.capacity=p.count;consumed=true;}if(e.key==='equip_round_start_upgrade_char')u.projectionUpgrade={itemUid:item.uid};if(e.key==='use_equip_upgrade_char'){const next=this.data.season.charChessDataDict[u.chessId].upgradeChessId;if(next)u.chessId=next;consumed=true;}if(e.key==='use_equip_reward_char_chess'){const initial=this.data.season.chessNormalIdLookupDict[u.chessId]||u.chessId,owned=this.s.units.filter(x=>(this.data.season.chessNormalIdLookupDict[x.chessId]||x.chessId)===initial).length,bonds=this.gainableBonds(u,this.s.level);if(owned>=2)this.gain(initial);else if(bonds.length)this.gain(this.drawFromPool({kind:'operator',bond:this.pick(bonds),maxTier:this.s.level}));consumed=true;}if(e.key==='use_equip_reward_char_chess_with_same_bond'){const bonds=this.gainableBonds(u,this.s.level);if(!bonds.length)throw Error('没有可招募的同盟约干员');for(let n=0;n<p.count;n++){const chessId=this.drawFromPool({kind:'operator',bond:this.pick(bonds),maxTier:this.s.level});if(!this.gain(chessId))throw Error('同盟约干员无法获得');}consumed=true;}if(e.key==='use_equip_reward_random_char_chess_in_shop'){const indices=this.s.offers.map((x,i)=>x?i:null).filter(x=>x!==null);for(let n=0;n<p.count&&indices.length;n++){const index=indices.splice(Math.floor(this.random()*indices.length),1)[0];this.gain(this.s.offers[index]);this.s.offers[index]=null;}consumed=true;}}
-  for(const e of effects){const p=blackboard(e.blackboard);if(e.key==='use_equip_reward_special_goods_char_chess')consumed=this.rewardFromBond(u,p.refresh_cnt||3)||consumed;if(e.key==='use_equip_recruit_new_char_and_give_char_to_player_most_bond'){this.rewardFromTier(u.rank||1,p.refresh_cnt||2);if(this.s.bandId==='band_fang')this.queueFangTransfer(u);this.s.units=this.s.units.filter(x=>x!==u);consumed=true;}if(e.key==='char_chess_transformation_equip')u.transformAfterBattle=true;if(e.key==='use_equip_upgrade_char'){const normal=this.data.season.chessNormalIdLookupDict[u.chessId]||u.chessId,golden=this.data.season.charShopChessDatas[normal]?.goldenChessId;if(golden)u.chessId=golden;consumed=true;}}
+  for(const e of effects){const p=blackboard(e.blackboard);if(e.key==='use_equip_reward_special_goods_char_chess')consumed=this.rewardFromBond(u,p.refresh_cnt||3)||consumed;if(e.key==='use_equip_recruit_new_char_and_give_char_to_player_most_bond'){this.rewardFromTier(u.rank||1,p.refresh_cnt||2);if(this.s.bandId==='band_fang'){this.queueFangTransfer(u,{includeEquipment:false});this.s.items.push(...(u.equipment||[]));u.equipment=[];this.refreshEquipmentBonds(u);}this.s.units=this.s.units.filter(x=>x!==u);consumed=true;}if(e.key==='char_chess_transformation_equip')u.transformAfterBattle=true;if(e.key==='use_equip_upgrade_char'){const normal=this.data.season.chessNormalIdLookupDict[u.chessId]||u.chessId,golden=this.data.season.charShopChessDatas[normal]?.goldenChessId;if(golden)u.chessId=golden;consumed=true;}}
   if(!consumed){if(u.equipment.length>=2){if(replaceIndex===null)return false;const old=u.equipment.splice(replaceIndex,1)[0];if(old)this.s.items.push(old);}u.equipment.push(item);this.refreshEquipmentBonds(u);}
   this.s.items=this.s.items.filter(i=>i.uid!==itemUid);this.settleBondRewards();if(u.chessId!==originalChessId){this.refreshEquipmentBonds(u);this.onOperatorGained(u);}return true;
  }
@@ -14214,7 +14217,7 @@ class NativeSession extends NativeEconomy {
   if(other)other.position=old;u.position={x,y};u.dir=dir;if(old&&(old.x!==x||old.y!==y))for(const card of this.s.summonCards||[])if(card.ownerUid===u.uid)card.position=null;this.settleBondRewards();this.syncSummonCards();return true;
  }
  fangRecipient(bonds){const peers=(this.s.teamPeers||[]).filter(p=>p?.playerId&&p.playerId!==this.s.playerId);if(!peers.length)return null;const scored=peers.map(peer=>({peer,score:Math.max(0,...bonds.map(id=>Number(peer.bondCounts?.[id]??0)))})),max=Math.max(...scored.map(x=>x.score));return this.pick(scored.filter(x=>x.score===max).map(x=>x.peer));}
- queueFangTransfer(u){const bonds=this.ownBonds(u).filter(Boolean),recipient=this.fangRecipient(bonds),record={transferId:`fang:${this.s.playerId}:${this.s.round}:${u.uid}:${this.s.seq}`,senderId:this.s.playerId,recipientId:recipient?.playerId||null,dueRound:this.s.round+1,chessId:u.chessId,charId:u.charId,rank:u.rank,skillIndex:u.skillIndex??0,bondIds:[...bonds],equipment:(u.equipment||[]).map(i=>({chessId:i.chessId}))};this.s.transferOutbox.push(record);if(this.teamTransport?.send){try{const accepted=this.teamTransport.send(structuredClone(record));if(accepted===true)record.sent=true;}catch{record.transportError='send-failed';}}return record;}
+ queueFangTransfer(u,{includeEquipment=true}={}){const bonds=this.ownBonds(u).filter(Boolean),recipient=this.fangRecipient(bonds),record={transferId:`fang:${this.s.playerId}:${this.s.round}:${u.uid}:${this.s.seq}`,senderId:this.s.playerId,recipientId:recipient?.playerId||null,dueRound:this.s.round+1,chessId:u.chessId,charId:u.charId,rank:u.rank,skillIndex:u.skillIndex??0,bondIds:[...bonds],equipment:includeEquipment?(u.equipment||[]).map(i=>({chessId:i.chessId})):[]};this.s.transferOutbox.push(record);if(this.teamTransport?.send){try{const accepted=this.teamTransport.send(structuredClone(record));if(accepted===true)record.sent=true;}catch{record.transportError='send-failed';}}return record;}
  attachTeamTransport(teamTransport){this.teamTransport=teamTransport;return this;}
  takeFangTransfers(){const pending=this.s.transferOutbox.filter(r=>!r.sent);for(const r of pending)r.sent=true;return structuredClone(pending);}
  receiveFangTransfer(record){if(!record?.transferId||record.recipientId!==this.s.playerId||!this.data.profiles[record.chessId]||this.s.strategyClaims[`fang:received:${record.transferId}`]||this.s.transferInbox.some(r=>r.transferId===record.transferId))return false;this.s.transferInbox.push(structuredClone(record));return true;}
@@ -16721,11 +16724,13 @@ const mobilePlay=()=>matchMedia('(hover:none) and (pointer:coarse)').matches;
 const iosMobile=()=>/iPhone|iPad|iPod/i.test(navigator.platform)||/iPhone|iPad|iPod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
 function syncPlayChrome(){
  const fullscreenButton=document.querySelector('[data-act="fullscreen"]');
- if(fullscreenButton)fullscreenButton.hidden=!mobilePlay()||iosMobile()||!!(document.fullscreenElement||document.webkitFullscreenElement)||!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
+ const androidApp=typeof window.GarrisonAndroid?.postMessage==='function';
+ if(fullscreenButton)fullscreenButton.hidden=androidApp||!mobilePlay()||iosMobile()||!!(document.fullscreenElement||document.webkitFullscreenElement)||!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
  const locked=document.documentElement.classList.contains('native-play-lock');
  const compact=matchMedia('(orientation:landscape) and (max-height:600px) and (max-width:1100px)').matches;
  const need=locked&&matchMedia('(orientation:portrait)').matches;
- document.documentElement.classList.toggle('native-landscape-ui',locked||compact);
+ document.documentElement.classList.toggle('native-android-app',androidApp);
+ document.documentElement.classList.toggle('native-landscape-ui',androidApp||locked||compact);
  document.documentElement.classList.toggle('native-need-rotate',need);
  const app=document.getElementById('app');
  if(!app)return;
@@ -16735,6 +16740,7 @@ function syncPlayChrome(){
  syncHandScrollControls();
 }
 async function enterPlayChrome(){
+ if(window.GarrisonAndroid?.postMessage){document.documentElement.classList.add('native-play-lock');syncPlayChrome();window.GarrisonAndroid.postMessage(JSON.stringify({type:'play-mode',active:true}));return;}
  if(!mobilePlay()||iosMobile())return;
  document.documentElement.classList.add('native-play-lock');
  syncPlayChrome();
@@ -16744,6 +16750,7 @@ async function enterPlayChrome(){
  syncPlayChrome();
 }
 async function leavePlayChrome(){
+ if(window.GarrisonAndroid?.postMessage){document.documentElement.classList.remove('native-play-lock','native-need-rotate');window.GarrisonAndroid.postMessage(JSON.stringify({type:'play-mode',active:false}));syncPlayChrome();return;}
  document.documentElement.classList.remove('native-play-lock','native-need-rotate');
  try{screen.orientation?.unlock?.();}catch{}
  try{if(document.fullscreenElement||document.webkitFullscreenElement)await (document.exitFullscreen||document.webkitExitFullscreen).call(document);}catch{}
@@ -17281,15 +17288,15 @@ function action(button,anchor=null){const a=button.dataset.act,g=state.game,uid=
  // 导出存档（用户 2026-09-27 需求）：大厅与对局顶栏共用一个入口。
  // 有对局时导出的是**原来的对局存档**（多带一份战绩档案，NativeSession.restore 会忽略额外字段），
  // 没有对局时只导出战绩档案；两种都能被下面的导入功能读回来。
- if(a==='export'){const archive=archiveWithPrepSkills(archiveNow()),record=exportRecord(g||null,archive,{expiresAt:g?state.expiresAt:null}),stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'),url=URL.createObjectURL(new Blob([JSON.stringify(record,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='garrison-save-'+stamp+'.json';link.click();URL.revokeObjectURL(url);notice(g?`已导出对局存档＋战绩档案（${archive.runs.length} 场）。`:`已导出战绩档案（${archive.runs.length} 场，当前没有进行中的对局）。`);return;}
- if(a==='import'){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{try{if(input.files[0].size>10e6)throw Error('存档文件过大');const record=JSON.parse(await input.files[0].text()),incoming=archiveFromRecord(record);let game=null;if(record&&record.s){game=NativeSession.restore(data,record);if(!game)throw Error('存档版本、数据或有效期不匹配');}if(!game&&!incoming)throw Error('这个 JSON 既不是对局存档，也没有战绩档案');
+   if(a==='export'){const archive=archiveWithPrepSkills(archiveNow()),record=exportRecord(g||null,archive,{expiresAt:g?state.expiresAt:null}),stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'),fileName='garrison-save-'+stamp+'.json',payload=JSON.stringify(record,null,2);if(window.GarrisonAndroid?.postMessage){window.GarrisonAndroid.postMessage(JSON.stringify({type:'export',fileName,json:payload}));return;}const url=URL.createObjectURL(new Blob([payload],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download=fileName;link.click();URL.revokeObjectURL(url);notice(g?`已导出对局存档＋战绩档案（${archive.runs.length} 场）。`:`已导出战绩档案（${archive.runs.length} 场，当前没有进行中的对局）。`);return;}
+  if(a==='import'){const importText=async text=>{try{if(new Blob([text]).size>10e6)throw Error('存档文件过大');const record=JSON.parse(text),incoming=archiveFromRecord(record);let game=null;if(record&&record.s){game=NativeSession.restore(data,record);if(!game)throw Error('存档版本、数据或有效期不匹配');}if(!game&&!incoming)throw Error('这个 JSON 既不是对局存档，也没有战绩档案');
   // 档案与对局存档分开合并：同 id 的场次以导入的为准，其余按时间合并，最多留 10 场。
   // 技能覆盖实际使用独立的 localStorage 键；导入档案时也写回那里，才能影响战前准备与新局。
   const mergedRaw=incoming?mergeArchives(archiveWithPrepSkills(archiveNow()),record.archive):null;
   if(mergedRaw)mergedRaw.prepSkills=savePrepSkills(mergedRaw.prepSkills,data);
   const merged=mergedRaw?saveArchive(archiveStorage(),mergedRaw):null;state.archive=merged;
   if(game){state.game=game;state.view='game';state.paused=true;save();saveCheckpoint();enterPlayChrome();notice(merged?`已恢复对局，并导入战绩档案（${merged.runs.length} 场）。`:'已恢复对局。');}else{state.view='lobby';leavePlayChrome();notice(`已导入战绩档案 ${merged.runs.length} 场（文件里没有对局存档）。`);}
-  render();}catch(e){notice(e.message);}};input.click();return;}
+    render();}catch(e){notice(e.message);}};window.__garrisonImportCallback=importText;if(window.GarrisonAndroid?.postMessage){window.GarrisonAndroid.postMessage(JSON.stringify({type:'import'}));return;}const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async()=>{if(input.files[0])await importText(await input.files[0].text());};input.click();return;}
  if(!g)return;
  if(a==='pause'){state.paused=!state.paused;render();return;}if(a==='speed'){state.speed=Number(button.dataset.speed);render();return;}
  if(a==='mute'){state.muted=!state.muted;savePreference('garrison-mute',state.muted?'1':'0');if(!state.muted)unlockAudio();render();return;}
@@ -17410,10 +17417,16 @@ function commitPreview(){
 function insideRect(r,x,y){return !!r&&x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}
 function overCanvas(x,y){return canvas?.isConnected&&insideRect(canvas.getBoundingClientRect(),x,y);}
 function overBench(x,y){return ['.native-bench','.native-bench-label'].some(selector=>insideRect(root.querySelector(selector)?.getBoundingClientRect(),x,y));}
-function handSlotAt(x,y){const slot=document.elementFromPoint(x,y)?.closest?.('.native-hand-slot[data-hand-slot]');return slot&&root.contains(slot)?Number(slot.dataset.handSlot):null;}
+function handSlotAt(x,y){const slots=root.querySelectorAll('.native-hand-slot[data-hand-slot]');for(const slot of slots){const r=slot.getBoundingClientRect();if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom)return Number(slot.dataset.handSlot);}return null;}
 function moveHandCardToSlot(kind,uid,target){const game=state.game;if(!game||game.s.phase!=='prep'||!Number.isSafeInteger(target)||target<0)return false;const cards=game.syncHandSlots(),card=cards.find(item=>item.uid===uid&&handCardKind(game,item)===kind);if(!card||target>=HAND_LIMIT&&card.handSlot<HAND_LIMIT)return false;const occupant=cards.find(item=>item.handSlot===target),source=card.handSlot;if(card===occupant)return true;card.handSlot=target;if(occupant)occupant.handSlot=source;game.syncHandSlots();return true;}
 function overShop(x,y){const shop=document.getElementById('native-supply-shop');if(!shop||!shop.offsetParent)return false;return insideRect(shop.getBoundingClientRect(),x,y);}
-function overUnitCard(x,y){const el=document.elementFromPoint(x,y)?.closest?.('[data-act="select"]');if(!el)return null;const uid=Number(el.dataset.uid);return state.game?.s.units.find(u=>u.uid===uid)||null;}
+function overUnitCard(x,y){
+ // Pointer capture can make elementFromPoint report the dragged item on some browsers.
+ // Classify hand drops by the slot geometry first, so item→operator drops equip instead
+ // of accidentally entering the cross-type hand-slot reorder path.
+ const slot=handSlotAt(x,y),game=state.game;if(slot!==null&&game){const card=game.syncHandSlots().find(item=>item.handSlot===slot);if(card&&game.s.units.includes(card))return card;}
+ const el=document.elementFromPoint(x,y)?.closest?.('[data-act="select"]');if(!el)return null;const uid=Number(el.dataset.uid);return game?.s.units.find(u=>u.uid===uid)||null;
+}
 // 装备落点也包含棋盘上已部署的干员（召唤物与召唤卡不算）
 function equipDropTarget(x,y){const u=overUnitCard(x,y);if(u)return u;if(!overCanvas(x,y))return null;const hit=unitAtPointer(x,y);if(!hit||hit.kind||hit.summon||hit.summonCard)return null;return state.game?.s.units.find(v=>v.uid===hit.uid)||null;}
 // 装备到干员（点击流程与拖放流程共用）。槽位已满时弹出摧毁选择。
