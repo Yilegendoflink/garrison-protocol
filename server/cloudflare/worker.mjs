@@ -6,6 +6,8 @@ export {MatchmakerDO} from './matchmaker-object.mjs';
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://yilegendoflink.github.io',
+  'https://strongholdonlinepreview.pages.dev',
+  'https://online.strongholdonlinepreview.pages.dev',
   'http://127.0.0.1:5502',
   'http://localhost:5502'
 ];

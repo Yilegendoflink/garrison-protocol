@@ -47,7 +47,7 @@ npm run online:cf:deploy
 npm run online:cf:tail
 ```
 
-`wrangler.jsonc` 中的 `ONLINE_ALLOWED_ORIGINS` 默认包含 GitHub Pages 正式来源和本地开发来源。自定义网页域名时，把精确的 `https://` 来源追加到该逗号分隔变量，再重新部署。不要将 API token 写入配置文件；Wrangler 登录凭证保存在本机。
+`wrangler.jsonc` 中的 `ONLINE_ALLOWED_ORIGINS` 默认包含 GitHub Pages 正式来源、Cloudflare Pages 预览项目 `strongholdonlinepreview.pages.dev`（含 `online` 分支别名）和本地开发来源。自定义网页域名时，把精确的 `https://` 来源追加到该逗号分隔变量，再重新部署。不要将 API token 写入配置文件；Wrangler 登录凭证保存在本机。
 
 Cloudflare 版使用 Durable Objects SQLite，因此状态会跨 Worker 休眠保留；房间与匹配队列按 MVP 生命周期规则管理。`server/cloudflare/` 是 Cloudflare 专用入口，原有 `npm run online:server` Node 服务仍可用于本机或自托管部署。
 
