@@ -1,6 +1,7 @@
 import {DurableObject} from 'cloudflare:workers';
 import {CoopGameCoordinator, CoopRoundCoordinator} from '../coop-coordinator.mjs';
 import {ServiceError} from '../service-error.mjs';
+import {onlineDiagnostic, roomTag, shortId, signalKindSummary} from '../online-diagnostic.mjs';
 import {
   MAX_ROOM_PLAYERS,
   MAX_SIGNAL_BYTES,
@@ -447,6 +448,19 @@ export class GameRoomDO extends DurableObject {
           const target = room.players.find(member => member.id === targetPlayerId);
           if (!target) throw new ServiceError('PLAYER_NOT_IN_ROOM', '信令目标不在当前房间。');
           if (!target.online || !target.connectionId) throw new ServiceError('PEER_OFFLINE', '信令目标当前不在线。');
+          const signalType = message.type;
+          const signalOrdinal = player.signalWindow.count;
+          if (signalType !== 'signal.ice' || signalOrdinal <= 2 || signalOrdinal % 10 === 0) {
+            onlineDiagnostic('signal.relay.queued', {
+              room: roomTag(room.code),
+              from: shortId(playerId),
+              to: shortId(targetPlayerId),
+              signalType,
+              ordinal: signalOrdinal,
+              bytes: new TextEncoder().encode(JSON.stringify(data)).byteLength,
+              ...signalKindSummary(signalType, data)
+            });
+          }
           this.#save(state);
           deliveries.push(delivery(target.connectionId, 'signal.forward', {
             fromPlayerId: playerId,

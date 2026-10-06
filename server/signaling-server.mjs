@@ -3,6 +3,7 @@ import http from 'node:http';
 import {WebSocket, WebSocketServer} from 'ws';
 import {ONLINE_MODE_IDS, RoomManager, ServiceError} from './room-manager.mjs';
 import {CoopGameCoordinator} from './coop-coordinator.mjs';
+import {onlineDiagnostic, roomTag, shortId, signalKindSummary} from './online-diagnostic.mjs';
 
 const MAX_SIGNAL_PAYLOAD_BYTES = 48 * 1024;
 const SIGNAL_WINDOW_MS = 10_000;
@@ -217,12 +218,32 @@ export function createSignalingService({
     if (!targetClient || targetClient.ws.readyState !== WebSocket.OPEN) {
       throw new ServiceError('PEER_OFFLINE', '信令目标当前不在线。');
     }
-    send(targetClient, 'signal.forward', {
+    const bytes = Buffer.byteLength(JSON.stringify(data), 'utf8');
+    const signalOrdinal = client.signalWindow.count;
+    if (message.type !== 'signal.ice' || signalOrdinal <= 2 || signalOrdinal % 10 === 0) {
+      onlineDiagnostic('signal.relay', {
+        room: roomTag(room.code),
+        from: shortId(client.playerId),
+        to: shortId(targetPlayerId),
+        signalType: message.type,
+        ordinal: signalOrdinal,
+        bytes,
+        ...signalKindSummary(message.type, data)
+      });
+    }
+    const delivered = send(targetClient, 'signal.forward', {
       fromPlayerId: client.playerId,
       fromName: room.players.find(player => player.id === client.playerId)?.name || '玩家',
       signalType: message.type,
       data
     });
+    onlineDiagnostic('signal.delivery', {
+      room: roomTag(room.code),
+      from: shortId(client.playerId),
+      to: shortId(targetPlayerId),
+      signalType: message.type,
+      delivered
+    }, delivered ? 'info' : 'warn');
     send(client, 'signal.sent', {targetPlayerId}, requestId);
   }
 
@@ -381,6 +402,12 @@ export function createSignalingService({
           throw new ServiceError('UNKNOWN_MESSAGE', '无法识别的服务消息类型。');
       }
     } catch (error) {
+      onlineDiagnostic('message.rejected', {
+        room: roomTag(client.roomCode),
+        player: shortId(client.playerId),
+        type: message.type,
+        code: error instanceof ServiceError ? error.code : 'INTERNAL_ERROR'
+      }, 'warn');
       sendError(client, error, requestId);
     }
   }
@@ -397,6 +424,7 @@ export function createSignalingService({
       alive: true
     };
     clients.set(client.id, client);
+    onlineDiagnostic('websocket.accepted', {connection: shortId(client.id)});
     ws.on('pong', () => { client.alive = true; });
     ws.on('message', (data, isBinary) => {
       if (isBinary) {
@@ -416,7 +444,14 @@ export function createSignalingService({
       }
       handleMessage(client, message);
     });
-    ws.on('close', () => {
+    ws.on('close', (code, reason) => {
+      onlineDiagnostic('websocket.closed', {
+        room: roomTag(client.roomCode),
+        player: shortId(client.playerId),
+        connection: shortId(client.id),
+        code,
+        reasonLength: reason?.length ?? null
+      }, code === 1000 || code === 1001 ? 'info' : 'warn');
       clients.delete(client.id);
       roomManager.cancelMatchmaking(client.id);
       if (client.playerId && playerConnections.get(client.playerId) === client) {
@@ -424,7 +459,14 @@ export function createSignalingService({
         roomManager.setPresence(client.playerId, false);
       }
     });
-    ws.on('error', () => {});
+    ws.on('error', error => {
+      onlineDiagnostic('websocket.error', {
+        room: roomTag(client.roomCode),
+        player: shortId(client.playerId),
+        connection: shortId(client.id),
+        errorName: error instanceof Error ? error.name : 'Error'
+      }, 'warn');
+    });
     send(client, 'server.hello', {
       protocolVersion: 1,
       playerCapacity: 4,

@@ -20413,6 +20413,38 @@ return {SEES_BAND_ID,SEES_BOND_ID,TARTARUS_BOND_ID,seesNumbers,seesUnlocked,band
 "native-online.js": function(load) {
 const MAX_ROOM_PLAYERS = 4;
 const PLAYER_NAME_KEY = 'garrison-online-player-name';
+const DIAGNOSTIC_CLIENT_ID = Math.random().toString(36).slice(2, 8);
+
+function diagnosticShortId(value) {
+  return typeof value === 'string' && value ? value.slice(-6) : null;
+}
+
+function diagnosticRoomTag(value) {
+  return typeof value === 'string' && value ? `…${value.slice(-2)}` : null;
+}
+
+function diagnosticErrorName(error) {
+  return error instanceof Error ? error.name : typeof error;
+}
+
+function diagnosticCandidate(candidate) {
+  if (!candidate) return {candidateEnd: true};
+  const raw = typeof candidate.candidate === 'string' ? candidate.candidate : '';
+  return {
+    candidateType: candidate.type || raw.match(/\btyp\s+(host|srflx|prflx|relay)\b/i)?.[1]?.toLowerCase() || null,
+    protocol: candidate.protocol || raw.match(/^candidate:\S+\s+\d+\s+(udp|tcp)\s/i)?.[1]?.toLowerCase() || null
+  };
+}
+
+function onlineDiagnostic(event, fields = {}, level = 'info') {
+  const write = console[level] || console.info;
+  write.call(console, '[online-diag]', {
+    timestamp: new Date().toISOString(),
+    client: DIAGNOSTIC_CLIENT_ID,
+    event,
+    ...fields
+  });
+}
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -20489,9 +20521,12 @@ class OnlineRoomClient {
     this.state.connection = 'connecting';
     this.state.error = null;
     this.#changed();
+    const endpoint = new URL(this.url);
+    onlineDiagnostic('ws.connecting', {host: endpoint.host, path: endpoint.pathname, hasSession: !!this.sessionToken});
     let socket;
     try { socket = new WebSocket(this.url); }
     catch (error) {
+      onlineDiagnostic('ws.create.failed', {errorName: diagnosticErrorName(error)}, 'error');
       this.state.connection = 'error';
       this.state.error = error.message || '无法创建信令连接。';
       this.#changed();
@@ -20499,6 +20534,7 @@ class OnlineRoomClient {
     }
     this.socket = socket;
     socket.addEventListener('open', () => {
+      onlineDiagnostic('ws.open', {host: endpoint.host, path: endpoint.pathname});
       this.state.connection = 'connected';
       this.state.error = null;
       const command = this.pendingCommand;
@@ -20509,11 +20545,19 @@ class OnlineRoomClient {
     });
     socket.addEventListener('message', event => this.#handleMessage(event.data));
     socket.addEventListener('error', () => {
+      onlineDiagnostic('ws.error', {host: endpoint.host, path: endpoint.pathname}, 'warn');
       this.state.error = '无法连接信令服务，请检查服务地址、端口与 Origin 配置。';
       this.#changed();
     });
     socket.addEventListener('close', event => {
       if (this.socket !== socket) return;
+      onlineDiagnostic('ws.close', {
+        room: diagnosticRoomTag(this.state.room?.code),
+        player: diagnosticShortId(this.state.player?.id),
+        code: event.code,
+        reasonLength: event.reason?.length || 0,
+        wasClean: event.wasClean
+      }, event.code === 1000 || event.code === 1001 ? 'info' : 'warn');
       this.socket = null;
       this.state.connection = 'disconnected';
       if (event.code !== 1000 && event.code !== 1001) this.state.error ||= `信令连接已断开（${event.code}）。`;
@@ -20559,12 +20603,25 @@ class OnlineRoomClient {
 
   #send(type, payload = {}) {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      if (type.startsWith('signal.')) onlineDiagnostic('signal.send.failed', {
+        room: diagnosticRoomTag(this.state.room?.code),
+        to: diagnosticShortId(payload.targetPlayerId),
+        signalType: type,
+        reason: 'websocket-not-open'
+      }, 'warn');
       this.state.error = '信令服务未连接。';
       if (this.sessionToken) this.connect();
       this.#changed();
       return false;
     }
     this.socket.send(JSON.stringify({type, payload}));
+    if (type.startsWith('signal.')) onlineDiagnostic('signal.send', {
+      room: diagnosticRoomTag(this.state.room?.code),
+      from: diagnosticShortId(this.state.player?.id),
+      to: diagnosticShortId(payload.targetPlayerId),
+      signalType: type,
+      ...(type === 'signal.ice' ? diagnosticCandidate(payload.data) : {})
+    });
     return true;
   }
 
@@ -20616,6 +20673,13 @@ class OnlineRoomClient {
         this.#reconcileRoom();
         break;
       case 'signal.forward':
+        onlineDiagnostic('signal.receive', {
+          room: diagnosticRoomTag(this.state.room?.code),
+          from: diagnosticShortId(message.fromPlayerId),
+          to: diagnosticShortId(this.state.player?.id),
+          signalType: message.signalType,
+          ...(message.signalType === 'signal.ice' ? diagnosticCandidate(message.data) : {})
+        });
         this.#handleSignal(message.fromPlayerId, message.fromName, message.signalType, message.data);
         break;
       case 'coop.progress':
@@ -20643,10 +20707,20 @@ class OnlineRoomClient {
         break;
       case 'request.accepted':
       case 'server.hello':
-      case 'signal.sent':
       case 'matchmaking.queued':
         break;
+      case 'signal.sent':
+        onlineDiagnostic('signal.ack', {
+          room: diagnosticRoomTag(this.state.room?.code),
+          from: diagnosticShortId(this.state.player?.id),
+          to: diagnosticShortId(message.targetPlayerId)
+        });
+        break;
       case 'error':
+        onlineDiagnostic('server.error', {
+          room: diagnosticRoomTag(this.state.room?.code),
+          code: message.code || 'UNKNOWN'
+        }, 'warn');
         this.state.error = message.message || message.code || '服务请求失败。';
         if (message.code === 'INVALID_SESSION') {
           this.sessionToken = null;
@@ -20701,6 +20775,8 @@ class OnlineRoomClient {
     if (this.iceServers) return this.iceServers;
     if (!this.iceServersPromise) {
       this.iceServersPromise = (async () => {
+        let endpointHost = null;
+        let responseStatus = null;
         try {
           const endpoint = new URL(this.url);
           if (endpoint.protocol !== 'wss:') throw new Error('当前信令服务未配置 Cloudflare TURN 凭据接口');
@@ -20708,10 +20784,13 @@ class OnlineRoomClient {
           endpoint.pathname = '/turn/ice-servers';
           endpoint.search = '';
           endpoint.hash = '';
+          endpointHost = endpoint.host;
+          onlineDiagnostic('turn.credentials.requested', {host: endpointHost});
           const response = await fetch(endpoint, {
             method: 'POST',
             headers: {'Authorization': `Bearer ${this.sessionToken}`}
           });
+          responseStatus = response.status;
           const payload = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
           if (!Array.isArray(payload.iceServers) || !payload.iceServers.some(server => {
@@ -20719,8 +20798,23 @@ class OnlineRoomClient {
             return urls.some(value => typeof value === 'string' && /^turns?:/i.test(value));
           })) throw new Error('服务端没有返回有效的 TURN 配置');
           this.iceServers = [...payload.iceServers, {urls: 'stun:stun.l.google.com:19302'}];
+          const serverKinds = payload.iceServers.flatMap(server => Array.isArray(server?.urls) ? server.urls : [server?.urls])
+            .filter(value => typeof value === 'string')
+            .map(value => ({scheme: value.split(':', 1)[0].toLowerCase(), kind: /^turns?:/i.test(value) ? 'turn' : 'stun'}));
+          onlineDiagnostic('turn.credentials.ready', {
+            host: endpointHost,
+            status: responseStatus,
+            serverCount: payload.iceServers.length,
+            servers: serverKinds
+          });
           this.state.notice = 'Cloudflare TURN 中继已启用';
         } catch (error) {
+          onlineDiagnostic('turn.credentials.fallback', {
+            host: endpointHost,
+            status: responseStatus,
+            errorName: diagnosticErrorName(error),
+            usingStunFallback: true
+          }, 'warn');
           this.iceServers = [
             {urls: 'stun:stun.cloudflare.com:3478'},
             {urls: 'stun:stun.l.google.com:19302'}
@@ -20741,32 +20835,86 @@ class OnlineRoomClient {
     for (const player of room.players || []) {
       if (player.id === localId || !player.online || this.peerConnections.has(player.id)) continue;
       const initiator = localId.localeCompare(player.id) < 0;
+      onlineDiagnostic('peer.create.requested', {
+        room: diagnosticRoomTag(room.code),
+        local: diagnosticShortId(localId),
+        remote: diagnosticShortId(player.id),
+        initiator
+      });
       this.#createPeer(player, initiator);
     }
   }
 
   #createPeer(player, initiator) {
     const pc = new RTCPeerConnection({iceServers: this.iceServers});
-    const entry = {pc, channel: null, status: 'connecting', pendingIce: []};
+    const entry = {pc, channel: null, status: 'connecting', pendingIce: [], candidateCounts: new Map(), remoteCandidateCount: 0};
     this.peerConnections.set(player.id, entry);
     this.state.peers[player.id] = {name: player.name, online: player.online, connection: 'connecting'};
+    let lastPeerState = null;
     const update = () => {
       const connection = entry.channel?.readyState === 'open' ? 'connected' : pc.connectionState;
       entry.status = connection === 'connected' ? 'connected' : connection || 'connecting';
       this.state.peers[player.id] = {name: player.name, online: player.online, connection: entry.status};
+      const peerState = {
+        connectionState: pc.connectionState,
+        iceConnectionState: pc.iceConnectionState,
+        iceGatheringState: pc.iceGatheringState,
+        signalingState: pc.signalingState,
+        dataChannelState: entry.channel?.readyState || 'not-created'
+      };
+      const serializedState = JSON.stringify(peerState);
+      if (serializedState !== lastPeerState) {
+        onlineDiagnostic('peer.state', {
+          room: diagnosticRoomTag(this.state.room?.code),
+          local: diagnosticShortId(this.state.player?.id),
+          remote: diagnosticShortId(player.id),
+          ...peerState
+        }, pc.connectionState === 'failed' || pc.iceConnectionState === 'failed' || pc.connectionState === 'disconnected' ? 'warn' : 'info');
+        lastPeerState = serializedState;
+      }
       this.#changed();
     };
     pc.onconnectionstatechange = update;
     pc.oniceconnectionstatechange = update;
     pc.onicecandidate = event => {
-      if (event.candidate) this.#send('signal.ice', {targetPlayerId: player.id, data: event.candidate.toJSON()});
+      if (!event.candidate) {
+        onlineDiagnostic('ice.gathering.complete', {
+          room: diagnosticRoomTag(this.state.room?.code),
+          remote: diagnosticShortId(player.id),
+          candidateCounts: Object.fromEntries(entry.candidateCounts)
+        });
+        return;
+      }
+      const summary = diagnosticCandidate(event.candidate);
+      const kind = `${summary.candidateType || 'unknown'}:${summary.protocol || 'unknown'}`;
+      const count = (entry.candidateCounts.get(kind) || 0) + 1;
+      entry.candidateCounts.set(kind, count);
+      if (count <= 2 || count % 10 === 0) onlineDiagnostic('ice.candidate.local', {
+        room: diagnosticRoomTag(this.state.room?.code),
+        remote: diagnosticShortId(player.id),
+        count,
+        ...summary
+      });
+      this.#send('signal.ice', {targetPlayerId: player.id, data: event.candidate.toJSON()});
     };
+    pc.onicegatheringstatechange = update;
     pc.ondatachannel = event => this.#bindChannel(player, entry, event.channel);
     if (initiator) {
       this.#bindChannel(player, entry, pc.createDataChannel('garrison-room-v1', {ordered: true}));
       pc.createOffer().then(offer => pc.setLocalDescription(offer)).then(() => {
+        onlineDiagnostic('peer.offer.created', {
+          room: diagnosticRoomTag(this.state.room?.code),
+          remote: diagnosticShortId(player.id),
+          signalingState: pc.signalingState
+        });
         this.#send('signal.offer', {targetPlayerId: player.id, data: pc.localDescription.toJSON()});
       }).catch(error => {
+        onlineDiagnostic('peer.offer.failed', {
+          room: diagnosticRoomTag(this.state.room?.code),
+          remote: diagnosticShortId(player.id),
+          errorName: diagnosticErrorName(error),
+          signalingState: pc.signalingState
+        }, 'error');
         this.state.error = `无法创建点对点连接：${error.message || error}`;
         entry.status = 'failed';
         update();
@@ -20778,17 +20926,33 @@ class OnlineRoomClient {
   #bindChannel(player, entry, channel) {
     entry.channel = channel;
     channel.onopen = () => {
+      onlineDiagnostic('channel.open', {
+        room: diagnosticRoomTag(this.state.room?.code),
+        local: diagnosticShortId(this.state.player?.id),
+        remote: diagnosticShortId(player.id),
+        label: channel.label
+      });
       entry.status = 'connected';
       this.state.peers[player.id] = {name: player.name, online: true, connection: 'connected'};
       this.sendPeerMessage({type: 'peer.hello', protocolVersion: 1, playerId: this.state.player?.id, playerName: this.state.player?.name});
       this.#changed();
     };
     channel.onclose = () => {
+      onlineDiagnostic('channel.close', {
+        room: diagnosticRoomTag(this.state.room?.code),
+        remote: diagnosticShortId(player.id),
+        label: channel.label
+      });
       entry.status = 'disconnected';
       if (this.state.peers[player.id]) this.state.peers[player.id].connection = 'disconnected';
       this.#changed();
     };
     channel.onerror = () => {
+      onlineDiagnostic('channel.error', {
+        room: diagnosticRoomTag(this.state.room?.code),
+        remote: diagnosticShortId(player.id),
+        label: channel.label
+      }, 'warn');
       entry.status = 'failed';
       this.#changed();
     };
@@ -20810,20 +20974,65 @@ class OnlineRoomClient {
     try {
       if (signalType === 'signal.offer') {
         await entry.pc.setRemoteDescription(data);
+        onlineDiagnostic('peer.offer.received', {
+          room: diagnosticRoomTag(this.state.room?.code),
+          remote: diagnosticShortId(playerId),
+          signalingState: entry.pc.signalingState
+        });
+        const pendingCount = entry.pendingIce.length;
         for (const candidate of entry.pendingIce.splice(0)) await entry.pc.addIceCandidate(candidate);
+        if (pendingCount) onlineDiagnostic('ice.queue.drained', {remote: diagnosticShortId(playerId), count: pendingCount});
         const answer = await entry.pc.createAnswer();
         await entry.pc.setLocalDescription(answer);
+        onlineDiagnostic('peer.answer.created', {
+          room: diagnosticRoomTag(this.state.room?.code),
+          remote: diagnosticShortId(playerId),
+          signalingState: entry.pc.signalingState
+        });
         this.#send('signal.answer', {targetPlayerId: playerId, data: entry.pc.localDescription.toJSON()});
       } else if (signalType === 'signal.answer') {
         await entry.pc.setRemoteDescription(data);
+        onlineDiagnostic('peer.answer.received', {
+          room: diagnosticRoomTag(this.state.room?.code),
+          remote: diagnosticShortId(playerId),
+          signalingState: entry.pc.signalingState
+        });
+        const pendingCount = entry.pendingIce.length;
         for (const candidate of entry.pendingIce.splice(0)) await entry.pc.addIceCandidate(candidate);
+        if (pendingCount) onlineDiagnostic('ice.queue.drained', {remote: diagnosticShortId(playerId), count: pendingCount});
       } else if (signalType === 'signal.ice') {
         if (!data) return;
         const candidate = new RTCIceCandidate(data);
-        if (entry.pc.remoteDescription) await entry.pc.addIceCandidate(candidate);
-        else entry.pendingIce.push(candidate);
+        const summary = diagnosticCandidate(candidate);
+        entry.remoteCandidateCount += 1;
+        if (entry.pc.remoteDescription) {
+          await entry.pc.addIceCandidate(candidate);
+          if (entry.remoteCandidateCount <= 2 || entry.remoteCandidateCount % 10 === 0) onlineDiagnostic('ice.candidate.remote.added', {
+            room: diagnosticRoomTag(this.state.room?.code),
+            remote: diagnosticShortId(playerId),
+            count: entry.remoteCandidateCount,
+            ...summary
+          });
+        } else {
+          entry.pendingIce.push(candidate);
+          if (entry.pendingIce.length <= 2) onlineDiagnostic('ice.candidate.remote.queued', {
+            room: diagnosticRoomTag(this.state.room?.code),
+            remote: diagnosticShortId(playerId),
+            pending: entry.pendingIce.length,
+            ...summary
+          });
+        }
       }
     } catch (error) {
+      onlineDiagnostic('signal.process.failed', {
+        room: diagnosticRoomTag(this.state.room?.code),
+        remote: diagnosticShortId(playerId),
+        signalType,
+        errorName: diagnosticErrorName(error),
+        signalingState: entry.pc.signalingState,
+        connectionState: entry.pc.connectionState,
+        iceConnectionState: entry.pc.iceConnectionState
+      }, 'error');
       this.state.error = `点对点信令处理失败：${error.message || error}`;
       entry.status = 'failed';
       this.#changed();

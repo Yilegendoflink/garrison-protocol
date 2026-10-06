@@ -1,5 +1,6 @@
 import {DurableObject} from 'cloudflare:workers';
 import {ServiceError} from '../service-error.mjs';
+import {onlineDiagnostic, roomTag, shortId} from '../online-diagnostic.mjs';
 import {
   MAX_MESSAGE_BYTES,
   ONLINE_MODE_IDS,
@@ -32,6 +33,7 @@ export class ClientSessionDO extends DurableObject {
     server.serializeAttachment({roomCode: null, playerId: null, searching: false, rateKey});
     this.ctx.acceptWebSocket(server);
     server.send(JSON.stringify({type: 'server.hello', protocolVersion: 1, playerCapacity: 4, availableModes: ONLINE_MODE_IDS}));
+    onlineDiagnostic('websocket.accepted', {connection: shortId(this.#connectionId())});
     return new Response(null, {status: 101, webSocket: client});
   }
 
@@ -44,11 +46,25 @@ export class ClientSessionDO extends DurableObject {
     }
   }
 
-  async webSocketClose(socket) {
+  async webSocketClose(socket, code, reason) {
+    const attachment = socket.deserializeAttachment() || {};
+    onlineDiagnostic('websocket.closed', {
+      room: roomTag(attachment.roomCode),
+      player: shortId(attachment.playerId),
+      connection: shortId(this.#connectionId()),
+      code: Number.isInteger(code) ? code : null,
+      reasonLength: typeof reason === 'string' ? reason.length : null
+    }, code === 1000 || code === 1001 ? 'info' : 'warn');
     await this.#handleDisconnect(socket);
   }
 
   async webSocketError(socket) {
+    const attachment = socket.deserializeAttachment() || {};
+    onlineDiagnostic('websocket.error', {
+      room: roomTag(attachment.roomCode),
+      player: shortId(attachment.playerId),
+      connection: shortId(this.#connectionId())
+    }, 'warn');
     await this.#handleDisconnect(socket);
   }
 
@@ -166,6 +182,12 @@ export class ClientSessionDO extends DurableObject {
     const room = this.env.GAME_ROOMS.getByName(attachment.roomCode);
     const result = await room.handleMessage(connectionId, attachment.playerId, message);
     if (!result.ok) {
+      onlineDiagnostic('message.rejected', {
+        room: roomTag(attachment.roomCode),
+        player: shortId(attachment.playerId),
+        type: message.type,
+        code: result.error?.code || 'UNKNOWN'
+      }, 'warn');
       this.#send(socket, {type: 'error', ...result.error, requestId});
       return;
     }
@@ -251,10 +273,44 @@ export class ClientSessionDO extends DurableObject {
 
   async #dispatch(socket, deliveries) {
     for (const item of deliveries) {
-      if (item.connectionId === this.#connectionId()) this.#send(socket, item.message);
+      if (item.connectionId === this.#connectionId()) {
+        this.#send(socket, item.message);
+        if (item.message?.type === 'signal.sent') {
+          const attachment = socket.deserializeAttachment() || {};
+          onlineDiagnostic('signal.sender.acknowledged', {
+            room: roomTag(attachment.roomCode),
+            from: shortId(attachment.playerId),
+            to: shortId(item.message.targetPlayerId)
+          });
+        }
+      }
       else {
         const id = this.env.CLIENT_SESSIONS.idFromString(item.connectionId);
-        await this.env.CLIENT_SESSIONS.get(id).deliver(item.message);
+        try {
+          const delivered = await this.env.CLIENT_SESSIONS.get(id).deliver(item.message);
+          if (item.message?.type === 'signal.forward') {
+            const attachment = socket.deserializeAttachment() || {};
+            onlineDiagnostic('signal.delivery', {
+              room: roomTag(attachment.roomCode),
+              from: shortId(item.message.fromPlayerId),
+              toSession: shortId(item.connectionId),
+              signalType: item.message.signalType,
+              deliveredSessions: delivered
+            }, delivered > 0 ? 'info' : 'warn');
+          }
+        } catch (error) {
+          if (item.message?.type === 'signal.forward') {
+            const attachment = socket.deserializeAttachment() || {};
+            onlineDiagnostic('signal.delivery.failed', {
+              room: roomTag(attachment.roomCode),
+              from: shortId(item.message.fromPlayerId),
+              toSession: shortId(item.connectionId),
+              signalType: item.message.signalType,
+              errorName: error instanceof Error ? error.name : 'Error'
+            }, 'error');
+          }
+          throw error;
+        }
       }
     }
   }
