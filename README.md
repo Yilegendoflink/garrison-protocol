@@ -47,7 +47,7 @@ S.E.E.S. 联动四人（虎狼丸／埃癸斯／岳羽由加莉／结城理）�
 
 直接打开根目录 `index.html`，或运行 `npm run dev` 后访问 http://127.0.0.1:5502 。开发需要 Node.js 22+（Pages 使用 24）。`npm run build` 会构建网页并生成 Android 预缓存清单；推送 `main` 会自动部署 Pages，工作流不运行测试。
 
-启动联机服务：另开终端运行 `npm run online:server`，再从大厅的“联机协作”卡片创建房间并把 6 位配对码发给队友。服务默认监听 `0.0.0.0:5503`；局域网或公网网页来源要加入 `ONLINE_ALLOWED_ORIGINS`，部署参数见 [服务端运行说明](server/README.md)。
+联机大厅默认连接 Cloudflare Worker `wss://garrison-protocol-online.1226631013.workers.dev/ws`；创建配对房间后可把 6 位配对码发给队友。也可在服务地址栏填写自建信令服务。Cloudflare 部署与本地 Node 启动方式见[服务端运行说明](server/README.md)。
 
 Android WebView 客户端在独立的 [`app/`](app/README.md) Gradle 工作区中，打开远程网页源并可预缓存离线资源；它不把游戏资源打包进 APK。
 

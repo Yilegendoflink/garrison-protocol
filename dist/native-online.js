@@ -6,9 +6,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
 }[char]));
 
 export function defaultOnlineServerUrl() {
-  const secure = typeof location !== 'undefined' && location.protocol === 'https:';
-  const host = typeof location !== 'undefined' && location.hostname ? location.hostname : '127.0.0.1';
-  return `${secure ? 'wss' : 'ws'}://${host}:5503/ws`;
+  return 'wss://garrison-protocol-online.1226631013.workers.dev/ws';
 }
 
 export function normalizeOnlineServerUrl(value) {

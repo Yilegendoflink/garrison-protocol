@@ -37,6 +37,16 @@ const garrisonHtml=rule=>{const text=garrisonText(rule),m=text.match(/^(【[^】
 const imageCache=new Map(),img=id=>{const file=data.assets[id];if(!file)return null;if(!imageCache.has(file)){const im=new Image();im.src='./'+file;imageCache.set(file,im);}return imageCache.get(file);};
 function preference(key,fallback){try{return localStorage.getItem(key)??fallback;}catch{return fallback;}}
 function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
+function onlineServerPreference(){
+ const fallback=defaultOnlineServerUrl(),saved=preference('garrison-online-url',fallback);
+ try{
+  const stored=new URL(saved);
+  if(['ws:','wss:'].includes(stored.protocol)&&stored.port==='5503'&&stored.pathname==='/ws'&&['127.0.0.1','localhost','yilegendoflink.github.io'].includes(stored.hostname)){
+   savePreference('garrison-online-url',fallback);return fallback;
+  }
+ }catch{}
+ return saved;
+}
 const mobilePlay=()=>matchMedia('(hover:none) and (pointer:coarse)').matches;
 const iosMobile=()=>/iPhone|iPad|iPod/i.test(navigator.platform)||/iPhone|iPad|iPod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
 function syncPlayChrome(){
@@ -80,7 +90,7 @@ document.addEventListener('fullscreenchange',syncPlayChrome);
 document.addEventListener('webkitfullscreenchange',syncPlayChrome);
 // `state.map` 默认是哨兵「随机地图」：开局按本局种子抽一个具体阵地（用户 2026-09-22 口径）。
 const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:null,view:'lobby',mode:'mode_single_normal',band:'band_amiya',strategyDraft:null,map:RANDOM_MAP_ID,selected:null,summonSelected:null,item:null,inspect:null,quickSell:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,roundEnd:null,resultUnitUid:null,editor:editorState(),waveTable:loadWaveTable(),bondBanBlocks:0};
-state.online={connection:'idle',room:null,player:null,peers:{},error:null,notice:null,serverUrl:preference('garrison-online-url',defaultOnlineServerUrl()),playerName:preference('garrison-online-player-name','玩家'),modeId:'mode_multi_normal'};
+state.online={connection:'idle',room:null,player:null,peers:{},error:null,notice:null,serverUrl:onlineServerPreference(),playerName:preference('garrison-online-player-name','玩家'),modeId:'mode_multi_normal'};
 state.onlineRun=null;
 let onlineClient=null;
 const onlinePeerStatuses=new Map();
