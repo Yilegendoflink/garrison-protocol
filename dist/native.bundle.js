@@ -16947,7 +16947,6 @@ root.addEventListener('click',event=>{
 },true);
 root.addEventListener('click',()=>{if(state.view==='game')setTimeout(()=>publishOnlineStatus(),0);});
 root.addEventListener('pointerup',()=>{if(state.view==='game')setTimeout(()=>publishOnlineStatus(),0);});
-if(onlineSessionToken()){const client=createOnlineClient();client?.connect();}
 window.addEventListener('resize',()=>{if(state.view==='lobby')positionLobbyUpdateCard();});
 let canvas,seesScreenFxCanvas=null,seesScreenFxWasActive=false,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0,dossierDismissedAt=0,runtimeFault=null;
 function readSave(key){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):null;}catch{return null;}}
@@ -17949,6 +17948,8 @@ function frame(now){
  requestAnimationFrame(frame);
 }
 root.setAttribute('data-view','native');root.addEventListener('pointerdown',()=>unlockAudio(),{once:true});syncPlayChrome();render();document.getElementById('boot-screen')?.remove();clearTimeout(window.__garrisonBootTimer);window.__garrisonReady=true;requestAnimationFrame(frame);
+// Rejoining fires onChange synchronously; wait until every render dependency is initialized.
+if(onlineSessionToken()){const client=createOnlineClient();client?.connect();}
 
 return {};
 },
