@@ -1,6 +1,6 @@
 # 联机匹配与信令服务
 
-该服务负责配对房间、快速匹配、WebRTC 信令中继，以及 MVP 的队伍回合栅栏。网页大厅已接入配对码创建／加入、准备、开始、连接状态和对局入口；DataChannel 交换队友状态及盟约干员转让。服务器接收每名玩家本轮战果，统一进入联防／回合结算，随机选择联防者，并等待存活成员全部确认后推进回合。玩家战斗仍在各自客户端模拟，服务器不托管战场状态或验证战斗过程；服务重启会清空房间、协调状态和匹配队列。
+该服务负责配对房间、快速匹配、WebRTC 信令中继，以及同盟对局的阶段推进。开局后服务端随机确定策略顺序，逐人限时选择且策略不重复，超时自动随机补选。全员选完后 5 秒进入第一轮整备；整备最长 90 秒，全员准备则提前自动开战。全员战斗结束后服务端汇总漏怪，按规则选择联防者，结算联防后的玩家生命损失并自动进入下一轮整备。战斗仍由各客户端模拟，服务端负责计时和协作栅栏，不验证玩家战果。Cloudflare Durable Object 版本持久化阶段状态并使用 Alarm 推进截止时间；本地 Node 服务使用进程内存和定时器。
 
 ## 启动
 
@@ -91,17 +91,19 @@ Cloudflare 版使用 Durable Objects SQLite，因此状态会跨 Worker 休眠�
 | `room.set-settings` | `modeId?`, `allowUnderfilledStart?` | 房主可在开始前改难度／未满员开局设置 |
 | `room.kick` | `playerId` | 房主可在开始前移除成员 |
 | `room.start` | `mapId?` | 房主在成员全员在线且准备后开始信令阶段；服务端生成本局公共种子并广播阵地 ID |
+| `coop.strategy.availability` | `strategies: [{id, hp}]` | 提交玩家可用策略；全员提交后随机确定选择顺序 |
+| `coop.strategy.choose` | `bandId` | 当前玩家提交策略；服务端拒绝重复策略并处理超时随机选择 |
+| `coop.prep.ready` | `round` | 玩家结束本轮整备；全员准备或 90 秒到时后进入战斗 |
 | `room.leave` | 空对象 | 显式离开房间并撤销该成员票据 |
 | `coop.battle.report` | `round`, `leaks`, `failedEnemies`, `eliminated` | 提交个人普通作战结果；全员提交后服务端决定联防名单或回合结算 |
-| `coop.joint-defense.report` | `round`, `leaks`, `eliminated` | 联防玩家提交结果；所有防守者提交后广播全队结算 |
-| `coop.round.ready` | `round` | 存活玩家确认继续；全员确认后广播下一回合开始 |
+| `coop.joint-defense.report` | `round`, `leaks`, `failedEnemies`, `eliminated` | 联防玩家报告漏过敌人及其原玩家归属；全部报告后扣除对应生命 |
 | `coop.boss.skip` | `round` | 同步到达 Boss 阶段并结束本局；当前 MVP 不运行 Boss 战 |
 
 创建、加入和匹配成功时，服务端发回 `sessionToken`。客户端应只把它保存在该设备本地存储中，不放进 URL、日志、信令 payload 或分享链接。服务端只在内存保留票据摘要；房间重启后票据失效。断线成员可在房间存续期间使用 `room.rejoin`；所有成员都离线 30 分钟后，房间会被清理。
 
-房间事件包括 `room.created`、`room.joined`、`room.rejoined`、`room.state`、`room.started`、`room.left`、`room.kicked` 和 `room.closed`。`room.started` 表示成员可以开始 WebRTC 协商，携带公共 `sessionSeed` 和 `mapId`；不代表服务端已开始或校验游戏对局。
+房间事件包括 `room.created`、`room.joined`、`room.rejoined`、`room.state`、`room.started`、`room.left`、`room.kicked` 和 `room.closed`。`room.started` 表示房主确认开局且信令可开始；客户端随后自动进入简报与策略选择。游戏中的策略、准备、战斗和联防阶段由 `coop.*` 消息推进。
 
-协作事件为 `coop.progress`、`coop.joint-defense.started`、`coop.round.advance`、`coop.round.begin` 和 `coop.game.finished`。3 名或 4 名玩家完美通关且至少有一名玩家漏怪时，服务端从完美玩家中无放回随机选 2 人；完美玩家不超过 2 人时全部参加。漏怪敌人按列表轮流分给防守者，并保留敌人 ID 与路线。普通战斗报告与联防报告都按回合编号去重；队伍必须越过 `coop.round.ready` 栅栏才能进入下一回合。
+协作事件包括 `coop.strategy.state`、`coop.strategy.complete`、`coop.prep.started`、`coop.battle.started`、`coop.progress`、`coop.joint-defense.started`、`coop.round.advance` 和 `coop.game.finished`。首位策略选择限时 30 秒，后续每位 15 秒；全队策略唯一。3 名或 4 名玩家完美通关且有漏怪时，服务端从完美玩家中无放回随机选 2 人；完美玩家不超过 2 人则全部参加。联防敌人保留原漏怪玩家、编号、路线和生命损失值；联防结束后，剩余漏怪按原归属扣除对应玩家生命，每人每轮最多扣 10 点。结算后自动进入下一轮整备。
 
 ### 快速匹配
 
@@ -143,13 +145,13 @@ Cloudflare 版使用 Durable Objects SQLite，因此状态会跨 Worker 休眠�
 
 大厅位于 `dist/native-online.js`，从主大厅的“联机协作”卡片进入。创建时默认允许 2–3 人开局，最多 4 人；加入者输入 6 位配对码。全员准备后房主开始，客户端为房间内在线玩家建立全网状 WebRTC DataChannel。每名玩家进入正式多人难度的独立 `NativeSession`；房间种子使阵地、波次和最终 Boss 统一，每个玩家的本地商店随机流按成员 ID 分开。`peer.status` 更新队友盟约计数，原有 `NativeSession` 转让钩子通过 `team.fang` 发送盟约干员。
 
-当前 DataChannel 由客户端彼此信任，各自战斗由本地客户端模拟；服务器只验证回合编号、身份和报告格式，不能防止伪造战果。联防和回合推进由服务器统一协调，但不校验敌人是否真实漏过。MVP 暂不支持整备／特殊选择计时与超时随机决策、共享 Boss 血量、跨端存档恢复或防作弊。联机 UI 会等待所有点对点连接建立后才允许进入模拟。
+当前 DataChannel 由客户端彼此信任，各自战斗由本地客户端模拟；服务器验证身份、阶段、策略顺序与唯一性、截止时间和报告格式，但不能防止伪造战果。联防、生命扣减和回合推进由服务器统一协调，但不校验敌人是否真实漏过。当前仍不支持共享 Boss 血量、跨端战斗恢复或防作弊；到 Boss 阶段仍按 MVP 规则结束。尚未接入 PRTS 特定回合的悬赏／机变轮换。
 
 ICE 当前并行使用 Cloudflare 和 Google STUN；跨运营商或严格 NAT／防火墙环境仍可能需要 TURN 中继，当前 MVP 尚未提供 TURN 服务配置入口。部署到同一局域网时，应让网页和服务端端口均可达，并把网页来源加入 `ONLINE_ALLOWED_ORIGINS`。
 
 ### 规则钩子
 
-`random-rules.mjs` 提供特殊选择超时等概率选取当前有效候选，以及联防者抽选规则。联防者规则已接入 `CoopRoundCoordinator`；特殊决策超时随机仍未接入实时阶段。
+`random-rules.mjs` 提供联防者抽选规则。`CoopGameCoordinator` 实现随机策略顺序、超时随机策略、整备倒计时、战斗栅栏、按漏怪归属扣除生命以及自动进入下一轮整备。
 
 ## 当前限制
 

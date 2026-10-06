@@ -2,7 +2,7 @@ import {randomUUID} from 'node:crypto';
 import http from 'node:http';
 import {WebSocket, WebSocketServer} from 'ws';
 import {ONLINE_MODE_IDS, RoomManager, ServiceError} from './room-manager.mjs';
-import {CoopRoundCoordinator} from './coop-coordinator.mjs';
+import {CoopGameCoordinator} from './coop-coordinator.mjs';
 
 const MAX_SIGNAL_PAYLOAD_BYTES = 48 * 1024;
 const SIGNAL_WINDOW_MS = 10_000;
@@ -52,6 +52,7 @@ export function createSignalingService({
   const playerConnections = new Map();
   const addressActions = new Map();
   const coopCoordinators = new Map();
+  const coopTimers = new Map();
   const server = http.createServer((request, response) => {
     const url = new URL(request.url || '/', 'http://localhost');
     if (request.method === 'GET' && (url.pathname === '/health' || url.pathname === '/healthz')) {
@@ -110,15 +111,25 @@ export function createSignalingService({
     if (room.phase !== 'signaling') throw new ServiceError('GAME_NOT_STARTED', '房间尚未开始联机局内阶段。');
     let coordinator = coopCoordinators.get(room.code);
     if (!coordinator) {
-      coordinator = new CoopRoundCoordinator(room.players.map(player => player.id));
+      coordinator = new CoopGameCoordinator(room.players.map(player => player.id));
       coopCoordinators.set(room.code, coordinator);
     }
     return coordinator;
   }
 
   function dispatchCoopResult(roomCode, result) {
-    if (result?.event) sendCoopEvent(roomCode, result.event);
+    for (const event of [result?.event, ...(result?.followupEvents || [])].filter(Boolean)) sendCoopEvent(roomCode, event);
     if (result?.progress) sendCoopProgress(roomCode, result.progress);
+    clearTimeout(coopTimers.get(roomCode));
+    coopTimers.delete(roomCode);
+    const coordinator = coopCoordinators.get(roomCode);
+    if (coordinator?.deadlineAt) {
+      const timer = setTimeout(() => {
+        const live = coopCoordinators.get(roomCode);
+        if (live) dispatchCoopResult(roomCode, live.advanceDeadline(Date.now()));
+      }, Math.max(1, coordinator.deadlineAt - Date.now()));
+      coopTimers.set(roomCode, timer);
+    }
   }
 
   function attachPlayer(client, player, room) {
@@ -304,7 +315,7 @@ export function createSignalingService({
         case 'room.start': {
           requireRoomPlayer(client);
           const result = roomManager.startRoom(client.playerId, payload);
-          coopCoordinators.set(result.room.code, new CoopRoundCoordinator(result.room.players.map(player => player.id)));
+          coopCoordinators.set(result.room.code, new CoopGameCoordinator(result.room.players.map(player => player.id)));
           send(client, 'request.accepted', {action: 'room.start', sessionId: result.sessionId}, requestId);
           const started = JSON.stringify({type: 'room.started', sessionId: result.sessionId, room: result.room});
           for (const player of result.room.players) {
@@ -313,10 +324,16 @@ export function createSignalingService({
           }
           return;
         }
+        case 'coop.strategy.availability':
+        case 'coop.strategy.choose':
+        case 'coop.prep.ready':
         case 'coop.battle.report': {
           const room = requireRoomPlayer(client);
           const coordinator = requireCoopCoordinator(room);
-          const result = coordinator.submitBattleResult(client.playerId, payload);
+          const result = message.type === 'coop.strategy.availability' ? coordinator.submitStrategyAvailability(client.playerId, payload)
+            : message.type === 'coop.strategy.choose' ? coordinator.chooseStrategy(client.playerId, payload)
+              : message.type === 'coop.prep.ready' ? coordinator.readyForBattle(client.playerId, payload)
+                : coordinator.submitBattleResult(client.playerId, payload);
           dispatchCoopResult(room.code, result);
           send(client, 'request.accepted', {action: message.type, round: coordinator.round}, requestId);
           return;
@@ -442,6 +459,8 @@ export function createSignalingService({
   roomManager.on('roomChanged', room => sendRoomState(room));
   roomManager.on('roomClosed', ({roomCode, reason}) => {
     coopCoordinators.delete(roomCode);
+    clearTimeout(coopTimers.get(roomCode));
+    coopTimers.delete(roomCode);
     const notice = JSON.stringify({type: 'room.closed', roomCode, reason});
     for (const client of clients.values()) {
       if (client.roomCode === roomCode) {

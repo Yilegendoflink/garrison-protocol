@@ -1,5 +1,5 @@
 import {DurableObject} from 'cloudflare:workers';
-import {CoopRoundCoordinator} from '../coop-coordinator.mjs';
+import {CoopGameCoordinator, CoopRoundCoordinator} from '../coop-coordinator.mjs';
 import {ServiceError} from '../service-error.mjs';
 import {
   MAX_ROOM_PLAYERS,
@@ -25,6 +25,7 @@ const SIGNAL_WINDOW_MS = 10_000;
 const MAX_SIGNALS_PER_WINDOW = 40;
 
 function coordinatorSnapshot(coordinator, initialPlayerIds) {
+  if (coordinator instanceof CoopGameCoordinator) return coordinator.snapshot();
   return {
     initialPlayerIds,
     activePlayers: [...coordinator.activePlayers],
@@ -40,6 +41,7 @@ function coordinatorSnapshot(coordinator, initialPlayerIds) {
 }
 
 function restoreCoordinator(snapshot) {
+  if (Array.isArray(snapshot.strategyAvailability)) return CoopGameCoordinator.restore(snapshot);
   const coordinator = new CoopRoundCoordinator(snapshot.initialPlayerIds);
   coordinator.activePlayers = new Set(snapshot.activePlayers);
   coordinator.round = snapshot.round;
@@ -294,7 +296,7 @@ export class GameRoomDO extends DurableObject {
     return {deliveries: state?.room ? roomStateDeliveries(state.room) : []};
   }
 
-  handleMessage(connectionId, playerId, message) {
+  async handleMessage(connectionId, playerId, message) {
     const requestId = requestIdOf(message);
     const payload = isPlainObject(message?.payload) ? message.payload : {};
     try {
@@ -365,28 +367,34 @@ export class GameRoomDO extends DurableObject {
           room.startedAt = Date.now();
           this.#touch(room);
           const ids = room.players.map(member => member.id);
-          state.coordinator = coordinatorSnapshot(new CoopRoundCoordinator(ids), ids);
+          state.coordinator = coordinatorSnapshot(new CoopGameCoordinator(ids), ids);
           this.#save(state);
           deliveries.push(delivery(connectionId, 'request.accepted', {action: 'room.start', sessionId: room.sessionId}, requestId));
           const event = {type: 'room.started', sessionId: room.sessionId, room: publicRoom(room)};
           deliveries.push(...room.players.filter(member => member.online).map(member => ({connectionId: member.connectionId, message: event})));
           break;
         }
+        case 'coop.strategy.availability':
+        case 'coop.strategy.choose':
+        case 'coop.prep.ready':
         case 'coop.battle.report':
         case 'coop.joint-defense.report':
         case 'coop.round.ready':
         case 'coop.boss.skip': {
           if (room.phase !== 'signaling') throw new ServiceError('GAME_NOT_STARTED', '房间尚未开始联机局内阶段。');
-          const coordinator = state.coordinator ? restoreCoordinator(state.coordinator) : new CoopRoundCoordinator(room.players.map(member => member.id));
+          const coordinator = state.coordinator ? restoreCoordinator(state.coordinator) : new CoopGameCoordinator(room.players.map(member => member.id));
           let result;
-          if (message.type === 'coop.battle.report') result = coordinator.submitBattleResult(playerId, payload);
+          if (message.type === 'coop.strategy.availability') result = coordinator.submitStrategyAvailability(playerId, payload);
+          else if (message.type === 'coop.strategy.choose') result = coordinator.chooseStrategy(playerId, payload);
+          else if (message.type === 'coop.prep.ready') result = coordinator.readyForBattle(playerId, payload);
+          else if (message.type === 'coop.battle.report') result = coordinator.submitBattleResult(playerId, payload);
           else if (message.type === 'coop.joint-defense.report') result = coordinator.submitDefenseResult(playerId, payload);
           else if (message.type === 'coop.round.ready') result = coordinator.readyNextRound(playerId, payload);
           else result = coordinator.finishAtBoss(playerId, payload);
           state.coordinator = coordinatorSnapshot(coordinator, state.coordinator?.initialPlayerIds || room.players.map(member => member.id));
+          this.#touch(room);
           this.#save(state);
-          if (result.event) {
-            const event = {...result.event};
+          for (const event of [result.event, ...(result.followupEvents || [])].filter(Boolean)) {
             deliveries.push(...room.players.filter(member => member.online).map(member => ({connectionId: member.connectionId, message: event})));
           }
           if (result.progress) {
@@ -394,6 +402,7 @@ export class GameRoomDO extends DurableObject {
             deliveries.push(...room.players.filter(member => member.online).map(member => ({connectionId: member.connectionId, message: progress})));
           }
           deliveries.push(delivery(connectionId, 'request.accepted', {action: message.type, round: coordinator.round}, requestId));
+          await this.#scheduleCoordinatorAlarm(state);
           break;
         }
         case 'room.leave': {
@@ -412,7 +421,9 @@ export class GameRoomDO extends DurableObject {
             this.#save(state);
             deliveries.push(...roomStateDeliveries(room));
             this.#appendCoopResult(deliveries, room, coopRemoval?.result);
+            await this.#scheduleCoordinatorAlarm(state);
           }
+          if (!room.players.length) await this.ctx.storage.deleteAlarm();
           deliveries.unshift(delivery(connectionId, 'room.left', {roomCode: oldCode}, requestId));
           return {ok: true, clearRoom: true, deliveries};
         }
@@ -464,23 +475,51 @@ export class GameRoomDO extends DurableObject {
     player.lastSeenAt = Date.now();
     this.#touch(room);
     this.#save(state);
-    if (room.players.every(member => !member.online)) await this.ctx.storage.setAlarm(Date.now() + ROOM_TTL_MS);
-    else await this.ctx.storage.deleteAlarm();
+    await this.#scheduleCoordinatorAlarm(state);
     return {deliveries: roomStateDeliveries(room)};
   }
 
   async alarm() {
     const state = this.#load();
     const room = state?.room;
-    if (!room || room.players.some(member => member.online)) return;
-    const expiry = room.updatedAt + ROOM_TTL_MS;
-    if (Date.now() >= expiry) this.#delete();
-    else await this.ctx.storage.setAlarm(expiry);
+    if (!room) return;
+    const coordinator = state.coordinator ? restoreCoordinator(state.coordinator) : null;
+    if (coordinator?.deadlineAt != null && Date.now() >= coordinator.deadlineAt) {
+      const result = coordinator.advanceDeadline(Date.now());
+      state.coordinator = coordinatorSnapshot(coordinator, coordinator.initialPlayerIds);
+      this.#touch(room);
+      this.#save(state);
+      const events = [result.event, ...(result.followupEvents || [])].filter(Boolean);
+      for (const event of events) for (const player of room.players.filter(member => member.online && member.connectionId)) {
+        try {
+          const session = this.env.CLIENT_SESSIONS.get(this.env.CLIENT_SESSIONS.idFromString(player.connectionId));
+          await session.deliver(event);
+        } catch {}
+      }
+      if (result.progress) for (const player of room.players.filter(member => member.online && member.connectionId)) {
+        try {
+          const session = this.env.CLIENT_SESSIONS.get(this.env.CLIENT_SESSIONS.idFromString(player.connectionId));
+          await session.deliver({type: 'coop.progress', ...result.progress});
+        } catch {}
+      }
+    }
+    const latest = this.#load();
+    await this.#scheduleCoordinatorAlarm(latest);
   }
 
   #touch(room) {
     room.revision += 1;
     room.updatedAt = Date.now();
+  }
+
+  async #scheduleCoordinatorAlarm(state) {
+    const room = state?.room;
+    if (!room) return this.ctx.storage.deleteAlarm();
+    const deadlines = [];
+    if (Number.isSafeInteger(state.coordinator?.deadlineAt)) deadlines.push(state.coordinator.deadlineAt);
+    if (room.players.every(member => !member.online)) deadlines.push(room.updatedAt + ROOM_TTL_MS);
+    if (!deadlines.length) return this.ctx.storage.deleteAlarm();
+    await this.ctx.storage.setAlarm(Math.max(Date.now() + 1, Math.min(...deadlines)));
   }
 
   #requireHost(room, playerId) {
@@ -495,11 +534,9 @@ export class GameRoomDO extends DurableObject {
 
   #appendCoopResult(deliveries, room, result) {
     if (!result) return;
-    if (result.event) {
-      deliveries.push(...room.players
-        .filter(member => member.online && member.connectionId)
-        .map(member => ({connectionId: member.connectionId, message: result.event})));
-    }
+    for (const event of [result.event, ...(result.followupEvents || [])].filter(Boolean)) deliveries.push(...room.players
+      .filter(member => member.online && member.connectionId)
+      .map(member => ({connectionId: member.connectionId, message: event})));
     if (result.progress) {
       const progress = {type: 'coop.progress', ...result.progress};
       deliveries.push(...room.players
