@@ -19,6 +19,9 @@
     "data:query": "node scripts/prts-db.mjs",
     "dev": "node scripts/serve.mjs",
     "online:server": "node server/index.mjs",
+    "online:cf:dev": "wrangler dev --config wrangler.jsonc",
+    "online:cf:deploy": "wrangler deploy --config wrangler.jsonc",
+    "online:cf:tail": "wrangler tail --config wrangler.jsonc",
     "data:fetch-game": "node scripts/fetch-game-data.mjs",
     "data:normalize": "node scripts/normalize-game-data.mjs",
     "data:normalized-sqlite": "node scripts/build-normalized-db.mjs",
@@ -35,5 +38,8 @@
   },
   "dependencies": {
     "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.147.0"
   }
 }

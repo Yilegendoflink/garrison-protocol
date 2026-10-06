@@ -1,6 +1,7 @@
 .vscode/
 light3d-test-ca.crt
 node_modules/
+.wrangler/
 *.tmp
 dist/android-assets.json
 data/**/database.sqlite

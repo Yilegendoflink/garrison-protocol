@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "garrison-protocol-online",
+  "main": "server/cloudflare/worker.mjs",
+  "compatibility_date": "2026-10-06",
+  "workers_dev": true,
+  "vars": {
+    "ONLINE_ALLOWED_ORIGINS": "https://yilegendoflink.github.io,http://localhost:5502,http://127.0.0.1:5502"
+  },
+  "durable_objects": {
+    "bindings": [
+      {"name": "CLIENT_SESSIONS", "class_name": "ClientSessionDO"},
+      {"name": "GAME_ROOMS", "class_name": "GameRoomDO"},
+      {"name": "MATCHMAKER", "class_name": "MatchmakerDO"},
+      {"name": "IP_LIMITERS", "class_name": "IpRateLimitDO"}
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ClientSessionDO", "GameRoomDO", "MatchmakerDO", "IpRateLimitDO"]
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true
+    }
+  }
+}

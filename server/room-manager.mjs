@@ -1,5 +1,8 @@
 import {createHash, randomBytes, randomInt, randomUUID} from 'node:crypto';
 import {EventEmitter} from 'node:events';
+import {ServiceError} from './service-error.mjs';
+
+export {ServiceError} from './service-error.mjs';
 
 export const ONLINE_MODE_IDS = Object.freeze([
   'mode_multi_funny',
@@ -11,14 +14,6 @@ export const ONLINE_MODE_IDS = Object.freeze([
 const MODE_ID_SET = new Set(ONLINE_MODE_IDS);
 const ROOM_CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 const MAX_PLAYERS = 4;
-
-export class ServiceError extends Error {
-  constructor(code, message) {
-    super(message);
-    this.name = 'ServiceError';
-    this.code = code;
-  }
-}
 
 export function validateModeId(modeId) {
   if (typeof modeId !== 'string' || !MODE_ID_SET.has(modeId)) {

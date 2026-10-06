@@ -24,6 +24,33 @@ npm run online:server
 
 将示例里的 IP 改成托管网页的来源。浏览器来源不在 `ONLINE_ALLOWED_ORIGINS` 中时，WebSocket 握手会被拒绝；不带 `Origin` 的非浏览器客户端可连接。公网部署应在反向代理上启用 TLS/WSS，并只允许可信网页来源。
 
+## Cloudflare 部署
+
+项目还提供基于 Workers + Durable Objects 的托管版本：Worker 处理 HTTP/WebSocket 握手；每个 WebSocket 会话、配对房间、快速匹配队列和来源 IP 限流各自使用 Durable Object。房间和队列数据存入 Durable Objects SQLite，服务可以在无常驻 Node 进程的情况下运行。客户端战斗仍在本地模拟，Worker 负责房间、信令与队伍回合协调。
+
+首次部署前，用 Wrangler 登录目标 Cloudflare 账号：
+
+```powershell
+npx wrangler login
+```
+
+登录完成后，从项目根目录发布：
+
+```powershell
+npm install
+npm run online:cf:deploy
+```
+
+当前部署地址为 `garrison-protocol-online.1226631013.workers.dev`。健康检查为 `https://garrison-protocol-online.1226631013.workers.dev/health`，WebSocket 地址为 `wss://garrison-protocol-online.1226631013.workers.dev/ws`。大厅默认使用此环境；如需本地调试，可运行 `npm run online:cf:dev`。查看实时日志：
+
+```powershell
+npm run online:cf:tail
+```
+
+`wrangler.jsonc` 中的 `ONLINE_ALLOWED_ORIGINS` 默认包含 GitHub Pages 正式来源和本地开发来源。自定义网页域名时，把精确的 `https://` 来源追加到该逗号分隔变量，再重新部署。不要将 API token 写入配置文件；Wrangler 登录凭证保存在本机。
+
+Cloudflare 版使用 Durable Objects SQLite，因此状态会跨 Worker 休眠保留；房间与匹配队列按 MVP 生命周期规则管理。`server/cloudflare/` 是 Cloudflare 专用入口，原有 `npm run online:server` Node 服务仍可用于本机或自托管部署。
+
 ## WebSocket 协议
 
 每条客户端消息是 UTF-8 JSON 对象：

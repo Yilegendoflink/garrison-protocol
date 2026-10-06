@@ -1,4 +1,4 @@
-import {ServiceError} from './room-manager.mjs';
+import {ServiceError} from './service-error.mjs';
 import {chooseJointDefenders} from './random-rules.mjs';
 
 const MAX_FAILED_ENEMIES_PER_PLAYER = 256;

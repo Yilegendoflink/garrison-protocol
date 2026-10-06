@@ -1,4 +1,13 @@
-import {randomInt} from 'node:crypto';
+function randomInt(max) {
+  if (!Number.isSafeInteger(max) || max < 1) throw new RangeError('max must be a positive safe integer');
+  const range = 0x1_0000_0000;
+  const limit = Math.floor(range / max) * max;
+  const sample = new Uint32Array(1);
+  do {
+    globalThis.crypto.getRandomValues(sample);
+  } while (sample[0] >= limit);
+  return sample[0] % max;
+}
 
 function requireCandidates(candidates) {
   if (!Array.isArray(candidates) || candidates.length === 0) {
