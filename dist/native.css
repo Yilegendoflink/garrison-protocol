@@ -1252,3 +1252,38 @@ html.native-landscape-ui .native-free-refresh-count{font-size:7px;line-height:8p
 @media(max-width:600px){.native-shop-card{min-height:125px}.native-shop-card>[data-act="buy"]{min-height:125px}}
 html.native-landscape-ui .native-shop-card{min-height:0;height:100%}
 html.native-landscape-ui .native-shop-card>[data-act="buy"]{min-height:0;height:100%}
+
+.native-online-card{min-width:0;color:#e8f4ef;background:linear-gradient(145deg,#112b2d,#0c1d22);border:1px solid #2b5754;padding:clamp(16px,2vw,26px);box-shadow:0 18px 48px #0003}
+.native-online-card .native-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.native-online-card .native-card-heading h2{margin:6px 0;font-size:22px;color:#e8f4ef}
+.native-online-card .native-card-index{color:#79dcb7;font-variant-numeric:tabular-nums}
+.native-online-card .native-online-status{display:flex;align-items:center;gap:8px;margin:0 0 14px;color:#91b6ad;font-size:12px}
+.native-online-status i{width:8px;height:8px;border-radius:50%;background:#b2835b;box-shadow:0 0 9px #b2835b80}
+.native-online-status i.is-online{background:#79dcb7;box-shadow:0 0 10px #79dcb7aa}
+.native-online-card .native-online-field{display:grid;gap:6px;margin:10px 0;color:#a8c8be;font-size:11px;letter-spacing:.04em}
+.native-online-card .native-online-field input,.native-online-card .native-online-field select{box-sizing:border-box;width:100%;min-width:0;padding:10px 12px;color:#e8f4ef;background:#091719;border:1px solid #315c57;border-radius:2px;font:inherit;letter-spacing:normal}
+.native-online-card .native-online-check{display:flex;align-items:center;gap:9px;margin:12px 0;color:#b8d4ca;font-size:12px}
+.native-online-card .native-online-check input{accent-color:#79dcb7;width:16px;height:16px}
+.native-online-card .native-online-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.native-online-card .native-online-actions button,.native-online-card .native-online-join>button,.native-online-card .native-online-settings>button,.native-online-room-code button{width:auto;flex:1 1 110px;margin:0;padding:10px 12px;color:#c4e0d6;background:#173436;border:1px solid #3b6d64;border-radius:2px;font-size:12px}
+.native-online-card .native-online-actions button:disabled{opacity:.38;cursor:not-allowed}
+.native-online-card .native-online-join{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid #244a47}
+.native-online-card .native-online-join .native-online-field{margin:0}
+.native-online-card .native-online-join>button{flex:0 0 auto;min-height:38px}
+.native-online-card .native-online-hint,.native-online-card .native-online-room-meta{color:#91b6ad;font-size:11px;line-height:1.7}
+.native-online-card .native-online-error{margin:8px 0;padding:9px 11px;color:#ffd0b9;background:#3d2220;border-left:2px solid #ed906c;font-size:11px;line-height:1.6}
+.native-online-room-code{display:flex;align-items:center;gap:12px;padding:12px;background:#091719;border:1px solid #2d5551}
+.native-online-room-code span{color:#91b6ad;font-size:11px}
+.native-online-room-code strong{margin-right:auto;color:#f0d18a;font-size:24px;letter-spacing:.18em;font-variant-numeric:tabular-nums}
+.native-online-room-code button{flex:0 0 auto}
+.native-online-roster{list-style:none;margin:12px 0;padding:0;border-top:1px solid #244a47}
+.native-online-roster li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 3px;border-bottom:1px solid #244a47}
+.native-online-roster li b,.native-online-roster li small{display:block}
+.native-online-roster li b{color:#e8f4ef;font-size:12px}
+.native-online-roster li small{margin-top:4px;color:#91b6ad;font-size:10px}
+.native-online-roster li em{color:#e6b88e;font-size:10px;font-style:normal}
+.native-online-roster li em.is-ready{color:#79dcb7}
+.native-online-settings{padding:10px 0;border-top:1px solid #244a47}
+.native-online-settings .native-online-field{margin-top:0}
+.native-online-card .native-online-settings>button{width:100%}
+@media(max-width:600px){.native-online-card{padding:15px}.native-online-card .native-card-heading h2{font-size:17px}.native-online-card .native-online-join{grid-template-columns:1fr}.native-online-card .native-online-join>button{width:100%}.native-online-room-code strong{font-size:20px}.native-online-card .native-online-actions button{flex-basis:100%}}

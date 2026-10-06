@@ -342,9 +342,36 @@ export class NativeSession extends NativeEconomy {
   return gained;
  }
  resolveTurn(turn){if(!turn?.isBossTurn||turn.isConditional)return turn;const finals=buildPhasePlan(this.data,this.s.modeId).filter(t=>t.isBossTurn&&!t.isConditional);if(turn.round!==finals.at(-1)?.round)return turn;const config=finalBossConfig(this.data,this.s.finalBossId,this.s.modeId,this.s.finalBossHpMultiplier);return {...turn,finalBossId:this.s.finalBossId,finalBoss:config,finalBossHp:config.hp};}
- startBattle(){if(this.s.phase!=='prep'||this.s.rewardPending)return false;this.syncSummonCards();this.syncHandSlots();const area=this.finalBossPrepArea();if(area&&[...this.s.units.filter(u=>u.position),...(this.s.summonCards||[]).filter(c=>c.position)].some(actor=>finalBossPlacementContains(area,actor.position.x,actor.position.y)))throw Error('昆图斯／萨米的意志将占据右上角 2 列 × 3 行，请先移开该区域的干员和召唤物。');this.applyTouchReplacement();this.settleTartarusRound();const ok=this.beginBattle();if(!ok)return false;if(this.s.phase==='prep')return true;const turn=this.resolveTurn(buildPhasePlan(this.data,this.s.modeId).find(t=>t.round===this.s.round));this.battle=new NativeBattle(this.data,this,this.map,turn);return true;}
+  startBattle(){
+   if(this.s.phase!=='prep'||this.s.rewardPending)return false;
+   const phaseTurn=buildPhasePlan(this.data,this.s.modeId).find(turn=>turn.round===this.s.round);
+   if(this.s.onlineCoop&&phaseTurn?.isBossTurn&&!phaseTurn.isConditional){this.s.coopStage='boss-skipped';this.s.runResult={kind:'online-boss-skipped',success:false,round:this.s.round,totalDamage:0};this.s.phase='finished';return true;}
+   this.syncSummonCards();this.syncHandSlots();const area=this.finalBossPrepArea();if(area&&[...this.s.units.filter(u=>u.position),...(this.s.summonCards||[]).filter(c=>c.position)].some(actor=>finalBossPlacementContains(area,actor.position.x,actor.position.y)))throw Error('昆图斯／萨米的意志将占据右上角 2 列 × 3 行，请先移开该区域的干员和召唤物。');this.applyTouchReplacement();this.settleTartarusRound();const ok=this.beginBattle();if(!ok)return false;if(this.s.phase==='prep')return true;const turn=this.resolveTurn(phaseTurn);this.battle=new NativeBattle(this.data,this,this.map,turn);return true;
+  }
+  startJointDefense(enemies){
+   if(!this.s.onlineCoop||this.s.phase!=='intermission'||!Array.isArray(enemies)||enemies.length>768)return false;
+   const planned=buildPhasePlan(this.data,this.s.modeId).find(turn=>turn.round===this.s.round);if(!planned||planned.isBossTurn||planned.isConditional)return false;
+   const turn=this.resolveTurn(planned),battle=new NativeBattle(this.data,this,this.map,turn),routes=battle.level?.routes||[];
+   const queue=enemies.map((enemy,index)=>{
+    if(!enemy||typeof enemy.id!=='string'||!this.data.enemies[enemy.id]&&!this.data.enemyDependencies?.[enemy.id])throw Error('联防敌人资料不存在：'+String(enemy?.id||''));
+    const raw=this.data.enemies[enemy.id]||this.data.enemyDependencies?.[enemy.id],flying=raw.motion==='FLY';
+    const route=Number.isSafeInteger(enemy.route)&&routes[enemy.route]?enemy.route:Math.max(0,routes.findIndex(candidate=>(candidate.motionMode==='FLY')===flying));
+    return {id:enemy.id,route,at:index*1.25,jointDefense:true};
+   });
+   battle.s.queue=queue;battle.s.total=queue.length;battle.s.limit=Math.max(90,queue.length*8+25);battle.s.finalBossId=null;
+   this.battle=battle;this.s.phase='battle';this.s.coopStage='joint-defense';this.s.coopStageRound=this.s.round;return true;
+  }
  bondLayerSnapshot(){const visible=id=>seesRun(this)||id!==SEES_BOND_ID&&id!==TARTARUS_BOND_ID,ids=new Set([...Object.keys(this.data.season.bondInfoDict||{}),SEES_BOND_ID,TARTARUS_BOND_ID,...Object.keys(this.s.bondLayers||{})]);return [...ids].filter(visible).map(id=>{const value=Number(this.s.bondLayers?.[id]);return {id,name:this.data.season.bondInfoDict[id]?.name||id,layers:Number.isFinite(value)?Math.max(0,Math.floor(value)):0};});}
- finishCurrentBattle(){if(!this.battle?.s.finished||this.s.phase!=='battle')return;const r=this.battle.s.result;r.finalBondLayers=this.bondLayerSnapshot();this.s.history.push(r);if(r.kind==='final-boss'){this.s.runResult=r;if(r.reason!=='boss-killed')this.s.hp=0;this.s.phase='finished';}else{const loss=Math.min(ROUND_LEAK_CAP,r.leaks);this.s.hp=Math.max(0,this.s.hp-loss);this.finishBattle({success:this.s.hp>0,leaks:r.leaks});this.s.lastBattle.loss=loss;if(!this.s.hp)this.s.runResult=r;}this.applyPostBattleTransforms();if(this.s.phase==='intermission')this.battle.clearEndedRoundEntities();}
+  finishCurrentBattle(){
+   if(!this.battle?.s.finished||this.s.phase!=='battle')return;
+   const r=this.battle.s.result;r.finalBondLayers=this.bondLayerSnapshot();this.s.history.push(r);
+   if(this.s.coopStage==='joint-defense'){
+    this.s.coopDefenseResult={leaks:r.leaks,failedEnemies:r.failedEnemies||[]};this.s.coopStage='joint-defense-complete';this.s.phase='intermission';this.applyPostBattleTransforms();this.battle.clearEndedRoundEntities();return;
+   }
+   if(r.kind==='final-boss'){this.s.runResult=r;if(r.reason!=='boss-killed')this.s.hp=0;this.s.phase='finished';}
+   else{const loss=Math.min(ROUND_LEAK_CAP,r.leaks);this.s.hp=Math.max(0,this.s.hp-loss);this.finishBattle({success:this.s.hp>0,leaks:r.leaks});this.s.lastBattle.loss=loss;if(!this.s.hp)this.s.runResult=r;}
+   this.applyPostBattleTransforms();if(this.s.phase==='intermission')this.battle.clearEndedRoundEntities();
+  }
  tick(){if(this.s.phase==='battle'&&this.battle){this.battle.step();this.finishCurrentBattle();}}
  advanceRound(){if(this.s.phase!=='intermission')return false;const locked=this.s.locked,oldOffers=locked?this.s.offers.slice():null,oldItems=locked?this.s.itemOffers.slice():null;this.s.prepApplied=false;const ok=this.nextRound(locked?[]:this.rollOffers());if(!ok)return false;if(locked){const refillOffers=this.rollOffers();this.s.offers=Array.from({length:this.terms().operatorSlots},(_,i)=>oldOffers[i]??refillOffers[i]);const refillItems=Array.from({length:this.terms().itemSlots},()=>this.drawFromPool({kind:'item',shop:true}));this.s.itemOffers=Array.from({length:this.terms().itemSlots},(_,i)=>oldItems[i]??refillItems[i]);}else this.fillItems();this.addFunds(this.s.passiveIncome);this.applyProjectionUpgrades();
   // 进入新回合只做「按持有者/类型对账」，**不重置已放置的召唤物卡**：召唤物留在原位跨回合存在，

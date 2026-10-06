@@ -13,7 +13,8 @@ import {PASSCODE_MAX,applyPasscode} from './native-passcode.js';
 import {NATIVE_DATA} from './runtime-data.js';
 import {NativeSession} from './native-session.js';
 import {NativeBattle} from './native-battle.js';
-import {renderLobby,NATIVE_CHANGELOG,changelogHtml} from './native-lobby.js';
+import {renderLobby as renderBaseLobby,NATIVE_CHANGELOG,changelogHtml} from './native-lobby.js';
+import {OnlineRoomClient,defaultOnlineServerUrl,normalizeOnlineServerUrl,renderOnlinePanel} from './native-online.js';
 import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText,battleBoardVisible,bondCurrentPreviewHtml,isolatedPlatform,tileLiftAmount,ROUND_LEAK_CAP,HAND_LIMIT,enemySprite,battleTally,RANDOM_MAP_ID,resolveMapId,directionOf,mapThumbnailHtml} from './protocol.js';
 // 特殊地块/地图装置的绘制只读环境层：气流格由 blowerCells 统一算，别在绘制里另算一遍。
 import {blowerCells} from './native-environment.js';
@@ -75,7 +76,179 @@ document.addEventListener('fullscreenchange',syncPlayChrome);
 document.addEventListener('webkitfullscreenchange',syncPlayChrome);
 // `state.map` 默认是哨兵「随机地图」：开局按本局种子抽一个具体阵地（用户 2026-09-22 口径）。
 const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:null,view:'lobby',mode:'mode_single_normal',band:'band_amiya',strategyDraft:null,map:RANDOM_MAP_ID,selected:null,summonSelected:null,item:null,inspect:null,quickSell:null,preview:null,paused:false,speed:1,muted:preference('garrison-mute','0')==='1',reduceFx:preference('garrison-reduce-fx','0')==='1',volume:Math.max(0,Math.min(1,Number(preference('garrison-volume','1'))||0)),modal:null,roundEnd:null,resultUnitUid:null,editor:editorState(),waveTable:loadWaveTable(),bondBanBlocks:0};
+state.online={connection:'idle',room:null,player:null,peers:{},error:null,notice:null,serverUrl:preference('garrison-online-url',defaultOnlineServerUrl()),playerName:preference('garrison-online-player-name','玩家'),modeId:'mode_multi_normal'};
+state.onlineRun=null;
+let onlineClient=null;
+const onlinePeerStatuses=new Map();
+function renderLobby(args){const html=renderBaseLobby(args),panel=renderOnlinePanel({online:state.online,data:args.data,esc:args.esc,onlineRun:state.onlineRun,hasGame:!!state.game});return html.replace('<section class="native-home-card native-database">',`${panel}<section class="native-home-card native-database">`);}
 function positionLobbyUpdateCard(){const hero=root.querySelector('.native-hero'),panel=root.querySelector('.native-hero-panel'),loadout=root.querySelector('.native-loadout');if(!hero||!panel||!loadout)return;if(matchMedia('(max-width:820px) and (orientation:portrait)').matches)loadout.after(panel);else hero.append(panel);}
+const onlinePendingTransfers=[];
+function onlineSessionToken(){try{return localStorage.getItem('garrison-online-session');}catch{return null;}}
+function createOnlineClient(serverUrl=state.online.serverUrl){
+ let normalized;try{normalized=normalizeOnlineServerUrl(serverUrl);}catch(error){notice(error.message);return null;}
+ if(onlineClient&&onlineClient.url===normalized)return onlineClient;
+ if(onlineClient?.state.room){notice('请先离开当前联机房间，再更换信令服务。');return null;}
+ const previousUrl=onlineClient?.url||state.online.serverUrl,sessionToken=previousUrl===normalized?onlineSessionToken():null;
+ if(previousUrl!==normalized)try{localStorage.removeItem('garrison-online-session');}catch{}
+ onlineClient?.dispose();
+ state.online.serverUrl=normalized;savePreference('garrison-online-url',normalized);
+ onlineClient=new OnlineRoomClient({url:normalized,sessionToken,onChange:snapshot=>{state.online={...state.online,...snapshot,serverUrl:normalized};if(state.view==='lobby')render();},onPeerMessage:(fromPlayerId,message)=>handleOnlinePeerMessage(fromPlayerId,message),onCoopEvent:handleCoopEvent});
+ state.online={...state.online,...onlineClient.snapshot(),serverUrl:normalized};return onlineClient;
+}
+function refreshOnlineTeamPeers(){
+ const game=state.game,room=state.online.room,playerId=onlineClient?.state.player?.id||state.online.player?.id;
+ if(!game||!room||!playerId)return;
+ game.s.teamPeers=(room.players||[]).filter(player=>player.id!==playerId).map(player=>({playerId:player.id,name:player.name,bondCounts:onlinePeerStatuses.get(player.id)?.bondCounts||{}}));
+}
+function handleOnlinePeerMessage(fromPlayerId,message){
+ if(message?.type==='peer.status'){
+  const bondCounts=message.bondCounts&&typeof message.bondCounts==='object'?message.bondCounts:{};
+  onlinePeerStatuses.set(fromPlayerId,{bondCounts,round:Number(message.round)||0,phase:String(message.phase||'')});refreshOnlineTeamPeers();return;
+ }
+ if(message?.type==='team.fang'&&message.record){
+  if(!state.game){onlinePendingTransfers.push(message.record);return;}
+  if(state.game.receiveFangTransfer(message.record)){save();notice('已收到队友转让的干员，将在下轮备战时入队。');render();}
+ }
+}
+let lastOnlineStatusAt=0;
+function publishOnlineStatus(force=false){
+ const game=state.game;if(!onlineClient||!state.onlineRun||!game)return;
+ if(!force&&Date.now()-lastOnlineStatusAt<1200)return;lastOnlineStatusAt=Date.now();
+ const bondCounts=Object.fromEntries(Object.entries(game.bonds()).map(([id,bond])=>[id,Number(bond.count)||0]));
+ onlineClient.sendPeerMessage({type:'peer.status',round:game.s.round,phase:game.s.phase,bondCounts});
+}
+function coopWaitModal(title,description){
+ const progress=onlineClient?.state.coop?.progress||state.online.coop?.progress,room=onlineClient?.state.room||state.online.room;
+ const expected=progress?.expectedPlayers||[],completed=new Set(progress?.completedPlayers||[]),names=expected.filter(id=>!completed.has(id)).map(id=>room?.players?.find(player=>player.id===id)?.name||'队友');
+ const waiting=names.length?`<p>等待：${names.map(esc).join('、')}</p>`:'<p>正在同步队伍状态…</p>';
+ modal(`<h2>${esc(title)}</h2><p>${esc(description)}</p>${waiting}`);
+}
+function submitCoopBattleResult(g){
+ const run=state.onlineRun;if(!run||run.reportedBattleRound===g.s.round)return;
+ run.reportedBattleRound=g.s.round;run.waitingForServer='battle';
+ const result=g.battle?.s?.result||g.s.history.at(-1)||{},failedEnemies=(result.failedEnemies||[]).slice(0,256).map(enemy=>({id:enemy.id,route:enemy.route??0}));
+ onlineClient?.reportBattle({round:g.s.round,leaks:Math.max(0,Number(result.leaks??g.s.lastBattle?.leaks)||0),failedEnemies,eliminated:g.s.hp<=0});
+ coopWaitModal('等待队友完成本轮作战',`第 ${g.s.round} 回合战果已提交，服务端会统一判断是否进入联防。`);
+}
+function submitCoopDefenseResult(g){
+ const run=state.onlineRun;if(!run||run.reportedDefenseRound===g.s.round)return;
+ run.reportedDefenseRound=g.s.round;run.waitingForServer='defense';
+ const result=g.s.coopDefenseResult||{leaks:0};
+ onlineClient?.reportJointDefense({round:g.s.round,leaks:Math.max(0,Number(result.leaks)||0),eliminated:g.s.hp<=0});
+ coopWaitModal('等待联防结算',`第 ${g.s.round} 回合联防结果已提交，等待其他防守玩家。`);
+}
+function handleCoopEvent(message){
+ const run=state.onlineRun,g=state.game;if(!run||!g)return;
+ if(message.type==='coop.progress'){
+  if(run.waitingForServer==='battle')coopWaitModal('等待队友完成本轮作战',`第 ${g.s.round} 回合战果已提交，等待队伍汇总。`);
+  else if(run.waitingForServer==='defense')coopWaitModal('等待联防结算',`第 ${g.s.round} 回合联防结果已提交，等待其他防守玩家。`);
+  else if(run.waitingForServer==='boss')coopWaitModal('联机对局结束中','已到 Boss 阶段，本局按联机 MVP 规则直接结束。');
+  else if(run.waitingForServer==='ready')coopWaitModal('等待队友继续',`已确认继续第 ${g.s.round+1} 回合，等待其他存活玩家。`);
+  return;
+ }
+ if(message.type==='coop.joint-defense.started'){
+  run.waitingForServer=null;run.coopStage='joint-defense';run.defenders=message.defenders||[];
+  state.modal=null;renderModal();
+  if(run.defenders.includes(run.playerId)){
+   const enemies=message.enemiesByPlayer?.[run.playerId]||[];
+   try{
+    if(!g.startJointDefense(enemies))throw new Error('当前会话不能开始联防。');
+    g.s.coopStage='joint-defense';state.paused=false;resetFxClock();attachZoneVisual(g.battle);save();render();
+   }catch(error){notice(`联防未能启动：${error.message||error}`);run.reportedDefenseRound=g.s.round;run.waitingForServer='defense';onlineClient?.reportJointDefense({round:g.s.round,leaks:1,eliminated:false});coopWaitModal('联防启动失败','已向服务端报告联防失败，等待本轮结算。');}
+  }else{
+   coopWaitModal('队友正在联防',`第 ${g.s.round} 回合由 ${run.defenders.map(id=>state.online.room?.players?.find(player=>player.id===id)?.name||'队友').map(esc).join('、')} 处理漏怪。`);
+  }
+  return;
+ }
+ if(message.type==='coop.round.advance'){
+  run.waitingForServer=null;run.coopStage='advance';run.eliminatedPlayers=message.eliminatedPlayers||[];
+  const active=(onlineClient?.state.room?.players||state.online.room?.players||[]).some(player=>player.id===run.playerId)&&!run.eliminatedPlayers.includes(run.playerId);
+  const summary=message.outcome==='all-perfect'?'全队完美通关。':message.outcome==='no-perfect-defender'?'本轮没有完美通关者，跳过联防。':message.success?'联防成功，漏怪已清除。':`联防漏怪 ${Number(message.defenseLeaks)||0}。`;
+  modal(`<h2>第 ${g.s.round} 回合结算</h2><p>${esc(summary)}</p>${active?'<button class="native-primary" data-act="coop-next">全员结算后继续 →</button>':'<p>本局生命已用尽，等待队伍完成后续结算。</p>'}`);
+  return;
+ }
+ if(message.type==='coop.round.begin'){
+  run.waitingForServer=null;run.coopStage='battle';run.reportedBattleRound=null;run.reportedDefenseRound=null;
+  if((message.activePlayers||[]).includes(run.playerId)&&g.s.phase==='intermission'){
+   if(!g.perform('next')){notice(g.lastError||'未能进入下一回合。');return;}
+   state.modal=null;renderModal();state.paused=false;save();saveCheckpoint();render();flushOnlineTransfers();publishOnlineStatus(true);
+  }
+  return;
+ }
+ if(message.type==='coop.game.finished'){
+  run.waitingForServer=null;run.coopStage='finished';state.modal=null;renderModal();
+  if(g.s.runResult?.kind==='online-boss-skipped')showResult();
+  else if(g.s.runResult||g.s.history.length)showResult();
+  else modal('<h2>本局结束</h2><p>全队已完成联机对局。</p><button class="native-primary" data-act="home">回到大厅</button>');
+ }
+}
+function flushOnlineTransfers(){
+ if(!state.game)return;let received=0;
+ for(const record of onlinePendingTransfers.splice(0))if(state.game.receiveFangTransfer(record))received++;
+ if(received){notice(`收到 ${received} 名队友转让的干员，将在下轮备战时入队。`);save();}
+}
+function deriveOnlinePlayerSeed(seed,playerId){let hash=(Number(seed)||1)>>>0;for(const char of String(playerId||''))hash=Math.imul(hash^char.charCodeAt(0),16777619)>>>0;return hash||1;}
+function onlineConnectionsReady(room,player){return !!room&&room.phase==='signaling'&&!!player&&(room.players||[]).every(member=>member.id===player.id||onlineClient?.state.peers?.[member.id]?.connection==='connected');}
+function beginOnlineBriefing(){
+ const room=onlineClient?.state.room||state.online.room,player=onlineClient?.state.player||state.online.player;
+ if(!room||room.phase!=='signaling'||!player){notice('当前没有可开始的联机房间。');return;}
+ if(!onlineConnectionsReady(room,player)){notice('仍有队友尚未建立点对点连接。');return;}
+ const baseSeed=(Number(room.sessionSeed)||1)>>>0,modeId=room.modeId,seed=deriveOnlinePlayerSeed(baseSeed,player.id);
+ const mapId=resolveMapId(data,room.mapId||RANDOM_MAP_ID,waveRng(baseSeed),modeId),banConfig=loadBondBan(data);
+ const sharedBonds=bondBanIds(data,baseSeed,banConfig);
+ state.draft={modeId,mapId,seed,sharedSeed:baseSeed,playerId:player.id,teamPeers:(room.players||[]).filter(member=>member.id!==player.id).map(member=>({playerId:member.id,name:member.name,bondCounts:onlinePeerStatuses.get(member.id)?.bondCounts||{}})),online:true,roomCode:room.code,sessionId:room.sessionId,finalBossId:rollFinalBoss(data,modeId,baseSeed),roster:createWaveRoster({random:waveRng((baseSeed^0x57a4c319)>>>0||1),data,modeId}),bondBan:{bonds:sharedBonds,always:banConfig.always,never:banConfig.never},egg325:false,cat:false};
+ state.onlineRun=null;state.bondBanBlocks=0;state.view='briefing';rememberView('lobby');state.strategyDraft=null;state.modal=null;render();
+}
+function beginOnlineSession(){
+ const draft=state.draft;if(!draft?.online)return;
+ const room=onlineClient?.state.room,player=onlineClient?.state.player;if(!onlineConnectionsReady(room,player)){notice('点对点连接已中断，请返回联机大厅重新连接。');state.view='lobby';render();return;}
+ state.lastChoiceContent=null;enterPlayChrome();state.supplyCollapsed=false;
+ try{
+  const transport={send:record=>onlineClient?.sendPeerMessage({type:'team.fang',record},record.recipientId)??false};
+  state.game=new NativeSession(data,{modeId:draft.modeId,bandId:guardedBandId(),mapId:draft.mapId,seed:draft.seed,waveRoster:draft.roster,bondBan:draft.bondBan,egg325:false,cat:false,playerId:draft.playerId,teamPeers:draft.teamPeers,teamTransport:transport,finalBossId:draft.finalBossId,finalBossHpMultiplier:state.waveTable?.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER});
+  state.game.s.onlineCoop=true;state.game.s.coopStage='battle';
+  state.onlineRun={roomCode:draft.roomCode,sessionId:draft.sessionId,sessionSeed:draft.sharedSeed,playerId:draft.playerId,coopStage:'battle',reportedBattleRound:null,reportedDefenseRound:null,waitingForServer:null};state.view='game';rememberView('game');state.draft=null;state.paused=false;state.expiresAt=null;state.resultUnitUid=null;state.selected=state.summonSelected=state.item=state.inspect=state.preview=state.modal=null;
+  refreshOnlineTeamPeers();save();saveCheckpoint();render();flushOnlineTransfers();publishOnlineStatus(true);
+ }catch(error){notice(error.message);}
+}
+async function handleOnlineAction(button){
+ const act=button.dataset.act;
+ if(act==='online-create'||act==='online-join'){
+  const serverUrl=document.getElementById('online-server-url')?.value||state.online.serverUrl;
+  const playerName=document.getElementById('online-player-name')?.value||state.online.playerName;
+  const modeId=document.getElementById('online-mode')?.value||state.online.modeId;
+  state.online.playerName=playerName;state.online.modeId=modeId;savePreference('garrison-online-player-name',playerName);
+  const client=createOnlineClient(serverUrl);if(!client)return;
+  if(act==='online-create')client.createRoom({playerName,modeId,allowUnderfilledStart:document.getElementById('online-allow-underfilled')?.checked!==false});
+  else client.joinRoom(document.getElementById('online-room-code')?.value,playerName);
+  return;
+ }
+ if(act==='online-settings'){
+  const client=createOnlineClient();client?.setSettings({modeId:document.getElementById('online-room-mode')?.value,allowUnderfilledStart:!!document.getElementById('online-room-underfilled')?.checked});return;
+ }
+ if(act==='online-ready'){onlineClient?.setReady(!state.online.player?.ready);return;}
+ if(act==='online-start'){onlineClient?.start(state.map||RANDOM_MAP_ID);return;}
+ if(act==='online-leave'){onlineClient?.leave();state.onlineRun=null;onlinePeerStatuses.clear();return;}
+ if(act==='online-enter'){
+  if(state.game&&state.onlineRun){state.view='game';state.paused=false;enterPlayChrome();render();return;}
+  beginOnlineBriefing();return;
+ }
+ if(act==='online-copy'){
+  try{await navigator.clipboard.writeText(state.online.room?.code||'');notice('配对码已复制');}
+  catch{notice(`配对码：${state.online.room?.code||''}`);}
+ }
+}
+root.addEventListener('click',event=>{
+ const button=event.target.closest?.('[data-act]');if(!button)return;
+ if(button.dataset.act==='begin'&&state.draft?.online){event.preventDefault();event.stopImmediatePropagation();beginOnlineSession();return;}
+ if(button.dataset.act==='coop-next'&&state.onlineRun){event.preventDefault();event.stopImmediatePropagation();const run=state.onlineRun,round=state.game?.s.round;if(run.readyRound===round)return;run.readyRound=round;run.waitingForServer='ready';onlineClient?.readyNextRound(round);coopWaitModal('等待队友继续',`已确认继续第 ${round+1} 回合，等待其他存活玩家。`);return;}
+ if(button.dataset.act==='next'&&state.onlineRun){event.preventDefault();event.stopImmediatePropagation();notice('联机回合需要在队伍结算提示中统一继续。');return;}
+ if(!button.dataset.act.startsWith('online-'))return;
+ event.preventDefault();event.stopImmediatePropagation();void handleOnlineAction(button);
+},true);
+root.addEventListener('click',()=>{if(state.view==='game')setTimeout(()=>publishOnlineStatus(),0);});
+root.addEventListener('pointerup',()=>{if(state.view==='game')setTimeout(()=>publishOnlineStatus(),0);});
+if(onlineSessionToken()){const client=createOnlineClient();client?.connect();}
 window.addEventListener('resize',()=>{if(state.view==='lobby')positionLobbyUpdateCard();});
 let canvas,seesScreenFxCanvas=null,seesScreenFxWasActive=false,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0,dossierDismissedAt=0,runtimeFault=null;
 function readSave(key){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):null;}catch{return null;}}
@@ -374,7 +547,7 @@ function requiredChoicePending(){const s=state.game?.s;return !!(s&&(s.rewardPen
 function reportCurve(samples){const values=(samples||[]).map(v=>Math.max(0,Number(v)||0)),w=320,h=120,p=8,peak=Math.max(0,...values),scale=peak||1,points=values.map((v,i)=>`${p+(w-2*p)*(values.length<2?0:i/(values.length-1))},${h-p-(h-2*p)*v/scale}`).join(' ');return `<svg class="native-dps-chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="每秒伤害变化曲线"><path d="M ${p} ${h-p} H ${w-p} M ${p} ${h-p} V ${p}"/><polyline points="${points}"/></svg><small>战斗时间（秒） · 峰值 ${Math.round(peak).toLocaleString()} DPS</small>`;}
 function finalBondLayerRows(g,r){const sees=isSeesBand(g.s.bandId),visible=id=>sees||id!==SEES_BOND_ID&&id!==TARTARUS_BOND_ID,ids=[...new Set([...Object.keys(data.season.bondInfoDict||{}),SEES_BOND_ID,TARTARUS_BOND_ID,...Object.keys(g.s.bondLayers||{})])].filter(visible),rows=Array.isArray(r.finalBondLayers)?r.finalBondLayers.filter(row=>visible(row.id)):ids.map(id=>({id,name:data.season.bondInfoDict[id]?.name||id,layers:g.s.bondLayers?.[id]||0}));return rows.map(row=>{const value=Number(row.layers);return {id:row.id,name:row.name||data.season.bondInfoDict[row.id]?.name||row.id,layers:Number.isFinite(value)?Math.max(0,Math.floor(value)):0};});}
 function bondLayerReport(rows){return '<section class="native-result-bond-layers"><h3>盟约最终层数</h3><div role="list">'+rows.map(row=>'<span role="listitem" class="'+(row.layers?'has-layers':'')+'"><b>'+esc(row.name)+'</b><i>'+row.layers+' 层</i></span>').join('')+'</div></section>';}
-function showResult(){const g=state.game,r=g.s.runResult||g.s.history.at(-1);if(!r)return;const archived=state.archive?.runs?.length||archiveNow().runs.length,units=(r.units||[]).slice().sort((a,b)=>b.damage-a.damage),selected=units.find(u=>u.uid===state.resultUnitUid)||units[0],bossName=r.bossName||'最终 Boss';modal(`<h2>${r.kind==='final-boss'?(r.reason==='boss-killed'?'Boss 击破 · 挑战成功':'Boss 未能击破 · 挑战结束'):'作战报告'}</h2>${r.kind==='final-boss'?`<p class="native-boss-result-heading">${esc(bossName)} · ${r.elapsed.toFixed(1)} 秒</p>`:''}<p>总伤害</p><strong class="native-total">${Math.round(r.totalDamage||0).toLocaleString()}</strong><p>${r.elapsed.toFixed(2)} 秒 · DPS ${(r.dps??(r.elapsed>0?r.totalDamage/r.elapsed:0)).toFixed(2)}${r.kind==='final-boss'?` · 红门漏怪 ${r.timePenalty||0} 次`:''}</p>${archived?`<p class="muted small">已记入本地战绩：最近 ${archived} 场，可在「战前准备」页查看并随存档导出。</p>`:''}<div class="native-result-dps"><h3>角色造成总伤害</h3><div class="native-result-unit-list">${units.map(u=>{const source=g.s.units.find(x=>x.uid===u.uid),name=source?data.profiles[source.chessId].name:u.id||'其他来源';return `<button data-act="result-unit" data-uid="${u.uid}" class="${selected?.uid===u.uid?'chosen':''}">${esc(name)}<b>${Math.round(u.damage).toLocaleString()}</b></button>`;}).join('')||'<p>本次没有造成伤害。</p>'}</div>${selected?reportCurve(selected.dpsSamples):''}</div>${bondLayerReport(finalBondLayerRows(g,r))}<div class="native-result-actions"><button data-act="export">导出本次记录</button><button class="native-primary" data-act="home">回到大厅</button></div>`);}
+function showResult(){const g=state.game,r=g.s.runResult||g.s.history.at(-1);if(!r)return;if(r.kind==='online-boss-skipped'){modal(`<h2>联机对局结束</h2><p>已到第 ${r.round} 回合的 Boss 阶段。联机 MVP 暂不开放 Boss 战，本局在此结束。</p><button class="native-primary" data-act="home">回到大厅</button>`);return;}const archived=state.archive?.runs?.length||archiveNow().runs.length,units=(r.units||[]).slice().sort((a,b)=>b.damage-a.damage),selected=units.find(u=>u.uid===state.resultUnitUid)||units[0],bossName=r.bossName||'最终 Boss';modal(`<h2>${r.kind==='final-boss'?(r.reason==='boss-killed'?'Boss 击破 · 挑战成功':'Boss 未能击破 · 挑战结束'):'作战报告'}</h2>${r.kind==='final-boss'?`<p class="native-boss-result-heading">${esc(bossName)} · ${r.elapsed.toFixed(1)} 秒</p>`:''}<p>总伤害</p><strong class="native-total">${Math.round(r.totalDamage||0).toLocaleString()}</strong><p>${r.elapsed.toFixed(2)} 秒 · DPS ${(r.dps??(r.elapsed>0?r.totalDamage/r.elapsed:0)).toFixed(2)}${r.kind==='final-boss'?` · 红门漏怪 ${r.timePenalty||0} 次`:''}</p>${archived?`<p class="muted small">已记入本地战绩：最近 ${archived} 场，可在「战前准备」页查看并随存档导出。</p>`:''}<div class="native-result-dps"><h3>角色造成总伤害</h3><div class="native-result-unit-list">${units.map(u=>{const source=g.s.units.find(x=>x.uid===u.uid),name=source?data.profiles[source.chessId].name:u.id||'其他来源';return `<button data-act="result-unit" data-uid="${u.uid}" class="${selected?.uid===u.uid?'chosen':''}">${esc(name)}<b>${Math.round(u.damage).toLocaleString()}</b></button>`;}).join('')||'<p>本次没有造成伤害。</p>'}</div>${selected?reportCurve(selected.dpsSamples):''}</div>${bondLayerReport(finalBondLayerRows(g,r))}<div class="native-result-actions"><button data-act="export">导出本次记录</button><button class="native-primary" data-act="home">回到大厅</button></div>`);}
 function resetUpgradeConfirm(){if(!upgradeConfirm)return;upgradeConfirm=false;const button=root.querySelector('[data-act="upgrade"]');if(button){button.textContent=`升级 ${catOn()?'ALL':(state.game?.terms?.().upgradeCost??'MAX')} ◆`;button.classList.remove('is-confirming');button.setAttribute('aria-pressed','false');}}
 function action(button,anchor=null){const a=button.dataset.act,g=state.game,uid=Number(button.dataset.uid);if(button.disabled)return;if(a!=='upgrade')resetUpgradeConfirm();if(['home','new','begin','resume','sandbox','sandbox-exit'].includes(a))runtimeFault=null;if(['sandbox','home','sandbox-exit','new'].includes(a))rememberView('lobby');if(['begin','resume','import'].includes(a))rememberView('game');
  if(a==='upgrade'){if(!g||g.s.phase!=='prep')return;if(!upgradeConfirm){upgradeConfirm=true;button.textContent='确定升级';button.classList.add('is-confirming');button.setAttribute('aria-pressed','true');return;}resetUpgradeConfirm();const ok=g.perform('upgrade');if(!ok)notice(g.lastError||'当前资金不足或商店已达最高等级，无法升级。');save();render();return;}
@@ -452,7 +625,7 @@ function action(button,anchor=null){const a=button.dataset.act,g=state.game,uid=
  if(a==='destroy'||a==='destroyEquip'){const slot=Number(button.dataset.slot),fromEquip=state.inspect?.kind==='equip',name=itemName(a==='destroy'?g.s.items.find(i=>i.uid===uid)?.chessId:g.s.units.find(u=>u.uid===uid)?.equipment?.[slot]?.chessId);if(!g.perform(a,uid,slot)){notice('当前阶段无法销毁装备。');return;}if(state.item===uid)state.item=null;state.inspect=fromEquip?{kind:'unit',uid}:null;notice('已销毁 '+name+'。');save();render();return;}
  if(a==='bond-info'){modal(bondModalHtml(button.dataset.id),{bond:button.dataset.id});return;}if(a==='aim'){if(state.preview){state.preview.dir=Number(button.dataset.dir);draw();}return;}if(a==='cancel'){state.preview=null;render();return;}if(a==='place-confirm'){commitPreview();return;}
  let ok;const handWasFull=g.handFull();if(a==='buy'||a==='buyItem'){const kind=a==='buy'?'shop':'shopItem',index=Number(button.dataset.index);if(!inspectSame(kind,index)){state.inspect={kind,index};state.selected=null;state.item=null;render();return;}if(g.s.phase!=='prep'){notice('当前阶段不能购买');return;}ok=g.perform(a,index);if(ok){state.inspect=null;if(a==='buy')state.selected=g.s.units.at(-1)?.uid??null;}}else if(a==='reward'){const reward=g.s.rewardPending,index=Number(button.dataset.index),id=reward?.tier?reward.offers?.[index]:button.dataset.id;if(reward?.tier&&!inspectSame('reward',index)){state.inspect={kind:'reward',index};state.selected=null;state.item=null;render();return;}ok=id?g.perform(reward?.kind==='bounty'?'bounty':'takePromotion',id):false;if(ok&&reward?.kind==='bounty')saveCheckpoint();state.modal=null;if(ok)state.inspect=null;}else if(a==='decision'){ok=g.perform(a,button.dataset.id);state.modal=null;}else if(a==='sell'){state.quickSell=null;ok=g.perform(a,uid);if(ok){state.selected=null;state.inspect=null;}}else if(a==='withdraw'||a==='mineCommand'){ok=g.perform(a,uid);}else if(['upgrade','refresh','lock','start','next'].includes(a)){ok=g.perform(a);if(a==='start'){state.paused=false;resetFxClock();unlockAudio();attachZoneVisual(g.battle);}state.preview=null;if(a==='refresh')state.inspect=null;}else return;
- if(!ok)notice(handWasFull&&(a==='buy'||a==='buyItem')?'整备区已满：先部署、出售或装备清出空余，才能购入干员／装备':g.lastError||'当前资金、位置或阶段不允许此操作');if(ok&&(a==='next'||a==='decision'))saveCheckpoint();save();render();if(g.s.phase==='finished')showResult();
+ if(!ok)notice(handWasFull&&(a==='buy'||a==='buyItem')?'整备区已满：先部署、出售或装备清出空余，才能购入干员／装备':g.lastError||'当前资金、位置或阶段不允许此操作');if(ok&&(a==='next'||a==='decision'))saveCheckpoint();save();render();if(ok&&a==='start'&&state.onlineRun&&g.s.runResult?.kind==='online-boss-skipped'){state.onlineRun.waitingForServer='boss';onlineClient?.skipBoss(g.s.round);coopWaitModal('联机对局结束中','已到 Boss 阶段，本局按联机 MVP 规则直接结束。');}else if(g.s.phase==='finished'&&!state.onlineRun)showResult();
 }
 function handCards(game){if(game.s.phase==='prep')game.syncSummonCards?.();return game.syncHandSlots?.()||game.hand();}
 function handCardKind(game,card){return game.s.units.includes(card)?'operator':game.s.items.includes(card)?'item':'summon-card';}
@@ -1056,7 +1229,7 @@ function advance(now,live){
   acc+=dt*state.speed;const previous=g.s.phase,deadline=live?0:performance.now()+BG_BUDGET_MS;
   while(acc>=1/30&&g.s.phase==='battle'){acc-=1/30;g.tick();if(!live&&performance.now()>deadline)break;}
   if(g.battle)playBattleEvents(g.battle.s,live?state.muted:true,state.volume);
-  if(g.s.phase!==previous){acc=0;save();recordRunIfOver(g);render();if(g.s.phase==='intermission')roundEndBegin(g);else if(g.s.phase==='finished'){const dmg=Math.round(g.s.runResult?.totalDamage||0),result=g.s.runResult;notice(result?.kind==='final-boss'?(result.success?'最终 Boss 击破，挑战成功':'最终 Boss 未能击破，挑战失败'):'模拟结束，总伤害 '+(eggOn()?format325(dmg):dmg.toLocaleString()));if(['final-boss','training-dummy'].includes(result?.kind))showResult();else roundEndBegin(g);}}
+  if(g.s.phase!==previous){acc=0;save();recordRunIfOver(g);render();if(state.onlineRun){if(g.s.phase==='intermission'){if(g.s.coopStage==='joint-defense-complete')submitCoopDefenseResult(g);else submitCoopBattleResult(g);}else if(g.s.coopStage==='boss-skipped'){state.onlineRun.waitingForServer='boss';onlineClient?.skipBoss(g.s.round);coopWaitModal('联机对局结束中','已到 Boss 阶段，本局按联机 MVP 规则直接结束。');}else submitCoopBattleResult(g);}else if(g.s.phase==='intermission')roundEndBegin(g);else if(g.s.phase==='finished'){const dmg=Math.round(g.s.runResult?.totalDamage||0),result=g.s.runResult;notice(result?.kind==='final-boss'?(result.success?'最终 Boss 击破，挑战成功':'最终 Boss 未能击破，挑战失败'):'模拟结束，总伤害 '+(eggOn()?format325(dmg):dmg.toLocaleString()));if(['final-boss','training-dummy'].includes(result?.kind))showResult();else roundEndBegin(g);}}
  }else if(state.view==='sandbox'&&state.sandbox?.phase==='battle'&&!state.paused){
   acc+=dt*state.speed;const deadline=live?0:performance.now()+BG_BUDGET_MS;
   while(acc>=1/30&&!state.sandbox.battle.s.finished){acc-=1/30;state.sandbox.battle.step();if(!live&&performance.now()>deadline)break;}
