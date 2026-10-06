@@ -135,15 +135,15 @@ export function bondBanBlockers(data,bonds,chessId){
 }
 // 简报／弹窗用：每个被禁盟约的规模、状态，以及**该盟约下被禁的干员**（这是预览分组的数据源）。
 // 同一名干员挂在多个被禁盟约下时会同时出现在多组里（用户要的就是「重复多列一次」）。
-export function bondBanSummary(data,bonds,config){
- const set=banSet(bonds),rows=bondRoster(data),rules=banRules(config,data);
+export function bondBanSummary(data,bonds,config,{operatorBonds=null}={}){
+ const set=banSet(bonds),baseRows=bondRoster(data),rows=operatorBonds?baseRows.map(row=>({...row,bonds:[...new Set(operatorBonds(row.chessIds[0]||row.charId))]})):baseRows,rules=banRules(config,data);
  const detail=row=>({charId:row.charId,name:row.name,tier:row.tier,bonds:row.bonds.slice()});
  return {
   bonds:(bonds||[]).map(id=>{
-   const members=bondMembers(data,id).filter(row=>memberBanned(row,set));
+   const bondRows=rows.filter(row=>row.bonds.includes(id)),members=bondRows.filter(row=>memberBanned(row,set));
    return {
     id,name:bondName(data,id),core:bondIsCore(data,id),mode:banModeOf(rules,id),
-    total:bondMembers(data,id).length,banned:members.map(row=>row.name),
+    total:bondRows.length,banned:members.map(row=>row.name),
     members:members.sort((a,b)=>a.tier-b.tier||String(a.name).localeCompare(String(b.name),'zh-CN')).map(detail),
    };
   }),
@@ -215,7 +215,7 @@ const bondCellHtml=(data,id,isBanned,row,esc)=>{
 
 export function bondBanBriefingHtml(data,ban,ui={}){
  if(!ban?.bonds?.length)return '';
- const esc=ui.esc||String,summary=bondBanSummary(data,ban.bonds,ban),banned=new Set(ban.bonds);
+ const esc=ui.esc||String,summary=bondBanSummary(data,ban.bonds,ban,ui),banned=new Set(ban.bonds);
  const ids=bondIds(data),rules=banRules(ban,data);
  // 核心盟约永远全列（含固定不禁用的），附加只列被禁的。
  const core=ids.filter(id=>bondIsCore(data,id)),extra=ids.filter(id=>!bondIsCore(data,id));
@@ -239,7 +239,7 @@ export function activeBondBan(draftBan,sessionBan){
 // 同一名干员挂在多个缺席盟约下时，每组各列一次（用户 2026-09-22 口径：重复就多列举一次）。
 export function bannedOperatorsHtml(data,ban,ui={}){
  const esc=ui.esc||String,avatar=ui.avatar||(()=>'');
- const summary=bondBanSummary(data,ban?.bonds||[],ban);
+ const summary=bondBanSummary(data,ban?.bonds||[],ban,ui);
  const ops=summary.operators.slice().sort((a,b)=>a.tier-b.tier||String(a.name).localeCompare(String(b.name),'zh'));
  const banned=new Set(ban?.bonds||[]),rules=banRules(ban,data);
  const fixedSet=new Set(rules.fixed);

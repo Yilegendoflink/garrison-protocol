@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "timeZone": "Asia/Hong_Kong",
+  "entries": [
+    {
+      "id": "2026-10-07-deep-sea-era",
+      "challengeId": "deep-sea-era",
+      "title": "深海时代",
+      "description": "阿戈尔盟约汇集所有干员，敌人池仅保留 PRTS 分类为“海怪”的海嗣相关敌人。",
+      "startsAt": "2026-10-07T00:00:00+08:00",
+      "endsAt": "2026-10-14T00:00:00+08:00",
+      "allowedModeIds": [],
+      "mapId": null,
+      "finalBossId": "boss_4",
+      "rules": [
+        {
+          "id": "all-operators-egir",
+          "title": "全员阿戈尔",
+          "description": "所有干员均视为拥有阿戈尔盟约，包含本局后续招募的干员。"
+        },
+        {
+          "id": "seaborn-enemy-pool",
+          "title": "海嗣敌池",
+          "description": "普通波次与终局增援只从 PRTS 分类为“海怪”的敌人中抽取；最终首领固定为海怪类的盐风主教昆图斯。"
+        }
+      ],
+      "effects": [
+        {
+          "hook": "operator.bonds",
+          "type": "add-bond",
+          "params": { "bondId": "egirShip" }
+        },
+        {
+          "hook": "enemy.pool",
+          "type": "filter-prts-kind",
+          "params": { "kind": "海怪" }
+        }
+      ]
+    }
+  ]
+}

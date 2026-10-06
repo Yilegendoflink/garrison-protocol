@@ -1,5 +1,6 @@
 import {buildPhasePlan} from './protocol.js';
 import {TRAINING_TYPES,PLACEHOLDER_ENEMY,loadWaveTable,enemyCost,tierPack,templateLabel,enemyPoolEligible} from './native-wave-fill.js';
+import {WEEKLY_CHALLENGE_HOOKS,runWeeklyChallengeHook} from './native-challenges.js';
 
 const A=(n,extra=1)=>extra*(1.1**n);
 const H=(n,extra=1)=>extra*(1.2**n);
@@ -103,11 +104,13 @@ export function fillBudgetWave(random,table,type,tier){
 
 // Keep the editable wave table intact, but prevent explicitly complex enemy
 // behaviors from leaking into the random pool before they have fixed-wave tests.
-export function filterRandomPoolTable(table,data){
+export function filterRandomPoolTable(table,data,weeklyChallenge=null){
  if(!data?.enemies)return table;
  const out=structuredClone(table);
+ const challengePool=weeklyChallenge?Object.entries(data.enemies).filter(([id,enemy])=>enemy?.prtsRace==='海怪'&&enemy?.kinds?.includes('random-pool')&&enemyPoolEligible(id,data)).map(([id])=>id):[];
  for(const type of Object.values(out.types||{}))for(const tier of Object.values(type||{}))for(const slot of tier?.templates||[]){
   slot.pool=(slot.pool||[]).filter(id=>data.enemies[id]&&data.enemies[id].enemyBehavior?.randomPoolEligible!==false);
+  if(weeklyChallenge){slot.pool=runWeeklyChallengeHook(weeklyChallenge,WEEKLY_CHALLENGE_HOOKS.ENEMY_POOL,slot.pool,{data,slot});if(!slot.pool.length)slot.pool=runWeeklyChallengeHook(weeklyChallenge,WEEKLY_CHALLENGE_HOOKS.ENEMY_POOL,challengePool,{data,slot,fallback:true});}
  }
  return out;
 }
@@ -135,7 +138,7 @@ export function scheduleWaveQueue(queue,level,round){
  });
 }
 
-export function buildWavePlan(data,turn,roster=null,table=null){
+export function buildWavePlan(data,turn,roster=null,table=null,weeklyChallenge=null){
  if(!turn)return null;
  if(turn.isBossTurn)return {round:turn.round,finalBoss:true,total:0,targets:1,queue:[],level:null,levelId:null,assignment:null};
  const levelId=turn.battles[0]?.levelId.toLowerCase(),level=data.levels[levelId];if(!level)throw Error('缺少关卡模板 '+levelId);
@@ -144,7 +147,7 @@ export function buildWavePlan(data,turn,roster=null,table=null){
  const ground=visibleRoutes(level,false),air=visibleRoutes(level,true),queue=[],mode=data.season.modeDataDict[roster.modeId];
  const scale=mode?enemyCombatScale(mode,turn.round,{hidden:!!turn.isConditional}):{atk:1,hp:1,moveSpeed:1};
  if(turn.round===1&&(scale.side==='multi'||mode?.modeDifficulty==='TRAINING'))scale.hp*=.8;
- const sourceTable=table||loadWaveTable(),waveTable=filterRandomPoolTable(sourceTable,data),pack=fillBudgetWave(waveRng(assignment.waveSeed||turn.round),waveTable,assignment.type,assignment.tier);
+ const sourceTable=table||loadWaveTable(),waveTable=filterRandomPoolTable(sourceTable,data,weeklyChallenge),pack=fillBudgetWave(waveRng(assignment.waveSeed||turn.round),waveTable,assignment.type,assignment.tier);
  pack.ids.forEach((id,i)=>{
   const fly=(data.enemies?.[id]||level.enemyProfiles?.[id])?.motion==='FLY';
   const routes=fly?(air.length?air:ground):(ground.length?ground:air);if(!routes.length)return;
@@ -156,9 +159,9 @@ export function buildWavePlan(data,turn,roster=null,table=null){
 
 // 最终 Boss 战的 30 名增援：候选只取本局三条特训词条的 III 档（高压）模板，
 // 再用独立种子每 3 秒抽一名，并从本阵地保存的上/下红门路线入场。
-export function buildFinalBossAddQueue(data,roster,seed,doorRoutes,table=null){
+export function buildFinalBossAddQueue(data,roster,seed,doorRoutes,table=null,weeklyChallenge=null){
  if(!Array.isArray(roster?.types)||roster.types.length!==3||!Array.isArray(doorRoutes)||doorRoutes.length!==2)throw Error('最终 Boss 波次缺少三条特训词条或上下红门路线');
- const sourceTable=filterRandomPoolTable(table||loadWaveTable(),data),candidatePool=[];
+ const sourceTable=filterRandomPoolTable(table||loadWaveTable(),data,weeklyChallenge),candidatePool=[];
  roster.types.forEach((type,index)=>{
   const pack=fillBudgetWave(waveRng((Number(seed)^0x51ed270b^Math.imul(index+1,0x9e3779b9))>>>0),sourceTable,type,3);
   for(const id of pack.ids)if(data.enemies?.[id]&&enemyPoolEligible(id,data)&&!['BOSS','LEADER'].includes(data.enemies[id].levelType))candidatePool.push(id);

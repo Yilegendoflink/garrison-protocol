@@ -5,6 +5,7 @@ import {runGarrison} from './garrison.js';
 import {bannedOperators,bondBanBlockers,bondBanSummary,bondMembers,isOperatorBanned} from './native-bond-ban.js';
 // S.E.E.S. 策略：`bonds()` 里把【塔尔塔罗斯】的计数换成层数（纯读，不改判定）。
 import {SEES_BOND_ID,seesRun,tartarusLayers} from './native-sees.js';
+import {WEEKLY_CHALLENGE_HOOKS} from './native-challenges.js';
 
 // Preparation controller for the historical mode. Random pools remain an explicit
 // controller input until their selection rules are verified; absent draws fail atomically.
@@ -27,7 +28,7 @@ export class NativeEconomy extends PreparationState {
   const id=this.poolDraw(request,structuredClone(this.s)),normalId=this.data.season.chessNormalIdLookupDict[id]||id,shop=this.data.season.charShopChessDatas[normalId],item=this.data.season.trapChessDataDict[id];
   if(request.kind==='item'?!item:!shop?.charId)throw Error('Invalid pool result '+id);
   if(shop&&request.maxTier!==undefined&&shop.chessLevel>request.maxTier)throw Error('Pool result exceeds requested tier');
-  if(shop&&request.bond&&!this.data.season.charChessDataDict[id].bondIds.includes(request.bond))throw Error('Pool result violates requested bond');
+  if(shop&&request.bond&&!this.operatorBonds(id).includes(request.bond))throw Error('Pool result violates requested bond');
   if(shop&&request.excludeCharId===shop.charId)throw Error('Pool result violates exclusion');
   // 兜底门禁：候选池理论上已经过滤掉禁用盟约的成员，这里再挡一次，防新增抽取路径漏过滤。
   if(request.kind!=='item'&&this.bondBanned(id))throw Error('Banned operator leaked into pool: '+id);
@@ -35,6 +36,12 @@ export class NativeEconomy extends PreparationState {
  }
  bonds(){
   const rows=activeBonds(this.data,this.s.units,this.s.modeId,this.s.bandId);
+  for(const effect of this.s.weeklyChallenge?.effects||[])if(effect.hook===WEEKLY_CHALLENGE_HOOKS.OPERATOR_BONDS&&effect.type==='add-bond'){
+   const id=effect.params?.bondId,row=rows[id],info=this.data.season.bondInfoDict[id],count=row?.count;
+   if(!row||!info||!Number.isFinite(count))continue;
+   const min=Number(info.activeParamList?.[0])||0,max=Number(info.activeParamList?.[1]);
+   row.active=info.activeConditionTemplate==='count_threshold_downward'?count>=min&&count<max:count>=min;
+  }
   // S.E.E.S. 策略局里【塔尔塔罗斯】没有「干员成员」概念：它的计数就是层数（面板、战报的盟约情况都读这一份）。
   if(seesRun(this)&&rows.tartarusShip){const layers=tartarusLayers(this);rows.tartarusShip.count=layers;rows.tartarusShip.rawCount=layers;}
   return rows;
@@ -43,10 +50,10 @@ export class NativeEconomy extends PreparationState {
  // 干员还能用，其余一律拿不到——**不只是商店**：策略／道具的固定点名发放、卫戍 SERVER_GAIN_CHAR、
  // 援军转让、晋升奖励候选都走这里挡。判定按 charId（精锐与初始是同一名干员），名单在编制台配置。
  // `bondBanned` 在 `NativeEconomy` 上定义，所以独立使用 economy 的场合（没有 s.bondBan）恒为 false。
- bondBanned(chessId){const ban=this.s?.bondBan;return !!ban&&isOperatorBanned(this.data,ban.bonds,chessId);} // v3：所属盟约全被禁才禁用
- bondBanBlockers(chessId){const ban=this.s?.bondBan||{};return bondBanBlockers(this.data,ban.bonds||[],chessId);}
- bannedOperatorList(){const ban=this.s?.bondBan||{};return bannedOperators(this.data,ban.bonds||[]);}
- bondBanSummary(){const ban=this.s?.bondBan||{};return bondBanSummary(this.data,ban.bonds||[],ban);}
+ bondBanned(chessId){const ban=this.s?.bondBan;if(!ban)return false;if(!this.s.weeklyChallenge)return isOperatorBanned(this.data,ban.bonds,chessId);const bonds=this.operatorBonds(chessId);return bonds.length>0&&bonds.every(id=>ban.bonds.includes(id));} // v3：所属盟约全被禁才禁用
+ bondBanBlockers(chessId){const ban=this.s?.bondBan||{};if(!this.s.weeklyChallenge)return bondBanBlockers(this.data,ban.bonds||[],chessId);const bonds=this.operatorBonds(chessId);return bonds.length&&bonds.every(id=>ban.bonds?.includes(id))?bonds.filter(id=>ban.bonds.includes(id)):[];}
+ bannedOperatorList(){const ban=this.s?.bondBan||{},rows=bannedOperators(this.data,ban.bonds||[]);return this.s.weeklyChallenge?rows.filter(row=>this.bondBanned(row.chessIds?.[0]||row.charId)):rows;}
+ bondBanSummary(){const ban=this.s?.bondBan||{};return bondBanSummary(this.data,ban.bonds||[],ban,this.s.weeklyChallenge?{operatorBonds:id=>this.operatorBonds(id)}:{});}
  // 「按盟约随机发人」的调用点必须先问这一句：被禁盟约在本局是缺席的，可能一个人都发不出来
  // （该盟约成员都还挂着别的盟约、或人都在调度中心等级之外），而空候选池会让 drawFromPool 抛错、
  // 把整个动作回滚——卫戍发放挂在 prep 上，抛错会连「进入下一回合」一起打回，等于卡死。
@@ -65,11 +72,13 @@ export class NativeEconomy extends PreparationState {
     candidates.push({charId:shop.charId,name:profile?.name||shop.charId,tier:Number(shop.chessLevel)||1,bonds:[...bonds],chessIds:[shop.chessId]});known.add(shop.charId);
    }
   }
+  if(this.s.weeklyChallenge){const known=new Set(candidates.map(row=>row.charId));for(const shop of this.eligible()){if(shop.chessLevel>tier||known.has(shop.charId)||!this.operatorBonds(shop.chessId).includes(id))continue;const profile=this.data.profiles?.[shop.chessId];candidates.push({charId:shop.charId,name:profile?.name||shop.charId,tier:Number(shop.chessLevel)||1,bonds:this.operatorBonds(shop.chessId),chessIds:[shop.chessId]});known.add(shop.charId);}}
   return candidates.filter(row=>!this.bondBanned(row.chessIds[0]));
  }
  bondHasCandidates(id,maxTier){return !!id&&this.bondCandidates(id,maxTier).length>0;}
  gainableBonds(u,maxTier){return (this.ownBonds(u)||[]).filter(id=>this.bondHasCandidates(id,maxTier));}
- ownBonds(u){return u.bondIds||this.data.season.charChessDataDict[u.chessId].bondIds;}
+ operatorBonds(chessId){const bonds=this.data.season.charChessDataDict[chessId]?.bondIds||[];return this.applyWeeklyChallengeHook?.(WEEKLY_CHALLENGE_HOOKS.OPERATOR_BONDS,[...bonds],{chessId})||bonds;}
+ ownBonds(u){const bonds=u?.bondIds||this.data.season.charChessDataDict[u?.chessId]?.bondIds||[];return this.applyWeeklyChallengeHook?.(WEEKLY_CHALLENGE_HOOKS.OPERATOR_BONDS,[...bonds],{unit:u,chessId:u?.chessId})||bonds;}
  addLayers(id,amount,requireActive=true){
   const info=this.data.season.bondInfoDict[id];if(!info)throw Error('Unknown bond '+id);if(!Number.isFinite(amount)||amount<0)throw Error('Invalid bond increment');
   if(requireActive&&!this.bonds()[id].active)return;
@@ -106,6 +115,7 @@ export class NativeEconomy extends PreparationState {
   const chess=this.data.season.charChessDataDict[chessId];if(!chess)throw Error('Unknown chess '+chessId);const previousReward=this.s.rewardPending;let unit;
   if(chess.isGolden){const normalId=this.data.season.chessNormalIdLookupDict[chessId]||Object.keys(this.data.season.charShopChessDatas).find(id=>this.data.season.charShopChessDatas[id].goldenChessId===chessId),shop=this.data.season.charShopChessDatas[normalId];if(!shop?.charId)throw Error('Unassigned DIY slot');unit={uid:++this.s.seq,chessId,charId:shop.charId,rank:shop.chessLevel,position:null,dir:0,equipment:[]};this.s.units.push(unit);}
   else unit=super.gain(chessId);
+  if(this.s.weeklyChallenge)unit.bondIds=this.operatorBonds(chessId);
   if(previousReward&&previousReward!==this.s.rewardPending){this.s.rewardQueue.push(this.s.rewardPending);this.s.rewardPending=previousReward;}
   return this.onOperatorGained(unit);
  }

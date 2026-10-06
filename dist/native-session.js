@@ -11,6 +11,7 @@ import {bondBanIds,loadBondBan,normalizeBondBan} from './native-bond-ban.js';
 import {applyPrepSkills} from './native-prep.js';
 import {TOKEN_IDS} from './native-effects.js';
 import {itemAllowed,operatorAllowed,seesRun,freeDeploy,settleFundsToLayers,grantCountForLayers,seesGrantCandidates,tartarusLayers,tartarusCap,SEES_BOND_ID,TARTARUS_BOND_ID} from './native-sees.js';
+import {runWeeklyChallengeHook as dispatchWeeklyChallengeHook,validateWeeklyChallengeSnapshot} from './native-challenges.js';
 
 // 召唤物落点不受主人攻击范围限制的类型（见 summonCardRange 的注释）。
 const SUMMON_FREE_PLACEMENT=new Set(['cathy-device','skadi2-seaborn','silent-drone']);
@@ -63,8 +64,10 @@ const namedPickList=(rows,weights,keyOf)=>rows.flatMap(row=>Array(Math.max(1,Mat
 
 
 export class NativeSession extends NativeEconomy {
- constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,bondBan=null,egg325=false,cat=false,playerId='local',teamPeers=[],teamTransport=null,finalBossId=null,finalBossHpMultiplier=DEFAULT_FINAL_BOSS_HP_MULTIPLIER}={}){
+ constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,bondBan=null,egg325=false,cat=false,playerId='local',teamPeers=[],teamTransport=null,finalBossId=null,finalBossHpMultiplier=DEFAULT_FINAL_BOSS_HP_MULTIPLIER,weeklyChallenge=null}={}){
   const map=data.maps.find(m=>m.stageId===mapId)||data.maps.find(m=>m.weight>0);super(data,modeId,{bandId,board:map,seed,manualPreview:true,playerId,teamPeers,cat});this.baseMap=map;this.map=map;this.teamTransport=teamTransport;this.battle=null;this.s.mapId=map.stageId;this.s.itemOffers=[];this.s.summonCards=[];this.s.capacity=8;this.s.passiveIncome=0;this.s.history=[];this.s.runResult=null;this.s.frozenSlots=[];this.s.roundDecisions=[];this.s.enemyModifiers=[];this.s.operatorModifiers=[];this.s.commands=[];
+  if(weeklyChallenge&&!validateWeeklyChallengeSnapshot(weeklyChallenge))throw Error('每周挑战快照无效');
+  if(weeklyChallenge)this.s.weeklyChallenge=structuredClone(weeklyChallenge);
   // 本局禁用的盟约（固定禁用的全部 + 随机抽中的 3 核心 + 4 附加）在开局定死，随存档保存；
   // 干员只有在「所属盟约全部被禁」时才被禁用。
   // 禁用方案默认取协议自定义「禁用方案」页配置的那份（localStorage；未配置时是默认方案：投资人固定不被随机禁用）；
@@ -78,6 +81,7 @@ export class NativeSession extends NativeEconomy {
    :{bonds:bondBanIds(this.data,seed,normalized),always:normalized.always,never:normalized.never};
   this.poolDraw=request=>this.drawFromPool(request);this.s.offers=this.rollOffers();this.fillItems();this.startPreparation();this.ensureRewards();this.s.waveRoster=waveRoster||createWaveRoster({random:()=>this.random(),data:this.data,modeId:this.s.modeId});if(egg325)this.s.egg325=true;
  }
+ applyWeeklyChallengeHook(hook,payload,context={}){return dispatchWeeklyChallengeHook(this.s.weeklyChallenge,hook,payload,{session:this,...context});}
  summonCardSpecs(u){const p=this.data.profiles[u?.chessId],skillIndex=u?.skillIndex??p?.skillIndex??0,out=[];if(p?.branch==='tactician'){if(u.charId==='char_427_vigil')out.push({type:'vigil-wolf',name:'狼群',count:1,mode:'manual'});if(u.charId==='char_249_mlyss')out.push({type:'mlyss-fluid',name:'流形',count:1,mode:'manual'});}
   // 凯瑟琳「定向支援信号」：携带数量取天赋黑板 `cnt`（精英0 = 2，精英1/2 = 3），同时部署上限取 token 的 `maxDeployCount`（2）。
   if(u.charId==='char_4162_cathy'){const talent=(p?.activeTalents||[]).find(t=>t.name==='定向支援信号'),cnt=talent?Number(blackboard(talent.blackboard).cnt)||3:3;out.push({type:'cathy-device',name:'支援装置',count:cnt,mode:'manual'});}
@@ -140,7 +144,7 @@ export class NativeSession extends NativeEconomy {
   const exclude=new Set((r.exclude||[]).filter(Boolean));
   const stockPool=!!this.s.stock,limited=stockPool&&!!used;
   const inStock=o=>stockOf(this.data,this.s,o.chessId)-(used?.[o.chessId]||0)>0;
-  if(r.bond&&this.bondHasCandidates(r.bond,r.maxTier||this.s.level))rows=rows.filter(o=>this.data.season.charChessDataDict[o.chessId].bondIds.includes(r.bond));if(r.excludeCharId)rows=rows.filter(o=>o.charId!==r.excludeCharId);
+  if(r.bond&&this.bondHasCandidates(r.bond,r.maxTier||this.s.level))rows=rows.filter(o=>this.operatorBonds(o.chessId).includes(r.bond));if(r.excludeCharId)rows=rows.filter(o=>o.charId!==r.excludeCharId);
   // 被禁盟约在本局一个人都发不出来时不要抛错：本局该盟约是缺席的，「本次刷新优先取某盟约」这种
   // **偏好型**请求直接忽略偏好、按普通规则抽（上面那行就是这么跳过的）；「发一名该盟约干员」这类
   // **权益型**请求由调用点先问 bondHasCandidates／gainableBonds，发不出来就不发，别在这里给出
@@ -186,7 +190,7 @@ export class NativeSession extends NativeEconomy {
   // 只有 canGiveBond 的装备（变形同构体）才给携带者盟约，而且给的是「另一件携带装备」的盟约：
   // 原表天赋栏那 14 条映射与对方 giveBondId 逐条一致（tests/native-equipment-growth.test.mjs 有门禁）。
  refreshEquipmentBonds(u){
-  const base=this.data.season.charChessDataDict[u.chessId]?.bondIds||[];
+  const base=this.operatorBonds(u.chessId);
   const items=u.equipment||[];
   const grants=items.some(i=>this.data.season.trapChessDataDict[i.chessId]?.canGiveBond===true);
   const extra=grants?[...new Set(items.map(i=>this.data.season.trapChessDataDict[i.chessId]).filter(d=>d&&d.canGiveBond!==true).map(d=>d.giveBondId).filter(Boolean))]:[];
@@ -407,6 +411,7 @@ export class NativeSession extends NativeEconomy {
   if(s.phase==='decision'&&(s.roundDecisionStage!=='reward'||!['early','late'].includes(s.roundDecisionPool)||!Array.isArray(s.roundDecisions)||!['bounty','equipment','tactical'].includes(s.roundDecisionType)))return null;
   if(s.phase==='decision'&&s.roundDecisionStage==='reward'&&(s.roundDecisions.length!==3||s.roundDecisions.some(o=>s.roundDecisionType==='bounty'?o?.kind!=='bounty'||!bountyOption(data,o.enemyId)||!integer(o.count,1,99)||!n(o.coin)||o.coin<0:s.roundDecisionType==='equipment'?o?.kind!=='equipment'||!data.season.trapChessDataDict[o.itemId]:o?.kind!=='tactical'||!data.season.effectBuffInfoDataDict[o.effectId])))return null;
   if(s.finalBossId!==undefined&&!AVAILABLE_FINAL_BOSS_IDS.includes(s.finalBossId))return null;
+  if(s.weeklyChallenge!==undefined&&!validateWeeklyChallengeSnapshot(s.weeklyChallenge))return null;
   if(s.finalBossHpMultiplier!==undefined&&(!n(s.finalBossHpMultiplier)||s.finalBossHpMultiplier<.01||s.finalBossHpMultiplier>10))return null;
   // 盟约禁用：必须是已知盟约、无重复、至多 23 个；缺省（旧存档）在下面按「本局不额外禁用」补齐。
   // `fixed`／`never`（禁用方案）只做类型校验，旧存档缺字段时读档时按当前方案补齐。

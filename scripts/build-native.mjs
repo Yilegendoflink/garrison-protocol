@@ -2,12 +2,27 @@ import fs from 'node:fs/promises';
 import {resolveChess,applyEnemyOverrides,richText} from '../dist/protocol.js';
 import {enemyBehaviorProfile} from '../dist/native-combat.js';
 import {applySeesContent} from './lib/sees-content.mjs';
+import {validateWeeklyChallengeSchedule} from '../dist/native-challenges.js';
+import {AVAILABLE_FINAL_BOSS_IDS} from '../dist/native-final-boss.js';
 const DEFAULT_CULTIVATION_BONUS={atk:0.1,def:0.1,maxHp:0.1};
 const source=JSON.parse(await fs.readFile('data/modes/alliance-lower/source.json','utf8')),base=JSON.parse(await fs.readFile('data/normalized/allianceLower.json','utf8')),catalog=JSON.parse(await fs.readFile('data/modes/alliance-lower/catalog.json','utf8')),behaviorConfig=JSON.parse(await fs.readFile('data/modes/alliance-lower/enemy-behavior-overrides.json','utf8')),behaviorOverrides=behaviorConfig.overrides||{},manifest=JSON.parse(await fs.readFile('data/modes/alliance-lower/levels/manifest.json','utf8')),characterTable=JSON.parse(await fs.readFile('data/gamedata/allianceLower/character_table.json','utf8')),enemyHandbook=JSON.parse(await fs.readFile('data/gamedata/allianceLower/enemy_handbook_table.json','utf8'));
+const weeklyChallengeSchedule=JSON.parse(await fs.readFile('data/modes/alliance-lower/weekly-challenges.json','utf8'));
+const weeklyChallengeErrors=validateWeeklyChallengeSchedule(weeklyChallengeSchedule,{modeIds:new Set([...Object.keys(source.season.modeDataDict),'mode_325','mode_cat_all']),mapIds:new Set(catalog.maps.filter(map=>map.weight>0).map(map=>map.stageId)),finalBossIds:new Set(AVAILABLE_FINAL_BOSS_IDS)});
+if(weeklyChallengeErrors.length)throw Error('Invalid weekly challenge schedule:\n'+weeklyChallengeErrors.join('\n'));
 const enemyCostEffects={};for(const [id,entry] of Object.entries(enemyHandbook.enemyData||{})){if(id==='enemy_2008_flking')continue;/* PRTS：墓碑图鉴中的全场削弱属于原关卡，不能烘成敌人天赋。 */const text=(entry.abilityList||[]).map(x=>x.text||'').join(' '),effects=[];if(/部署费用回复速度减半/.test(text))effects.push({costRecoveryMultiplier:.5});if(/再部署时间加倍/.test(text))effects.push({respawnTimeMultiplier:2});if(/封锁我方部署费用的自然回复/.test(text))effects.push({costRecoveryMultiplier:0});if(effects.length)enemyCostEffects[id]=effects;}
 // 普攻伤害类型的权威来源：敌人图鉴的 damageType（PHYSIC／MAGIC／NO_DAMAGE，多类型按原表顺序，第一项是常态）。
 // 客户端不再从描述文本猜类型（见 dist/native-battle.js 的 enemyBaseDamageType）。
 const enemyDamageTypes=Object.fromEntries(Object.entries(enemyHandbook.enemyData||{}).map(([id,entry])=>[id,Array.isArray(entry.damageType)&&entry.damageType.length?entry.damageType:null]));
+// PRTS 图鉴 codexId 对应原始敌人索引；按图鉴「种类」给运行时档案加只读分类，周挑战据此筛敌池。
+const prtsSnapshotDirs=(await fs.readdir('data/prts/snapshots',{withFileTypes:true})).filter(entry=>entry.isDirectory()).map(entry=>entry.name).sort();
+const prtsEnemySnapshot=prtsSnapshotDirs.length?JSON.parse(await fs.readFile(`data/prts/snapshots/${prtsSnapshotDirs.at(-1)}/enemies.json`,'utf8')):[];
+const prtsRaceByEnemyIndex=new Map(prtsEnemySnapshot.map(enemy=>[enemy.codexId,enemy.race]).filter(([id,race])=>id&&race));
+const prtsRaceByEnemyId=Object.fromEntries(Object.entries(base.enemies||{}).map(([id,enemy])=>[id,prtsRaceByEnemyIndex.get(enemy.codex?.enemyIndex)]).filter(([,race])=>race));
+for(const challenge of weeklyChallengeSchedule.entries)for(const effect of challenge.effects||[])if(effect.hook==='enemy.pool'&&effect.type==='filter-prts-kind'){
+ const kind=effect.params?.kind,available=catalog.enemies.filter(enemy=>enemy.kinds?.includes('random-pool')&&prtsRaceByEnemyId[enemy.id]===kind&&enemy.enemyBehavior?.randomPoolEligible!==false);
+ if(!available.length)throw Error(`每周挑战 ${challenge.id} 没有可用的 PRTS「${kind}」敌人`);
+ if(challenge.finalBossId){const enemyId=source.common.bossInfoDict[challenge.finalBossId]?.enemyId;if(prtsRaceByEnemyId[enemyId]!==kind)throw Error(`每周挑战 ${challenge.id} 的最终首领不属于 PRTS「${kind}」种类`);}
+}
 const virtualChess=[['chess_virtual_prepared_medic','char_605_cmedic',4,0],['chess_virtual_touch','char_613_acmedc',6,2]];for(const[chessId,charId,chessLevel,defaultSkillIndex]of virtualChess){const template=source.season.charChessDataDict[Object.keys(source.season.charChessDataDict).find(id=>source.season.charChessDataDict[id].isGolden===false)];source.season.charChessDataDict[chessId]={...structuredClone(template),chessId,isGolden:false,charId,bondIds:[],garrisonIds:[],status:{...template.status,evolvePhase:'PHASE_2',charLevel:1,skillLevel:1,equipLevel:0}};source.season.charShopChessDatas[chessId]={chessId,goldenChessId:null,chessLevel,shopLevelSortId:999,chessType:'NORMAL',charId,tmplId:null,defaultSkillIndex,isHidden:true};}
 // 联动干员（S.E.E.S. 四人组）：口径见 data/modes/alliance-lower/collab-operators.json——只建隐藏档进技能测试场，
 // 不给盟约、不给卫戍、不进商店池。数值不抄写：实体／技能／范围从全局数据 data/normalized/current.json（rel77.0）取，
@@ -22,7 +37,7 @@ const catalogById=Object.fromEntries(catalog.enemies.map(e=>[e.id,e]));
 // 敌人档案统一入口：把行为覆盖 JSON 和 enemyBehaviorProfile 推导出的能力（持续伤害区域、
 // 流血、抵抗等）一起写进 enemyBehavior。客户端读到的 runtime-data 因此自带这些字段，
 // 不会因为快照丢失原始 skills 表而退化成空行为。
-const buildEnemyProfile=(id,rawData,catalogEnemy,extra={})=>{const profile={...rawData,damageTypes:enemyDamageTypes[id]||null,ability:catalogEnemy?.ability||base.enemies[id]?.codex?.abilityList||[],kinds:catalogEnemy?.kinds||[],categories:catalogEnemy?.categories||[],costEffects:enemyCostEffects[id]||[],...extra,enemyBehavior:behaviorOverrides[id]};return {...profile,enemyBehavior:enemyBehaviorProfile(profile)};};
+const buildEnemyProfile=(id,rawData,catalogEnemy,extra={})=>{const profile={...rawData,damageTypes:enemyDamageTypes[id]||null,ability:catalogEnemy?.ability||base.enemies[id]?.codex?.abilityList||[],kinds:catalogEnemy?.kinds||[],categories:catalogEnemy?.categories||[],...(prtsRaceByEnemyId[id]?{prtsRace:prtsRaceByEnemyId[id]}:{}),costEffects:enemyCostEffects[id]||[],...extra,enemyBehavior:behaviorOverrides[id]};return {...profile,enemyBehavior:enemyBehaviorProfile(profile)};};
 const levels={};for(const[id,entry]of Object.entries(manifest.files)){const l=JSON.parse(await fs.readFile('data/modes/alliance-lower/levels/'+entry.file,'utf8'));const enemyProfiles={};for(const ref of l.enemyDbRefs||[]){const raw=base.enemies[ref.id]?.levels.find(x=>x.level===ref.level),catalogEnemy=catalogById[ref.id];if(raw)enemyProfiles[ref.id]=buildEnemyProfile(ref.id,applyEnemyOverrides(raw.data,ref.overwrittenData),catalogEnemy);}levels[id]={routes:l.routes,waves:l.waves,enemyProfiles};}
 // 正式最终战需要领袖原表关卡覆盖（例如卢西恩的本期攻击 600），不把领袖塞进道中随机池。
 const finalBosses={};
@@ -32,6 +47,7 @@ for(const[modeId,rounds]of Object.entries(source.season.battleDataDict)){
 }
 const assets=JSON.parse(await fs.readFile('dist/assets/prts/manifest.json','utf8'));const branchRules=JSON.parse(await fs.readFile('data/prts/branch-rules.json','utf8'));const data={...source,sees:catalog.sees||null,tokens:Object.fromEntries(Object.entries(base.entities).filter(([id])=>id.startsWith('token_'))),branchRules,profiles,ranges:base.ranges,maps:catalog.maps,enemies:Object.fromEntries(catalog.enemies.map(e=>[e.id,buildEnemyProfile(e.id,e.data,e)])) ,items:catalog.items,assets:Object.fromEntries(Object.entries(assets.assets).map(([id,a])=>[id,a.file])),levels,enemyIndex:catalog.enemies.map(e=>{const a=e.data?.attributes||{},profile=buildEnemyProfile(e.id,e.data,e);return {id:e.id,name:e.name,kinds:profile.kinds||[],categories:profile.categories||[],motion:e.data?.motion||'WALK',applyWay:e.data?.applyWay||'',hp:a.maxHp??0,atk:a.atk??0,def:a.def??0,res:a.magicResistance??0,speed:a.moveSpeed??0,interval:a.baseAttackTime??0,tags:e.data?.enemyTags||[],desc:richText(e.data?.description||'')+(profile.enemyBehavior.scopeNote?' '+profile.enemyBehavior.scopeNote:''),enemyBehavior:profile.enemyBehavior};}),limitations:['商店刷新先按当前等级掷出阶级（最高阶30%、次高阶40%、更低阶合计30%），再从该阶级的剩余库存里抽；掷中的阶级没有库存时回落到整池随机抽。','技能通用属性、技力与弹药已接入；特殊召唤、形态、动画释放帧和部分敌人能力仍存在差异。','部分复杂策略、地图环境和装备联动尚未完整实现，请通过反馈入口记录。','道中敌人改为开局随机三种特训词条；每档按难度预算从自建敌人池抽取。空池使用占位模板。生命／攻击倍率按PRTS用户表接入，页面声明不保证准确。'],version:'manual-2026-09-13'};
 data.cultivationBonus=DEFAULT_CULTIVATION_BONUS;
+data.weeklyChallenges=weeklyChallengeSchedule;
 data.finalBosses=finalBosses;
 // 实现的召唤能力需要子实体档案，但子实体不扩充可选敌人目录/随机词条池。
 data.enemyDependencies={};

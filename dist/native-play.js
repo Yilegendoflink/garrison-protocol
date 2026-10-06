@@ -14,6 +14,7 @@ import {NATIVE_DATA} from './runtime-data.js';
 import {NativeSession} from './native-session.js';
 import {NativeBattle} from './native-battle.js';
 import {renderLobby,NATIVE_CHANGELOG,changelogHtml} from './native-lobby.js';
+import {fetchNetworkEpoch,weeklyChallengeAt,weeklyChallengeSnapshot,runWeeklyChallengeHook,WEEKLY_CHALLENGE_HOOKS} from './native-challenges.js';
 import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText,battleBoardVisible,bondCurrentPreviewHtml,isolatedPlatform,tileLiftAmount,ROUND_LEAK_CAP,HAND_LIMIT,enemySprite,battleTally,RANDOM_MAP_ID,resolveMapId,directionOf,mapThumbnailHtml} from './protocol.js';
 // 特殊地块/地图装置的绘制只读环境层：气流格由 blowerCells 统一算，别在绘制里另算一遍。
 import {blowerCells} from './native-environment.js';
@@ -215,10 +216,11 @@ function strategyInfo(id){const b=data.season.bandDataListDict[id],common=data.c
 function decorateStrategyCatalog(){for(const button of root.querySelectorAll('.native-strategy-catalog button')){const c=strategyCoverageById[button.dataset.id]||{status:'partial',statusLabel:'待核对',gapNote:'尚未建立效果覆盖记录'},span=button.querySelector('span');if(!span)continue;const status=document.createElement('small');status.className=`native-strategy-completeness ${c.status}`;status.textContent=c.statusLabel;status.title=c.gapNote||c.statusLabel;span.prepend(status);if(c.gapNote){const gap=document.createElement('em');gap.className='native-strategy-gap';gap.textContent='缺口：'+c.gapNote;span.append(gap);}}}
 // 作战前简报的「盟约缺席情况」与「被禁干员」弹窗。判定与 HTML 片段都在 `native-bond-ban.js`
 // 里（那边能在 Node 里直接断言渲染结果），这里只注入转义／头像并挂到动作上。
-function bondBanBriefing(d){return bondBanBriefingHtml(data,d?.bondBan,{esc});}
+function challengeBondUi(challenge){return challenge?{operatorBonds:chessId=>runWeeklyChallengeHook(challenge,WEEKLY_CHALLENGE_HOOKS.OPERATOR_BONDS,[...(data.season.charChessDataDict[chessId]?.bondIds||[])],{chessId})}:{};}
+function bondBanBriefing(d){return bondBanBriefingHtml(data,d?.bondBan,{esc,...challengeBondUi(d?.weeklyChallenge)});}
 // 弹窗取的是「本局」的禁用记录（战前＝draft，局中＝会话），不能优先用 state.game：
 // 从大厅开新局时它可能还留着上一局／旧存档恢复出来的空记录，那样会显示成 0 名。
-function showBannedOperators(){modal(bannedOperatorsHtml(data,activeBondBan(state.draft?.bondBan,state.game?.s?.bondBan),{esc,avatar}));}
+function showBannedOperators(){const challenge=state.draft?.weeklyChallenge||state.game?.s?.weeklyChallenge;modal(bannedOperatorsHtml(data,activeBondBan(state.draft?.bondBan,state.game?.s?.bondBan),{esc,avatar,...challengeBondUi(challenge)}));}
 // 「战前准备」页面状态：页签／筛选和已保存的默认技能覆盖。
 function prepState(){
  if(!state.prep)state.prep={tab:'operator',tier:0,core:'',extra:'',skills:null,scroll:0};
@@ -236,18 +238,21 @@ function updatePrepCard(charId){
  if(skillInfo)skillInfo.outerHTML=renderPrepSkillInfo(data,charId,current,custom,esc);
  for(const button of card.querySelectorAll('[data-act="prep-skill"]')){const chosen=Number(button.dataset.index)===current;button.classList.toggle('chosen',chosen);button.setAttribute('aria-pressed',String(chosen));}
 }
+function challengeWindowLabel(challenge){const fmt=value=>new Intl.DateTimeFormat('zh-Hans-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:challenge.timeZone}).format(new Date(value));return `${fmt(challenge.startsAt)} — ${fmt(challenge.endsAt)}`;}
+function weeklyChallengeCard(challenge){if(!challenge)return '';const rules=challenge.rules||[];return `<section class="briefing-weekly-card" aria-label="本周挑战特殊规则"><header><div><span class="native-eyebrow">WEEKLY CHALLENGE · ${esc(challenge.id)}</span><h2>${esc(challenge.title)}</h2></div><small>生效时间 ${esc(challengeWindowLabel(challenge))}</small></header><p>${esc(challenge.description)}</p>${rules.length?`<ul>${rules.map(rule=>`<li><b>${esc(rule.title)}</b><span>${esc(rule.description)}</span></li>`).join('')}</ul>`:''}</section>`;}
 function renderBriefingScreen(){
- const d=state.draft,mode=data.season.modeDataDict[d.modeId],mapIndex=data.maps.filter(m=>m.weight>0).findIndex(m=>m.stageId===d.mapId),map=data.maps.find(m=>m.stageId===d.mapId),tags=(d.roster.types||[]).map(id=>trainingType(id)).filter(Boolean),boss=finalBossConfig(data,d.finalBossId,d.modeId,state.waveTable?.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER),strategy=strategyInfo(guardedBandId());
+ const d=state.draft,weekly=d.weeklyChallenge||null,mode=data.season.modeDataDict[d.modeId],mapIndex=data.maps.filter(m=>m.weight>0).findIndex(m=>m.stageId===d.mapId),map=data.maps.find(m=>m.stageId===d.mapId),tags=(d.roster.types||[]).map(id=>trainingType(id)).filter(Boolean),boss=finalBossConfig(data,d.finalBossId,d.modeId,state.waveTable?.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER),strategy=strategyInfo(guardedBandId());
  const modeName=d.cat?'海猫模式':d.egg325?'325模式':mode?.name||'模拟模式',mapLabel=mapIndex>=0?`阵地 ${mapIndex+1}`:'阵地待定',bossName=boss.enemyProfile.name||boss.bossId,bondMarkup=bondBanBriefing(d);
  const mapThumb=mapThumbnailHtml(map,{esc,label:`本局战场：${mapLabel}${map?' · '+map.stageId:''}`});
  return `<main class="native-lobby native-briefing native-briefing-v2">
-<header class="briefing-topbar"><button class="briefing-back" data-act="home"><span aria-hidden="true">‹</span> 大厅</button><span class="briefing-topmark"><span class="native-eyebrow">TACTICAL DOSSIER</span><b>SIMULATION / 01</b></span><span class="briefing-mode">${esc(modeName)} <i></i> ${esc(mapLabel)}</span></header>
+<header class="briefing-topbar"><button class="briefing-back" data-act="home"><span aria-hidden="true">‹</span> 大厅</button><span class="briefing-topmark"><span class="native-eyebrow">TACTICAL DOSSIER</span><b>${weekly?'WEEKLY CHALLENGE':'SIMULATION / 01'}</b></span><span class="briefing-mode">${esc(modeName)} <i></i> ${esc(mapLabel)}</span></header>
 <div class="briefing-content" role="region" aria-label="模拟简报内容，可滚动" tabindex="0">
 <section class="briefing-title"><div><span class="native-eyebrow">MISSION SUMMARY</span><h1>模拟简报</h1><p>确认本局特训、初始策略与盟约限制后，进入模拟。</p></div><aside class="briefing-final-boss"><span class="native-eyebrow">FINAL ENCOUNTER</span><div class="briefing-final-main">${avatar(boss.handbookEnemyId)}<div><small>最终 BOSS · 血量 ${Math.round(boss.hpMultiplier*100)}%</small><b>${esc(bossName)}</b></div></div></aside></section>
+${weeklyChallengeCard(weekly)}
 <section class="briefing-overview"><section class="briefing-training"><header class="briefing-section-head"><div><span>01 / BATTLE CONDITIONS</span><h2>本局特训</h2></div><small>${tags.length} 项生效</small></header><div class="briefing-training-grid">${tags.length?tags.map((tag,index)=>`<article class="briefing-training-card"><span class="briefing-training-index">${String(index+1).padStart(2,'0')}</span><div><h3>${esc(tag.name)}</h3><small>${esc(tag.id)}</small><p>${esc(tag.desc)}</p></div></article>`).join(''):'<p class="briefing-empty">本局没有额外特训。</p>'}</div></section><aside class="briefing-map-card"><div class="briefing-map-copy"><span class="native-eyebrow">BATTLEFIELD</span><h2>本局战场</h2><b>${esc(mapLabel)}</b><small>${map?esc(map.stageId):'地图数据缺失'}</small></div><div class="briefing-map-preview">${mapThumb}</div></aside></section>
 <section class="briefing-strategy-section"><header class="briefing-section-head"><div><span>02 / STARTING PLAN</span><h2>初始策略</h2></div><button class="briefing-choose-strategy" data-act="strategy-select">更换策略 <span aria-hidden="true">→</span></button></header><article class="briefing-selected-strategy"><div class="briefing-strategy-art">${avatar(strategy.id)||'<span class="native-strategy-placeholder" aria-hidden="true">◈</span>'}</div><div class="briefing-strategy-copy"><span class="native-eyebrow">SELECTED STRATEGY</span><h3>${esc(strategy.name)}</h3><p>${esc(strategy.desc)}</p><small>初始生命 <b>${strategy.hp}</b></small></div></article></section>
 ${bondMarkup?`<section class="briefing-bond-section"><span class="native-eyebrow">03 / COVENANT STATUS</span>${bondMarkup}</section>`:''}
-</div><footer class="briefing-actions"><button class="native-primary native-begin" data-act="begin">进入模拟 <span aria-hidden="true">→</span></button></footer></main>`;
+</div><footer class="briefing-actions"><button class="native-primary native-begin" data-act="begin">${weekly?'进入每周挑战':'进入模拟'} <span aria-hidden="true">→</span></button></footer></main>`;
 }
 // 已选策略可能因为「关掉 S.E.E.S. 标记」而变得不可见：这时回落到列表里的第一个，
 // 别把一个本局不该存在的策略带进简报与对局（`state.band` 只在选择时才写）。
@@ -380,10 +385,35 @@ function finalBondLayerRows(g,r){const sees=isSeesBand(g.s.bandId),visible=id=>s
 function bondLayerReport(rows){return '<section class="native-result-bond-layers"><h3>盟约最终层数</h3><div role="list">'+rows.map(row=>'<span role="listitem" class="'+(row.layers?'has-layers':'')+'"><b>'+esc(row.name)+'</b><i>'+row.layers+' 层</i></span>').join('')+'</div></section>';}
 function showResult(){const g=state.game,r=g.s.runResult||g.s.history.at(-1);if(!r)return;const archived=state.archive?.runs?.length||archiveNow().runs.length,units=(r.units||[]).slice().sort((a,b)=>b.damage-a.damage),selected=units.find(u=>u.uid===state.resultUnitUid)||units[0],bossName=r.bossName||'最终 Boss';modal(`<h2>${r.kind==='final-boss'?(r.reason==='boss-killed'?'Boss 击破 · 挑战成功':'Boss 未能击破 · 挑战结束'):'作战报告'}</h2>${r.kind==='final-boss'?`<p class="native-boss-result-heading">${esc(bossName)} · ${r.elapsed.toFixed(1)} 秒</p>`:''}<p>总伤害</p><strong class="native-total">${Math.round(r.totalDamage||0).toLocaleString()}</strong><p>${r.elapsed.toFixed(2)} 秒 · DPS ${(r.dps??(r.elapsed>0?r.totalDamage/r.elapsed:0)).toFixed(2)}${r.kind==='final-boss'?` · 红门漏怪 ${r.timePenalty||0} 次`:''}</p>${archived?`<p class="muted small">已记入本地战绩：最近 ${archived} 场，可在「战前准备」页查看并随存档导出。</p>`:''}<div class="native-result-dps"><h3>角色造成总伤害</h3><div class="native-result-unit-list">${units.map(u=>{const source=g.s.units.find(x=>x.uid===u.uid),name=source?data.profiles[source.chessId].name:u.id||'其他来源';return `<button data-act="result-unit" data-uid="${u.uid}" class="${selected?.uid===u.uid?'chosen':''}">${esc(name)}<b>${Math.round(u.damage).toLocaleString()}</b></button>`;}).join('')||'<p>本次没有造成伤害。</p>'}</div>${selected?reportCurve(selected.dpsSamples):''}</div>${bondLayerReport(finalBondLayerRows(g,r))}<div class="native-result-actions"><button data-act="export">导出本次记录</button><button class="native-primary" data-act="home">回到大厅</button></div>`);}
 function resetUpgradeConfirm(){if(!upgradeConfirm)return;upgradeConfirm=false;const button=root.querySelector('[data-act="upgrade"]');if(button){button.textContent=`升级 ${catOn()?'ALL':(state.game?.terms?.().upgradeCost??'MAX')} ◆`;button.classList.remove('is-confirming');button.setAttribute('aria-pressed','false');}}
-function action(button,anchor=null){const a=button.dataset.act,g=state.game,uid=Number(button.dataset.uid);if(button.disabled)return;if(a!=='upgrade')resetUpgradeConfirm();if(['home','new','begin','resume','sandbox','sandbox-exit'].includes(a))runtimeFault=null;if(['sandbox','home','sandbox-exit','new'].includes(a))rememberView('lobby');if(['begin','resume','import'].includes(a))rememberView('game');
+function createNewDraft(weeklyChallenge=null,networkEpoch=null){
+ const egg=state.mode===EGG_MODE_ID,cat=state.mode===CAT_MODE_ID,modeId=egg?EGG_BASE_MODE:cat?CAT_BASE_MODE:state.mode,seed=(Date.now()&0xffffffff)>>>0,banConfig=loadBondBan(data),mapChoice=weeklyChallenge?.mapId||state.map,mapId=resolveMapId(data,mapChoice,waveRng((seed^0x9e3779b9)>>>0),modeId);
+ state.draft={modeId,mapId,seed,finalBossId:weeklyChallenge?.finalBossId||rollFinalBoss(data,modeId,seed),roster:createWaveRoster({random:waveRng(seed),data,modeId}),bondBan:{bonds:bondBanIds(data,seed,banConfig),always:banConfig.always,never:banConfig.never},egg325:egg,cat,weeklyChallenge:weeklyChallenge?weeklyChallengeSnapshot(weeklyChallenge,networkEpoch):null};
+ state.bondBanBlocks=0;state.view='briefing';state.strategyDraft=null;state.modal=null;render();
+}
+async function openWeeklyChallenge(button){
+ if(button.disabled)return;
+ const small=button.querySelector('small'),label=small?.textContent;
+ button.disabled=true;button.setAttribute('aria-busy','true');if(small)small.textContent='正在联网校时…';
+ try{
+  const networkEpoch=await fetchNetworkEpoch();
+  if(state.view!=='lobby'||!button.isConnected)return;
+  const challenge=weeklyChallengeAt(data.weeklyChallenges,networkEpoch);
+  if(!challenge){modal('<h2>每周挑战暂未开放</h2><p>当前联网时间没有对应的挑战安排，暂时无法进入每周挑战。</p>');return;}
+  if(challenge.allowedModeIds?.length&&!challenge.allowedModeIds.includes(state.mode)){
+   modal(`<h2>当前难度不适用</h2><p>本周挑战「${esc(challenge.title)}」不支持当前选择的行动难度。请切换难度后重试。</p>`);return;
+  }
+  createNewDraft(challenge,networkEpoch);
+ }catch{
+  if(state.view==='lobby'&&button.isConnected)modal('<h2>无法校准网络时间</h2><p>联网校时失败，无法进入每周挑战。请确认网络连接后重试。</p>');
+ }finally{
+  if(button.isConnected){button.disabled=false;button.removeAttribute('aria-busy');if(small)small.textContent=label||'联网校时并加载本周规则 →';}
+ }
+}
+function action(button,anchor=null){const a=button.dataset.act,g=state.game,uid=Number(button.dataset.uid);if(button.disabled)return;if(a!=='upgrade')resetUpgradeConfirm();if(['home','new','weekly-challenge','begin','resume','sandbox','sandbox-exit'].includes(a))runtimeFault=null;if(['sandbox','home','sandbox-exit','new','weekly-challenge'].includes(a))rememberView('lobby');if(['begin','resume','import'].includes(a))rememberView('game');
  if(a==='upgrade'){if(!g||g.s.phase!=='prep')return;if(!upgradeConfirm){upgradeConfirm=true;button.textContent='确定升级';button.classList.add('is-confirming');button.setAttribute('aria-pressed','true');return;}resetUpgradeConfirm();const ok=g.perform('upgrade');if(!ok)notice(g.lastError||'当前资金不足或商店已达最高等级，无法升级。');save();render();return;}
  if(a==='result-unit'){state.resultUnitUid=uid;showResult();return;}
  if(a==='update-log'){showUpdateLog();return;}
+ if(a==='weekly-challenge'){openWeeklyChallenge(button);return;}
  if(a==='hand-scroll'){scrollHandByHalfSlot(button.dataset.direction);return;}
  if(a==='fullscreen'){enterPlayChrome().then(()=>{if(!(document.fullscreenElement||document.webkitFullscreenElement))notice('未能进入全屏，请再次点击或检查浏览器全屏设置。');});return;}
  if(a==='ban-list'){showBannedOperators();return;}
@@ -426,8 +456,8 @@ function action(button,anchor=null){const a=button.dataset.act,g=state.game,uid=
   if(result)render();if(a==='ed-close-test')root.querySelector('.wave-ed-current [data-act=ed-roll]')?.focus();return;
  }
   if(a==='strategy-select'&&state.view==='briefing'){state.strategyDraft=null;state.view='strategy-select';render();return;}if(a==='strategy-pick'&&state.view==='strategy-select'){const catalog=document.querySelector('.native-strategy-catalog'),scrollHost=catalog?.scrollHeight>catalog?.clientHeight?catalog:catalog?.closest('.native-lobby'),scroll=scrollHost?.scrollTop||0,id=button.dataset.id;if(state.strategyDraft===id){state.band=id;state.strategyDraft=null;state.view='briefing';render();return;}state.strategyDraft=id;render();const next=document.querySelector('.native-strategy-catalog'),nextHost=next?.scrollHeight>next?.clientHeight?next:next?.closest('.native-lobby');if(nextHost)nextHost.scrollTop=scroll;return;}if(a==='strategy-cancel'&&state.view==='strategy-select'){state.strategyDraft=null;state.view='briefing';render();return;}
- if(a==='new'){const egg=state.mode===EGG_MODE_ID,cat=state.mode===CAT_MODE_ID,modeId=egg?EGG_BASE_MODE:cat?CAT_BASE_MODE:state.mode,seed=(Date.now()&0xffffffff)>>>0;const banConfig=loadBondBan(data),mapId=resolveMapId(data,state.map,waveRng((seed^0x9e3779b9)>>>0),modeId);state.draft={modeId,mapId,seed,finalBossId:rollFinalBoss(data,modeId,seed),roster:createWaveRoster({random:waveRng(seed),data,modeId}),bondBan:{bonds:bondBanIds(data,seed,banConfig),always:banConfig.always,never:banConfig.never},egg325:egg,cat};state.bondBanBlocks=0;state.view='briefing';state.strategyDraft=null;state.modal=null;render();return;}
- if(a==='begin'){state.lastChoiceContent=null;enterPlayChrome();state.supplyCollapsed=false;if(!state.draft){state.view='lobby';leavePlayChrome();render();return;}try{state.game=new NativeSession(data,{modeId:state.draft.modeId,bandId:guardedBandId(),mapId:state.draft.mapId,seed:state.draft.seed,waveRoster:state.draft.roster,bondBan:state.draft.bondBan,egg325:!!state.draft.egg325,cat:!!state.draft.cat,finalBossId:state.draft.finalBossId,finalBossHpMultiplier:state.waveTable?.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER});state.view='game';state.draft=null;state.paused=false;state.expiresAt=null;state.resultUnitUid=null;state.selected=state.summonSelected=state.item=state.inspect=state.preview=state.modal=null;save();saveCheckpoint();render();}catch(e){notice(e.message);}return;}
+ if(a==='new'){createNewDraft();return;}
+ if(a==='begin'){state.lastChoiceContent=null;enterPlayChrome();state.supplyCollapsed=false;if(!state.draft){state.view='lobby';leavePlayChrome();render();return;}try{state.game=new NativeSession(data,{modeId:state.draft.modeId,bandId:guardedBandId(),mapId:state.draft.mapId,seed:state.draft.seed,waveRoster:state.draft.roster,bondBan:state.draft.bondBan,egg325:!!state.draft.egg325,cat:!!state.draft.cat,finalBossId:state.draft.finalBossId,finalBossHpMultiplier:state.waveTable?.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER,weeklyChallenge:state.draft.weeklyChallenge||null});state.view='game';state.draft=null;state.paused=false;state.expiresAt=null;state.resultUnitUid=null;state.selected=state.summonSelected=state.item=state.inspect=state.preview=state.modal=null;save();saveCheckpoint();render();}catch(e){notice(e.message);}return;}
  if(a==='resume'){if(state.expiresAt&&Date.now()>=state.expiresAt){notice('暂离已超过24小时，请开始新模拟');return;}enterPlayChrome();state.expiresAt=null;state.view='game';render();return;}if(a==='home'){dismissRoundEnd();if(state.view==='editor'||state.view==='briefing'||state.view==='prepare'){state.view='lobby';leavePlayChrome();render();return;}state.view='lobby';state.paused=true;state.expiresAt??=Date.now()+86400000;state.modal=null;save();leavePlayChrome();render();return;}if(a==='result'){showResult();return;}
  // 导出存档（用户 2026-09-27 需求）：大厅与对局顶栏共用一个入口。
  // 有对局时导出的是**原来的对局存档**（多带一份战绩档案，NativeSession.restore 会忽略额外字段），
