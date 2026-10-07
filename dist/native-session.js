@@ -5,7 +5,8 @@ import {buildPhasePlan,singleDecisionRounds,blackboard,ensureStock,restoreStock,
 import {allowsHighlandPlacement} from './native-branches.js';
 import {AVAILABLE_FINAL_BOSS_IDS,DEFAULT_FINAL_BOSS_HP_MULTIPLIER,finalBossConfig,finalBossPlacementArea,finalBossPlacementContains,normalizeFinalBossHpMultiplier,rollFinalBoss} from './native-final-boss.js';
 import {runStrategyEvent} from './strategy.js';
-import {createWaveRoster} from './native-wave-random.js';
+import {buildFinalBossAddQueue,createWaveRoster,scheduleWaveQueue,waveRng} from './native-wave-random.js';
+import {nativeWavePlan} from './native-waves.js';
 import {bondBanIds,loadBondBan,normalizeBondBan} from './native-bond-ban.js';
 // 干员默认技能（「战前准备」页保存的配置）：购买时按它决定新干员携带哪一档，读档时用来补齐/对齐副本。
 import {applyPrepSkills} from './native-prep.js';
@@ -79,7 +80,7 @@ export class NativeSession extends NativeEconomy {
   this.s.bondBan=banOption
    ?{bonds:[...new Set((banOption.bonds||[]).filter(id=>this.data.season.bondInfoDict[id]))],always:normalized.always,never:normalized.never}
    :{bonds:bondBanIds(this.data,seed,normalized),always:normalized.always,never:normalized.never};
-  this.poolDraw=request=>this.drawFromPool(request);this.s.offers=this.rollOffers();this.fillItems();this.startPreparation();this.ensureRewards();this.s.waveRoster=waveRoster||createWaveRoster({random:()=>this.random(),data:this.data,modeId:this.s.modeId});if(egg325)this.s.egg325=true;
+  this.poolDraw=request=>this.drawFromPool(request);this.s.offers=this.rollOffers();this.fillItems();this.startPreparation();this.ensureRewards();this.s.waveRoster=waveRoster||createWaveRoster({random:()=>this.random(),data:this.data,modeId:this.s.modeId});if(egg325)this.s.egg325=true;this.prepareDoorWaveQueue();
  }
  applyWeeklyChallengeHook(hook,payload,context={}){return dispatchWeeklyChallengeHook(this.s.weeklyChallenge,hook,payload,{session:this,...context});}
  summonCardSpecs(u){const p=this.data.profiles[u?.chessId],skillIndex=u?.skillIndex??p?.skillIndex??0,out=[];if(p?.branch==='tactician'){if(u.charId==='char_427_vigil')out.push({type:'vigil-wolf',name:'狼群',count:1,mode:'manual'});if(u.charId==='char_249_mlyss')out.push({type:'mlyss-fluid',name:'流形',count:1,mode:'manual'});}
@@ -244,7 +245,7 @@ export class NativeSession extends NativeEconomy {
   if(!consumed){if(u.equipment.length>=2){if(replaceIndex===null)return false;const old=u.equipment.splice(replaceIndex,1)[0];if(old)this.s.items.push(old);}u.equipment.push(item);this.refreshEquipmentBonds(u);}
   this.s.items=this.s.items.filter(i=>i.uid!==itemUid);this.settleBondRewards();if(u.chessId!==originalChessId){this.refreshEquipmentBonds(u);this.onOperatorGained(u);}return true;
  }
- chooseBounty(id){const reward=this.s.rewardPending;if(this.s.phase!=='prep'||reward?.kind!=='bounty'||!reward.offers.includes(id))return false;const option=bountyOption(this.data,id);if(!option)return false;this.s.pendingBounty={enemyId:option.enemyId,coin:option.coin,count:option.count};this.s.rewardPending=this.s.rewardQueue.shift()||null;return true;}
+ chooseBounty(id){const reward=this.s.rewardPending;if(this.s.phase!=='prep'||reward?.kind!=='bounty'||!reward.offers.includes(id))return false;const option=bountyOption(this.data,id);if(!option)return false;this.s.pendingBounty={enemyId:option.enemyId,coin:option.coin,count:option.count};this.s.rewardPending=this.s.rewardQueue.shift()||null;this.prepareDoorWaveQueue(this.s.round,{force:true});return true;}
  finalBossPrepArea(){if(this.s.phase!=='prep'||this.s.round!==finalBossRound(this.data,this.s.modeId))return null;return finalBossPlacementArea(this.map,finalBossConfig(this.data,this.s.finalBossId,this.s.modeId).enemyId);}
  canDeploy(uid,x,y){
   if(!Number.isInteger(x)||!Number.isInteger(y))return false;
@@ -346,14 +347,42 @@ export class NativeSession extends NativeEconomy {
   return gained;
  }
  resolveTurn(turn){if(!turn?.isBossTurn||turn.isConditional)return turn;const finals=buildPhasePlan(this.data,this.s.modeId).filter(t=>t.isBossTurn&&!t.isConditional);if(turn.round!==finals.at(-1)?.round)return turn;const config=finalBossConfig(this.data,this.s.finalBossId,this.s.modeId,this.s.finalBossHpMultiplier);return {...turn,finalBossId:this.s.finalBossId,finalBoss:config,finalBossHp:config.hp};}
- startBattle(){if(this.s.phase!=='prep'||this.s.rewardPending)return false;this.syncSummonCards();this.syncHandSlots();const area=this.finalBossPrepArea();if(area&&[...this.s.units.filter(u=>u.position),...(this.s.summonCards||[]).filter(c=>c.position)].some(actor=>finalBossPlacementContains(area,actor.position.x,actor.position.y)))throw Error('昆图斯／萨米的意志将占据右上角 2 列 × 3 行，请先移开该区域的干员和召唤物。');this.applyTouchReplacement();this.settleTartarusRound();const ok=this.beginBattle();if(!ok)return false;if(this.s.phase==='prep')return true;const turn=this.resolveTurn(buildPhasePlan(this.data,this.s.modeId).find(t=>t.round===this.s.round));this.battle=new NativeBattle(this.data,this,this.map,turn);return true;}
+ doorForRoute(route,routes=this.map.bossDoorRoutes){
+  const start=route?.startPosition,origin=this.map.origin||{col:0,row:0};if(!start)return 0;
+  const x=start.col-origin.col,y=origin.row-start.row,doors=[];
+  for(let row=0;row<this.map.rows;row++)for(let col=0;col<this.map.cols;col++)if(this.map.grid[row]?.[col]?.tileKey?.startsWith('tile_start'))doors.push({x:col,y:row});
+  doors.sort((a,b)=>a.y-b.y||a.x-b.x);
+  const exact=doors.findIndex(door=>door.x===x&&door.y===y);if(exact>=0)return Math.min(1,exact);
+  const routesByDoor=(routes||[]).map((entry,index)=>({entry,index})).sort((a,b)=>(origin.row-a.entry.startPosition.row)-(origin.row-b.entry.startPosition.row));
+  const routeIndex=routesByDoor.findIndex(item=>item.entry===route);return Math.max(0,Math.min(1,routeIndex));
+ }
+ prepareDoorWaveQueue(round=this.s.round,{force=false}={}){
+  const s=this.s,turn=this.resolveTurn(buildPhasePlan(this.data,s.modeId).find(row=>row.round===round));if(!turn||!s.waveRoster)return null;
+  const boss=Boolean(turn.finalBossId),routes=boss?this.map.bossDoorRoutes:null,existing=s.preparedDoorWave,routeCount=boss?routes?.length:null;
+  if(!force&&existing?.round===round&&existing.kind===(boss?'boss':'wave')&&Array.isArray(existing.queue)&&existing.queue.every(q=>this.data.enemies[q?.id]&&Number.isFinite(q.at)&&Number.isInteger(q.route)&&q.route>=0&&(boss?q.route<(routeCount||0):true)&&Number.isInteger(q.door)&&q.door>=0&&q.door<2))return existing;
+  if(boss){
+   const queue=buildFinalBossAddQueue(this.data,s.waveRoster,s.finalBossAddSeed||s.randomState,routes,null,s.weeklyChallenge||null).map(q=>({...q,door:this.doorForRoute(routes[q.route],routes)}));
+   return s.preparedDoorWave={round:turn.round,kind:'boss',queue};
+  }
+  const plan=nativeWavePlan(this.data,turn,s.waveRoster,s.weeklyChallenge||null);if(!plan?.level)return s.preparedDoorWave={round:turn.round,kind:'wave',queue:[]};
+  const queue=plan.queue.map(q=>({...q}));
+  if(!s.weeklyChallenge&&s.bandId==='band_ducklord'&&turn.round>=5&&queue.length){
+   const targets=['enemy_2002_bearmi_2','enemy_2034_sythef_2','enemy_2085_skzjxd_2','enemy_2001_duckmi_2'],ground=queue.filter(q=>plan.level.routes[q.route]?.motionMode!=='FLY'),assignment=s.waveRoster.rounds?.[turn.round],random=waveRng(((Number(assignment?.waveSeed)||turn.round)^0x4d595df4)>>>0),count=Math.min(2,Math.floor(random()*3));
+   for(let i=0;i<count&&ground.length;i++){if(random()<.6)continue;const q=ground.splice(Math.floor(random()*ground.length),1)[0];q.id=targets[Math.floor(random()*targets.length)];q.ducklord=true;}
+  }
+  const bounties=[...(s.pendingBounties||[]),s.pendingBounty].filter(Boolean);
+  for(const bounty of bounties){const motion=(this.data.enemies[bounty.enemyId]||plan.level.enemyProfiles?.[bounty.enemyId])?.motion==='FLY'?'FLY':'WALK',route=(plan.level.routes||[]).findIndex(r=>r.motionMode===motion&&r.startPosition.col<=10&&r.startPosition.row>=6&&r.startPosition.row<=12),baseAt=queue.reduce((n,q)=>Math.max(n,q.at||0),0);for(let i=0;i<bounty.count;i++)queue.push({id:bounty.enemyId,at:baseAt+1.5+i*1.2,route:route<0?0:route,cost:0,bountyReward:bounty.coin});}
+  const scheduled=scheduleWaveQueue(queue,plan.level,turn.round).map(q=>({...q,door:this.doorForRoute(plan.level.routes[q.route],plan.level.routes)}));
+  return s.preparedDoorWave={round:turn.round,kind:'wave',queue:scheduled};
+ }
+ startBattle(){if(this.s.phase!=='prep'||this.s.rewardPending)return false;this.prepareDoorWaveQueue();this.syncSummonCards();this.syncHandSlots();const area=this.finalBossPrepArea();if(area&&[...this.s.units.filter(u=>u.position),...(this.s.summonCards||[]).filter(c=>c.position)].some(actor=>finalBossPlacementContains(area,actor.position.x,actor.position.y)))throw Error('昆图斯／萨米的意志将占据右上角 2 列 × 3 行，请先移开该区域的干员和召唤物。');this.applyTouchReplacement();this.settleTartarusRound();const ok=this.beginBattle();if(!ok)return false;if(this.s.phase==='prep')return true;const turn=this.resolveTurn(buildPhasePlan(this.data,this.s.modeId).find(t=>t.round===this.s.round));this.battle=new NativeBattle(this.data,this,this.map,turn);return true;}
  bondLayerSnapshot(){const visible=id=>seesRun(this)||id!==SEES_BOND_ID&&id!==TARTARUS_BOND_ID,ids=new Set([...Object.keys(this.data.season.bondInfoDict||{}),SEES_BOND_ID,TARTARUS_BOND_ID,...Object.keys(this.s.bondLayers||{})]);return [...ids].filter(visible).map(id=>{const value=Number(this.s.bondLayers?.[id]);return {id,name:this.data.season.bondInfoDict[id]?.name||id,layers:Number.isFinite(value)?Math.max(0,Math.floor(value)):0};});}
  finishCurrentBattle(){if(!this.battle?.s.finished||this.s.phase!=='battle')return;const r=this.battle.s.result;r.finalBondLayers=this.bondLayerSnapshot();this.s.history.push(r);if(r.kind==='final-boss'){this.s.runResult=r;if(r.reason!=='boss-killed')this.s.hp=0;this.s.phase='finished';}else{const loss=Math.min(ROUND_LEAK_CAP,r.leaks);this.s.hp=Math.max(0,this.s.hp-loss);this.finishBattle({success:this.s.hp>0,leaks:r.leaks});this.s.lastBattle.loss=loss;if(!this.s.hp)this.s.runResult=r;}this.applyPostBattleTransforms();if(this.s.phase==='intermission')this.battle.clearEndedRoundEntities();}
  tick(){if(this.s.phase==='battle'&&this.battle){this.battle.step();this.finishCurrentBattle();}}
- advanceRound(){if(this.s.phase!=='intermission')return false;const locked=this.s.locked,oldOffers=locked?this.s.offers.slice():null,oldItems=locked?this.s.itemOffers.slice():null;this.s.prepApplied=false;const ok=this.nextRound(locked?[]:this.rollOffers());if(!ok)return false;if(locked){const refillOffers=this.rollOffers();this.s.offers=Array.from({length:this.terms().operatorSlots},(_,i)=>oldOffers[i]??refillOffers[i]);const refillItems=Array.from({length:this.terms().itemSlots},()=>this.drawFromPool({kind:'item',shop:true}));this.s.itemOffers=Array.from({length:this.terms().itemSlots},(_,i)=>oldItems[i]??refillItems[i]);}else this.fillItems();this.addFunds(this.s.passiveIncome);this.applyProjectionUpgrades();
+ advanceRound(){if(this.s.phase!=='intermission')return false;const locked=this.s.locked,oldOffers=locked?this.s.offers.slice():null,oldItems=locked?this.s.itemOffers.slice():null,nextRound=this.s.round+1,rounds=buildPhasePlan(this.data,this.s.modeId),next=rounds.find(row=>row.round===nextRound),mode=this.data.season.modeDataDict[this.s.modeId],decisionSchedule=singleDecisionRounds(mode),willPrepare=decisionSchedule?decisionSchedule.includes(nextRound-1):next?.battles.some(battle=>battle.isSpPrepare)||false;if(next&&nextRound<=rounds.length&&!next.isConditional&&!willPrepare)this.prepareDoorWaveQueue(nextRound);this.s.prepApplied=false;const ok=this.nextRound(locked?[]:this.rollOffers());if(!ok)return false;if(locked){const refillOffers=this.rollOffers();this.s.offers=Array.from({length:this.terms().operatorSlots},(_,i)=>oldOffers[i]??refillOffers[i]);const refillItems=Array.from({length:this.terms().itemSlots},()=>this.drawFromPool({kind:'item',shop:true}));this.s.itemOffers=Array.from({length:this.terms().itemSlots},(_,i)=>oldItems[i]??refillItems[i]);}else this.fillItems();this.addFunds(this.s.passiveIncome);this.applyProjectionUpgrades();
   // 进入新回合只做「按持有者/类型对账」，**不重置已放置的召唤物卡**：召唤物留在原位跨回合存在，
   // 只有持有者撤走（syncSummonCards 会把卡删掉）或主动撤回整备区（withdrawSummonCard）才会离场。
-  if(this.s.phase==='prep')this.syncSummonCards();if(this.s.phase==='decision')this.prepareRoundDecision();return true;
+  if(this.s.phase==='prep'){this.syncSummonCards();this.prepareDoorWaveQueue();}if(this.s.phase==='decision')this.prepareRoundDecision();return true;
  }
  prepareRoundDecision(){const mode=this.data.season.modeDataDict[this.s.modeId],schedule=singleDecisionRounds(mode),round=this.s.round-1,index=schedule?.indexOf(round)??0,firstDecision=schedule?.[0]===round;this.s.roundDecisionPool=index<=0?'early':'late';this.s.roundDecisionType=schedule===null?'tactical':firstDecision?'bounty':['bounty','equipment','tactical'][Math.floor(this.random()*3)];this.s.roundDecisionStage='reward';this.s.roundDecisions=this.decisionRewardOffers(this.s.roundDecisionType);if(this.s.roundDecisions.length<3&&!firstDecision){this.s.roundDecisionType='tactical';this.s.roundDecisions=this.decisionRewardOffers('tactical');}}
  decisionRewardOffers(type){
@@ -382,7 +411,7 @@ export class NativeSession extends NativeEconomy {
    const effectId=typeof offer==='string'?offer:offer.effectId;
    for(const e of this.data.season.effectBuffInfoDataDict[effectId]||[]){const p=blackboard(e.blackboard);if(e.key==='global_special_choice_gain_coin')this.addFunds(p.count);if(e.key==='global_special_choice_refresh_free')this.s.freeRefresh+=p.count;if(e.key==='global_special_choice_bond_addlayer')for(const b of p.bond_list.split(','))this.addLayers(b,p.count,false);if(e.key.startsWith('enemy_attribute'))this.s.enemyModifiers.push(e);if(e.key==='char_attribute_mul')this.s.operatorModifiers.push(e);}
   }else return false;
-  this.s.roundDecisions=[];this.s.roundDecisionStage=null;this.s.roundDecisionType=null;this.s.roundDecisionPool=null;this.s.phase='prep';this.startPreparation();return true;
+  this.s.roundDecisions=[];this.s.roundDecisionStage=null;this.s.roundDecisionType=null;this.s.roundDecisionPool=null;this.prepareDoorWaveQueue();this.s.phase='prep';this.startPreparation();return true;
  }
   // 导入的旧存档可能留着本局已禁盟约的候选（商店槽／晋升奖励候选）：读档时按禁用规则清一遍，
   // 否则玩家能从这些残留槽位买到、领到禁用干员。奖励候选被清空时按原口径补抽，抽不出来就丢掉这项奖励
@@ -434,6 +463,6 @@ export class NativeSession extends NativeEconomy {
   for(const u of c.s.units)c.refreshEquipmentBonds(u);
   // 读档时按「战前准备」的默认技能补齐没写过档位的副本、并把同名干员对齐到同一个技能
   // （存档里显式写下的档位优先，不会被配置覆盖）。
-  applyPrepSkills(data,c.s.units);if(migrated&&record.battle){const deployed=new Set(c.s.units.filter(u=>u.position).map(u=>u.uid));record.battle.units=record.battle.units.filter(u=>deployed.has(u.uid));}if(record.battle){const turn=c.resolveTurn(buildPhasePlan(data,c.s.modeId).find(t=>t.round===c.s.round));if(turn.finalBossId&&record.battle.benchmark)c.battle=new NativeBattle(data,c,c.map,turn);else{c.battle=NativeBattle.restore(data,c,c.map,turn,record.battle);if(!c.battle)return null;}}if(c.battle&&['prep','intermission','decision'].includes(c.s.phase))c.battle.clearEndedRoundEntities();return c;
+  applyPrepSkills(data,c.s.units);if(c.s.phase==='prep')c.prepareDoorWaveQueue();if(migrated&&record.battle){const deployed=new Set(c.s.units.filter(u=>u.position).map(u=>u.uid));record.battle.units=record.battle.units.filter(u=>deployed.has(u.uid));}if(record.battle){const turn=c.resolveTurn(buildPhasePlan(data,c.s.modeId).find(t=>t.round===c.s.round));if(turn.finalBossId&&record.battle.benchmark)c.battle=new NativeBattle(data,c,c.map,turn);else{c.battle=NativeBattle.restore(data,c,c.map,turn,record.battle);if(!c.battle)return null;}}if(c.battle&&['prep','intermission','decision'].includes(c.s.phase))c.battle.clearEndedRoundEntities();return c;
  }
 }
