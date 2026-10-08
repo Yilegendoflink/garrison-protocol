@@ -80,7 +80,7 @@ export class NativeSession extends NativeEconomy {
   this.s.bondBan=banOption
    ?{bonds:[...new Set((banOption.bonds||[]).filter(id=>this.data.season.bondInfoDict[id]))],always:normalized.always,never:normalized.never}
    :{bonds:bondBanIds(this.data,seed,normalized),always:normalized.always,never:normalized.never};
-  this.poolDraw=request=>this.drawFromPool(request);this.s.offers=this.rollOffers();this.fillItems();this.startPreparation();this.ensureRewards();this.s.waveRoster=waveRoster||createWaveRoster({random:()=>this.random(),data:this.data,modeId:this.s.modeId});if(egg325)this.s.egg325=true;this.prepareDoorWaveQueue();
+  this.poolDraw=request=>this.drawFromPool(request);this.s.offers=this.rollOffers();this.fillItems();this.startPreparation();this.ensureRewards();this.s.waveRoster=waveRoster||createWaveRoster({random:()=>this.random(),data:this.data,modeId:this.s.modeId,weeklyChallenge:this.s.weeklyChallenge});if(egg325)this.s.egg325=true;this.prepareDoorWaveQueue();
  }
  applyWeeklyChallengeHook(hook,payload,context={}){return dispatchWeeklyChallengeHook(this.s.weeklyChallenge,hook,payload,{session:this,...context});}
  summonCardSpecs(u){const p=this.data.profiles[u?.chessId],skillIndex=u?.skillIndex??p?.skillIndex??0,out=[];if(p?.branch==='tactician'){if(u.charId==='char_427_vigil')out.push({type:'vigil-wolf',name:'狼群',count:1,mode:'manual'});if(u.charId==='char_249_mlyss')out.push({type:'mlyss-fluid',name:'流形',count:1,mode:'manual'});}
@@ -358,8 +358,8 @@ export class NativeSession extends NativeEconomy {
  }
  prepareDoorWaveQueue(round=this.s.round,{force=false}={}){
   const s=this.s,turn=this.resolveTurn(buildPhasePlan(this.data,s.modeId).find(row=>row.round===round));if(!turn||!s.waveRoster)return null;
-  const boss=Boolean(turn.finalBossId),routes=boss?this.map.bossDoorRoutes:null,existing=s.preparedDoorWave,routeCount=boss?routes?.length:null;
-  if(!force&&existing?.round===round&&existing.kind===(boss?'boss':'wave')&&Array.isArray(existing.queue)&&existing.queue.every(q=>this.data.enemies[q?.id]&&Number.isFinite(q.at)&&Number.isInteger(q.route)&&q.route>=0&&(boss?q.route<(routeCount||0):true)&&Number.isInteger(q.door)&&q.door>=0&&q.door<2))return existing;
+  const boss=Boolean(turn.finalBossId),routes=boss?this.map.bossDoorRoutes:null,existing=s.preparedDoorWave,routeCount=boss?routes?.length:null,bountyKey=JSON.stringify([...(s.pendingBounties||[]),s.pendingBounty].filter(Boolean));
+  if(!force&&existing?.round===round&&existing.kind===(boss?'boss':'wave')&&(existing.bountyKey??'[]')===bountyKey&&Array.isArray(existing.queue)&&existing.queue.every(q=>this.data.enemies[q?.id]&&Number.isFinite(q.at)&&Number.isInteger(q.route)&&q.route>=0&&(boss?q.route<(routeCount||0):true)&&Number.isInteger(q.door)&&q.door>=0&&q.door<2))return existing;
   if(boss){
    const queue=buildFinalBossAddQueue(this.data,s.waveRoster,s.finalBossAddSeed||s.randomState,routes,null,s.weeklyChallenge||null).map(q=>({...q,door:this.doorForRoute(routes[q.route],routes)}));
    return s.preparedDoorWave={round:turn.round,kind:'boss',queue};
@@ -373,7 +373,7 @@ export class NativeSession extends NativeEconomy {
   const bounties=[...(s.pendingBounties||[]),s.pendingBounty].filter(Boolean);
   for(const bounty of bounties){const motion=(this.data.enemies[bounty.enemyId]||plan.level.enemyProfiles?.[bounty.enemyId])?.motion==='FLY'?'FLY':'WALK',route=(plan.level.routes||[]).findIndex(r=>r.motionMode===motion&&r.startPosition.col<=10&&r.startPosition.row>=6&&r.startPosition.row<=12),baseAt=queue.reduce((n,q)=>Math.max(n,q.at||0),0);for(let i=0;i<bounty.count;i++)queue.push({id:bounty.enemyId,at:baseAt+1.5+i*1.2,route:route<0?0:route,cost:0,bountyReward:bounty.coin});}
   const scheduled=scheduleWaveQueue(queue,plan.level,turn.round).map(q=>({...q,door:this.doorForRoute(plan.level.routes[q.route],plan.level.routes)}));
-  return s.preparedDoorWave={round:turn.round,kind:'wave',queue:scheduled};
+  return s.preparedDoorWave={round:turn.round,kind:'wave',bountyKey,queue:scheduled};
  }
  startBattle(){if(this.s.phase!=='prep'||this.s.rewardPending)return false;this.prepareDoorWaveQueue();this.syncSummonCards();this.syncHandSlots();const area=this.finalBossPrepArea();if(area&&[...this.s.units.filter(u=>u.position),...(this.s.summonCards||[]).filter(c=>c.position)].some(actor=>finalBossPlacementContains(area,actor.position.x,actor.position.y)))throw Error('昆图斯／萨米的意志将占据右上角 2 列 × 3 行，请先移开该区域的干员和召唤物。');this.applyTouchReplacement();this.settleTartarusRound();const ok=this.beginBattle();if(!ok)return false;if(this.s.phase==='prep')return true;const turn=this.resolveTurn(buildPhasePlan(this.data,this.s.modeId).find(t=>t.round===this.s.round));this.battle=new NativeBattle(this.data,this,this.map,turn);return true;}
  bondLayerSnapshot(){const visible=id=>seesRun(this)||id!==SEES_BOND_ID&&id!==TARTARUS_BOND_ID,ids=new Set([...Object.keys(this.data.season.bondInfoDict||{}),SEES_BOND_ID,TARTARUS_BOND_ID,...Object.keys(this.s.bondLayers||{})]);return [...ids].filter(visible).map(id=>{const value=Number(this.s.bondLayers?.[id]);return {id,name:this.data.season.bondInfoDict[id]?.name||id,layers:Number.isFinite(value)?Math.max(0,Math.floor(value)):0};});}
@@ -441,6 +441,7 @@ export class NativeSession extends NativeEconomy {
   if(s.phase==='decision'&&s.roundDecisionStage==='reward'&&(s.roundDecisions.length!==3||s.roundDecisions.some(o=>s.roundDecisionType==='bounty'?o?.kind!=='bounty'||!bountyOption(data,o.enemyId)||!integer(o.count,1,99)||!n(o.coin)||o.coin<0:s.roundDecisionType==='equipment'?o?.kind!=='equipment'||!data.season.trapChessDataDict[o.itemId]:o?.kind!=='tactical'||!data.season.effectBuffInfoDataDict[o.effectId])))return null;
   if(s.finalBossId!==undefined&&!AVAILABLE_FINAL_BOSS_IDS.includes(s.finalBossId))return null;
   if(s.weeklyChallenge!==undefined&&!validateWeeklyChallengeSnapshot(s.weeklyChallenge))return null;
+  if(s.waveRoster?.version===3){const r=s.waveRoster,types=data.season.specialEnemyRandomTypeDict||{};if(r.modeId!==s.modeId||!Array.isArray(r.types)||r.types.length!==3||new Set(r.types).size!==3||r.types.some(id=>id==='SPECIAL'||!types[id])||!r.rounds)return null;for(const turn of buildPhasePlan(data,s.modeId)){const a=r.rounds[turn.round],g=data.season.specialEnemyInfoDict[a?.groupId];if(!a||Boolean(a.boss)!==Boolean(turn.isBossTurn)||!turn.isBossTurn&&(!integer(a.waveSeed,0,0xffffffff)||!g||g.type!==a.type||g.type!=='SPECIAL'&&!r.types.includes(g.type)||g.isInFirstHalf!==(turn.round<=7)))return null;}}
   if(s.finalBossHpMultiplier!==undefined&&(!n(s.finalBossHpMultiplier)||s.finalBossHpMultiplier<.01||s.finalBossHpMultiplier>10))return null;
   // 盟约禁用：必须是已知盟约、无重复、至多 23 个；缺省（旧存档）在下面按「本局不额外禁用」补齐。
   // `fixed`／`never`（禁用方案）只做类型校验，旧存档缺字段时读档时按当前方案补齐。

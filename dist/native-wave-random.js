@@ -1,6 +1,7 @@
 import {buildPhasePlan} from './protocol.js';
 import {TRAINING_TYPES,PLACEHOLDER_ENEMY,loadWaveTable,enemyCost,tierPack,templateLabel,enemyPoolEligible} from './native-wave-fill.js';
 import {WEEKLY_CHALLENGE_HOOKS,runWeeklyChallengeHook} from './native-challenges.js';
+import {originalEnemyGroups,pickWeightedGroup,originalWaveQueue} from './native-wave-original.js';
 
 const A=(n,extra=1)=>extra*(1.1**n);
 const H=(n,extra=1)=>extra*(1.2**n);
@@ -69,8 +70,9 @@ export function pickDistinct(random,items,count){
  return chosen;
 }
 
-export function createWaveRoster({random,data,modeId}){
- const types=pickDistinct(random,TRAINING_TYPES.map(t=>t.id),3);
+export function createWaveRoster({random,data,modeId,generation=loadWaveTable().generation,weeklyChallenge=null}){
+ const original=generation==='original'&&!weeklyChallenge&&data.season.modeDataDict[modeId]?.modeDifficulty!=='TRAINING';
+ const types=pickDistinct(random,TRAINING_TYPES.filter(t=>!original||t.id!=='SPECIAL').map(t=>t.id),data.common.constData.specialEnemyNum||3);
  const plan=buildPhasePlan(data,modeId);
  const combat=plan.filter(t=>!t.isBossTurn).map(t=>t.round);
  const order=types.slice();
@@ -78,9 +80,10 @@ export function createWaveRoster({random,data,modeId}){
  const rounds={};
  for(const turn of plan){
   if(turn.isBossTurn){rounds[turn.round]={boss:true,type:null,tier:null,waveSeed:null};continue;}
-  rounds[turn.round]={boss:false,type:order[combat.indexOf(turn.round)%order.length],tier:pressureTier(turn.round,combat),waveSeed:Math.floor(random()*0xffffffff)>>>0};
+  const waveSeed=Math.floor(random()*0xffffffff)>>>0,group=original?pickWeightedGroup(waveRng(waveSeed),originalEnemyGroups(data,modeId,types,turn.round<=7)):null;
+  rounds[turn.round]={boss:false,type:group?.type||order[combat.indexOf(turn.round)%order.length],tier:pressureTier(turn.round,combat),waveSeed,...(group?{groupId:group.specialEnemyKey}: {})};
  }
- return {version:2,modeId,types,order,rounds};
+ return {version:original?3:2,modeId,types,order,rounds};
 }
 
 export function waveRng(seed){let x=(seed||1)>>>0;const next=()=>{x^=x<<13;x^=x>>>17;x^=x<<5;x>>>=0;return x/4294967296;};next();return next;}
@@ -122,6 +125,8 @@ function visibleRoutes(level,fly){
 // 各种敌人按自身数量的分位交错，再把整波平铺到开场 2–40 秒。
 // 按出生点分桶，避免同一入口路线较多时分走更多敌人。
 export function scheduleWaveQueue(queue,level,round){
+ // 原版队列与额外悬赏已有独立时间/路线；只排序，不重新均分或压进40秒。
+ if(queue.some(q=>q.original))return queue.slice().sort((a,b)=>a.at-b.at||a.route-b.route);
  const groups=new Map();
  for(const q of queue){if(!groups.has(q.id))groups.set(q.id,[]);groups.get(q.id).push(q);}
  const lanes=[0,0],entries=[];
@@ -147,6 +152,12 @@ export function buildWavePlan(data,turn,roster=null,table=null,weeklyChallenge=n
  const ground=visibleRoutes(level,false),air=visibleRoutes(level,true),queue=[],mode=data.season.modeDataDict[roster.modeId];
  const scale=mode?enemyCombatScale(mode,turn.round,{hidden:!!turn.isConditional}):{atk:1,hp:1,moveSpeed:1};
  if(turn.round===1&&(scale.side==='multi'||mode?.modeDifficulty==='TRAINING'))scale.hp*=.8;
+ if(roster.version===3&&(!table||table.generation==='original')&&!weeklyChallenge){
+  const group=originalEnemyGroups(data,roster.modeId,roster.types,turn.round<=7).find(g=>g.specialEnemyKey===assignment.groupId);
+  if(!group)throw Error('本局原版敌人编组不可用 '+assignment.groupId);
+  const queue=originalWaveQueue(data,level,group);
+  return {round:turn.round,benchmark:false,total:queue.length,targets:queue.length,queue,level,levelId,assignment,scale,pack:{groupId:group.specialEnemyKey,templateName:data.enemies[group.specialEnemyKey].name,ids:queue.map(q=>q.id),countRule:'template-slots',unfilled:false},filled:queue.length,placeholders:0};
+ }
  const sourceTable=table||loadWaveTable(),waveTable=filterRandomPoolTable(sourceTable,data,weeklyChallenge),pack=fillBudgetWave(waveRng(assignment.waveSeed||turn.round),waveTable,assignment.type,assignment.tier);
  pack.ids.forEach((id,i)=>{
   const fly=(data.enemies?.[id]||level.enemyProfiles?.[id])?.motion==='FLY';
@@ -162,7 +173,9 @@ export function buildWavePlan(data,turn,roster=null,table=null,weeklyChallenge=n
 export function buildFinalBossAddQueue(data,roster,seed,doorRoutes,table=null,weeklyChallenge=null){
  if(!Array.isArray(roster?.types)||roster.types.length!==3||!Array.isArray(doorRoutes)||doorRoutes.length!==2)throw Error('最终 Boss 波次缺少三条特训词条或上下红门路线');
  const sourceTable=filterRandomPoolTable(table||loadWaveTable(),data,weeklyChallenge),candidatePool=[];
- roster.types.forEach((type,index)=>{
+ if(roster.version===3&&(!table||table.generation==='original')&&!weeklyChallenge){
+  for(const group of originalEnemyGroups(data,roster.modeId,roster.types,false).filter(g=>g.type!=='SPECIAL'))candidatePool.push(...group.attachedNormalEnemyKeys,...group.attachedEliteEnemyKeys);
+ }else roster.types.forEach((type,index)=>{
   const pack=fillBudgetWave(waveRng((Number(seed)^0x51ed270b^Math.imul(index+1,0x9e3779b9))>>>0),sourceTable,type,3);
   for(const id of pack.ids)if(data.enemies?.[id]&&enemyPoolEligible(id,data)&&!['BOSS','LEADER'].includes(data.enemies[id].levelType))candidatePool.push(id);
  });

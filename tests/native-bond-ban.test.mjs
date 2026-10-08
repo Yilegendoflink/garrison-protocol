@@ -325,7 +325,7 @@ test('禁用方案落盘：只认当前版本，v2／无版本／坏数据一律
 test('协议自定义只有两页：敌人波次 ＋ 禁用方案（「盟约禁用名单」页整页移除）',()=>{
  const ui=editorState(),table=defaultWaveTable();
  assert.equal(ui.page,'enemies');
- assert.ok(renderWaveEditor(data,table,ui).includes('wave-ed-layout'),'默认仍是敌人波次页');
+ assert.ok(renderWaveEditor(data,table,ui).includes('data-act="ed-generation"'),'默认仍是敌人波次页');
  assert.ok(!('bondQuery' in ui),'名单页的搜索词状态一并删掉');
  assert.equal(applyEditorAction('ed-page',{page:'bonds'},table,ui,data),'render');
  assert.equal(ui.page,'enemies','旧的 bonds 页入口落到敌人波次页，不再有名单页');
@@ -338,7 +338,7 @@ test('协议自定义只有两页：敌人波次 ＋ 禁用方案（「盟约禁
  assert.equal(html.includes('不禁用名单'),false,'页面上不再出现「不禁用名单」');
  assert.equal(/data-act="ed-bb-(toggle|all|defaults|clear)"/.test(html),false,'勾选／整盟约开关的动作要删掉');
  applyEditorAction('ed-page',{page:'enemies'},table,ui,data);
- assert.ok(renderWaveEditor(data,table,ui).includes('wave-ed-layout'));
+ assert.ok(renderWaveEditor(data,table,ui).includes('data-act="ed-generation"'));
 });
 
 test('协议自定义的「禁用方案」页：逐盟约三选一（固定禁用／参与随机／不被禁）',()=>{

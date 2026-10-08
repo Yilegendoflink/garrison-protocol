@@ -42,7 +42,7 @@
 - `native-sp.js`：技力（脱手清空、持续倒流、弹药格子）
 - `native-shift.js`：明确力度的推动/默认拖拽逐帧失衡；`moveActor` 第五参 `forceLevel` 启用，取技能 `attack@force/force`，力度0有效。普通推击手有方向转径向/减两级修正，见行者S2固定身前方向例外。物理时段驱动弧光锋卫自伤、雪孩子撞高台、地穴坠落与失衡结束回调；默认拖拽按持续力和距离四次方衰减，绑定来源/部署代次；薄绿向内推走动量例外。捕网、歌蕾蒂娅S3等分段特殊拉力和未核定力度的旧调用仍未迁移，不能把本模块当作完整Unity刚体还原。静态刚体由行为覆盖表逐ID登记：可以进入失衡但零物理速度，不能等同失衡免疫，也不禁止普通导航/传送。新增模块须登记 `scripts/build-browser.mjs`。
 - `native-environment.js`：地图显式控制器的战斗效果及敌人生成的国度；当前接入深水、沙尘暴、**活性源石／沼泽地段／排气格栅／源石流气流**与现有土石结构遮挡。全局控制器可能在裁切外，构建时按原始地图的启用状态、技能索引/等级与历史黑板保留配置，不可只遍历可见 `map.devices`。**气流源尤其要注意**：a2m01 真正吹进战场的是裁切框外的 4 台，所以 `build-protocol` 另出 `map.windSources`（不裁切），`blowerCells` 只保留棋盘内的格子。沙尘暴不等于活性源石风暴，不能触发后者专属的敌人能力。国度格子保存在 `battle.s.dominionCells`，不改写共享地图；绘制只能读取它。
-- `native-waves.js` / `native-wave-random.js` / `native-wave-editor.js`：词条预算抽怪与「协议自定义」（两个页面：敌人波次／禁用方案）；最终 Boss 血量倍率也保存在敌人波次表中，默认 75%，只对新开对局生效，可导入／导出
+- `native-waves.js` / `native-wave-random.js` / `native-wave-original.js` / `native-wave-editor.js`：默认原版编组随机出怪（六类抽三类＋常驻特异、原表权重、1–7／8起切池、难度与完整编组准入过滤）；普通／精英／组长数量暂沿用原关卡槽位，服务器战斗力换算未核定。原版队列保留批次时间和上下路线，禁止再均分或压进40秒。自定义预算模式、v2旧对局、入门训练与每周挑战保留原规则；细节见 `docs/ORIGINAL_WAVE_RANDOMIZATION.md`。最终 Boss 血量倍率仍默认75%，只对新开对局生效，可导入／导出。
 - `native-bond-ban.js`：盟约禁用（每局随机 3 核心 + 4 附加、逐盟约三态「固定禁用／参与随机／不被禁」、干员「所属盟约全被禁才禁用」的判定、配置读写与简报／分组弹窗）。**战前预览顶部那段口径说明（禁用条数／固定禁用／「所属盟约全部缺席才不可用」）已按用户 2026-09-23 要求整段删除**，这些信息只看每张盟约卡的 `<small>` 标签（`固定禁用`／`固定不禁用`／`随机候选`），被禁干员弹窗的首行摘要保留；别再往页面加回散文说明。
 - `native-prep.js`：大厅「战前准备」页（全干员／全装备效果横向卡片、底部固定阶级与盟约筛选、技能档位点击即保存、全体恢复档案默认、`applyPrepSkills` 局内接线）
 - `native-sees.js`：**S.E.E.S. 策略（band_sees）整块内容**（用户 2026-09-27；口径与逐条落点见 `docs/SEES_CONTENT.md`／`docs/SEES_STRATEGY_REMAINING.md`；模块是纯函数，**不 import session／battle／play**）。三条边界：① 数据由构建期从 `data/modes/alliance-lower/sees-content.json` 注入并写进 `data.sees`——`build-native` 里**必须在联动干员建档之后**调，否则 `bondIds` 会被覆盖回空；② **可见性**看本地存档 `flags.sees`（密码 `20100305`）：策略列表 `visibleBands`、已选策略不可见时 `guardedBandId()` 回落、战前准备 `dataForPrep`（未解锁时名册／装备与改动前逐项一致）；③ **卡池资格**看本局策略：`operatorAllowed`／`itemAllowed` 是唯一判定，`eligible()`／装备池／`ensureStock` 三处都走它（四人平时 `isHidden` 且**没有库存**）。两条专属盟约不进禁用池也不进盟约下拉（`native-bond-ban.SEES_EXCLUSIVE_BONDS`）；`activeBonds(data,units,modeId,band)` 多收一个 band 才把它们算作可激活；四人的 `garrisonIds` 指向 `sees-content` 登记的 `garrison_sees_*` 说明项，实际规则仍由 `native-sees`／`native-collab-*` 执行，不走通用 garrison 事件，避免重复结算。回归：`tests/native-sees.test.mjs`。
@@ -138,7 +138,7 @@
 - 战斗规则走 `native-effects` 结算入口（伤害/治疗/回复/流失/退场，带 `eventId` / `parentEventId` / `attackId`）。不要为了特效去改命中结果。
 - 能力状态只能由真实场景改 `operator-capability-status.json`；构建脚本不得批量升 `verified`。
 - 商店抽取顺序是**先掷阶级再从该阶级库存里抽**（`native-session.js` 的 `SHOP_TIER_ROLL`：最高阶30% / 次高阶40% / 更低阶合计30%，档内按剩余库存加权、同店无放回）；掷中的阶级没库存才回落到整池随机。百分比是项目规定值，不要写成原作权重，也不要改回「整池直接按库存抽」。
-- 波次已改为词条难度预算自建池，不再追求关卡模板逐波复刻。
+- 波次默认按原表完整编组加权抽取；不能为了补齐池子批量放开 `randomPoolEligible:false` 的敌人。数量沿模板是当前近似规则，不得声称原版出怪完全对等。预算自建池为可选兼容模式。
 - 推 `main` 会发布 Pages 且不跑测试。功能分支验收后再合并。
 
 ## 文档怎么读

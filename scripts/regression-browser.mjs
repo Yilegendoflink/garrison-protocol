@@ -25,6 +25,25 @@ const {chromium}=pw.default||pw;
 const suites=new Map();
 const suite=(name,fn)=>suites.set(name,fn);
 
+suite('original-waves',async(browser)=>{
+ const {NATIVE_DATA:data}=await import('../dist/runtime-data.js'),{NativeSession}=await import('../dist/native-session.js');
+ const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await fs.mkdir('artifacts/original-waves',{recursive:true});await page.goto(URL);await page.waitForFunction(()=>window.__garrisonReady);
+ await page.locator('[data-act=editor]').click();assert.equal(await page.locator('[data-act=ed-generation]').inputValue(),'original');assert.equal(await page.locator('.wave-ed-table tbody tr').count(),17);
+ assert.ok(await page.locator('.wave-ed-original-table').evaluate(t=>t.rows[0].cells[1].getBoundingClientRect().width>t.getBoundingClientRect().width*.3),'编组成员列不得继承预算表的42px窄列');
+ await page.screenshot({path:'artifacts/original-waves/editor.png',fullPage:true});
+ for(const width of [320,375,768]){await page.setViewportSize({width,height:850});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'原版编组页无横向溢出 '+width);}
+ await page.locator('[data-act=ed-generation]').selectOption('budget');await page.locator('[data-act=ed-budget]').fill('123');await page.locator('[data-act=ed-generation]').selectOption('original');await page.locator('[data-act=ed-generation]').selectOption('budget');assert.equal(await page.locator('[data-act=ed-budget]').inputValue(),'123');await page.locator('[data-act=ed-generation]').selectOption('original');
+ const g=new NativeSession(data,{modeId:'mode_single_normal',mapId:'act1autochess_m03',seed:42});g.s.round=8;g.s.rewardPending=null;g.s.rewardQueue=[];g.s.pendingBounties=[{enemyId:'enemy_1007_slime',count:1,coin:2}];g.prepareDoorWaveQueue(8,{force:true});const saved=g.snapshot();
+ await page.evaluate(r=>{localStorage.setItem('garrison-native-manual-v1',JSON.stringify(r));localStorage.setItem('garrison-native-safe-v1',JSON.stringify(r));},saved);await page.reload();await page.waitForFunction(()=>window.__garrisonReady);await page.setViewportSize({width:1440,height:900});await page.locator('[data-act=resume]').click();
+ const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('garrison-native-manual-v1')));assert.deepEqual(before.s.preparedDoorWave.queue,saved.s.preparedDoorWave.queue);
+ await page.locator('[data-act=start]').click();await page.waitForFunction(()=>document.querySelector('.native-game')?.classList.contains('is-battle'));await page.locator('[data-act=pause]').click();
+ const started=await page.evaluate(()=>JSON.parse(localStorage.getItem('garrison-native-manual-v1')));assert.equal(started.s.waveRoster.version,3);assert.ok(started.battle.queue.some(q=>q.at>60));assert.deepEqual(started.battle.queue.map(({door,...q})=>q),saved.s.preparedDoorWave.queue.map(({door,...q})=>q));
+ await page.screenshot({path:'artifacts/original-waves/battle.png',fullPage:true});await page.locator('[data-act=home]').click();await page.reload();await page.waitForFunction(()=>window.__garrisonReady);await page.locator('[data-act=resume]').click();
+ const resumed=await page.evaluate(()=>JSON.parse(localStorage.getItem('garrison-native-manual-v1')));assert.deepEqual(resumed.s.waveRoster,started.s.waveRoster);assert.deepEqual(resumed.battle.queue,started.battle.queue);assert.deepEqual(errors,[]);await page.close();
+ await fs.writeFile('artifacts/original-waves/browser.json',JSON.stringify({passed:true,checks:['默认原版编组','320/375/768无横向溢出','模式切换保留预算编辑','预览与开战队列一致','60秒后批次保留','战斗读档不重抽'],errors},null,2)+'\n');
+});
+
 async function acceptRoundBounty(page){const card=page.locator('[data-act=round-bounty]').first();if(await card.isVisible())await card.click();}
 
 suite('bounty-decisions',async(browser)=>{
@@ -55,6 +74,7 @@ suite('wave-activities',async(browser)=>{
  await page.waitForFunction(()=>window.__garrisonReady);
  await page.locator('[data-act=editor]').click();
  await page.locator('[data-act=ed-tools]').click();await page.locator('[data-act=ed-defaults]').click();await page.locator('[data-act=ed-tools]').click();
+ assert.match(await page.locator('body').innerText(),/原版敌人编组/);await page.locator('[data-act=ed-generation]').selectOption('budget');
  assert.equal(await page.locator('[data-act=ed-readiness]').inputValue(),'ready');
  await page.locator('[data-act=ed-activity]').selectOption('将进酒');
  const rows=page.locator('.wave-ed-table tbody tr');
@@ -124,7 +144,7 @@ const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];p
  await page.locator('[data-act=passcode]').click();assert.ok(await page.locator('#native-modal').isVisible());assert.match(await page.locator('#native-modal').innerText(),/输入密码/);
  await page.locator('#native-modal [data-key="1"]').click();await page.locator('#native-modal [data-key="2"]').click();assert.match(await page.locator('.native-passcode-display').innerText(),/1 2/);
  await page.locator('#native-modal [data-key=clear]').click();assert.match(await page.locator('.native-passcode-display').innerText(),/未输入/);await page.locator('#native-modal [data-act=close]').click();
- await page.locator('[data-act=editor]').click();assert.ok(await page.locator('.wave-ed').isVisible());assert.match(await page.locator('body').innerText(),/配置管理/);await page.locator('[data-act=ed-tools]').click();await page.locator('[data-act=ed-defaults]').click();await page.locator('[data-act=ed-tools]').click();assert.match(await page.locator('body').innerText(),/模板敌人/);await page.screenshot({path:'artifacts/s0-s3/editor.png'});await page.locator('[data-act=home]').click();
+ await page.locator('[data-act=editor]').click();assert.ok(await page.locator('.wave-ed').isVisible());assert.match(await page.locator('body').innerText(),/配置管理/);await page.locator('[data-act=ed-tools]').click();await page.locator('[data-act=ed-defaults]').click();await page.locator('[data-act=ed-tools]').click();assert.match(await page.locator('body').innerText(),/原版敌人编组/);await page.screenshot({path:'artifacts/s0-s3/editor.png'});await page.locator('[data-act=home]').click();
  // 技能测试场的入口已按用户口径从大厅删掉（功能代码仍在，只是暂时没有 UI 入口），
  // 所以这一段浏览器流程暂时到这里为止；等它有了新入口（例如接到「输入密码」后面）再补回来。
  await page.locator('[data-act=new]').click();assert.match(await page.locator('body').innerText(),/战前准备/);await page.locator('[data-act=begin]').click();await acceptRoundBounty(page);assert.ok(await page.locator('.native-game').isVisible());

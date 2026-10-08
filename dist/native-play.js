@@ -405,7 +405,7 @@ function showResult(){const g=state.game,r=g.s.runResult||g.s.history.at(-1);if(
 function resetUpgradeConfirm(){if(!upgradeConfirm)return;upgradeConfirm=false;const button=root.querySelector('[data-act="upgrade"]');if(button){button.textContent=`升级 ${catOn()?'ALL':(state.game?.terms?.().upgradeCost??'MAX')} ◆`;button.classList.remove('is-confirming');button.setAttribute('aria-pressed','false');}}
 function createNewDraft(weeklyChallenge=null,networkEpoch=null){
  const egg=state.mode===EGG_MODE_ID,cat=state.mode===CAT_MODE_ID,modeId=egg?EGG_BASE_MODE:cat?CAT_BASE_MODE:state.mode,seed=(Date.now()&0xffffffff)>>>0,banConfig=loadBondBan(data),mapChoice=weeklyChallenge?.mapId||state.map,mapId=resolveMapId(data,mapChoice,waveRng((seed^0x9e3779b9)>>>0),modeId);
- state.draft={modeId,mapId,seed,finalBossId:weeklyChallenge?.finalBossId||rollFinalBoss(data,modeId,seed),roster:createWaveRoster({random:waveRng(seed),data,modeId}),bondBan:{bonds:bondBanIds(data,seed,banConfig),always:banConfig.always,never:banConfig.never},egg325:egg,cat,weeklyChallenge:weeklyChallenge?weeklyChallengeSnapshot(weeklyChallenge,networkEpoch):null};
+ state.draft={modeId,mapId,seed,finalBossId:weeklyChallenge?.finalBossId||rollFinalBoss(data,modeId,seed),roster:createWaveRoster({random:waveRng(seed),data,modeId,generation:state.waveTable.generation,weeklyChallenge}),bondBan:{bonds:bondBanIds(data,seed,banConfig),always:banConfig.always,never:banConfig.never},egg325:egg,cat,weeklyChallenge:weeklyChallenge?weeklyChallengeSnapshot(weeklyChallenge,networkEpoch):null};
  state.bondBanBlocks=0;state.view='briefing';state.strategyDraft=null;state.modal=null;render();
 }
 async function openWeeklyChallenge(button){

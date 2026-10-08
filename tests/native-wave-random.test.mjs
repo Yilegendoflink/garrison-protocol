@@ -2,6 +2,8 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 import {TRAINING_TYPES,PLACEHOLDER_ENEMY,emptyWaveTable,normalizeWaveTable} from '../dist/native-wave-fill.js';
 import {createWaveRoster,enemyCombatScale,buildWavePlan,pressureTier,fillBudgetWave,waveRng,filterRandomPoolTable} from '../dist/native-wave-random.js';
 import {buildPhasePlan} from '../dist/protocol.js';
+// 本文件保留自定义预算模式的兼容契约；原版编组见 native-wave-original.test.mjs。
+const legacyRoster=args=>createWaveRoster({...args,generation:'budget'});
 
 const data=JSON.parse(fs.readFileSync('data/modes/alliance-lower/source.json','utf8'));
 const stub={motionMode:'WALK',startPosition:{col:0,row:8},endPosition:{col:10,row:8}};
@@ -13,17 +15,17 @@ data.enemies={enemy_a:{name:'A',motion:'WALK',attributes:{maxHp:1,atk:1}},enemy_
 function rng(seed=1){let x=seed>>>0;return()=>{x^=x<<13;x^=x>>>17;x^=x<<5;x>>>=0;return x/4294967296;};}
 
 test('opening draw picks three distinct training types and is seed-stable',()=>{
- const a=createWaveRoster({random:rng(7),data,modeId:'mode_single_normal'});
- const b=createWaveRoster({random:rng(7),data,modeId:'mode_single_normal'});
+ const a=legacyRoster({random:rng(7),data,modeId:'mode_single_normal'});
+ const b=legacyRoster({random:rng(7),data,modeId:'mode_single_normal'});
  assert.equal(a.types.length,3);assert.equal(new Set(a.types).size,3);
  for(const id of a.types)assert.ok(TRAINING_TYPES.some(t=>t.id===id));
  assert.deepEqual(a,b);
- const c=createWaveRoster({random:rng(8),data,modeId:'mode_single_normal'});
+ const c=legacyRoster({random:rng(8),data,modeId:'mode_single_normal'});
  assert.notDeepEqual(a,c);
 });
 
 test('combat rounds cycle the three types and rise through pressure thirds',()=>{
- const roster=createWaveRoster({random:rng(3),data,modeId:'mode_single_funny'});
+ const roster=legacyRoster({random:rng(3),data,modeId:'mode_single_funny'});
  const plan=buildPhasePlan(data,'mode_single_funny');
  const combat=plan.filter(t=>!t.isBossTurn);
  const used=new Set();
@@ -116,13 +118,13 @@ test('legacy single pool migrates to one template; a wave draws from only one of
 });
 
 test('wave plan rebuilds from roster seed without advancing game RNG and marks the final phase as a boss battle',()=>{
- const random=rng(11);const roster=createWaveRoster({random,data,modeId:'mode_single_funny'});
+ const random=rng(11);const roster=legacyRoster({random,data,modeId:'mode_single_funny'});
  const turn=buildPhasePlan(data,'mode_single_funny').find(t=>t.round===1);
  const table=emptyWaveTable();
  buildWavePlan(data,turn,roster,table);
  buildWavePlan(data,turn,roster,table);
  const after=random();
- const other=rng(11);createWaveRoster({random:other,data,modeId:'mode_single_funny'});
+ const other=rng(11);legacyRoster({random:other,data,modeId:'mode_single_funny'});
  assert.equal(after,other());
  const plan=buildWavePlan(data,turn,roster,table);
  assert.equal(plan.placeholders,1);

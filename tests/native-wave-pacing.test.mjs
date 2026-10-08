@@ -33,9 +33,9 @@ test('species are interleaved across 2–40 seconds with balanced entrances inde
  assert.equal(scheduleWaveQueue(Array.from({length:80},()=>source[0]),level,10).at(-1).at,40);
 });
 
-test('all modes use lower entrance in early rounds and balanced upper/lower thereafter',()=>{
+test('custom budget modes keep lower entrance in early rounds and balanced upper/lower thereafter',()=>{
  for(const modeId of Object.keys(data.season.modeDataDict)){
-  const roster=createWaveRoster({random:waveRng(42),data,modeId});
+  const roster=createWaveRoster({random:waveRng(42),data,modeId,generation:'budget'});
   for(const turn of buildPhasePlan(data,modeId).filter(t=>!t.isBossTurn)){
    const plan=buildWavePlan(data,turn,roster),counts=new Map();
    for(const q of plan.queue){const p=plan.level.routes[q.route].startPosition;assert.equal(p.col,10);assert.ok(q.at>=2&&q.at<=40);counts.set(p.row,(counts.get(p.row)||0)+1);}
@@ -53,7 +53,7 @@ test('real map spawn coordinates, first-round HP and bounty pacing use the same 
   const session=new NativeSession(data,{mapId:map.stageId,seed:42});
   session.s.pendingBounty={count:3,enemyId:'enemy_1000_gopro_2',coin:2};
   const battle=new NativeBattle(data,session,map,turns.find(t=>t.round===round));
-  assert.ok(battle.s.queue.every(q=>q.at<=40));
+  assert.ok(battle.s.queue.every(q=>Number.isFinite(q.at)));
   assert.equal(battle.s.queue.filter(q=>q.bountyReward===2).length,3);
   for(const q of battle.s.queue){const route=battle.level.routes[q.route],p=battle.path(route,route.motionMode==='FLY')[0];assert.equal(p.x,10);assert.ok(round===1?p.y===3:p.y===0||p.y===3);assert.equal(map.grid[p.y][p.x].tileKey,'tile_start');}
   const id='enemy_1000_gopro_2';battle.spawn({id,route:0});
@@ -63,14 +63,14 @@ test('real map spawn coordinates, first-round HP and bounty pacing use the same 
  }
 });
 
-test('real battle steps consume the entire wave by 40 seconds',()=>{
+test('real battle steps consume the original queue at its scheduled times',()=>{
  const session=new NativeSession(data,{seed:42});session.s.hp=100000;
  const battle=new NativeBattle(data,session,session.map,turns.find(t=>t.round===4));
  const planned=battle.s.queue.map(q=>({...q})),spawned=[],spawn=battle.spawn.bind(battle);
  battle.spawn=(q,...args)=>{spawned.push({id:q.id,at:battle.s.time});return spawn(q,...args);};
- while(battle.s.time<40&&!battle.s.finished)battle.step();
+ while(battle.s.time<Math.max(...planned.map(q=>q.at))+1&&!battle.s.finished)battle.step();
  assert.equal(battle.s.queue.length,0);assert.equal(spawned.length,planned.length);
- assert.equal(spawned[0].at,2);assert.equal(spawned.at(-1).at,40);
+ for(let i=0;i<spawned.length;i++){assert.equal(spawned[i].id,planned[i].id);assert.ok(spawned[i].at>=planned[i].at&&spawned[i].at-planned[i].at<=.05);}
 });
 
 test('difficulty attack and HP reach real spawns without a single-player first-round HP modifier',()=>{

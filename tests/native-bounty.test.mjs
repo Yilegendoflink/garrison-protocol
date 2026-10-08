@@ -46,7 +46,7 @@ test('a decision randomly selects one type and bounty targets join the next wave
  const selected=g.s.roundDecisions[0];assert.equal(g.perform('decision',selected.id),true);
  assert.equal(g.s.phase,'prep');assert.equal(g.s.pendingBounties.length,1);
  const b=new NativeBattle(data,g,g.map,turnOf(g.s.modeId,g.s.round)),targets=b.s.queue.filter(q=>q.bountyReward!==undefined);
- assert.equal(targets.length,selected.count);assert.ok(targets.every(q=>q.bountyReward===selected.coin&&q.at<=40));
+ assert.equal(targets.length,selected.count);assert.ok(targets.every(q=>q.bountyReward===selected.coin&&q.at>Math.max(...b.s.queue.filter(q=>q.original).map(q=>q.at))));
  const before=g.s.nextRoundBonus;b.spawn(targets[0]);commitExit(b,{target:b.s.enemies.at(-1),reason:'death'});
  assert.equal(g.s.nextRoundBonus-before,selected.coin);
  g.s.phase='battle';g.battle=b;

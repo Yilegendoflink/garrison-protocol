@@ -50,10 +50,11 @@ export function emptyWaveTable(){
  return {version:2,defaultCost:1,costs:{},types,finalBossHpMultiplier:DEFAULT_FINAL_BOSS_HP_MULTIPLIER};
 }
 
-export function defaultWaveTable(){return normalizeWaveTable(DEFAULT_WAVE_TABLE);}
+export function defaultWaveTable(){return normalizeWaveTable({...DEFAULT_WAVE_TABLE,generation:'original'});}
 
 export function normalizeWaveTable(raw){
  const base=emptyWaveTable();if(!raw||typeof raw!=='object')return base;
+ if(['original','budget'].includes(raw.generation))base.generation=raw.generation;
  base.defaultCost=Math.max(1,Number(raw.defaultCost)||1);
  base.finalBossHpMultiplier=normalizeFinalBossHpMultiplier(raw.finalBossHpMultiplier);
  if(raw.costs&&typeof raw.costs==='object')for(const [id,value] of Object.entries(raw.costs)){const n=Number(value);if(Number.isFinite(n)&&n>0)base.costs[id]=n;}
@@ -65,7 +66,7 @@ export function normalizeWaveTable(raw){
 }
 
 export function loadWaveTable(){
- try{if(typeof localStorage!=='undefined'){const raw=JSON.parse(localStorage.getItem(WAVE_STORE_KEY)||'null');if(raw)return normalizeWaveTable(raw);}}catch{}
+ try{if(typeof localStorage!=='undefined'){const raw=JSON.parse(localStorage.getItem(WAVE_STORE_KEY)||'null');if(raw){const table=normalizeWaveTable(raw);if(raw.generation===undefined&&sameWaveTable({...table,finalBossHpMultiplier:DEFAULT_FINAL_BOSS_HP_MULTIPLIER},normalizeWaveTable(DEFAULT_WAVE_TABLE)))table.generation='original';return table;}}}catch{}
  return defaultWaveTable();
 }
 
