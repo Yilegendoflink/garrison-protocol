@@ -18,6 +18,35 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const readJson = async p => JSON.parse(await readFile(path.join(root, p), 'utf8'));
 const chessOf = (charId, golden = false) => Object.values(data.profiles).find(p => p.charId === charId && !!p.isGolden === golden)?.chessId;
 
+test('莫斯提马 S3 天赋减速只覆盖当前范围：未开技不扩大，结束后收回（两种阶级、四朝向）', () => {
+  for (const golden of [false, true]) for (const dir of [0, 1, 2, 3]) {
+    const { b } = openBattle({ chessId: chessOf('char_213_mostma', golden), skillIndex: 2 });
+    deployNow(b);
+    const u = byId(b, 'char_213_mostma');
+    u.x = 4; u.y = 3; u.dir = dir; u.sp = 0; u.attackCooldown = 1e9;
+    const rotate = (x,y) => { for(let i=0;i<dir;i++)[x,y]=[-y,x];return {x:u.x+x,y:u.y+y}; };
+    const base = enemy(b,{...rotate(1,0),hp:1e9,speed:0});
+    const extra = enemy(b,{...rotate(3,0),hp:1e9,speed:0});
+    const outside = enemy(b,{...rotate(4,0),hp:1e9,speed:0});
+    const slowed = e => e.statuses.some(s=>s.kind==='sluggish'&&s.source===u.uid);
+    assert.ok(b.inside(u,base));assert.equal(b.inside(u,extra),false);assert.ok(b.inside(u,extra,true));
+    b.step();
+    assert.ok(slowed(base),'常态基础范围内继续减速');
+    assert.equal(slowed(extra),false,'未开技，技能额外范围内不能减速');
+    assert.equal(slowed(outside),false);
+    u.sp=b.spCost(u);b.activate(u);b.step();
+    assert.ok(slowed(base));assert.ok(slowed(extra),'S3期间扩大范围内减速');assert.equal(slowed(outside),false);
+    b.deactivate(u);
+    // 跨过开技帧的范围保持与天赋状态短暂刷新窗口，检查是否还在错误续期。
+    for(let i=0;i<4;i++)b.step();
+    assert.ok(slowed(base));assert.equal(slowed(extra),false,'S3结束后，额外范围内减速不再续期');assert.equal(slowed(outside),false);
+    for(let i=0;i<100;i++)b.step(); // 等待重复开技的引擎间隔，不把未成功开技误判成范围错误。
+    u.sp=b.spCost(u);b.activate(u);b.step();assert.ok(slowed(extra));
+    u.skillLeft=.01;for(let i=0;i<5;i++)b.step();
+    assert.equal(b.skillActive(u),false);assert.ok(slowed(base));assert.equal(slowed(extra),false,'技能自然结束后也收回额外范围');
+  }
+});
+
 test('范围形状数据与 PRTS 快照逐格一致，基础范围与 PRTS 的 phase.rangeId 全部对得上', async () => {
   const ours = await readJson('data/gamedata/allianceLower/range_table.json');
   const prtsRaw = await readJson('data/prts/snapshots/2026-09-12-prts/ranges.json');
