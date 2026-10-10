@@ -16736,6 +16736,7 @@ const {PASSCODE_MAX,applyPasscode} = load("native-passcode.js");
 const {NATIVE_DATA} = load("runtime-data.js");
 const {NativeSession} = load("native-session.js");
 const {NativeBattle} = load("native-battle.js");
+const {createEnemyOverlapHud} = load("native-enemy-overlap.js");
 const {renderLobby,NATIVE_CHANGELOG,changelogHtml} = load("native-lobby.js");
 const {fetchNetworkEpoch,weeklyChallengeAt,weeklyChallengeSnapshot,runWeeklyChallengeHook,WEEKLY_CHALLENGE_HOOKS} = load("native-challenges.js");
 const {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText,battleBoardVisible,bondCurrentPreviewHtml,isolatedPlatform,tileLiftAmount,ROUND_LEAK_CAP,HAND_LIMIT,enemySprite,battleTally,RANDOM_MAP_ID,resolveMapId,directionOf,mapThumbnailHtml} = load("protocol.js");
@@ -16805,6 +16806,7 @@ const state={supplyCollapsed:false,expiresAt:null,game:null,draft:null,sandbox:n
 function positionLobbyUpdateCard(){const hero=root.querySelector('.native-hero'),panel=root.querySelector('.native-hero-panel'),loadout=root.querySelector('.native-loadout');if(!hero||!panel||!loadout)return;if(matchMedia('(max-width:820px) and (orientation:portrait)').matches)loadout.after(panel);else hero.append(panel);}
 window.addEventListener('resize',()=>{if(state.view==='lobby')positionLobbyUpdateCard();});
 let canvas,seesScreenFxCanvas=null,seesScreenFxWasActive=false,drag=null,canvasPress=null,aim=null,touchButton=null,last=performance.now(),acc=0,hudTime=0,saveTime=0,ignoredClickPointer=null,ignoredClickUntil=0,dossierDismissedAt=0,runtimeFault=null;
+const enemyOverlapHud=createEnemyOverlapHud({asset:e=>data.assets[enemySprite(e).key],name:e=>e.name||data.enemies[e.id]?.name,onChange:()=>draw()});
 function readSave(key){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):null;}catch{return null;}}
 function savedView(){try{return sessionStorage.getItem(VIEW_SAVE)||'lobby';}catch{return 'lobby';}}
 function rememberView(view){try{sessionStorage.setItem(VIEW_SAVE,view);}catch{}}
@@ -16983,6 +16985,7 @@ function guardedBandId(){const bands=visibleBands(data,archiveNow()).map(b=>b.ba
 function deployCount(s){return s.units.filter(u=>u.position&&!freeDeploy(data,u)).length;}
 function renderStrategySelectScreen(){const bands=visibleBands(data,archiveNow()).map(b=>b.bandId),list=bands.map(id=>strategyInfo(id)).filter(b=>b.name),selectedDraft=state.strategyDraft||state.band,selected=bands.includes(selectedDraft)?selectedDraft:(list[0]?.id||null);return `<main class="native-lobby native-strategy-select"><header><button data-act="strategy-cancel">‹ 返回模拟简报</button><span>策略选择</span></header><div class="native-strategy-select-heading"><div><span class="native-eyebrow">STRATEGY CATALOG</span><h1>选择初始策略</h1></div><p>点击策略卡片预览，再次点击当前策略确认并返回模拟简报。</p></div><div class="native-strategy-catalog">${list.map(b=>`<button data-act="strategy-pick" data-id="${b.id}" class="${selected===b.id?'chosen':''}"><div class="native-strategy-card-art">${avatar(b.id)||'<span class="native-strategy-placeholder" aria-hidden="true">◈</span>'}</div><span><b>${esc(b.name)}</b><small>初始生命 ${b.hp}</small><p>${esc(b.desc)}</p></span></button>`).join('')}</div><div class="native-strategy-select-actions"><button data-act="strategy-cancel">取消</button></div></main>`;}
 function render(){
+ if(state.view!=='game'||!state.game?.battle||!battleBoardVisible(state.game.s.phase))enemyOverlapHud.clear();
  painting=true;
  try{
  if(state.view!=='game'||!state.game||state.game.s.phase!=='prep'||state.sandbox)document.getElementById('native-door-popover-portal')?.remove();
@@ -17580,6 +17583,11 @@ function draw(){
   for(const cell of cells)c.fillStyle='#63d8b738',c.fillRect(z.ox+cell.x*z.tw+2,z.oy+cell.y*z.th+2,z.tw-4,z.th-4);
  }
  const statusOverlays=[];
+ const overlapEnemies=g.battle&&battleBoardVisible(g.s.phase)?g.battle.s.enemies:[],viewport=g.map.viewport||{left:0,right:10,top:0,bottom:6};
+ const overlapGridTop=z.oy+viewport.top*z.th,overlapLandscape=document.documentElement.classList.contains('native-landscape-ui')||(innerWidth>innerHeight&&innerHeight<=600&&innerWidth<=1100),overlapTop=overlapLandscape?overlapGridTop:Math.min(overlapGridTop,48);
+ const overlapBounds={x:z.ox+viewport.left*z.tw,y:overlapTop,w:(viewport.right-viewport.left+1)*z.tw,h:overlapLandscape?(viewport.bottom-viewport.top+1)*z.th:z.r.height-overlapTop-32,coarse:mobilePlay(),gridTop:overlapGridTop};
+ const overlapPositions=overlapEnemies.length?enemyOverlapHud.update({board:canvas.parentElement,canvas,battle:g.battle.s,entries:overlapEnemies.map(e=>{const p=point(e.x,e.y);return {enemy:e,x:p.x,y:p.y-(e.flying?15:0),size:z.tw*.55*enemySprite(e).scale};}),bounds:overlapBounds}):new Map();
+ if(!overlapEnemies.length)enemyOverlapHud.clear();
   const prepSummons=g.s.phase==='prep'?(g.s.summonCards||[]).filter(card=>card.position).map(card=>({...card,x:card.position.x,y:card.position.y,id:card.type,deployed:true})):[];
   const actors=battleBoardVisible(g.s.phase)?g.battle?.s.units||[]:[...g.s.units.filter(u=>u.position).map(u=>({...u,x:u.position.x,y:u.position.y,id:u.charId,deployed:true})),...prepSummons];
   for(const u of actors){
@@ -17616,7 +17624,7 @@ function draw(){
   c.fillStyle='#e9fff7';c.font='10px sans-serif';c.textAlign='center';c.fillText(s.name||s.type,p.x,p.y-size*.65);
   });
  }
- if(g.battle&&battleBoardVisible(g.s.phase))for(const e of g.battle.s.enemies){if(e.hidden)continue;const p=point(e.x,e.y),sprite=enemySprite(e),size=z.tw*.55*sprite.scale,im=formTintedImage(img(sprite.key),sprite.tint&&!state.reduceFx?sprite.tint:null);if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);drawFrostOverlay(c,e,{x:p.x-20,y:p.y-20,w:40,h:40},{reduceFx:state.reduceFx});}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{drawElementRing(c,p.x,p.y-(e.flying?15:0),e,size);drawFrostOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx});drawConcealOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx,time:g.battle.s.time,image:im});c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);drawTerrainBadges(c,{x:p.x,y:p.y-(e.flying?15:0)},e,size);});}if(g.battle.s.whitwEyes?.some(x=>x.targetUid===e.uid)){const y=p.y-size*.8-(e.flying?15:0);c.save();c.strokeStyle='#ff4f5e';c.fillStyle='#ff4f5e';c.lineWidth=2;c.beginPath();c.ellipse(p.x,y,7,4.5,0,0,Math.PI*2);c.stroke();c.beginPath();c.arc(p.x,y,2,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(p.x-11,y);c.lineTo(p.x-8,y);c.moveTo(p.x+8,y);c.lineTo(p.x+11,y);c.stroke();c.restore();}}
+ if(g.battle&&battleBoardVisible(g.s.phase))for(const e of [...g.battle.s.enemies].sort((a,b)=>Number(a.uid===enemyOverlapHud.selectedUid)-Number(b.uid===enemyOverlapHud.selectedUid))){if(e.hidden||e.hp<=0)continue;const p=point(e.x,e.y),offset=overlapPositions.get(e.uid);if(offset){p.x+=offset.x;p.y+=offset.y;}const sprite=enemySprite(e),size=z.tw*.55*sprite.scale,im=formTintedImage(img(sprite.key),sprite.tint&&!state.reduceFx?sprite.tint:null);if(e.trainingDummy){c.fillStyle='#be9364';c.fillRect(p.x-7,p.y-20,14,40);c.fillRect(p.x-20,p.y-10,40,10);c.fillStyle='#fff0c8';c.font='bold 22px sans-serif';c.fillText('∞',p.x,p.y-26);drawFrostOverlay(c,e,{x:p.x-20,y:p.y-20,w:40,h:40},{reduceFx:state.reduceFx});}else{if(im?.complete&&im.naturalWidth)c.drawImage(im,p.x-size/2,p.y-size/2-(e.flying?15:0),size,size);else{c.fillStyle='#d9846d';c.beginPath();c.arc(p.x,p.y,12,0,Math.PI*2);c.fill();}statusOverlays.push(()=>{drawElementRing(c,p.x,p.y-(e.flying?15:0),e,size);drawFrostOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx});drawConcealOverlay(c,e,{x:p.x-size/2,y:p.y-size/2-(e.flying?15:0),w:size,h:size},{reduceFx:state.reduceFx,time:g.battle.s.time,image:im});if(!offset?.groupUid){c.fillStyle='#e29179';c.fillRect(p.x-size/2,p.y-size*.65-(e.flying?15:0),size*Math.max(0,e.hp/e.maxHp),3);}if(e.uid===enemyOverlapHud.selectedUid){c.strokeStyle='#79dcb7';c.lineWidth=2;c.strokeRect(p.x-size/2-2,p.y-size/2-(e.flying?15:0)-2,size+4,size+4);}drawStatuses(c,p.x,p.y-(e.flying?15:0),e,size);drawTerrainBadges(c,{x:p.x,y:p.y-(e.flying?15:0)},e,size);});}if(g.battle.s.whitwEyes?.some(x=>x.targetUid===e.uid)){const y=p.y-size*.8-(e.flying?15:0);c.save();c.strokeStyle='#ff4f5e';c.fillStyle='#ff4f5e';c.lineWidth=2;c.beginPath();c.ellipse(p.x,y,7,4.5,0,0,Math.PI*2);c.stroke();c.beginPath();c.arc(p.x,y,2,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(p.x-11,y);c.lineTo(p.x-8,y);c.moveTo(p.x+8,y);c.lineTo(p.x+11,y);c.stroke();c.restore();}}
  if(g.battle&&battleBoardVisible(g.s.phase))drawWhitwEyes(c,point,z,g.battle,{reduceFx:state.reduceFx});
  if(g.battle&&g.s.phase==='battle')drawFx(c,point,z,g.battle,{reduceFx:state.reduceFx,formatText:eggOn()?rewrite325Text:null});
   if(drag?.moved&&overCanvas(drag.x,drag.y)){const cell=cellAt(drag.x,drag.y);if(g.map.grid[cell.y]?.[cell.x]){const can=drag.kind==='summon-card'?g.canDeploySummonCard(drag.uid,cell.x,cell.y):g.canDeploy(drag.uid,cell.x,cell.y);c.strokeStyle=can?'#78f1bd':'#f88c78';c.lineWidth=3;c.strokeRect(z.ox+cell.x*z.tw+2,z.oy+cell.y*z.th+2,z.tw-4,z.th-4);}}
@@ -20430,6 +20438,96 @@ function originalWaveQueue(data,level,group){
 }
 
 return {originalEnemyGroups,pickWeightedGroup,originalWaveQueue};
+},
+"native-enemy-overlap.js": function(load) {
+// 纯显示布局：输入中的敌人、坐标和战斗状态一律只读。
+const close=(a,b,factor)=>Math.abs(a.x-b.x)<Math.min(a.size,b.size)*factor&&Math.abs(a.y-b.y)<Math.min(a.size,b.size)*factor;
+const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+const intersects=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+function enemyOverlapLayout(entries,bounds,previous=[]){
+ const visible=entries.filter(v=>v.enemy.hp>0&&!v.enemy.hidden&&!v.enemy.trainingDummy&&!v.enemy.finalBoss).sort((a,b)=>a.enemy.uid-b.enemy.uid),byUid=new Map(visible.map(v=>[v.enemy.uid,v])),used=new Set(),groups=[];
+ // 分离阈值稍大于合并阈值，避免移动到边缘时一帧合并、一帧拆开。
+ for(const old of previous){const members=old.entries.map(v=>byUid.get(v.enemy.uid)).filter(Boolean),anchor=members[0];if(!anchor)continue;const retained=members.filter(v=>!used.has(v.enemy.uid)&&close(anchor,v,.9));if(retained.length){groups.push({entries:retained});for(const v of retained)used.add(v.enemy.uid);}}
+ // ponytail: 当前波次规模下用锚点约束的二次扫描；出现千人波次后再换空间桶，禁止连通链跨整条路合成一组。
+ for(const v of visible){if(used.has(v.enemy.uid))continue;const group=groups.find(g=>close(g.entries[0],v,.7));if(group)group.entries.push(v);else groups.push({entries:[v]});used.add(v.enemy.uid);}
+ const positions=new Map(),plates=[];
+ for(const group of groups){
+  group.entries.sort((a,b)=>a.enemy.uid-b.enemy.uid);group.uid=group.entries[0].enemy.uid;
+  const n=group.entries.length;group.x=group.entries.reduce((sum,v)=>sum+v.x,0)/n;group.y=group.entries.reduce((sum,v)=>sum+v.y,0)/n;
+  for(const [i,v] of group.entries.entries()){
+   const step=Math.min(10,v.size*.2),angle=i*2.399963,radius=n>1?step*(.55+Math.min(i,7)*.12):0;
+   positions.set(v.enemy.uid,{x:Math.cos(angle)*radius,y:Math.sin(angle)*radius,groupUid:n>1?group.uid:null});
+  }
+  if(n<2)continue;
+  const w=Math.min(132,bounds.w),h=Math.min(n,4)*20+(bounds.coarse?44:20)+8,anchorSize=Math.max(...group.entries.map(v=>v.size));
+  const candidates=[{x:group.x-w/2,y:group.y-anchorSize/2-h-8},{x:group.x+anchorSize/2+8,y:group.y-h/2},{x:group.x-anchorSize/2-w-8,y:group.y-h/2}].map(p=>({x:clamp(p.x,bounds.x,bounds.x+bounds.w-w),y:clamp(p.y,bounds.y,bounds.y+bounds.h-h),w,h}));
+  group.plate=candidates.find(p=>!plates.some(q=>intersects(p,q)))||candidates[0];plates.push(group.plate);
+ }
+ return {groups:groups.filter(g=>g.entries.length>1),positions};
+}
+
+function enemyHealthLabel(enemy){return enemy.hitCountHp?`${Math.max(0,Math.ceil(enemy.hp))}次`:`${Math.round(clamp(enemy.hp/Math.max(1,enemy.maxHp),0,1)*100)}%`;}
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const healthRatio=e=>clamp(e.hp/Math.max(1,e.maxHp),0,1);
+const statusText=e=>[e.block!=null?'被阻挡':'',e.invulnerable?'无敌':'',e.shield>0?'有护盾':'',...(e.statuses||[]).map(s=>({stun:'眩晕',frozen:'冻结',sleep:'睡眠',sluggish:'减速',root:'束缚',levitate:'浮空',cold:'寒冷',invisible:'隐匿',camouflage:'迷彩'}[s.kind]||''))].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).slice(0,3).join(' · ');
+
+function createEnemyOverlapHud({asset,name,onChange=()=>{}}){
+ let layer=null,panel=null,groups=[],selectedUid=null,openUids=[],nodes=new Map(),nextRefresh=0,battleKey=null;
+ const image=e=>{const src=asset(e);return src?`<img src="./${esc(src)}" alt="" draggable="false">`:'<span class="native-overlap-no-art">◆</span>';};
+ const enemyName=e=>name(e)||e.name||e.id;
+ const aria=e=>`${enemyName(e)}，${e.hitCountHp?'剩余次数':'生命'} ${Math.ceil(e.hp)} / ${Math.ceil(e.maxHp)}`;
+ function closePanel(){const uid=groups.find(g=>g.entries.some(v=>v.enemy.uid===selectedUid))?.uid;openUids=[];selectedUid=null;panel.hidden=true;layer.querySelector(`[data-overlap-group="${uid}"]`)?.focus();}
+ function interact(event){
+  event.stopPropagation();const button=event.target.closest('button');if(!button)return;
+  if(button.dataset.overlapGroup){const g=groups.find(g=>g.uid===Number(button.dataset.overlapGroup));if(!g)return;if(g.entries.some(v=>openUids.includes(v.enemy.uid)))closePanel();else{openUids=g.entries.map(v=>v.enemy.uid);selectedUid=openUids.includes(selectedUid)?selectedUid:openUids[0];}}
+  else if(button.dataset.overlapEnemy)selectedUid=Number(button.dataset.overlapEnemy);
+  else if(button.hasAttribute('data-overlap-close'))closePanel();
+  nextRefresh=0;onChange();
+ }
+ function mount(board){
+  if(layer?.parentElement===board)return;
+  layer=document.createElement('div');layer.className='native-enemy-overlap-layer';board.append(layer);panel=document.createElement('section');panel.className='native-enemy-overlap-panel';panel.setAttribute('aria-label','重叠敌人详情');panel.hidden=true;layer.append(panel);nodes=new Map();
+  layer.addEventListener('click',interact);
+  for(const type of ['pointerdown','pointerup'])layer.addEventListener(type,e=>e.stopPropagation());
+  layer.addEventListener('keydown',e=>{if(e.key==='Escape'&&openUids.length){e.preventDefault();e.stopPropagation();closePanel();nextRefresh=0;onChange();}});
+ }
+ return {
+  get selectedUid(){return selectedUid;},
+  clear(){layer?.remove();layer=panel=null;groups=[];selectedUid=null;openUids=[];nodes=new Map();battleKey=null;},
+  update({board,canvas,battle,entries,bounds}){
+   if(battle!==battleKey){groups=[];selectedUid=null;openUids=[];battleKey=battle;nextRefresh=0;}
+   const layout=enemyOverlapLayout(entries,bounds,groups);groups=layout.groups;mount(board);
+   const boardRect=board.getBoundingClientRect(),canvasRect=canvas.getBoundingClientRect(),dx=canvasRect.left-boardRect.left,dy=canvasRect.top-boardRect.top,active=new Set(groups.map(g=>g.uid)),now=performance.now();let refresh=now>=nextRefresh;
+   for(const [uid,node] of nodes)if(!active.has(uid)){node.remove();nodes.delete(uid);}
+   for(const group of groups){
+    let node=nodes.get(group.uid);if(!node){node=document.createElement('div');node.className='native-enemy-overlap-stack';nodes.set(group.uid,node);layer.append(node);}
+    const signature=group.entries.slice(0,4).map(v=>v.enemy.uid+':'+asset(v.enemy)).join(',')+':'+group.entries.length;
+    if(node.dataset.signature!==signature){refresh=true;node.dataset.signature=signature;node.innerHTML=group.entries.slice(0,4).map(({enemy:e},i)=>`<button type="button" data-overlap-enemy="${e.uid}" class="native-enemy-overlap-row">${image(e)}<span class="native-overlap-index">${i+1}</span><span class="native-overlap-track"><i></i></span><span class="native-overlap-health"></span></button>`).join('')+`<button type="button" data-overlap-group="${group.uid}" class="native-enemy-overlap-count">×${group.entries.length}${group.entries.length>4?` <small>＋${group.entries.length-4}</small>`:''}</button>`;}
+    node.style.left=group.plate.x+dx+'px';node.style.top=group.plate.y+dy+'px';node.style.width=group.plate.w+'px';
+    node.querySelector('[data-overlap-group]').setAttribute('aria-label',`查看重叠的 ${group.entries.length} 名敌人`);
+    node.querySelector('[data-overlap-group]').setAttribute('aria-expanded',String(group.entries.some(v=>openUids.includes(v.enemy.uid))));
+    for(const {enemy:e} of group.entries.slice(0,4)){const row=node.querySelector(`[data-overlap-enemy="${e.uid}"]`);row.classList.toggle('is-concealed',!!e.invisible);row.setAttribute('aria-pressed',String(e.uid===selectedUid));if(refresh){row.setAttribute('aria-label',aria(e));row.title=enemyName(e);row.querySelector('i').style.width=healthRatio(e)*100+'%';row.querySelector('.native-overlap-health').textContent=enemyHealthLabel(e);}}
+   }
+   const live=new Map(entries.filter(v=>v.enemy.hp>0&&!v.enemy.hidden).map(v=>[v.enemy.uid,v.enemy]));
+   // 打开详情后跟随活着的成员；分组变动或组长死亡不把名单重置成另一个组。
+   openUids=openUids.filter(uid=>live.has(uid));if(!live.has(selectedUid))selectedUid=openUids[0]??null;
+   const followed=groups.find(g=>g.entries.some(v=>v.enemy.uid===selectedUid));if(openUids.length&&followed)openUids=followed.entries.map(v=>v.enemy.uid);
+   panel.hidden=!openUids.length;
+   if(openUids.length){
+    const signature=openUids.join(',');if(panel.dataset.signature!==signature){refresh=true;panel.dataset.signature=signature;panel.innerHTML=`<header><b>重叠敌人 <span></span></b><button type="button" data-overlap-close aria-label="关闭重叠敌人详情">关闭</button></header><div class="native-overlap-list">${openUids.map(uid=>{const e=live.get(uid);return `<button type="button" data-overlap-enemy="${uid}" class="native-overlap-detail-row">${image(e)}<span><b>${esc(enemyName(e))}</b><small></small><span class="native-overlap-track"><i></i></span></span><span class="native-overlap-detail-hp"></span></button>`;}).join('')}</div>`;}
+    panel.querySelector('header span').textContent=`· ${openUids.length}名`;
+    const panelWidth=Math.min(280,Math.max(160,bounds.w*.45),bounds.w-8),panelX=followed&&followed.x<bounds.x+bounds.w/2?bounds.x+bounds.w-panelWidth-4:bounds.x+4;
+    const topSpace=(bounds.gridTop??bounds.y)-bounds.y-8,panelHeight=topSpace>=90?Math.min(topSpace,360):bounds.h-8;
+    panel.style.left=panelX+dx+'px';panel.style.top=bounds.y+dy+4+'px';panel.style.width=panelWidth+'px';panel.style.maxHeight=Math.max(90,panelHeight)+'px';
+    for(const [i,uid] of openUids.entries()){const e=live.get(uid),row=panel.querySelector(`[data-overlap-enemy="${uid}"]`);row.classList.toggle('is-concealed',!!e.invisible);row.setAttribute('aria-pressed',String(uid===selectedUid));if(refresh){row.setAttribute('aria-label',aria(e));row.querySelector('small').textContent=`第${i+1}名${statusText(e)?' · '+statusText(e):''}`;row.querySelector('i').style.width=healthRatio(e)*100+'%';row.querySelector('.native-overlap-detail-hp').textContent=e.hitCountHp?`${Math.ceil(e.hp)} / ${Math.ceil(e.maxHp)}次`:`${Math.ceil(e.hp).toLocaleString()} / ${Math.ceil(e.maxHp).toLocaleString()}`;}}
+   }
+   if(refresh)nextRefresh=now+150;
+   return layout.positions;
+  }
+ };
+}
+
+return {enemyOverlapLayout,enemyHealthLabel,createEnemyOverlapHud};
 }
 };
 const cache = Object.create(null);

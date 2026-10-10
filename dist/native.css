@@ -103,6 +103,30 @@ button.native-equipment-slot:hover{border-color:#78e6bd;background:#17362d}
 
 
 .native-board{position:relative}.native-cost{position:absolute;right:12px;bottom:8px;z-index:2;display:inline-flex;align-items:center;gap:5px;padding:0;color:#b5c7bf;pointer-events:none;font-variant-numeric:tabular-nums;white-space:nowrap}.native-cost small{font-size:11px}.native-cost output{min-width:2ch;text-align:right;font-size:16px;font-weight:500;line-height:1}.native-cost output.is-debt{color:#ff9b87}
+.native-enemy-overlap-layer{position:absolute;inset:0;z-index:5;pointer-events:none}
+.native-enemy-overlap-stack{position:absolute;padding:3px;background:#0d2023f5;border:1px solid #42685c;border-radius:3px;pointer-events:auto}
+.native-game .native-enemy-overlap-stack button.native-enemy-overlap-row{display:grid;grid-template-columns:16px 12px minmax(0,1fr) 28px;gap:3px;align-items:center;width:100%;height:20px;min-height:0;margin:0;padding:1px 2px;border:0;background:transparent;color:#eafaf3;text-align:left;font-size:11px}
+.native-enemy-overlap-row img{width:16px;height:16px;object-fit:contain;pointer-events:none}
+.native-enemy-overlap-layer .is-concealed img{filter:brightness(.45) saturate(.3)}
+.native-overlap-index{color:#91b6ad;font-size:10px}
+.native-overlap-track{display:block;height:4px;background:#283c37;border-radius:1px;overflow:hidden}
+.native-overlap-track i{display:block;height:100%;background:#e29179}
+.native-overlap-health{font-size:10px;text-align:right;font-variant-numeric:tabular-nums}
+.native-game .native-enemy-overlap-stack button.native-enemy-overlap-count{width:100%;min-height:20px;height:20px;margin:0;padding:1px 3px;background:transparent;color:#79dcb7;border:0;border-top:1px solid #2b5754;font-size:11px}
+.native-enemy-overlap-count small{font-size:10px;margin-left:4px}
+.native-enemy-overlap-panel{position:absolute;z-index:1;pointer-events:auto;padding:8px;background:#0d2023fa;border:1px solid #79dcb7;border-radius:3px;overflow:auto;color:#eafaf3;overscroll-behavior:contain}
+.native-enemy-overlap-panel[hidden]{display:none}
+.native-enemy-overlap-panel header{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px;font-size:12px}
+.native-game .native-enemy-overlap-panel header button{min-height:36px;padding:4px 8px;font-size:11px}
+.native-game .native-enemy-overlap-panel button.native-overlap-detail-row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:6px;min-height:48px;width:100%;margin:0;padding:6px 2px;background:transparent;border:0;border-bottom:1px solid #2b5754;text-align:left;font-size:11px;color:#eafaf3}
+.native-overlap-detail-row img{width:28px;height:28px;object-fit:contain;pointer-events:none}
+.native-overlap-detail-row b{font-size:11px;font-weight:500;overflow-wrap:anywhere}
+.native-overlap-detail-row small{display:block;font-size:10px;color:#91b6ad;margin:3px 0}
+.native-overlap-detail-hp{font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.native-enemy-overlap-layer button[aria-pressed=true]{background:#79dcb71c;outline:1px solid #79dcb7}
+.native-overlap-no-art{font-size:12px;color:#e29179}
+.native-enemy-overlap-layer button:focus-visible{outline:2px solid #f0d18a;outline-offset:2px}
+@media(pointer:coarse){.native-enemy-overlap-stack{pointer-events:none}.native-game .native-enemy-overlap-stack button.native-enemy-overlap-count{pointer-events:auto;min-height:44px;height:44px}.native-game .native-enemy-overlap-panel header button{min-height:44px}}
 /* Landscape panels overlay the board; opening supply never changes its geometry. */
 .native-mobile-info,.native-supply-toggle{display:none}
 html.native-play-lock,html.native-play-lock body{height:100%;margin:0;background:#071114}

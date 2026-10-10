@@ -49,6 +49,7 @@
 - **S.E.E.S. 玩法口径（数值全在 `data.sees.numbers`，别写死）**：回合结算＝`NativeSession.settleTartarusRound()`，由 `startBattle` 在 `beginBattle` **之前**调（`beginBattle` 会清零资金，那是唯一还有余额的时刻）：资金 × 每资金层数（5 ＋ 场上由加莉初始 +2／精锐 +4）→【塔尔塔罗斯】层数（**封顶 264**，`addTartarusLayers(...,data)` 必须传 data），随后 `setFunds(0)`；每 25 层发一名**不高于当前商店阶级**的 S.E.E.S. 干员（优先不与场上重复），档次记在 `s.seesGrants`（发不出去不推进档次）。核心盟约 3/3：`hit()` 里**弱点伤害**那一帧触发（与陈策略／混沌卫戍／弱点装备／虎狼丸同一条 `weaknessHit` 路由），`coreTrueDamagePercent`（0 层 5% → 264 层 40%）× 场上 S.E.E.S. 干员**当前**攻击总和，对全场敌人结算真实伤害，冷却 `coreCooldown`（≥264 层 1 秒，否则 20 秒；账本 `battle.s.seesCoreNextAt`）。虎狼丸：伤害转弱点 ＋ **不占部署位**（`canDeploy` 按「放下去之后」的计数判、界面走 `deployCount`）；埃癸斯：攻／血每层 +0.2%（`native-collab-aigis` 的 `statMods`）；结城理：击倒敌人／自身被击倒 +5/+10（`commitExit` 敌人分支、`notifyKnockdown`、傀儡师致死分支；**衍生敌人不算击倒**）；臂章：`native-equipment.seesArmbandScales` 读黑板 `weakness_scale`／`true_scale`，在 `hit()` 里追加弱点伤害、装备者是 `seesShip` 时再追加真实伤害。侧栏／盟约面板里【塔尔塔罗斯】的计数是**层数**（`bondPanelCount`），即使当前 0 层也显示为已激活；策略头像本期没有 `band_sees` 资源，用 `.native-strategy-placeholder` 占位。
 - `native-branches.js`：职业分支基础层
 - `native-fx.js`：**只画特效**。`s.events` 会裁剪过期，禁止当规则执行依据
+- `native-enemy-overlap.js`：敌人重叠的**纯显示层**（头像小幅错开、上方逐名血条，最多4行＋总数，点击展开完整名单）。布局只读投影坐标，不许改敌人的 `x/y`、路线、阻挡或受击数据；组内按 uid 排序，合并/分离有滞回且按锚点限制范围。死亡／隐藏／Boss／木桩不进常规重叠组；次数怪显示次数，隐匿头像维持压暗。手机点44px计数按钮后在完整名单选择。界面状态不入战斗存档；备战和回大厅清理。回归：`tests/native-enemy-overlap.test.mjs`、浏览器 `enemy-overlap`。
 - `scripts/build-native.mjs`：把固定历史库编进客户端
 
 ## Android WebView 客户端
