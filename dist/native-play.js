@@ -497,17 +497,17 @@ function action(button,anchor=null){const a=button.dataset.act,g=state.game,uid=
  if(a==='pause'){state.paused=!state.paused;render();return;}if(a==='speed'){state.speed=Number(button.dataset.speed);render();return;}
  if(a==='mute'){state.muted=!state.muted;savePreference('garrison-mute',state.muted?'1':'0');if(!state.muted)unlockAudio();render();return;}
  if(a==='reduce-fx'){state.reduceFx=!state.reduceFx;savePreference('garrison-reduce-fx',state.reduceFx?'1':'0');render();return;}
- if(a==='inspect-close'){state.inspect=null;render();return;}
+ if(a==='inspect-close'){state.inspect=null;clearRangeSelection();render();return;}
  if(a==='summon-select'){state.summonSelected=uid;state.selected=null;state.item=null;state.inspect={kind:'summon-card',uid};state.preview=null;render();return;}
  if(a==='select'){if(state.item)equipItemOnUnit(uid);state.quickSell=null;if(g?.s?.phase==='prep'&&!state.sandbox){const image=button.querySelector?.('img'),target=image||button,rect=target.getBoundingClientRect?.();if(rect)state.quickSell={uid,x:rect.left+rect.width/2,y:rect.top-3};else if(anchor)state.quickSell={uid,x:anchor.x,y:anchor.y-22};}state.summonSelected=null;state.selected=uid;state.inspect={kind:'unit',uid};state.preview=null;save();render();return;}
- if(a==='item'){state.summonSelected=null;if(inspectSame('pack',uid)){state.item=uid;notice('点击一名场上或整备区干员以装备／使用。');}else{state.item=null;state.selected=null;state.inspect={kind:'pack',uid};}render();return;}
- if(a==='equip-inspect'){state.item=null;state.selected=null;state.inspect={kind:'equip',uid,slot:Number(button.dataset.slot)};render();return;}
+ if(a==='item'){clearRangeSelection();if(inspectSame('pack',uid)){state.item=uid;notice('点击一名场上或整备区干员以装备／使用。');}else{state.item=null;state.selected=null;state.inspect={kind:'pack',uid};}render();return;}
+ if(a==='equip-inspect'){state.item=null;clearRangeSelection();state.inspect={kind:'equip',uid,slot:Number(button.dataset.slot)};render();return;}
  if(a==='inspect-back'){state.inspect={kind:'unit',uid};render();return;}
  if(a==='replace'){g.perform('equip',state.item,uid,Number(button.dataset.slot));state.item=null;state.modal=null;save();render();return;}
  if(a==='stockview'){modal(stockPanel());return;}
  if(a==='destroy'||a==='destroyEquip'){const slot=Number(button.dataset.slot),fromEquip=state.inspect?.kind==='equip',name=itemName(a==='destroy'?g.s.items.find(i=>i.uid===uid)?.chessId:g.s.units.find(u=>u.uid===uid)?.equipment?.[slot]?.chessId);if(!g.perform(a,uid,slot)){notice('当前阶段无法销毁装备。');return;}if(state.item===uid)state.item=null;state.inspect=fromEquip?{kind:'unit',uid}:null;notice('已销毁 '+name+'。');save();render();return;}
- if(a==='bond-info'){modal(bondModalHtml(button.dataset.id),{bond:button.dataset.id});return;}if(a==='aim'){if(state.preview){state.preview.dir=Number(button.dataset.dir);draw();}return;}if(a==='cancel'){state.preview=null;render();return;}if(a==='place-confirm'){commitPreview();return;}
- let ok;const handWasFull=g.handFull();if(a==='buy'||a==='buyItem'){const kind=a==='buy'?'shop':'shopItem',index=Number(button.dataset.index);if(!inspectSame(kind,index)){state.inspect={kind,index};state.selected=null;state.item=null;render();return;}if(g.s.phase!=='prep'){notice('当前阶段不能购买');return;}ok=g.perform(a,index);if(ok){state.inspect=null;if(a==='buy')state.selected=g.s.units.at(-1)?.uid??null;}}else if(a==='reward'){const reward=g.s.rewardPending,index=Number(button.dataset.index),id=reward?.tier?reward.offers?.[index]:button.dataset.id;if(reward?.tier&&!inspectSame('reward',index)){state.inspect={kind:'reward',index};state.selected=null;state.item=null;render();return;}ok=id?g.perform(reward?.kind==='bounty'?'bounty':'takePromotion',id):false;if(ok&&reward?.kind==='bounty')saveCheckpoint();state.modal=null;if(ok)state.inspect=null;}else if(a==='decision'){state.doorPeek=null;ok=g.perform(a,button.dataset.id);state.modal=null;}else if(a==='sell'){state.quickSell=null;ok=g.perform(a,uid);if(ok){state.selected=null;state.inspect=null;}}else if(a==='withdraw'||a==='mineCommand'){ok=g.perform(a,uid);}else if(['upgrade','refresh','lock','start','next'].includes(a)){if(a==='start'||a==='next')state.doorPeek=null;ok=g.perform(a);if(a==='start'){state.paused=false;resetFxClock();unlockAudio();attachZoneVisual(g.battle);}state.preview=null;if(a==='refresh')state.inspect=null;}else return;
+ if(a==='bond-info'){modal(bondModalHtml(button.dataset.id),{bond:button.dataset.id});return;}if(a==='aim'){if(state.preview){state.preview.dir=Number(button.dataset.dir);draw();}return;}if(a==='cancel'){clearRangeSelection();render();return;}if(a==='place-confirm'){commitPreview();return;}
+ let ok;const handWasFull=g.handFull();if(a==='buy'||a==='buyItem'){const kind=a==='buy'?'shop':'shopItem',index=Number(button.dataset.index);if(!inspectSame(kind,index)){clearRangeSelection();state.inspect={kind,index};state.item=null;render();return;}if(g.s.phase!=='prep'){notice('当前阶段不能购买');return;}ok=g.perform(a,index);if(ok){state.inspect=null;if(a==='buy')state.selected=g.s.units.at(-1)?.uid??null;}}else if(a==='reward'){const reward=g.s.rewardPending,index=Number(button.dataset.index),id=reward?.tier?reward.offers?.[index]:button.dataset.id;if(reward?.tier&&!inspectSame('reward',index)){clearRangeSelection();state.inspect={kind:'reward',index};state.item=null;render();return;}ok=id?g.perform(reward?.kind==='bounty'?'bounty':'takePromotion',id):false;if(ok&&reward?.kind==='bounty')saveCheckpoint();state.modal=null;if(ok)state.inspect=null;}else if(a==='decision'){state.doorPeek=null;ok=g.perform(a,button.dataset.id);state.modal=null;}else if(a==='sell'){state.quickSell=null;ok=g.perform(a,uid);if(ok){state.selected=null;state.inspect=null;}}else if(a==='withdraw'||a==='mineCommand'){ok=g.perform(a,uid);}else if(['upgrade','refresh','lock','start','next'].includes(a)){if(a==='start'||a==='next')state.doorPeek=null;ok=g.perform(a);if(a==='start'){state.paused=false;resetFxClock();unlockAudio();attachZoneVisual(g.battle);}state.preview=null;if(a==='refresh')state.inspect=null;}else return;
  if(!ok)notice(handWasFull&&(a==='buy'||a==='buyItem')?'整备区已满：先部署、出售或装备清出空余，才能购入干员／装备':g.lastError||'当前资金、位置或阶段不允许此操作');if(ok&&(a==='next'||a==='decision'))saveCheckpoint();save();render();if(g.s.phase==='finished')showResult();
 }
 function handCards(game){if(game.s.phase==='prep')game.syncSummonCards?.();return game.syncHandSlots?.()||game.hand();}
@@ -605,8 +605,8 @@ function place(uid,x,y){
 }
  function placeSummon(cardUid,x,y){const g=state.game;if(!g||g.s.phase!=='prep'||!g.canDeploySummonCard(cardUid,x,y)){notice('该位置不在召唤卡的可部署范围内');return;}state.inspect=null;state.preview={summonUid:cardUid,x,y,dir:null,revision:g.s.commands.length};render();}
 function commitPreview(){
- const p=state.preview,g=state.game;if(!p)return;if(p.summonUid!=null){if(p.dir===null){notice('请先选择召唤物朝向');return;}if(g.s.phase!=='prep'||g.s.commands.length!==p.revision){state.preview=null;notice('阵地已变化，请重新选择召唤卡');render();return;}if(!g.perform('deploySummon',p.summonUid,p.x,p.y,p.dir)){notice('该位置无法部署召唤卡');return;}state.preview=null;state.summonSelected=null;state.inspect=null;save();render();return;}if(p.dir===null){notice('请先选择朝向');return;}
- if(g.s.phase!=='prep'||g.s.commands.length!==p.revision){state.preview=null;notice('阵地已变化，请重新选择位置');render();return;}
+ const p=state.preview,g=state.game;if(!p)return;if(p.summonUid!=null){if(p.dir===null){notice('请先选择召唤物朝向');return;}if(g.s.phase!=='prep'||g.s.commands.length!==p.revision){clearRangeSelection();notice('阵地已变化，请重新选择召唤卡');render();return;}if(!g.perform('deploySummon',p.summonUid,p.x,p.y,p.dir)){notice('该位置无法部署召唤卡');return;}state.preview=null;state.summonSelected=null;state.inspect=null;save();render();return;}if(p.dir===null){notice('请先选择朝向');return;}
+ if(g.s.phase!=='prep'||g.s.commands.length!==p.revision){clearRangeSelection();notice('阵地已变化，请重新选择位置');render();return;}
  if(!g.perform('deploy',p.uid,p.x,p.y,p.dir))notice('该位置无法部署');
  state.preview=null;state.selected=null;state.inspect=null;save();render();
 }
@@ -652,13 +652,14 @@ function clearDrag(){drag=null;canvasPress=null;touchButton=null;dragFeedback();
 // 商店卡片（同卡再点＝确认购买、异卡再点＝切到那件商品）、奖励候选按钮、
 // 以及「已经选好装备再点干员」（那一下本来就是要装备）。落在棋盘上的按压仍旧吞掉，
 // 否则关掉详情的同时会把干员挪到那一格。
+function clearRangeSelection(){state.selected=state.summonSelected=null;state.preview=null;state.quickSell=null;}
 function dismissInspectOnOutsidePress(e){
  const inv=state.inspect;if(!inv)return false;
  if(!['unit','shop','shopItem','pack','equip','summon'].includes(inv.kind))return false;
  if(e.target.closest?.('.native-dossier'))return false;
  if(e.target.closest?.('button[data-act="buy"], button[data-act="buyItem"], [data-act="reward"]'))return false;
  if(state.item&&e.target.closest?.('[data-act="select"]'))return false;
- state.inspect=null;
+ state.inspect=null;clearRangeSelection();
  if(e.target===canvas||!e.target.closest?.('button[data-act], [role="button"][data-act]')){
   dossierDismissedAt=performance.now();e.preventDefault();render();return true;
  }
@@ -1052,7 +1053,7 @@ root.addEventListener('pointerdown',e=>{
   if(button?.dataset.act==='item'&&manage&&button.dataset.uid){drag={uid:Number(button.dataset.uid),kind:'item',id:e.pointerId,from:'hand',x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,moved:false};button.setPointerCapture(e.pointerId);return;}
   if((button?.dataset.act==='select'||button?.dataset.act==='summon-select')&&manage&&!state.item&&(button.dataset.act!=='summon-select'||button.dataset.mode==='manual'||button.dataset.placeable==='true')){state.preview=null;root.querySelector('.native-facing')?.setAttribute('hidden','');drag={uid:Number(button.dataset.uid),kind:button.dataset.act==='summon-select'?'summon-card':'operator',id:e.pointerId,from:'hand',x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,moved:false};button.setPointerCapture(e.pointerId);return;}
  if(e.target!==canvas)return;
- if(state.preview&&manage){const z=geometry(),x=z.r.left+z.ox+(state.preview.x+.5)*z.tw,y=z.r.top+z.oy+(state.preview.y+.5)*z.th;if(Math.hypot(e.clientX-x,e.clientY-y)>95){state.preview=null;render();return;}aim={x,y,id:e.pointerId};canvas.setPointerCapture(e.pointerId);return;}
+ if(state.preview&&manage){const z=geometry(),x=z.r.left+z.ox+(state.preview.x+.5)*z.tw,y=z.r.top+z.oy+(state.preview.y+.5)*z.th;if(Math.hypot(e.clientX-x,e.clientY-y)>95){clearRangeSelection();render();return;}aim={x,y,id:e.pointerId};canvas.setPointerCapture(e.pointerId);return;}
   const cell=cellAt(e.clientX,e.clientY),unit=unitAtPointer(e.clientX,e.clientY);canvasPress={...cell,uid:unit?.uid,kind:unit?.kind,x0:e.clientX,y0:e.clientY};
   if(unit&&manage&&!state.item&&(!unit.summon||unit.summonCard))drag={uid:unit.uid,kind:unit.summonCard?'summon-card':'operator',id:e.pointerId,from:'field',x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,moved:false};canvas.setPointerCapture(e.pointerId);
 });
@@ -1070,7 +1071,7 @@ if(d.kind==='item'&&d.from==='hand'){const u=equipDropTarget(e.clientX,e.clientY
     if(d.from==='field'&&overBench(e.clientX,e.clientY)){const ok=d.kind==='summon-card'?state.game.perform('withdrawSummon',d.uid):state.game.perform('withdraw',d.uid);if(ok){state.selected=state.summonSelected=state.preview=null;save();notice('已移回整备区');}else notice('整备区已满或当前阶段无法收回');render();}
     else if(overCanvas(e.clientX,e.clientY)){const cell=cellAt(e.clientX,e.clientY);d.kind==='summon-card'?placeSummon(d.uid,cell.x,cell.y):place(d.uid,cell.x,cell.y);}else render();return;
    }drag=null;dragFeedback();if(d.from==='field'){canvasPress=null;action({dataset:{act:d.kind==='summon-card'?'summon-select':'select',uid:String(d.uid)}},{x:e.clientX,y:e.clientY});return;}}
- if(aim&&aim.id===e.pointerId){aim=null;ignoredClickPointer=e.pointerId;ignoredClickUntil=performance.now()+400;if(state.preview&&state.preview.dir!==null)commitPreview();else{state.preview=null;render();}return;}
+ if(aim&&aim.id===e.pointerId){aim=null;ignoredClickPointer=e.pointerId;ignoredClickUntil=performance.now()+400;if(state.preview&&state.preview.dir!==null)commitPreview();else{clearRangeSelection();render();}return;}
   if(canvasPress){const press=canvasPress;canvasPress=null;if(overCanvas(e.clientX,e.clientY)){const cell=cellAt(e.clientX,e.clientY);if(press.kind==='summon-card')action({dataset:{act:'summon-select',uid:String(press.uid)}});else if(press.uid){const summon=state.game.battle?.s.summons?.find(s=>s.uid===press.uid);if(summon){state.inspect={kind:'summon',uid:press.uid};state.selected=null;render();}else action({dataset:{act:'select',uid:String(press.uid)}},{x:e.clientX,y:e.clientY});}else if(state.selected)place(state.selected,cell.x,cell.y);else if(state.summonSelected)placeSummon(state.summonSelected,cell.x,cell.y);}}
  if(paneMoved||performance.now()<ignoredClickUntil){paneMoved=false;touchButton=null;ignoredClickPointer=e.pointerId;ignoredClickUntil=performance.now()+400;return;}
  const scroller=scrollerAtPoint(e.clientX,e.clientY);
@@ -1086,8 +1087,8 @@ if(d.kind==='item'&&d.from==='hand'){const u=equipDropTarget(e.clientX,e.clientY
   if(t.id===e.pointerId&&t.b.isConnected&&!t.b.disabled)action(t.b);
  }
 });
-root.addEventListener('pointercancel',()=>{benchTouchMoved=false;if(!drag&&!aim&&!state.preview&&!canvasPress)return;clearDrag();aim=null;state.preview=null;render();});
-document.addEventListener('keydown',e=>{if(root.querySelector('#wave-ed-test[open]')||root.querySelector('.native-choice-overlay'))return;if(e.target.matches('input,select,textarea'))return;if(e.key==='Escape'){clearDrag();aim=null;state.preview=null;state.doorPeek=null;state.selected=state.summonSelected=null;state.inspect=null;if(!requiredChoicePending())state.modal=null;render();}if(state.preview){const d={ArrowRight:0,ArrowDown:1,ArrowLeft:2,ArrowUp:3}[e.key];if(d!==undefined){e.preventDefault();state.preview.dir=d;draw();}if(e.key==='Enter')commitPreview();}});
+root.addEventListener('pointercancel',()=>{benchTouchMoved=false;if(!drag&&!aim&&!state.preview&&!canvasPress)return;clearDrag();aim=null;clearRangeSelection();render();});
+document.addEventListener('keydown',e=>{if(root.querySelector('#wave-ed-test[open]')||root.querySelector('.native-choice-overlay'))return;if(e.target.matches('input,select,textarea'))return;if(e.key==='Escape'){clearDrag();aim=null;clearRangeSelection();state.doorPeek=null;state.inspect=null;if(!requiredChoicePending())state.modal=null;render();}if(state.preview){const d={ArrowRight:0,ArrowDown:1,ArrowLeft:2,ArrowUp:3}[e.key];if(d!==undefined){e.preventDefault();state.preview.dir=d;draw();}if(e.key==='Enter')commitPreview();}});
 window.addEventListener('beforeunload',()=>{state.expiresAt??=Date.now()+86400000;save();});
 // 切走页面**不再自动暂停**（用户 2026-09-23 口径「网页切走时后台继续运行而不是暂停」）：隐藏标签页里
 // requestAnimationFrame 会停摆，所以换一条按真实时间补帧的后台驱动（scheduleBackground），回到前台再交还给 rAF。

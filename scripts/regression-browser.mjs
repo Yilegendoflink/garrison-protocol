@@ -25,6 +25,28 @@ const {chromium}=pw.default||pw;
 const suites=new Map();
 const suite=(name,fn)=>suites.set(name,fn);
 
+suite('selection-summon-swap',async(browser)=>{
+ const {NATIVE_DATA:data}=await import('../dist/runtime-data.js'),{NativeSession}=await import('../dist/native-session.js');
+ const g=new NativeSession(data,{mapId:'act1autochess_m03',seed:42,bondBan:{bonds:[]}});g.s.rewardPending=null;g.s.rewardQueue=[];
+ const wolfOwner=g.gain('chess_char_3_19_a'),other=g.gain('chess_char_1_20_a'),v=g.map.viewport;
+ for(const u of [wolfOwner,other]){let done=false;for(let y=v.top;y<=v.bottom&&!done;y++)for(let x=v.left;x<=v.right&&!done;x++)if(!g.s.units.some(a=>a.position?.x===x&&a.position?.y===y)&&g.canDeploy(u.uid,x,y))done=g.deploy(u.uid,x,y,0);assert.ok(done);}
+ const wolf=g.s.summonCards.find(c=>c.ownerUid===wolfOwner.uid);let placed=false;for(let y=v.top;y<=v.bottom&&!placed;y++)for(let x=v.left;x<=v.right&&!placed;x++)if(g.canDeploySummonCard(wolf.uid,x,y))placed=g.deploySummonCard(wolf.uid,x,y);assert.ok(placed);
+ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{const clear=CanvasRenderingContext2D.prototype.clearRect,fill=CanvasRenderingContext2D.prototype.fillRect;CanvasRenderingContext2D.prototype.clearRect=function(...args){if(this.canvas.id==='native-canvas')window.__selectionRangePaints=0;return clear.apply(this,args);};CanvasRenderingContext2D.prototype.fillRect=function(...args){if(this.canvas.id==='native-canvas'&&(this.fillStyle==='#63d8b738'||/^rgba\(99,\s*216,\s*183,/.test(this.fillStyle)))window.__selectionRangePaints=(window.__selectionRangePaints||0)+1;return fill.apply(this,args);};});
+ await fs.mkdir('artifacts/selection-summon-swap',{recursive:true});await page.goto(pathToFileURL(path.resolve('dist/index.html')).href);await page.waitForFunction(()=>window.__garrisonReady);
+ await page.evaluate(r=>{localStorage.setItem('garrison-native-manual-v1',JSON.stringify(r));localStorage.setItem('garrison-native-safe-v1',JSON.stringify(r));},g.snapshot());await page.reload();await page.waitForFunction(()=>window.__garrisonReady);if(await page.locator('[data-act=resume]').count())await page.locator('[data-act=resume]').click();
+ const point=async position=>page.locator('#native-canvas').evaluate((canvas,{position,v})=>{const r=canvas.getBoundingClientRect(),cols=v.right-v.left+1,rows=v.bottom-v.top+1,tw=Math.min((r.width-32)/cols,(r.height-44)/rows/.82),th=tw*.82,ox=16+(r.width-32-tw*cols)/2-v.left*tw,oy=22+(r.height-44-th*rows)/2-v.top*th;return {x:r.left+ox+(position.x+.5)*tw,y:r.top+oy+(position.y+.5)*th-tw*.1};},{position,v});
+ const select=async()=>{await page.waitForTimeout(550);await page.locator('#native-canvas').scrollIntoViewIfNeeded();const p=await point(wolfOwner.position);await page.mouse.click(p.x,p.y);await page.locator('.native-dossier').waitFor();await page.waitForFunction(()=>window.__selectionRangePaints>0);};
+ await select();await page.locator('[data-act=inspect-close]').click();await page.waitForFunction(()=>window.__selectionRangePaints===0);assert.equal(await page.locator('.native-dossier').count(),0);
+ await select();await page.mouse.click((await page.locator('#native-canvas').boundingBox()).x+(await page.locator('#native-canvas').boundingBox()).width-5,(await page.locator('#native-canvas').boundingBox()).y+5);await page.waitForFunction(()=>window.__selectionRangePaints===0);
+ await select();await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__selectionRangePaints===0);
+ await select();await page.locator('[data-act=buy]').first().click();await page.waitForFunction(()=>window.__selectionRangePaints===0);await page.locator('[data-act=inspect-close]').click();
+ const from=await point(other.position),to=await point(wolfOwner.position);await page.mouse.move(from.x,from.y);await page.mouse.down();await page.mouse.move(to.x,to.y,{steps:8});await page.mouse.up();await page.locator('.native-facing:not([hidden])').waitFor();await page.locator('[data-act=aim][data-dir="0"]').click();await page.locator('[data-act=place-confirm]').click();
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('garrison-native-manual-v1')));assert.deepEqual(saved.s.units.find(u=>u.uid===wolfOwner.uid).position,other.position);assert.equal(saved.s.summonCards.find(c=>c.uid===wolf.uid).position,null);await page.waitForFunction(()=>window.__selectionRangePaints===0);
+ const now=await point(other.position);await page.mouse.move(now.x,now.y);await page.mouse.down();await page.mouse.move(to.x,to.y,{steps:8});await page.mouse.up();await page.locator('.native-facing:not([hidden])').waitFor();await page.locator('[data-act=cancel]').click();await page.waitForFunction(()=>window.__selectionRangePaints===0);assert.ok(await page.locator('.native-facing').isHidden());
+ await page.screenshot({path:'artifacts/selection-summon-swap/cleared-range.png',fullPage:true});assert.deepEqual(errors,[]);await page.close();await fs.writeFile('artifacts/selection-summon-swap/browser.json',JSON.stringify({passed:true,checks:['关闭档案/点空白/Esc/切商店清范围','拖动换位清狼群布局','取消部署预览清范围'],errors},null,2)+'\n');
+});
+
 suite('enemy-overlap',async(browser)=>{
  const {NATIVE_DATA:data}=await import('../dist/runtime-data.js'),{NativeSession}=await import('../dist/native-session.js');
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await fs.mkdir('artifacts/enemy-overlap',{recursive:true});

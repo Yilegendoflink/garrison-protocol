@@ -63,6 +63,9 @@
 
 ## 对局 UI 交互约定（`native-play.js`）
 
+- **备战换位的绑定召唤物**：`NativeSession.deploy` 必须清理交换双方的召唤卡布局，不能只清主动移动的一方；持有者被换回整备区后按原有对账移除卡片。当前有布局卡的伺夜／缪尔赛思／凯瑟琳／赫默S2／浊心斯卡蒂都走此规则。未移动和跨回合仍保留布局。回归：`tests/native-summon-swap.test.mjs`。
+- **取消选中的范围清理**：`clearRangeSelection()` 同时清 `selected`／`summonSelected`／`preview`／`quickSell`；关闭档案、点外部取消、取消部署、指针取消与Esc走同一入口。进入装备／商店／奖励预览也清掉旧范围，不能只删档案DOM或只清 `inspect`。浏览器回归 `selection-summon-swap` 检查真实画布绘制。
+
 - **整备区装备拖放**：`pointerdown` 在 `[data-act="item"]` 上起拖（`drag.kind==='item'`、`from:'hand'`），落点由 `overUnitCard` 找干员卡；点击流程（先点装备再点干员）与拖放共用 `equipItemOnUnit(uid,itemUid)`，槽位满时它弹摧毁选择（`data-act="replace"` + `data-slot`）。
 - **拖到商店出售**：干员卡拖到 `#native-supply-shop` 上松手即出售，`overShop` 判定，`dragFeedback` 给商店加 `drop-target`。
 - **整备区上限只认 `handLength()`**：未上场干员 ＋ 未装备装备 ＋ 未放置的召唤物卡合计 10 格（`HAND_LIMIT`，`protocol.js`）。干员／策略效果发放的卡牌可以临时超出，但 `handFull()` 为真时禁止购入干员和装备，也禁止收回场上召唤卡，必须先用部署、出售、装备消耗或销毁清出空余；「第三张同名卡」的三合一不占新格，仍然放行。UI 的计数、拖回提示和商店提示都走 `handFull()`，不要再写死 10。

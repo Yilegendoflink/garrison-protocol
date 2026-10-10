@@ -266,7 +266,11 @@ export class NativeSession extends NativeEconomy {
  deploy(uid,x,y,dir){
   if(!Number.isInteger(dir)||dir<0||dir>3||!this.canDeploy(uid,x,y))return false;
   const u=this.s.units.find(u=>u.uid===uid),other=this.s.units.find(v=>v.uid!==uid&&v.position?.x===x&&v.position?.y===y),old=u.position;
-  if(other)other.position=old;u.position={x,y};u.dir=dir;if(old&&(old.x!==x||old.y!==y))for(const card of this.s.summonCards||[])if(card.ownerUid===u.uid)card.position=null;this.settleBondRewards();this.syncSummonCards();return true;
+  if(other)other.position=old;u.position={x,y};u.dir=dir;
+  // 交换双方都发生了位置变化；被动换位的持有者也必须清掉自己的召唤物布局。
+  const movedOwners=new Set();if(old&&(old.x!==x||old.y!==y))movedOwners.add(u.uid);if(other)movedOwners.add(other.uid);
+  for(const card of this.s.summonCards||[])if(movedOwners.has(card.ownerUid))card.position=null;
+  this.settleBondRewards();this.syncSummonCards();return true;
  }
  fangRecipient(bonds){const peers=(this.s.teamPeers||[]).filter(p=>p?.playerId&&p.playerId!==this.s.playerId);if(!peers.length)return null;const scored=peers.map(peer=>({peer,score:Math.max(0,...bonds.map(id=>Number(peer.bondCounts?.[id]??0)))})),max=Math.max(...scored.map(x=>x.score));return this.pick(scored.filter(x=>x.score===max).map(x=>x.peer));}
  queueFangTransfer(u,{includeEquipment=true}={}){const bonds=this.ownBonds(u).filter(Boolean),recipient=this.fangRecipient(bonds),record={transferId:`fang:${this.s.playerId}:${this.s.round}:${u.uid}:${this.s.seq}`,senderId:this.s.playerId,recipientId:recipient?.playerId||null,dueRound:this.s.round+1,chessId:u.chessId,charId:u.charId,rank:u.rank,skillIndex:u.skillIndex??0,bondIds:[...bonds],equipment:includeEquipment?(u.equipment||[]).map(i=>({chessId:i.chessId})):[]};this.s.transferOutbox.push(record);if(this.teamTransport?.send){try{const accepted=this.teamTransport.send(structuredClone(record));if(accepted===true)record.sent=true;}catch{record.transportError='send-failed';}}return record;}
