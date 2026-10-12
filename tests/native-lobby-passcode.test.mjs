@@ -5,7 +5,6 @@ import {fileURLToPath} from 'node:url';
 import {renderLobby} from '../dist/native-lobby.js';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
 import {createHost} from './native-host.mjs';
-import {mapThumbnailHtml} from '../dist/protocol.js';
 
 // 开始页面（大厅）清理与「输入密码」入口（用户 2026-09-22 口径）：
 //   1. 删掉右上角「已知差异」、任务配置里的「费用规则」、资料与工具里的「职业分支规则」与「旧版演示与资料库」；
@@ -16,12 +15,11 @@ const read=file=>readFile(path.join(root,'dist',file),'utf8');
 // 大厅是纯字符串渲染：直接渲染真实数据断言最终 HTML，比在源码里找片段更可靠。
 const lobbyHtml=(game=null)=>renderLobby({data:NATIVE_DATA,state:{mode:'mode_single_normal',map:'random',band:null,game},avatar:()=>'<img alt="">'});
 
-test('大厅切换阵地时显示真实地图预览，并将同一阵地传入新局',async()=>{
+test('大厅不显示阵地预览卡片，阵地选择仍正确传入新局',async()=>{
  const h=createHost(),app=h.elements.get('app'),maps=NATIVE_DATA.maps.filter(map=>map.weight>0),map=maps[1];
- assert.equal((app.html.match(/aria-label="阵地预览 /g)||[]).length,Math.min(3,maps.length));
+ assert.doesNotMatch(app.html,/native-battlefield-preview|native-home-maps|作战阵地预览/);
  app.fire('change',{target:{id:'native-map',value:map.stageId,dataset:{}}});
- assert.equal((app.html.match(/aria-label="阵地预览 /g)||[]).length,1);
- assert.ok(app.html.includes(mapThumbnailHtml(map,{label:'阵地预览 '+map.stageId})));
+ assert.doesNotMatch(app.html,/native-battlefield-preview|native-home-maps/);
  await h.dispatch('new');await h.dispatch('begin');assert.equal(h.save().s.mapId,map.stageId);
 });
 

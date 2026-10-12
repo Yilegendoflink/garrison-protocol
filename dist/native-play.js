@@ -957,7 +957,7 @@ function draw(){
 root.addEventListener('change',e=>{
  if(e.target.id==='custom-picker-profession'&&customPickerActive()){state.customPicker.profession=e.target.value;refreshCustomPicker();return;}
  if(upgradeConfirm)resetUpgradeConfirm();
- if(e.target.id==='native-mode')state.mode=e.target.value;if(e.target.id==='native-map'){state.map=e.target.value;if(state.view==='lobby')render();}if(e.target.id==='native-skill'){state.game.perform('skill',Number(e.target.dataset.uid),Number(e.target.value));save();render();}
+ if(e.target.id==='native-mode')state.mode=e.target.value;if(e.target.id==='native-map')state.map=e.target.value;if(e.target.id==='native-skill'){state.game.perform('skill',Number(e.target.dataset.uid),Number(e.target.value));save();render();}
  // 战前准备页：盟约下拉重筛列表；技能选择通过卡片按钮即时保存。
  if(state.view==='prepare'){
   const p=prepState();

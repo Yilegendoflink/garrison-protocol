@@ -1,5 +1,5 @@
 import {EGG_MODE_ID} from './native-325.js';
-import {RANDOM_MAP_ID,mapThumbnailHtml} from './protocol.js';
+import {RANDOM_MAP_ID} from './protocol.js';
 const CAT_MODE_ID='mode_cat_all';
 
 export const NATIVE_CHANGELOG={
@@ -45,15 +45,13 @@ export function renderLobby({data,state,avatar,esc=escDefault}){
  const maps=data.maps.filter(m=>m.weight>0);
  // 阵地下拉第一项是哨兵「随机地图」（用户 2026-09-22 口径，且为默认）：开局时按本局种子抽一个具体阵地。
  const randomMapOption=`<option value="${RANDOM_MAP_ID}" ${state.map===RANDOM_MAP_ID?'selected':''}>随机地图</option>`;
- const selected=maps.find(map=>map.stageId===state.map),previews=selected?[selected]:maps.slice(0,3);
  return `<main class="native-lobby native-home-screen">
  <header class="native-lobby-topbar"><div class="native-brand"><strong>卫戍协议</strong><span>盟约 · 下半期</span></div><button class="native-version-entry" data-act="update-log">更新日志 <span>v${esc(NATIVE_CHANGELOG.version)}</span></button></header>
  <section class="native-hero">
-  <div class="native-hero-copy"><h1>盟约 · 下半期</h1><p class="native-hero-lead">调配干员，合成精锐，迎击最后一轮领袖。</p>
+  <div class="native-hero-copy"><div class="native-home-intro"><h1>卫戍协议</h1><p class="native-hero-lead">网页自制版</p></div>
    <section class="native-loadout"><h2>开局设置</h2><div class="native-setup-fields"><label class="native-field-label" for="native-mode">行动难度<select id="native-mode">${modes.map(m=>`<option value="${m.modeId}" ${m.modeId===state.mode?'selected':''}>${m.name}</option>`).join('')}</select></label><label class="native-field-label" for="native-map">作战阵地<select id="native-map">${randomMapOption}${maps.map((m,i)=>`<option value="${m.stageId}" ${m.stageId===state.map?'selected':''}>阵地 ${i+1} · ${m.stageId}</option>`).join('')}</select></label></div><div class="native-loadout-actions"><button class="native-prep-entry" data-act="prepare"><span class="native-prep-entry-icon" aria-hidden="true">◈</span><span class="native-prep-entry-label">战前准备</span></button>${state.game?'<button data-act="resume">恢复本地模拟</button>':''}<button data-act="import">导入存档</button></div></section>
    <div class="native-hero-actions"><button class="native-primary native-hero-start" data-act="new">开始一局</button><button class="native-weekly-entry" data-act="weekly-challenge">每周挑战</button></div>
   </div>
-  <aside class="native-battlefield-preview" aria-label="作战阵地预览"><header><h2>${selected?'当前阵地':'随机阵地'}</h2><span>${selected?esc(selected.stageId):'开局后确定'}</span></header><div class="native-home-maps${selected?' is-single':''}">${previews.map(map=>`<figure>${mapThumbnailHtml(map,{esc,label:'阵地预览 '+map.stageId})}<figcaption>阵地 ${maps.indexOf(map)+1}</figcaption></figure>`).join('')}</div><p>${selected?'敌方从红门进入，守住蓝门。':`从 ${maps.length} 张可用阵地中随机选择，上方展示部分战场。`}</p><div class="native-home-map-key"><span><i class="terrain-entry"></i>敌方入口</span><span><i class="terrain-goal"></i>防守目标</span></div></aside>
  </section>
  <div class="native-home"><section class="native-home-card native-home-updates"><header class="native-card-heading"><h2>近期更新</h2><time datetime="${NATIVE_CHANGELOG.publishedAt}">${esc(NATIVE_CHANGELOG.dateLabel)}</time></header><ul class="native-update-list">${NATIVE_CHANGELOG.preview.map(item=>`<li><div><b>${changelogHtml(item.topic,esc)}</b><p>${changelogHtml(item.summary,esc)}</p></div></li>`).join('')}</ul><button class="native-update-more" data-act="update-log">查看完整更新日志</button></section>
  <section class="native-home-card native-database"><header class="native-card-heading"><h2>资料与工具</h2></header><div class="native-tool-grid"><button data-act="editor"><span class="native-tool-icon">▦</span><span><b>协议自定义</b><small>调整敌人波次与盟约禁用方案</small></span></button><button data-act="archive"><span class="native-tool-icon">▤</span><span><b>战绩与解锁</b><small>查看最近对局与已解锁内容</small></span></button><button data-act="passcode"><span class="native-tool-icon">※</span><span><b>输入密码</b><small>用数字键盘输入密码</small></span></button></div></section></div>
