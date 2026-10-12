@@ -13,6 +13,8 @@ import {applyPrepSkills} from './native-prep.js';
 import {TOKEN_IDS} from './native-effects.js';
 import {itemAllowed,operatorAllowed,seesRun,freeDeploy,settleFundsToLayers,grantCountForLayers,seesGrantCandidates,tartarusLayers,tartarusCap,SEES_BOND_ID,TARTARUS_BOND_ID} from './native-sees.js';
 import {runWeeklyChallengeHook as dispatchWeeklyChallengeHook,validateWeeklyChallengeSnapshot} from './native-challenges.js';
+import {customDataView,customAllowed,normalizeCustomOperators} from './native-custom-operators.js';
+import {validCustomBattle} from './native-custom-combat.js';
 
 // 召唤物落点不受主人攻击范围限制的类型（见 summonCardRange 的注释）。
 const SUMMON_FREE_PLACEMENT=new Set(['cathy-device','skadi2-seaborn','silent-drone']);
@@ -65,10 +67,12 @@ const namedPickList=(rows,weights,keyOf)=>rows.flatMap(row=>Array(Math.max(1,Mat
 
 
 export class NativeSession extends NativeEconomy {
- constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,bondBan=null,egg325=false,cat=false,playerId='local',teamPeers=[],teamTransport=null,finalBossId=null,finalBossHpMultiplier=DEFAULT_FINAL_BOSS_HP_MULTIPLIER,weeklyChallenge=null}={}){
+ constructor(data,{modeId='mode_single_normal',bandId='band_bldsk',mapId,seed=Date.now(),waveRoster=null,bondBan=null,egg325=false,cat=false,playerId='local',teamPeers=[],teamTransport=null,finalBossId=null,finalBossHpMultiplier=DEFAULT_FINAL_BOSS_HP_MULTIPLIER,weeklyChallenge=null,customOperators=null}={}){
+  data=customDataView(data,customOperators??data.customSelection);
   const map=data.maps.find(m=>m.stageId===mapId)||data.maps.find(m=>m.weight>0);super(data,modeId,{bandId,board:map,seed,manualPreview:true,playerId,teamPeers,cat});this.baseMap=map;this.map=map;this.teamTransport=teamTransport;this.battle=null;this.s.mapId=map.stageId;this.s.itemOffers=[];this.s.summonCards=[];this.s.capacity=8;this.s.passiveIncome=0;this.s.history=[];this.s.runResult=null;this.s.frozenSlots=[];this.s.roundDecisions=[];this.s.enemyModifiers=[];this.s.operatorModifiers=[];this.s.commands=[];
   if(weeklyChallenge&&!validateWeeklyChallengeSnapshot(weeklyChallenge))throw Error('每周挑战快照无效');
   if(weeklyChallenge)this.s.weeklyChallenge=structuredClone(weeklyChallenge);
+  this.s.customOperators=structuredClone(data.customSelection||normalizeCustomOperators(null,data));
   // 本局禁用的盟约（固定禁用的全部 + 随机抽中的 3 核心 + 4 附加）在开局定死，随存档保存；
   // 干员只有在「所属盟约全部被禁」时才被禁用。
   // 禁用方案默认取协议自定义「禁用方案」页配置的那份（localStorage；未配置时是默认方案：投资人固定不被随机禁用）；
@@ -292,6 +296,7 @@ export class NativeSession extends NativeEconomy {
    this.s.roundGainedChars.count++;this.gainCharEquipEffects();return unit;
   }
   gain(chessId){
+   if(!customAllowed(this.data,chessId))return null;
    if(this.bondBanned(chessId)){
     const bonds=this.bondBanBlockers(chessId);
     this.s.bondBanBlocks=(this.s.bondBanBlocks||0)+1;this.s.bondBanLast={chessId,bonds};
@@ -438,6 +443,8 @@ export class NativeSession extends NativeEconomy {
  snapshot(){return {version:this.data.version,s:this.s,battle:this.battle?.s||null,savedAt:Date.now()};}
  static restore(data,record){
   record=structuredClone(record);
+  try{data=customDataView(data,record?.s?.customOperators);}catch{return null;}
+  if(Array.isArray(record?.s?.units)&&record.s.units.some(u=>!customAllowed(data,u.chessId))||Array.isArray(record?.s?.offers)&&record.s.offers.some(id=>id&&!customAllowed(data,id)))return null;
  const s=record?.s,n=v=>typeof v==='number'&&Number.isFinite(v),integer=(v,min,max)=>Number.isInteger(v)&&v>=min&&v<=max;
   if(!s||record.version!==data.version||!data.season.modeDataDict[s.modeId]||!data.season.bandDataListDict[s.bandId]||!data.maps.some(m=>m.stageId===s.mapId)||!integer(s.level,1,6)||!integer(s.round,1,15)||!n(s.funds)||s.funds<0||!n(s.hp)||!n(s.maxHp)||s.hp<0||s.hp>s.maxHp||!['prep','battle','decision','intermission','finished'].includes(s.phase)||![undefined,true].includes(s.cat)||![undefined,true].includes(s.egg325)||!n(record.savedAt)||Date.now()>=(record.expiresAt??record.savedAt+86400000))return null;
   if(s.phase==='decision'&&s.roundDecisionStage===undefined){if(!Array.isArray(s.roundDecisions))return null;s.roundDecisionStage='reward';s.roundDecisionType='tactical';s.roundDecisionPool='early';s.roundDecisions=s.roundDecisions.map(id=>typeof id==='string'?{id:`tactical:${id}`,kind:'tactical',effectId:id}:id);}
@@ -456,6 +463,7 @@ export class NativeSession extends NativeEconomy {
   if(!Array.isArray(s.units)||s.units.length>500||!Array.isArray(s.items)||s.items.length>1000||s.items.some(i=>!item(i))||(s.stock!==undefined&&(typeof s.stock!=='object'||s.stock===null||Object.values(s.stock).some(v=>!integer(v,0,99999))))||s.units.some(u=>!integer(u.uid,1,Number.MAX_SAFE_INTEGER)||!data.profiles[u.chessId]||u.charId!==data.profiles[u.chessId].charId||!integer(u.dir,0,3)||!Array.isArray(u.equipment)||u.equipment.length>2||u.equipment.some(i=>!item(i))||(u.purchases!==undefined&&(typeof u.purchases!=='object'||u.purchases===null||Object.values(u.purchases).some(v=>!integer(v,1,9999))))||(u.position!==null&&(!integer(u.position?.x,0,s.mapVariant==='boss'?20:10)||!integer(u.position?.y,0,6)))))return null;
   if(!Array.isArray(s.offers)||s.offers.some(id=>id!==null&&!data.profiles[id])||!Array.isArray(s.itemOffers)||s.itemOffers.some(id=>id!==null&&!data.season.trapChessDataDict[id])||!Array.isArray(s.history))return null;
   if(record.battle&&(!Array.isArray(record.battle.units)||!Array.isArray(record.battle.enemies)||!n(record.battle.frame)||!n(record.battle.time)))return null;
+  if(record.battle&&!validCustomBattle(record.battle))return null;
   const c=Object.create(NativeSession.prototype);c.data=data;c.baseMap=data.maps.find(m=>m.stageId===s.mapId);const restartLegacyBossBattle=s.mapVariant==='boss'&&s.phase==='battle'&&!!record.battle;c.bossMap=c.baseMap;c.map=c.baseMap;c.board=c.map;c.manualPreview=true;c.triggerChain=[];c.poolDraw=request=>c.drawFromPool(request);c.battle=null;c.s=s;delete c.s.mapVariant;if(restartLegacyBossBattle){c.s.phase='prep';c.s.legacyBossBattleRestarted=true;for(const unit of c.s.units)unit.position=null;for(const card of c.s.summonCards||[])card.position=null;record.battle=null;}c.s.finalBossId??=rollFinalBoss(data,s.modeId,s.randomState);c.s.finalBossHpMultiplier=normalizeFinalBossHpMultiplier(c.s.finalBossHpMultiplier??DEFAULT_FINAL_BOSS_HP_MULTIPLIER);if(c.s.cat)c.s.funds=INFINITE_FUNDS;ensureStock(data,c.s);c.s.playerId??='local';c.s.teamPeers??=[];c.s.transferInbox??=[];c.s.transferOutbox??=[];
   // 旧存档没有盟约禁用记录：按「本局不额外禁用」补齐（`bonds:[]`），不动玩家已经买到的干员。
   // 禁用方案（fixed／never）不参与判定，只用于简报／弹窗标注「固定禁用还是随机抽中」，缺字段时补当前方案。

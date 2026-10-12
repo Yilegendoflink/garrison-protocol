@@ -14,12 +14,13 @@ import {richText,DIRECTION_NAMES} from './protocol.js';
 import {renderSkillDescription} from './native-skill-text.js';
 import {ARCHIVE_FLAG_DEFAULTS,loadArchive} from './native-archive.js';
 import {dataForPrep,SEES_BOND_ID,TARTARUS_BOND_ID} from './native-sees.js';
+import {customDataView,customChessId,loadCustomOperators,renderCustomOperators} from './native-custom-operators.js';
 
 export const PREP_SKILL_KEY='garrison-prep-default-skill-v1';
 // 配置版本：只认当前版本，读到别的版本（或没有版本号）一律当作「没设置过」，回落到档案自带档位。
 export const PREP_SKILL_VERSION=1;
 export const PREP_TIERS=Object.freeze([1,2,3,4,5,6]);
-export const PREP_TABS=Object.freeze(['operator','equipment']);
+export const PREP_TABS=Object.freeze(['operator','equipment','custom']);
 
 // ── 默认技能配置的读写 ───────────────────────────────────────────────────────
 // 只存「玩家改过」的干员：`{charId: 档位}`。没有条目的干员继续跟随档案里的 skillIndex，
@@ -32,6 +33,7 @@ function storage(){
 const prepSkillDataCache=new WeakMap();
 function prepSkillData(data){
  if(!data)return data;
+ data=customDataView(data,data.customSelection??loadCustomOperators(data));
  if(Object.values(data.season?.charShopChessDatas||{}).some(row=>row?.sees===true&&!row.isHidden))return data;
  const archive=loadArchive(storage());if(archive?.flags?.sees!==true)return data;
  if(prepSkillDataCache.has(data))return prepSkillDataCache.get(data);
@@ -59,7 +61,8 @@ export function normalizePrepSkills(raw,data){
  const index=prepOperatorIndex(prepSkillData(data)),source=raw&&typeof raw==='object'?(raw.skills&&typeof raw.skills==='object'?raw.skills:raw):{};
  const out={};
  for(const [charId,value] of Object.entries(source)){
-  const row=index.get(charId);if(!row)continue;
+  const registered=data.customOperators?.operators.some(o=>o.charId===charId);
+  const row=index.get(charId)||(registered?{choices:(data.profiles[customChessId(data,charId,5)]?.skillChoices||[]).map((_,index)=>({index}))}:null);if(!row)continue;
   const i=Number(value);
   if(!Number.isInteger(i)||!row.choices.some(choice=>choice.index===i))continue;
   out[charId]=i;
@@ -274,7 +277,8 @@ export function renderPreparePage(data,prep={},ui={}){
  const archive=ui.archive||loadArchive(storage());
  // S.E.E.S.（用户 2026-09-27 口径）：解锁标记为真时，四名联动干员与「S.E.E.S.臂章」才进这份名册／装备表；
  // 没解锁时它们在数据里仍是隐藏档，页面与改动前完全一致——dataForPrep 就是这一处开关。
- const page=dataForPrep(data,archive);
+ const page=customDataView(dataForPrep(data,archive),loadCustomOperators(data));
+ if(prep.tab==='custom')return `<main class="native-lobby native-prep"><header class="native-prep-top"><button data-act="home">‹ 大厅</button><h1>战前准备</h1></header><div class="native-prep-tabs"><button data-act="prep-tab" data-tab="operator">干员</button><button data-act="prep-tab" data-tab="equipment">装备</button><button data-act="prep-tab" data-tab="custom" class="chosen">自选干员</button></div>${renderCustomOperators(data,loadCustomOperators(data),{esc,avatar,skills:prep.skills||loadPrepSkills(data)})}</main>`;
  const catalog=prepCatalog(page),tab=PREP_TABS.includes(prep.tab)?prep.tab:'operator';
  const skills=prep.skills||{},filters={tier:prep.tier,core:prep.core,extra:prep.extra};
  const operators=filterPrepOperators(catalog.operators,filters),equipment=filterPrepEquipment(catalog.equipment,filters);
@@ -286,6 +290,7 @@ export function renderPreparePage(data,prep={},ui={}){
 <div class="native-prep-tabs">
 <button data-act="prep-tab" data-tab="operator" class="${tab==='operator'?'chosen':''}" aria-pressed="${tab==='operator'}"><span>01</span> 干员 <small>${catalog.operators.length}</small></button>
 <button data-act="prep-tab" data-tab="equipment" class="${tab==='equipment'?'chosen':''}" aria-pressed="${tab==='equipment'}"><span>02</span> 装备 <small>${catalog.equipment.length}</small></button>
+<button data-act="prep-tab" data-tab="custom" aria-pressed="false"><span>03</span> 自选干员</button>
 </div>
 <div class="native-prep-list" id="prep-list" role="region" tabindex="0" aria-label="${tab==='operator'?'干员名册，横向滚动浏览':'装备资料，横向滚动浏览'}">${list.length?(tab==='operator'?list.map(row=>operatorCard(page,row,skills,esc,avatar)).join(''):list.map(item=>equipmentCard(page,item,esc)).join('')):'<p class="native-prep-empty">没有符合当前筛选条件的条目。</p>'}</div>
 <section class="native-prep-filters" aria-label="战前资料筛选">

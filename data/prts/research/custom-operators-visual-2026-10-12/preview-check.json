@@ -1,0 +1,69 @@
+{
+  "checkedAt": "2026-10-12",
+  "scope": "Five loaded PRTS model viewers and representative frames, not a full skill VFX audit",
+  "operators": [
+    {
+      "id": "char_1035_wisdel",
+      "name": "维什戴尔",
+      "modelViewerLoaded": true,
+      "skillNamedClips": 15,
+      "independentGameEffectsVerified": false
+    },
+    {
+      "id": "char_1050_chen3",
+      "name": "赤刃明霄陈",
+      "modelViewerLoaded": true,
+      "skillNamedClips": 10,
+      "independentGameEffectsVerified": false
+    },
+    {
+      "id": "char_4132_ascln",
+      "name": "阿斯卡纶",
+      "modelViewerLoaded": true,
+      "skillNamedClips": 6,
+      "independentGameEffectsVerified": false
+    },
+    {
+      "id": "char_2027_wang",
+      "name": "望",
+      "modelViewerLoaded": true,
+      "skillNamedClips": 5,
+      "independentGameEffectsVerified": false
+    },
+    {
+      "id": "char_4231_clemnt",
+      "name": "克莱门莎",
+      "modelViewerLoaded": true,
+      "skillNamedClips": 17,
+      "independentGameEffectsVerified": false
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "prts-ascln-s3.png",
+      "sha256": "554eb98d0229c561381d0072db63624ad7f2eb2d15756c5f1fcad087c8ccba51"
+    },
+    {
+      "file": "prts-chen3-s3-hit-pose.png",
+      "sha256": "b27858d77b71cafa9fe2ad83871b803e77dd351ba8121bc39e81aa16287f2055"
+    },
+    {
+      "file": "prts-chen3-s3.png",
+      "sha256": "85bb83a9d7e2e889130a988cc39e649e5b750cdbee209746e55b83a0ece02381"
+    },
+    {
+      "file": "prts-clemnt-s2.png",
+      "sha256": "646182e9b01b1a9da3f41405afee09bbcbfd133fe792ce9dd2c4f3fdc4ae7ed1"
+    },
+    {
+      "file": "prts-wang-s3.png",
+      "sha256": "5400b5f52be66f6ae2793c5e0c5084e2f24d6d579506a4f67c7d10f26e706fd6"
+    },
+    {
+      "file": "prts-wisdel-s3.png",
+      "sha256": "12c323d9f7c33eb62f947a5b16036e0c6a23727653253eb0e2c3f9f698211525"
+    }
+  ],
+  "prtsExplanation": "https://prts.wiki/w/话题:Yvxk4ys66jtl0xyv",
+  "fullBattleReferenceReviewed": false
+}

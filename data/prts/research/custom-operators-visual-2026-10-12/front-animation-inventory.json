@@ -1,0 +1,496 @@
+{
+  "operators": [
+    {
+      "id": "char_1035_wisdel",
+      "name": "维什戴尔",
+      "source": {
+        "skeleton": "https://torappu.prts.wiki/assets/char_spine/char_1035_wisdel/defaultskin/front/char_1035_wisdel.skel",
+        "atlas": "https://torappu.prts.wiki/assets/char_spine/char_1035_wisdel/defaultskin/front/char_1035_wisdel.atlas",
+        "retrievedAt": "2026-10-12T02:59:22.491Z",
+        "skeletonSha256": "3d80d908389551703f7422f63c950cea8eaf199372d201ea238bcf879901aec0",
+        "atlasSha256": "a52a4de8bd1834e5a5703906e3b0d9645dbba4383bd872306e59d9b65c7a0a64"
+      },
+      "spineVersion": "3.8.99",
+      "bounds": {
+        "x": -868.4761962890625,
+        "y": -39.32269287109375,
+        "width": 1400.0064697265625,
+        "height": 572.3475952148438
+      },
+      "skins": [
+        "default"
+      ],
+      "animations": [
+        {
+          "name": "Attack_A",
+          "duration": 2.1
+        },
+        {
+          "name": "Attack_B",
+          "duration": 2.1
+        },
+        {
+          "name": "Attack_C",
+          "duration": 2.1
+        },
+        {
+          "name": "Attack_Down_A",
+          "duration": 2.1
+        },
+        {
+          "name": "Attack_Down_B",
+          "duration": 2.1
+        },
+        {
+          "name": "Attack_Down_C",
+          "duration": 2.1
+        },
+        {
+          "name": "Default",
+          "duration": 0
+        },
+        {
+          "name": "Die",
+          "duration": 1
+        },
+        {
+          "name": "Idle",
+          "duration": 5.333333
+        },
+        {
+          "name": "Skill_1",
+          "duration": 2.1
+        },
+        {
+          "name": "Skill_2_Begin",
+          "duration": 0.333333
+        },
+        {
+          "name": "Skill_2_End",
+          "duration": 0.1
+        },
+        {
+          "name": "Skill_2_Idle",
+          "duration": 4
+        },
+        {
+          "name": "Skill_2_Loop",
+          "duration": 1.4
+        },
+        {
+          "name": "Skill_2_Overload_Begin",
+          "duration": 0.166667
+        },
+        {
+          "name": "Skill_2_Overload_End",
+          "duration": 0.5
+        },
+        {
+          "name": "Skill_2_Overload_Idle",
+          "duration": 4
+        },
+        {
+          "name": "Skill_2_Overload_Loop",
+          "duration": 1.4
+        },
+        {
+          "name": "Skill_3_Begin",
+          "duration": 0.833333
+        },
+        {
+          "name": "Skill_3_End",
+          "duration": 0.5
+        },
+        {
+          "name": "Skill_3_Idle",
+          "duration": 5.333333
+        },
+        {
+          "name": "Skill_3_Loop",
+          "duration": 5
+        },
+        {
+          "name": "Skill_Down_3_Idle",
+          "duration": 5.333333
+        },
+        {
+          "name": "Skill_Down_3_Loop",
+          "duration": 5
+        },
+        {
+          "name": "Start",
+          "duration": 1
+        },
+        {
+          "name": "Stun",
+          "duration": 1
+        }
+      ],
+      "scope": "Animation names parsed from default front model; candidate skill labels only; not visual confirmation or complete Unity VFX"
+    },
+    {
+      "id": "char_1050_chen3",
+      "name": "赤刃明霄陈",
+      "source": {
+        "skeleton": "https://torappu.prts.wiki/assets/char_spine/char_1050_chen3/defaultskin/front/char_1050_chen3.skel",
+        "atlas": "https://torappu.prts.wiki/assets/char_spine/char_1050_chen3/defaultskin/front/char_1050_chen3.atlas",
+        "retrievedAt": "2026-10-12T02:59:22.636Z",
+        "skeletonSha256": "ffb1cf1cad8b55780efe4d900f551da75d811dd7a8f101ffc53c118000732e9a",
+        "atlasSha256": "79f06da4cbb327bd40a0067da57cfa6eda516962e18134da860538d10fd0db3c"
+      },
+      "spineVersion": "3.8.99",
+      "bounds": {
+        "x": -219.881103515625,
+        "y": -15.43780517578125,
+        "width": 1226.1318359375,
+        "height": 435.0133056640625
+      },
+      "skins": [
+        "default"
+      ],
+      "animations": [
+        {
+          "name": "Attack",
+          "duration": 1.233333
+        },
+        {
+          "name": "Default",
+          "duration": 0
+        },
+        {
+          "name": "Die",
+          "duration": 1
+        },
+        {
+          "name": "Idle",
+          "duration": 4
+        },
+        {
+          "name": "Skill_1_Begin",
+          "duration": 0.2
+        },
+        {
+          "name": "Skill_1_End",
+          "duration": 0.2
+        },
+        {
+          "name": "Skill_1_Idle",
+          "duration": 2.666667
+        },
+        {
+          "name": "Skill_1_Loop",
+          "duration": 1.233333
+        },
+        {
+          "name": "Skill_2_Begin",
+          "duration": 0.566667
+        },
+        {
+          "name": "Skill_2_Disappear",
+          "duration": 0.166667
+        },
+        {
+          "name": "Skill_3_Begin",
+          "duration": 0.433333
+        },
+        {
+          "name": "Skill_3_End",
+          "duration": 0.266667
+        },
+        {
+          "name": "Skill_3_Idle",
+          "duration": 2.666667
+        },
+        {
+          "name": "Skill_3_Loop",
+          "duration": 1.233333
+        },
+        {
+          "name": "Start",
+          "duration": 1
+        },
+        {
+          "name": "Start_2",
+          "duration": 1
+        }
+      ],
+      "scope": "Animation names parsed from default front model; candidate skill labels only; not visual confirmation or complete Unity VFX"
+    },
+    {
+      "id": "char_4132_ascln",
+      "name": "阿斯卡纶",
+      "source": {
+        "skeleton": "https://torappu.prts.wiki/assets/char_spine/char_4132_ascln/defaultskin/front/char_4132_ascln.skel",
+        "atlas": "https://torappu.prts.wiki/assets/char_spine/char_4132_ascln/defaultskin/front/char_4132_ascln.atlas",
+        "retrievedAt": "2026-10-12T02:59:22.722Z",
+        "skeletonSha256": "6f2c718bfcc41229c4458644d5c0fc3c8c3feab499ae06a118fd29dd9af8005a",
+        "atlasSha256": "525792001fbc24f2358a136e1f72ffe07b9eb1a81140a1e7e1723f9507ef32c9"
+      },
+      "spineVersion": "3.8.99",
+      "bounds": {
+        "x": -431.95513916015625,
+        "y": -2.106130599975586,
+        "width": 766.072021484375,
+        "height": 505.5088195800781
+      },
+      "skins": [
+        "default"
+      ],
+      "animations": [
+        {
+          "name": "Attack_A",
+          "duration": 1.5
+        },
+        {
+          "name": "Attack_B",
+          "duration": 1.5
+        },
+        {
+          "name": "Default",
+          "duration": 0
+        },
+        {
+          "name": "Die",
+          "duration": 1
+        },
+        {
+          "name": "Idle",
+          "duration": 4
+        },
+        {
+          "name": "Skill_1",
+          "duration": 1.5
+        },
+        {
+          "name": "Skill_2",
+          "duration": 1.666667
+        },
+        {
+          "name": "Skill_3_Begin",
+          "duration": 0.5
+        },
+        {
+          "name": "Skill_3_End",
+          "duration": 0.5
+        },
+        {
+          "name": "Skill_3_Idle",
+          "duration": 4
+        },
+        {
+          "name": "Skill_3_Loop",
+          "duration": 1.833333
+        },
+        {
+          "name": "Start",
+          "duration": 1
+        }
+      ],
+      "scope": "Animation names parsed from default front model; candidate skill labels only; not visual confirmation or complete Unity VFX"
+    },
+    {
+      "id": "char_2027_wang",
+      "name": "望",
+      "source": {
+        "skeleton": "https://torappu.prts.wiki/assets/char_spine/char_2027_wang/defaultskin/front/char_2027_wang.skel",
+        "atlas": "https://torappu.prts.wiki/assets/char_spine/char_2027_wang/defaultskin/front/char_2027_wang.atlas",
+        "retrievedAt": "2026-10-12T02:59:22.803Z",
+        "skeletonSha256": "3064f5715b6f6b3a755951e856bb65a99e371f03ff8170088e4dbe7f0755ab97",
+        "atlasSha256": "fb1b0bdde9941f4d94ccc8a33e5aa45da046a904bedffd656eb1775279722316"
+      },
+      "spineVersion": "3.8.99",
+      "bounds": {
+        "x": -606.9153442382812,
+        "y": -2.046387195587158,
+        "width": 898.099609375,
+        "height": 509.7178649902344
+      },
+      "skins": [
+        "default"
+      ],
+      "animations": [
+        {
+          "name": "Attack_1_A",
+          "duration": 0.833333
+        },
+        {
+          "name": "Attack_1_B",
+          "duration": 0.833333
+        },
+        {
+          "name": "Attack_2_A",
+          "duration": 0.833333
+        },
+        {
+          "name": "Attack_2_B",
+          "duration": 0.833333
+        },
+        {
+          "name": "Default",
+          "duration": 0
+        },
+        {
+          "name": "Default_2",
+          "duration": 0
+        },
+        {
+          "name": "Die",
+          "duration": 1
+        },
+        {
+          "name": "Idle",
+          "duration": 8.333333
+        },
+        {
+          "name": "Idle_2",
+          "duration": 8.333333
+        },
+        {
+          "name": "Skill_3_Attack_A",
+          "duration": 2.2
+        },
+        {
+          "name": "Skill_3_Attack_B",
+          "duration": 2.2
+        },
+        {
+          "name": "Skill_3_Begin",
+          "duration": 0.166667
+        },
+        {
+          "name": "Skill_3_End",
+          "duration": 0.266667
+        },
+        {
+          "name": "Skill_3_Idle",
+          "duration": 3.333333
+        },
+        {
+          "name": "Start",
+          "duration": 1
+        },
+        {
+          "name": "Start_2",
+          "duration": 1
+        }
+      ],
+      "scope": "Animation names parsed from default front model; candidate skill labels only; not visual confirmation or complete Unity VFX"
+    },
+    {
+      "id": "char_4231_clemnt",
+      "name": "克莱门莎",
+      "source": {
+        "skeleton": "https://torappu.prts.wiki/assets/char_spine/char_4231_clemnt/defaultskin/front/char_4231_clemnt.skel",
+        "atlas": "https://torappu.prts.wiki/assets/char_spine/char_4231_clemnt/defaultskin/front/char_4231_clemnt.atlas",
+        "retrievedAt": "2026-10-12T02:59:22.942Z",
+        "skeletonSha256": "c4a72d5785a8c7f381e60512be2d2cdc7e8d5a0fa728b545ead4426a9121fcce",
+        "atlasSha256": "e8e9fdc43cd5e95e8992be229fa93fddae13c6a76d70f39c9ca6927605df9868"
+      },
+      "spineVersion": "3.8.99",
+      "bounds": {
+        "x": -214.7118377685547,
+        "y": -12.635213851928711,
+        "width": 481.83831787109375,
+        "height": 455.0183410644531
+      },
+      "skins": [
+        "default"
+      ],
+      "animations": [
+        {
+          "name": "Attack",
+          "duration": 1.2
+        },
+        {
+          "name": "Attack_Down",
+          "duration": 1.2
+        },
+        {
+          "name": "Default",
+          "duration": 0
+        },
+        {
+          "name": "Die",
+          "duration": 1
+        },
+        {
+          "name": "Idle",
+          "duration": 2.4
+        },
+        {
+          "name": "Skill_1",
+          "duration": 1.2
+        },
+        {
+          "name": "Skill_2_Begin",
+          "duration": 0.6
+        },
+        {
+          "name": "Skill_2_End",
+          "duration": 0.2
+        },
+        {
+          "name": "Skill_2_Idle",
+          "duration": 2.4
+        },
+        {
+          "name": "Skill_2_Loop",
+          "duration": 1.2
+        },
+        {
+          "name": "Skill_3_Begin",
+          "duration": 0.2
+        },
+        {
+          "name": "Skill_3_End",
+          "duration": 0.2
+        },
+        {
+          "name": "Skill_3_Idle",
+          "duration": 2.4
+        },
+        {
+          "name": "Skill_3_Loop",
+          "duration": 1.2
+        },
+        {
+          "name": "Skill_Down_2_Begin",
+          "duration": 0.6
+        },
+        {
+          "name": "Skill_Down_2_End",
+          "duration": 0.2
+        },
+        {
+          "name": "Skill_Down_2_Idle",
+          "duration": 2.4
+        },
+        {
+          "name": "Skill_Down_2_Loop",
+          "duration": 1.2
+        },
+        {
+          "name": "Skill_Down_3_Begin",
+          "duration": 0.2
+        },
+        {
+          "name": "Skill_Down_3_End",
+          "duration": 0.2
+        },
+        {
+          "name": "Skill_Down_3_Idle",
+          "duration": 2.4
+        },
+        {
+          "name": "Skill_Down_3_Loop",
+          "duration": 1.2
+        },
+        {
+          "name": "Start",
+          "duration": 1
+        }
+      ],
+      "scope": "Animation names parsed from default front model; candidate skill labels only; not visual confirmation or complete Unity VFX"
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "scope": "Five requested default combat models; design research, not a runtime animation pack",
+  "operators": [
+    {
+      "id": "char_1035_wisdel",
+      "name": "维什戴尔",
+      "url": "https://torappu.prts.wiki/assets/char_spine/char_1035_wisdel/meta.json",
+      "retrievedAt": "2026-10-12T02:38:38.527Z",
+      "sha256": "a5b959fa34366342f52a4c37424a51c9d6a007502d101c6d3ef9acd035f10c00",
+      "prefix": "https://torappu.prts.wiki/assets/char_spine/char_1035_wisdel/",
+      "defaultCombat": {
+        "front": {
+          "file": "defaultskin/front/char_1035_wisdel"
+        },
+        "back": {
+          "file": "defaultskin/back/char_1035_wisdel"
+        }
+      },
+      "scope": "Metadata availability only; no visual playback or standalone effect asset verification"
+    },
+    {
+      "id": "char_1050_chen3",
+      "name": "赤刃明霄陈",
+      "url": "https://torappu.prts.wiki/assets/char_spine/char_1050_chen3/meta.json",
+      "retrievedAt": "2026-10-12T02:38:38.540Z",
+      "sha256": "038fc9b14c4f2aa2360ced08ec33353e0f4269576f5ebe39a5bebe8d4c888024",
+      "prefix": "https://torappu.prts.wiki/assets/char_spine/char_1050_chen3/",
+      "defaultCombat": {
+        "front": {
+          "file": "defaultskin/front/char_1050_chen3"
+        },
+        "back": {
+          "file": "defaultskin/back/char_1050_chen3"
+        }
+      },
+      "scope": "Metadata availability only; no visual playback or standalone effect asset verification"
+    },
+    {
+      "id": "char_4132_ascln",
+      "name": "阿斯卡纶",
+      "url": "https://torappu.prts.wiki/assets/char_spine/char_4132_ascln/meta.json",
+      "retrievedAt": "2026-10-12T02:38:38.552Z",
+      "sha256": "077aba82655c384adb79fdfaed198a30ef737ad8a185cd4c1e0f3d88e0ad678b",
+      "prefix": "https://torappu.prts.wiki/assets/char_spine/char_4132_ascln/",
+      "defaultCombat": {
+        "front": {
+          "file": "defaultskin/front/char_4132_ascln"
+        },
+        "back": {
+          "file": "defaultskin/back/char_4132_ascln"
+        }
+      },
+      "scope": "Metadata availability only; no visual playback or standalone effect asset verification"
+    },
+    {
+      "id": "char_2027_wang",
+      "name": "望",
+      "url": "https://torappu.prts.wiki/assets/char_spine/char_2027_wang/meta.json",
+      "retrievedAt": "2026-10-12T02:38:38.562Z",
+      "sha256": "bc9d06eabddbb1c2252f702b201eb00bf3a60fa7d93889aa8615ccdf1efc06c8",
+      "prefix": "https://torappu.prts.wiki/assets/char_spine/char_2027_wang/",
+      "defaultCombat": {
+        "front": {
+          "file": "defaultskin/front/char_2027_wang"
+        },
+        "back": {
+          "file": "defaultskin/back/char_2027_wang"
+        }
+      },
+      "scope": "Metadata availability only; no visual playback or standalone effect asset verification"
+    },
+    {
+      "id": "char_4231_clemnt",
+      "name": "克莱门莎",
+      "url": "https://torappu.prts.wiki/assets/char_spine/char_4231_clemnt/meta.json",
+      "retrievedAt": "2026-10-12T02:38:38.574Z",
+      "sha256": "9f66114247620756b5c5e0be6f16fd020ce122e064511b6167a8a40b01b86aa2",
+      "prefix": "https://torappu.prts.wiki/assets/char_spine/char_4231_clemnt/",
+      "defaultCombat": {
+        "front": {
+          "file": "defaultskin/front/char_4231_clemnt"
+        },
+        "back": {
+          "file": "defaultskin/back/char_4231_clemnt"
+        }
+      },
+      "scope": "Metadata availability only; no visual playback or standalone effect asset verification"
+    }
+  ]
+}

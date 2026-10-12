@@ -1,0 +1,11 @@
+{
+  "scope": "Five requested custom operators and two attached objects; research only, not a full PRTS catalog or playable capability verification",
+  "source": "PRTS MediaWiki API",
+  "fetchedAt": "2026-10-12T02:18:59.981Z",
+  "files": {
+    "pages.json": "2c11cb749e5239b119441f954142e60bf119b3c37f1be3de81f7b1de38296989",
+    "operators.json": "96079f4f0c671cada75fee36401c85e3d4977eee034e939456e85a4f8809b13e",
+    "supporting.json": "590ffae9cd5fc125b84eddd7f9ce4fa4eb96cc33c096059a5b3e922f7c97d530",
+    "comparison.json": "be5302d13e4a81e2a99f1602636e6e383a81c77d7b52dc0b4add44aa54cf83ed"
+  }
+}

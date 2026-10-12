@@ -6,10 +6,10 @@ import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 
 const root = 'dist/assets/prts';
-const registry = JSON.parse(await fs.readFile('data/modes/alliance-lower/collab-operators.json', 'utf8'));
+const registry = JSON.parse(await fs.readFile(process.argv.includes('--custom')?'data/modes/alliance-lower/custom-operators.json':'data/modes/alliance-lower/collab-operators.json', 'utf8'));
 const manifestPath = root + '/manifest.json';
 const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
-const request = url => fetch(url, { headers: { 'User-Agent': 'garrison-protocol-collab-asset-sync/1.0' } });
+const request = url => fetch(url, { signal: AbortSignal.timeout(45000) });
 
 const added = [], skipped = [], failed = [];
 for (const op of registry.operators) {
@@ -24,8 +24,9 @@ for (const op of registry.operators) {
     const target = root + '/' + file;
     let bytes = await fs.readFile(target).catch(() => null);
     if (!bytes || crypto.createHash('sha1').update(bytes).digest('hex') !== info.sha1) {
-      bytes = Buffer.from(await (await request(info.url)).arrayBuffer());
-      if (crypto.createHash('sha1').update(bytes).digest('hex') !== info.sha1) throw Error('sha1 与 PRTS 不一致');
+      bytes = Buffer.from(await (await fetch(info.url)).arrayBuffer());
+      if(crypto.createHash('sha1').update(bytes).digest('hex')!==info.sha1)bytes=Buffer.from(await (await fetch(info.url+'?garrison-source='+info.sha1)).arrayBuffer());
+      if (crypto.createHash('sha1').update(bytes).digest('hex') !== info.sha1) throw Error('sha1 与 PRTS 不一致 '+JSON.stringify({url:info.url,expected:info.sha1,actual:crypto.createHash('sha1').update(bytes).digest('hex'),bytes:bytes.length}));
       await fs.writeFile(target, bytes);
       added.push(file);
     } else skipped.push(file);

@@ -14,6 +14,7 @@ import {collabDeploy,collabTick,collabEvent} from './native-collab.js';
 import {addTartarusLayers,makotoKillLayers,isSeesOperator} from './native-sees.js';
 import {FLIGHT_PRESETS,FLIGHT_MODES,stepFlight,faceTarget,setFlightVelocity,distanceBetween,ensureFlight,orbitStep,fanHeadings,randomPointInSquare} from './native-flight.js';
 import {TENTATIVE_PROJECTILE_SPEED} from './native-combat.js';
+import {customAttackConfig,customEvent,customTick,customDamageAmount} from './native-custom-combat.js';
 
 export const BATTLE_SCHEMA_VERSION=1;
 export const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','field','attached','aura','guard','barrier','lock','stat']);
@@ -109,7 +110,7 @@ export function activeTalentsOf(battle,u){
  if(p?.activeTalents)return p.activeTalents.map(t=>({...t,values:blackboard(t.blackboard)}));
  return resolveActiveTalents({talents:p?.talents},p?.status,{modulePhase:p?.modulePhase}).map(t=>({...t,values:blackboard(t.blackboard)}));
 }
-export function operatorSkillConfig(battle,u){return skillConfig(battle.profile(u));}
+export function operatorSkillConfig(battle,u){return customAttackConfig(battle,u,skillConfig(battle.profile(u)));}
 function skillBB(battle,u){return blackboard(battle.profile(u)?.skill?.blackboard);}
 function log(battle,type,payload){
  const rec={t:battle.s.time,type,...payload};
@@ -341,7 +342,7 @@ export function dealDamage(battle,opts){
  let value=opts.value;
  if(!Number.isFinite(value)){
   const stats=battle.s.units.includes(target)?battle.stats(target):target;
-  const amount=(opts.amount??(source?.atk??0))*yinYangAttackScale(source,target);
+  const amount=customDamageAmount(battle,source,target,opts.amount??(source?.atk??0),opts.type||'physical')*yinYangAttackScale(source,target);
   const type=opts.type||'physical';
   const status=battle.s.enemies.includes(target)?statusAttributeChanges(target):{};
   const pen=battle.s.units.includes(source)?attackPenetration(battle,source,target):{},preciBB=battle.s.units.includes(source)&&battle.on?.('preciShip')&&(battle.owns(source,'preciShip')||battle.profile(source).position==='RANGED')?bondParam(battle,'preciShip'):null,bondPen=preciBB&&battle.rows?.preciShip?.count>=bondValue(preciBB,'power_bond_char_cnt',3)?bondValue(preciBB,type==='arts'?'power_magic_resist_penetrate':'power_def_penetrate',.3):0;
@@ -648,6 +649,7 @@ export function tickLogic(battle,dt){
  updateAreas(battle);
  tickAuras(battle);
  for(const u of battle.s.units){const collabCtx=ctxFor(battle);periodicMods(battle,u,collabCtx);bondPeriodic(battle,u);collabTick(battle,u,collabCtx);}
+ customTick(battle,dt,ctxFor(battle));
  tickSummons(battle,dt);
  tickWhitwEyes(battle,dt);
  syncReveals(battle);
@@ -684,6 +686,7 @@ function syncReveals(battle){
 }
 
 function ctxFor(battle){return {dealDamage,applyHeal,applyRegen,applyLoss,applyElementDamage,grantShield,addDamageRedirect,queueDelayedDamage,reviveActor,gainSp,addEffect,moveActor,teleportActor,canRelocateTo,projectSpot,nearbySpots,spawnSummon,spawnWhitwEyes,tickWhitwEyes,exit:commitExit,revealEnemy:(b,t,h)=>revealEnemy(b,t,h),log:(b,t,p)=>log(b,t,p)};}
+export function effectContext(battle){return ctxFor(battle);}
 
 function bondUnits(battle,id,{deployedOnly=false}={}){return battle.s.units.filter(u=>(!deployedOnly||u.deployed&&u.hp>0)&&battle.owns?.(u,id));}
 function yanUnits(battle){return battle.s.units.filter(u=>battle.economy.ownBonds(u.source).includes('yanShip'));}
@@ -1210,6 +1213,7 @@ export function dispatch(battle,type,payload){
  else onEvent(battle,type,payload,ctx);
  equipmentEvent(battle,type,payload,ctx);
  collabEvent(battle,type,payload,ctx);
+ customEvent(battle,type,payload,ctx);
  if(type==='after-damage'&&payload.cause!=='dot'&&payload.cause!=='reflect'){
   if(target&&battle.s.units.includes(target)&&target.id==='char_107_liskam'&&target.deployed){
    const t=activeTalentsOf(battle,target).find(x=>x.name==='战术防御');
@@ -1476,7 +1480,7 @@ function onOperatorExit(battle,u,reason){
 }
 
 // 召唤物类型 → token id 的唯一映射（`native-session` 也用它取 token 的部署上限）。
-export const TOKEN_IDS={'skadi2-seaborn':'token_10017_skadi2_dedant','silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
+export const TOKEN_IDS={'wisdel-shadow':'token_10035_wisdel_wward','wang-stone':'token_10064_wang_stone1','skadi2-seaborn':'token_10017_skadi2_dedant','silent-drone':'token_10000_silent_healrb','dusk-token':'token_10015_dusk_drgn','nearl2-sun':'token_10019_nearl2_sword','vigil-wolf':'token_10028_vigil_wolf','cathy-device':'token_10041_cathy_catsld','beewax-obelisk':'token_10011_beewax_oblisk','kazema-shadow':'token_10022_kazema_shadow','siege2-golden':'token_10040_siege2_vlion','mlyss-fluid':'token_10030_mlyss_wtrman','swire2-trap':'token_10031_swire2_gdtrap'};
 function whitwTargetable(e){return e.hp>0&&!e.hidden&&(!e.invisible||e.revealed||e.block!=null)&&!e.invulnerable&&!e.untargetable&&!permissions(e).sleeping;}
 function whitwNonmoving(e){return e.movingThisFrame!==true;}
 // 荒芜拉普兰德 S1/S2 的普通御械术师浮游单元：每枚单独索敌、独立累计同目标伤害，
@@ -1625,7 +1629,7 @@ export function tickWhitwEyes(battle,dt){
 export function spawnSummon(battle,owner,spec){
  const tokenId=spec.tokenId||TOKEN_IDS[spec.type]||('synthetic_'+spec.type);let entity=battle.data.tokens?.[tokenId];if(!entity&&spec.synthetic){const attributes={maxHp:Math.max(1,owner.maxHp*.2),atk:Math.max(1,battle.stats(owner).atk*.3),def:0,magicResistance:0,blockCnt:0,baseAttackTime:1,attackSpeed:100,cost:0};entity={name:spec.name||spec.type,phases:[{maxLevel:1,rangeId:null,attributesKeyFrames:[{level:1,data:attributes}]}],skillRefs:[]};}
  if(!entity)throw Error('缺少固定召唤物数据 '+spec.type);
- const ctrl=owner.summonCtrl,live=battle.s.summons.filter(x=>x.ownerUid===owner.uid&&x.type===spec.type&&x.deployed);
+ const ctrl=spec.customControl?null:owner.summonCtrl,live=battle.s.summons.filter(x=>x.ownerUid===owner.uid&&x.type===spec.type&&x.deployed);
   if(ctrl&&((!spec.preparedCard&&(ctrl.stock??0)<=0)||live.length>=ctrl.cap))return null;
  const occupied=new Set(alliedActors(battle.s).filter(x=>x.occupiesTile!==false&&(x.kind!=='summon'||(x.deployed&&x.hp>0))).map(x=>x.x+','+x.y));
  const candidates=spec.x!=null?[[spec.x,spec.y]]:[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>[owner.x+dx,owner.y+dy]);

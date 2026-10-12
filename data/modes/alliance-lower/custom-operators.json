@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "maxSlots": 2,
+  "allowedTiers": [5, 6],
+  "operators": [
+    {"charId":"char_1035_wisdel","key":"wisdel","name":"维什戴尔","bondIds":["emptyShip"],"defaultUniEquipId":"uniequip_002_wisdel","defaultSkillIndex":0},
+    {"charId":"char_1050_chen3","key":"chen3","name":"赤刃明霄陈","bondIds":["yanShip"],"defaultUniEquipId":"uniequip_002_chen3","defaultSkillIndex":0},
+    {"charId":"char_4132_ascln","key":"ascln","name":"阿斯卡纶","aliases":["阿斯卡伦"],"bondIds":["emptyShip"],"defaultUniEquipId":"uniequip_002_ascln","defaultSkillIndex":0},
+    {"charId":"char_2027_wang","key":"wang","name":"望","bondIds":["yanShip"],"defaultUniEquipId":"uniequip_002_wang","defaultSkillIndex":0},
+    {"charId":"char_4231_clemnt","key":"clemnt","name":"克莱门莎","bondIds":["egirShip"],"defaultUniEquipId":null,"defaultSkillIndex":0}
+  ]
+}

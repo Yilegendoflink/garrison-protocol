@@ -33,6 +33,8 @@ export const BRANCH_POLICIES={
 // 索引与预设的 skillIndex 一样是 0 起：{技能序号: 该技能生效时能否打空}。
 // 这张表只写**与分支默认值不同**的技能；tests/native-air-targeting.test.mjs 会拿 PRTS 备注做门禁。
 export const SKILL_ANTIAIR={
+ char_1035_wisdel:{2:true},
+ char_1050_chen3:{1:true,2:true},
  char_102_texas:{1:true},     // 德克萨斯「剑雨」：※可对空
  char_202_demkni:{2:true},    // 塞雷娅「钙质化」：※可对空
  char_311_mudrok:{2:true},    // 泥岩「秽壤的血脉」：※减速效果可对飞行单位生效

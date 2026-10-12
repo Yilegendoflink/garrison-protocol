@@ -3,6 +3,7 @@ import {directionOf} from './protocol.js';
 import {containsTarget} from './targeting.js';
 // 联动干员（S.E.E.S. 四人组）的专属实现走独立派发，避免继续往下面几个大函数里堆逐名分支。
 import {collabStatMods,collabSkillStart,collabAttackModifier,collabDamageReduction} from './native-collab.js';
+import {customSkillStart,customStats,customDamageReduction,isCustomOperator} from './native-custom-combat.js';
 
 // 目标此刻是否处于某类元素爆发期间。爆发状态本身由 `native-effects.applyElementDamage` 维护
 // （`elementBurstType` / `elementBurstUntil`，爆发期间元素条锁定），这里只做只读判定——
@@ -209,6 +210,7 @@ export function statMods(battle,u){
  const note=(stat,layer,v,src)=>{if(v)out.parts.push({stat,layer,v,src});};
  if(!u?.deployed||u.hp<=0)return out;
  for(const talent of activeTalents(battle,u)){
+  if(u.id==='char_4132_ascln'&&talent.name==='噬光残影')continue;
   const text=talent.description||'',bb=talentValues(talent);
   const atk=Number(bb.atk),hp=Number(bb.max_hp),def=Number(bb.def),mr=Number(bb.magic_resistance),as=Number(bb.attack_speed),sp=Number(bb.sp_recovery_per_sec),blocks=Number(bb.block_cnt),taunt=Number(bb.taunt_level);
   if(Number.isFinite(atk)&&direct(text,'攻击力')){out.ratio.atk+=atk;note('atk','ratio',atk,talent.name||u.id);}
@@ -227,6 +229,7 @@ export function statMods(battle,u){
   if(Number.isFinite(hp)&&has(text,/所有友方|全体友方|全场友方|攻击范围内的友方|所有【|周围/))out.auras.push({stat:'maxHp',layer:'ratio',value:hp,text,source:u});
  }
  collabStatMods(battle,u,out);
+ customStats(battle,u,out);
  return out;
 }
 export function attackModifier(battle,source,target,value){
@@ -288,6 +291,7 @@ export function damageReductionFor(battle,target,type,attacker=null){
   if(auraSource.uid===target.uid||(limit&&Math.max(Math.abs((auraSource.x??0)-(target.x??0)),Math.abs((auraSource.y??0)-(target.y??0)))<=limit)||(!limit&&/所有|全体/.test(text)))reduction=Math.max(reduction,Math.min(1,value));
  }
  reduction=collabDamageReduction(battle,target,type,attacker,reduction);
+ reduction=customDamageReduction(battle,target,type,attacker,reduction);
  return reduction;
 }
 function inRange(battle,source,target,skill=false){return battle.inside(source,target,skill);}
@@ -306,6 +310,7 @@ function zoneTargets(battle,source,rangeId,radius=1){
  });
 }
 export function operatorSkillStart(battle,u,ctx){
+ if(isCustomOperator(u))return customSkillStart(battle,u,ctx);
  const profile=battle.profile(u),config=skillConfig(profile),text=config.description,bb=config.bb;
  let suppressDefault=false;
  const skillIndex=profile.skillIndex??u.source?.skillIndex??0;

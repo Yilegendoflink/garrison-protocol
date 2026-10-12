@@ -32,7 +32,7 @@ export function createHost(){
   set innerHTML(markup){this.html=markup;registerIds(markup);}
   get innerHTML(){return this.html;}
   setAttribute(k,v){this.attrs[k]=v;}
-  insertAdjacentHTML(where,markup){if(typeof markup==='string')registerIds(markup);}
+  insertAdjacentHTML(where,markup){if(typeof markup==='string'){registerIds(markup);if(markup.includes('class="native-hand-scroll-controls"'))virtual('.native-hand-scroll-controls').innerHTML=markup;}}
   // 同一个元素、同一个事件类型可以注册多个监听（native-play 在 #app 上注册了两次 pointerdown：
   // 主处理器 + 开局的 unlockAudio），宿主必须像真实 DOM 那样全部保留、按注册顺序派发，
   // 否则后注册的那个会把主处理器顶掉，棋盘按压就永远进不去。
@@ -49,7 +49,13 @@ export function createHost(){
   // 宿主没有真实节点树与布局：只给「类选择器替身」这一种用途返回节点（当前只有 `.native-bonds`，
   // `updateBondLive` 用它拿侧栏）。其余一律 null——`overBench`/`scrollerAtPoint` 这类命中测试
   // 一旦拿到假节点就会误判「按在整备区上」，把棋盘按压当成拖拽。
-  querySelector(selector){return selector==='.native-bonds'?virtual(selector):null;}
+  querySelector(selector){
+   if(selector==='.native-bonds')return virtual(selector);
+   // 新建的手牌横向滚动控件有自己的两个按钮，不能把它们当作棋盘/整备区命中节点。
+   if(selector==='.native-hand-scroll-controls')return virtuals.get(selector)||null;
+   if(this.html.includes('data-act="hand-scroll"')&&selector.includes('data-direction')){this.scrollButtons??=new Map();if(!this.scrollButtons.has(selector))this.scrollButtons.set(selector,new Element('hand-scroll'));return this.scrollButtons.get(selector);}
+   return null;
+  }
   querySelectorAll(){return [];}
   // 宿主里没有真实节点树：事件目标的 `closest` 一律判为「不在任何按钮/档案里」，
   // 这正是棋盘按压需要的结果（native-play 用 e.target===canvas + closest 区分落点）。

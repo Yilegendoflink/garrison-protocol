@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
 import {NATIVE_DATA} from '../dist/runtime-data.js';
+import {customDataView} from '../dist/native-custom-operators.js';
 import {SKILL_ANTIAIR,skillAntiAir,branchBehavior} from '../dist/native-branches.js';
 import {skillPolicy} from '../dist/protocol.js';
 import {tickLogic} from '../dist/native-effects.js';
@@ -12,14 +13,15 @@ const prts=JSON.parse(fs.readFileSync(`data/prts/${pointer.path}/operators.json`
 const prtsList=Array.isArray(prts)?prts:Object.values(prts);
 const prtsByChar=new Map(prtsList.map(o=>[o.gameId,o]));
 const noteOf=(charId,index)=>String(prtsByChar.get(charId)?.skills?.[index]?.sourceTemplate?.fields?.备注||'');
-const SKILL_KEYS=/可对空|可对飞行单位生效|效果可对空/;
+const SKILL_KEYS=/可对空|可选取空中单位|可对飞行单位生效|效果可对空/;
 const DENY_KEYS=/不可对空|不对空|不再攻击空中单位/;
 
 const profileFor=charId=>Object.values(NATIVE_DATA.profiles).find(p=>p?.charId===charId);
 function openFor(charId,skillIndex){
  const p=profileFor(charId);
  assert.ok(p,`本期应当有 ${charId}`);
- const {b}=openBattle([{chessId:p.chessId,skillIndex}]);
+ const data=NATIVE_DATA.season.charShopChessDatas[p.normalId||p.chessId]?.custom?customDataView(NATIVE_DATA,{version:1,slots:[{charId,tier:p.rank}]}):NATIVE_DATA;
+ const {b}=openBattle([{chessId:p.chessId,skillIndex}],{data});
  deployNow(b);
  return {b,u:byId(b,charId)};
 }
@@ -41,7 +43,7 @@ test('技能级对空表与 PRTS 技能备注一致（可对空／不可对空�
  for(const [charId,byIndex] of rows){
   const record=prtsByChar.get(charId);
   assert.ok(record,`PRTS 快照里应当有 ${charId}`);
-  assert.equal(record.position,'近战位',`${record.name} 是地面干员`);
+  assert.ok(['近战位','远程位'].includes(record.position),`${record.name} 部署位置有效`);
   for(const [index,flag] of Object.entries(byIndex)){
    const note=noteOf(charId,Number(index));
    assert.ok(note,`${record.name} 技能 ${index} 应当有 PRTS 备注`);
@@ -76,6 +78,8 @@ test('本期地面干员里，PRTS 标注可对空的技能都已经进表（uti
 test('技能生效时对空开关按表切换，未开启技能时回到分支默认值',()=>{
  for(const [charId,byIndex] of Object.entries(SKILL_ANTIAIR)){
   for(const [index,flag] of Object.entries(byIndex)){
+   // 陈 S2 斩击与 S3 剑气的对空独立于后续普攻，走自选专属分段回归。
+   if(charId==='char_1050_chen3')continue;
    const {b,u}=openFor(charId,Number(index));
    const base=b.behavior(u).antiAir;
    assert.equal(branchBehavior(b.profile(u),false).antiAir,base);
@@ -97,6 +101,7 @@ test('技能生效时对空开关按表切换，未开启技能时回到分支�
 test('标注可对空的技能能选到飞行敌人，未标注的地面技能仍然选不到',()=>{
  for(const [charId,byIndex] of Object.entries(SKILL_ANTIAIR)){
   for(const [index,flag] of Object.entries(byIndex)){
+   if(charId==='char_1050_chen3')continue;
    const {b,u}=openFor(charId,Number(index));
    if(!flag)continue; // 银灰「雪境生存法则」是关闭对空的例外，单独覆盖
    activate(b)(u);

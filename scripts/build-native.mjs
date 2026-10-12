@@ -4,6 +4,7 @@ import {enemyBehaviorProfile} from '../dist/native-combat.js';
 import {applySeesContent} from './lib/sees-content.mjs';
 import {validateWeeklyChallengeSchedule} from '../dist/native-challenges.js';
 import {AVAILABLE_FINAL_BOSS_IDS} from '../dist/native-final-boss.js';
+import {applyCustomOperators} from './lib/custom-operators.mjs';
 const DEFAULT_CULTIVATION_BONUS={atk:0.1,def:0.1,maxHp:0.1};
 const source=JSON.parse(await fs.readFile('data/modes/alliance-lower/source.json','utf8')),base=JSON.parse(await fs.readFile('data/normalized/allianceLower.json','utf8')),catalog=JSON.parse(await fs.readFile('data/modes/alliance-lower/catalog.json','utf8')),behaviorConfig=JSON.parse(await fs.readFile('data/modes/alliance-lower/enemy-behavior-overrides.json','utf8')),behaviorOverrides=behaviorConfig.overrides||{},manifest=JSON.parse(await fs.readFile('data/modes/alliance-lower/levels/manifest.json','utf8')),characterTable=JSON.parse(await fs.readFile('data/gamedata/allianceLower/character_table.json','utf8')),enemyHandbook=JSON.parse(await fs.readFile('data/gamedata/allianceLower/enemy_handbook_table.json','utf8'));
 const weeklyChallengeSchedule=JSON.parse(await fs.readFile('data/modes/alliance-lower/weekly-challenges.json','utf8'));
@@ -32,6 +33,8 @@ const collabCharacters={};for(const op of collab.operators){const entity=collabB
 // S.E.E.S. 策略内容：必须在联动干员建完档之后注入——上面那段会重建 charChessDataDict[chessId]（bondIds:[]），
 // 先注入会被它覆盖回去。四人从此挂上 seesShip，商店记录带 sees 标记，臂章与两条盟约同时就位。
 applySeesContent(source);
+applyCustomOperators(source,base,JSON.parse(await fs.readFile('data/modes/alliance-lower/custom-operators.json','utf8')),JSON.parse(await fs.readFile('data/modes/alliance-lower/custom-operator-data.json','utf8')));
+source.customOperators=JSON.parse(await fs.readFile('data/modes/alliance-lower/custom-operators.json','utf8'));
 const profiles={};for(const shop of Object.values(source.season.charShopChessDatas)){if(!shop.charId)continue;const entity=base.entities[shop.tmplId||shop.charId],rawCharacter=characterTable[shop.tmplId||shop.charId]||collabCharacters[shop.tmplId||shop.charId]||{};for(const id of [shop.chessId,shop.goldenChessId]){if(!id)continue;const states=[];for(let i=0;i<entity.skillRefs.length;i++)states.push(resolveChess(source,base,id,{skillIndex:i}));const selected=resolveChess(source,base,id);profiles[id]={...selected,profession:entity.profession,branch:entity.branch,position:entity.position,groupId:rawCharacter.groupId??null,teamId:rawCharacter.teamId??null,skillChoices:states,asset:catalog.roster.find(r=>r.charId===shop.charId)?.asset};}}
 const catalogById=Object.fromEntries(catalog.enemies.map(e=>[e.id,e]));
 // 敌人档案统一入口：把行为覆盖 JSON 和 enemyBehaviorProfile 推导出的能力（持续伤害区域、

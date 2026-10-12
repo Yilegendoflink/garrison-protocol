@@ -14,7 +14,7 @@ export function skillKind(skill){
 }
 export function ammoCount(skill){
  const b=Object.fromEntries((skill?.blackboard||[]).map(x=>[x.key,x.valueStr??x.value]));
- const n=Number(b['attack@trigger_time']??b.ammo??b['attack@s2.trigger_time']);
+ const n=Number(b['attack@trigger_time']??b.trigger_time??b.ammo??b['attack@s2.trigger_time']);
  return Math.max(1,Math.trunc(Number.isFinite(n)?n:1));
 }
 export function spIncrement(skill){
