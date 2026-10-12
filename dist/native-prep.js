@@ -240,12 +240,12 @@ export function renderArchiveWindow(archive,esc=value=>String(value??'')){
  const flags={...ARCHIVE_FLAG_DEFAULTS,...(archive?.flags||{})},runs=archive?.runs||[];
  const unlocks=[flags.sees?'策略：S.E.E.S.':null,flags.egg325?'325 模式':null,flags.cat?'海猫模式':null].filter(Boolean);
  return `<div class="native-archive-window">
-<header class="native-archive-head"><div><span class="native-eyebrow">LOCAL RECORD / TERMINAL</span><h2>战绩与解锁</h2><p>本地保存最近十场对局与已解锁内容；导出存档可迁移到其他浏览器。</p></div><div class="native-archive-counter"><b>${runs.length}</b><span>/ 10</span><small>RECENT RUNS</small></div></header>
-<section class="native-archive-unlocks"><div class="native-archive-section-head"><h3><i>01</i> 已解锁内容</h3><small>${unlocks.length} 项</small></div>
+<header class="native-archive-head"><div><h2>战绩与解锁</h2><p>本地保存最近十场对局与已解锁内容；导出存档可迁移到其他浏览器。</p></div><div class="native-archive-counter"><b>${runs.length}</b><span>/ 10</span><small>最近对局</small></div></header>
+<section class="native-archive-unlocks"><div class="native-archive-section-head"><h3>已解锁内容</h3><small>${unlocks.length} 项</small></div>
 ${unlocks.length?`<div class="native-archive-unlock-grid">${unlocks.map(name=>`<div class="native-archive-unlock"><span class="native-archive-unlock-dot"></span><b>${esc(name)}</b><small>已解锁</small></div>`).join('')}</div>`:'<p class="native-archive-empty-unlocks">暂无可查看的解锁内容</p>'}
 ${flags.sees?'<button data-act="prep-flags-sees" class="native-archive-toggle" aria-pressed="true">隐藏 S.E.E.S. 内容</button>':''}
 </section>
-<section class="native-archive-runs"><div class="native-archive-section-head"><h3><i>02</i> 最近对局</h3><small>${runs.length} / 10</small></div>
+<section class="native-archive-runs"><div class="native-archive-section-head"><h3>最近对局</h3><small>${runs.length} / 10</small></div>
 ${runs.length?`<div class="native-archive-run-list">${runs.map((run,index)=>runCard(run,index+1,esc,flags.sees)).join('')}</div>`:'<p class="native-prep-empty">尚无对局记录。完成一局后会自动归档。</p>'}
 </section>
 </div>`;
@@ -285,12 +285,12 @@ export function renderPreparePage(data,prep={},ui={}){
  const list=tab==='operator'?operators:equipment,total=tab==='operator'?catalog.operators.length:catalog.equipment.length;
  const bondSelect=(id,label,options,value)=>`<label class="native-prep-field">${label}<select id="${id}"><option value="">全部${label}</option>${options.map(option=>`<option value="${esc(option.id)}" ${option.id===value?'selected':''}>${esc(option.name)}</option>`).join('')}</select></label>`;
  return `<main class="native-lobby native-prep">
-<header class="native-prep-top"><button data-act="home">‹ 大厅</button><div><span class="native-eyebrow">PREPARATION / REFERENCE</span><h1>战前准备</h1></div><span class="native-prep-count">${total} 条资料</span></header>
-<section class="native-prep-heading"><div><span class="native-eyebrow">TACTICAL CONFIGURATION / 01</span><h2>${tab==='operator'?'干员名册':'装备资料'}</h2><p>${tab==='operator'?'切换 S 档可查看当前默认技能说明，也可设为新局默认。':'横向浏览基础与精锐形态效果，使用下方筛选栏定位装备。'}</p></div><div class="native-prep-live-count"><b>${list.length}</b><span>/ ${total} 条目</span></div></section>
+<header class="native-prep-top"><button data-act="home">‹ 大厅</button><div><h1>战前准备</h1></div><span class="native-prep-count">${total} 条资料</span></header>
+<section class="native-prep-heading"><div><h2>${tab==='operator'?'干员名册':'装备资料'}</h2><p>${tab==='operator'?'切换 S 档可查看当前默认技能说明，也可设为新局默认。':'横向浏览基础与精锐形态效果，使用下方筛选栏定位装备。'}</p></div><div class="native-prep-live-count"><b>${list.length}</b><span>/ ${total} 条目</span></div></section>
 <div class="native-prep-tabs">
-<button data-act="prep-tab" data-tab="operator" class="${tab==='operator'?'chosen':''}" aria-pressed="${tab==='operator'}"><span>01</span> 干员 <small>${catalog.operators.length}</small></button>
-<button data-act="prep-tab" data-tab="equipment" class="${tab==='equipment'?'chosen':''}" aria-pressed="${tab==='equipment'}"><span>02</span> 装备 <small>${catalog.equipment.length}</small></button>
-<button data-act="prep-tab" data-tab="custom" aria-pressed="false"><span>03</span> 自选干员</button>
+<button data-act="prep-tab" data-tab="operator" class="${tab==='operator'?'chosen':''}" aria-pressed="${tab==='operator'}">干员 <small>${catalog.operators.length}</small></button>
+<button data-act="prep-tab" data-tab="equipment" class="${tab==='equipment'?'chosen':''}" aria-pressed="${tab==='equipment'}">装备 <small>${catalog.equipment.length}</small></button>
+<button data-act="prep-tab" data-tab="custom" aria-pressed="false">自选干员</button>
 </div>
 <div class="native-prep-list" id="prep-list" role="region" tabindex="0" aria-label="${tab==='operator'?'干员名册，横向滚动浏览':'装备资料，横向滚动浏览'}">${list.length?(tab==='operator'?list.map(row=>operatorCard(page,row,skills,esc,avatar)).join(''):list.map(item=>equipmentCard(page,item,esc)).join('')):'<p class="native-prep-empty">没有符合当前筛选条件的条目。</p>'}</div>
 <section class="native-prep-filters" aria-label="战前资料筛选">

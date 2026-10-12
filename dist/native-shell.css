@@ -1,0 +1,140 @@
+/* native 页面的布局与排版层。沿用 native.css 的辉光、扫描线与语义颜色。 */
+:root{--font-terminal:"Bahnschrift","Source Han Sans SC","Noto Sans CJK SC","DengXian","Microsoft YaHei UI",sans-serif}
+html body{font-family:var(--font-terminal);color:var(--color-terminal-ink)}
+.native-lobby :is(h1,h2,h3),.native-modal :is(h2,h3),.wave-ed :is(h1,h2,h3){letter-spacing:0;font-family:var(--font-terminal)}
+.native-lobby :is(button,input,select),.native-modal :is(button,input,select),.wave-ed :is(button,input,select){font-family:var(--font-terminal);text-transform:none;letter-spacing:0}
+.native-lobby button,.native-modal button{transition:background-color .15s,border-color .15s,color .15s}
+.native-lobby :is(button,input,select,summary):focus-visible,.native-modal :is(button,input,select,summary):focus-visible,.wave-ed :is(button,input,select):focus-visible{outline:2px solid var(--color-terminal-accent);outline-offset:3px}
+.native-lobby button:disabled,.native-modal button:disabled{cursor:default}
+
+/* 大厅：先配置一局，再查看资料。实际棋盘提供视觉辨识。 */
+.native-home-screen{padding:32px clamp(20px,5vw,72px) 24px}
+.native-home-screen .native-lobby-topbar{padding-bottom:18px}
+.native-home-screen .native-brand{gap:18px;flex-wrap:wrap}
+.native-home-screen .native-brand strong{font-size:20px;letter-spacing:0}
+.native-brand>span{font-size:13px;color:var(--color-terminal-muted)}
+.native-version-entry{min-height:40px;padding:8px 12px;font-size:12px;background:transparent!important}
+.native-version-entry span{margin-left:10px;color:var(--color-terminal-muted);font-variant-numeric:tabular-nums}
+.native-home-screen .native-hero{grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);align-items:start;gap:clamp(24px,5vw,64px);padding:42px 0}
+.native-home-screen .native-hero h1{font-size:clamp(34px,4.5vw,58px);line-height:1.2;letter-spacing:0;font-weight:600}
+.native-home-screen .native-hero-lead{margin:14px 0 28px;font-size:14px;line-height:1.75}
+.native-home-screen .native-loadout h2{margin:0 0 8px;font-size:16px;font-weight:600}
+.native-setup-fields{display:grid;grid-template-columns:1fr 1.1fr;gap:14px}
+.native-home-screen .native-field-label{font-size:13px;margin:8px 0;letter-spacing:0}
+.native-home-screen .native-field-label select{min-height:44px;font-size:14px}
+.native-home-screen .native-loadout-actions{margin-top:12px;gap:8px}
+.native-home-screen .native-loadout-actions button{min-height:40px;font-size:13px}
+.native-home-screen .native-hero-actions{display:grid;grid-template-columns:minmax(150px,1fr) minmax(130px,.7fr);gap:12px;margin-top:24px}
+.native-home-screen .native-hero-actions button{display:block;min-width:0;min-height:52px;padding:14px;font-size:16px;text-align:center}
+.native-home-screen .native-hero-start{position:relative;text-align:left!important;padding-left:22px!important;border-right:12px solid #21443c!important;box-shadow:0 0 20px #79dcb72b}
+.native-home-screen .native-hero-start::after{content:'';position:absolute;right:12px;top:50%;width:9px;height:9px;border-top:2px solid currentColor;border-right:2px solid currentColor;transform:translateY(-50%) rotate(45deg)}
+.native-battlefield-preview{min-width:0;padding:22px 24px;background:#0b1b1ec9;border:1px solid var(--color-terminal-rule);box-shadow:0 0 28px #79dcb70b}
+.native-battlefield-preview{clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,0 100%);border-top:2px solid #79dcb7}
+.native-battlefield-preview>header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:22px}
+.native-battlefield-preview h2{margin:0;font-size:17px;font-weight:600}
+.native-battlefield-preview>header>span{font-size:12px;color:var(--color-terminal-muted)}
+.native-home-maps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.native-home-maps figure{margin:0;min-width:0}.native-home-maps figure:first-child{grid-column:1/-1}
+.native-home-maps figure:not(:first-child){opacity:.78}
+.native-home-maps .native-map-thumb{display:grid;width:100%;max-width:none;padding:6px;gap:3px;background:#081417;border:1px solid #355450;box-shadow:0 0 18px #79dcb717}
+.native-home-maps .native-map-thumb i{min-width:0;aspect-ratio:1.15;border-radius:0}
+.native-home-maps figcaption{margin-top:6px;font-size:11px;color:var(--color-terminal-muted)}
+.native-home-maps.is-single{grid-template-columns:1fr}
+.native-battlefield-preview>p{margin:18px 0 12px;font-size:12px;line-height:1.65;color:var(--color-terminal-muted)}
+.native-home-map-key{display:flex;gap:20px;font-size:12px;color:#b9d4ca}
+.native-home-map-key>span{display:flex;align-items:center;gap:7px}.native-home-map-key i{display:block;width:10px;height:10px}
+.native-home-screen .native-home{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:32px;padding-top:4px}
+.native-home-screen .native-home-card{padding:22px 24px;box-shadow:none}
+.native-home-screen .native-card-heading{margin:0 0 14px;align-items:baseline}
+.native-home-screen .native-card-heading h2{margin:0;font-size:17px;font-weight:600;letter-spacing:0}
+.native-home-screen .native-card-heading time{color:var(--color-terminal-muted);font-size:12px}
+.native-home-screen .native-update-list li{grid-template-columns:1fr;padding:10px 0;border-top:0}
+.native-home-screen .native-update-list li>div{padding:0}.native-home-screen .native-update-list li>div:before{content:none}
+.native-home-screen .native-update-list b{font-size:13px;letter-spacing:0}.native-home-screen .native-update-list p{font-size:12px;line-height:1.7}
+.native-home-screen .native-update-more{margin-top:14px;min-height:40px;padding:7px 12px;font-size:12px;background:transparent}
+.native-home-screen .native-tool-grid{gap:0}
+.native-home-screen .native-tool-grid button{grid-template-columns:30px minmax(0,1fr);margin:0;padding:18px 0;border:0;border-bottom:1px solid #26433f;background:transparent;box-shadow:none}
+.native-home-screen .native-tool-grid button:last-child{border-bottom:0}.native-home-screen .native-tool-grid button:hover{background:#16312e}
+.native-home-screen .native-tool-grid b{font-size:15px;letter-spacing:0}.native-home-screen .native-tool-grid small{font-size:12px;line-height:1.65}
+.native-home-screen .native-tool-icon{width:26px;height:30px;border:0;background:transparent;font-size:21px}
+.native-home-screen .native-lobby-footer{margin-top:26px;padding:14px 0;font-size:11px;letter-spacing:0;color:var(--color-terminal-muted)}
+
+/* 资料、配置与弹窗：层级靠字号和分组，避免每块内容都重复标题。 */
+.native-prep-top h1{margin:0;font-size:26px;letter-spacing:0}
+.native-prep-heading h2{margin:0 0 8px;font-size:24px;letter-spacing:0}
+.native-prep-heading p{font-size:13px;line-height:1.7}
+.native-prep-count,.native-prep-live-count,.native-prep-tabs button small{font-family:var(--font-terminal);font-variant-numeric:tabular-nums;letter-spacing:0}
+.native-prep-live-count b{font-size:20px}
+.native-prep-tabs button{min-height:42px;font-size:14px;gap:8px}
+.native-prep-card{border-radius:2px}.native-prep-title b{font-size:15px;letter-spacing:0}
+.native-prep-skill{letter-spacing:0}.native-prep-art{border:0;background:transparent}
+.native-prep-current-skill-meta{font-family:var(--font-terminal);font-variant-numeric:tabular-nums;letter-spacing:0}
+.native-custom-heading h2{font-size:25px}.native-custom-count{font:600 20px var(--font-terminal)}
+.native-custom-slots article{border-color:var(--color-terminal-rule);background:#102528}
+.native-custom-identity b{font-size:17px}.native-custom-attributes{background:#0d1e22;border-color:#31524e}
+.native-custom-picker-modal>section{background:#0d2023;border-color:#4f7b6b}
+.native-custom-picker-filters{background:#0a191d;border-color:#2b5754}
+.native-custom-picker-results .native-custom-candidate{background:#10282a;border-color:#315e5a}
+.native-custom-picker-results .native-custom-candidate{clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}
+.native-custom-picker-results .native-custom-identity img{width:70px;height:78px;object-fit:contain;background:#091719;border:1px solid #315e5a}
+.native-custom-picker-results .native-custom-candidate.is-selected{border-color:var(--color-terminal-accent)}
+.native-custom-picker h2{font-size:23px}
+.native-archive-modal .native-archive-head h2{margin:0;font-size:25px;letter-spacing:0}
+.native-archive-modal .native-archive-counter,.native-archive-modal .native-archive-counter b{font-family:var(--font-terminal)}.native-archive-modal .native-archive-counter b{font-size:28px}
+.native-archive-modal .native-archive-head p{font-size:13px}.native-archive-modal .native-archive-section-head h3{font-size:17px;letter-spacing:0}
+.native-archive-run-list{gap:10px}.native-prep-run summary{font-family:var(--font-terminal);font-variant-numeric:tabular-nums}
+.native-modal>section>h2{font-size:24px;letter-spacing:0}.native-modal p,.native-modal li{line-height:1.75}
+.native-changelog-meta,.native-changelog-meta b,.native-changelog-meta time{font-family:var(--font-terminal);letter-spacing:0}
+.native-changelog-section h3{font-size:16px!important;letter-spacing:0}.native-changelog-section li{font-size:13px}
+.wave-ed-top h1{font-size:25px;letter-spacing:0}.wave-ed-autosave{font-family:var(--font-terminal);font-size:12px}
+.wave-ed-section-label,.wave-ed-top button,.wave-ed-field,.wave-ed-pages button{font-family:var(--font-terminal);letter-spacing:0}
+
+/* 简报与策略选择：保留真实特训、盟约和地图，只收敛文字装饰。 */
+.native-briefing-v2 .briefing-title h1{font-size:34px;letter-spacing:0;font-weight:600}
+.native-briefing-v2 .briefing-title{padding-top:22px}
+.native-briefing-v2 .briefing-topmark b,.native-briefing-v2 .briefing-mode{font-family:var(--font-terminal);letter-spacing:0;font-size:12px}
+.native-briefing-v2 .briefing-section-head h2,.native-briefing-v2 .briefing-map-copy h2{font-size:18px;letter-spacing:0}
+.native-briefing-v2 .briefing-section-head{margin-bottom:12px}.native-briefing-v2 .briefing-strategy-copy h3{letter-spacing:0}
+.native-briefing-v2 .briefing-training-card h3{font-size:15px;letter-spacing:0}.native-briefing-v2 .briefing-training-card p{line-height:1.7}
+.native-briefing-v2 .briefing-actions .native-begin{font-size:15px;min-height:46px}
+.native-strategy-select h1{font-size:32px;margin:20px 0;letter-spacing:0;font-weight:600}
+.native-strategy-catalog button b{letter-spacing:0}.native-strategy-catalog button small{font-family:var(--font-terminal);font-variant-numeric:tabular-nums}
+.native-choice-heading h2{letter-spacing:0;font-weight:600}.native-choice-heading>p{letter-spacing:0;font-family:var(--font-terminal)}
+.native-choice-card strong{letter-spacing:0}.native-choice-index,.native-choice-card-footer,.native-choice-footer{font-family:var(--font-terminal);letter-spacing:0}
+
+/* 对局布局与告警颜色不变，统一标题和操作文字的排版。 */
+.native-top strong{font-size:17px;letter-spacing:0}.native-top button,.native-controls button{font-family:var(--font-terminal);letter-spacing:0}
+.native-top{border-bottom:2px solid #467268}.native-field-caption{border-bottom:1px solid #33554d}
+.native-detail h3,.native-shop h2{font-family:var(--font-terminal);font-weight:600;letter-spacing:0}
+.native-shop-cards strong,.native-dossier-heading-name,.native-result-heading{letter-spacing:0}
+.native-status{font-variant-numeric:tabular-nums}.native-result-actions button{font-family:var(--font-terminal);letter-spacing:0}
+
+@media(max-width:900px){
+ .native-home-screen .native-hero{grid-template-columns:1fr;gap:28px;padding:28px 0}
+ .native-home-screen .native-home{grid-template-columns:1fr;gap:18px}
+ .native-home-maps{grid-template-columns:1.5fr 1fr 1fr;align-items:start;gap:12px}
+ .native-home-maps figure:first-child{grid-column:auto}.native-home-maps.is-single{grid-template-columns:1fr;max-width:620px;margin:auto}
+}
+@media(max-width:600px){
+ .native-home-screen{padding:18px 16px}.native-home-screen .native-brand{gap:8px}.native-brand>span{font-size:11px}
+ .native-home-screen .native-brand strong{font-size:17px}.native-version-entry{padding:6px 8px;font-size:11px}.native-version-entry span{margin-left:4px}
+ .native-home-screen .native-hero h1{font-size:32px}.native-home-screen .native-hero-lead{margin-bottom:22px;font-size:13px}
+ .native-setup-fields{grid-template-columns:1fr;gap:3px}.native-home-screen .native-hero-actions{gap:8px;margin-top:18px}
+ .native-home-screen .native-loadout-actions button{font-size:12px;padding:8px 10px}
+ .native-battlefield-preview,.native-home-screen .native-home-card{padding:16px}
+ .native-home-maps{grid-template-columns:1fr 1fr}.native-home-maps figure:first-child{grid-column:1/-1}.native-home-maps .native-map-thumb{gap:2px;padding:4px}
+ .native-prep-top h1{font-size:22px}.native-prep-heading h2{font-size:21px}.native-prep-tabs button{min-height:42px;padding:8px 10px;font-size:13px}
+ .native-briefing-v2 .briefing-title h1{font-size:28px}.native-briefing-v2 .briefing-title{padding-top:14px}
+}
+@media(orientation:landscape) and (max-height:600px){
+ .native-home-screen{padding:12px 20px}.native-home-screen .native-hero{grid-template-columns:1fr 1fr;gap:24px;padding:20px 0}
+ .native-home-screen .native-hero h1{font-size:30px}.native-home-screen .native-hero-lead{margin:8px 0 16px}
+ .native-setup-fields{grid-template-columns:1fr 1fr;gap:8px}.native-home-screen .native-field-label{font-size:11px}
+ .native-home-screen .native-hero-actions{margin-top:12px}.native-home-screen .native-hero-actions button{min-height:44px;padding:10px}
+ .native-home-maps{grid-template-columns:1fr 1fr}.native-home-maps figure:first-child{grid-column:1/-1}
+ .native-briefing-v2 .briefing-title h1{font-size:26px}.native-briefing-v2 .briefing-title{padding-top:6px}
+ .native-briefing-v2 .briefing-section-head h2,.native-briefing-v2 .briefing-map-copy h2{font-size:13px}
+ .native-briefing-v2 .briefing-training-card h3{font-size:11px}.native-briefing-v2 .briefing-actions .native-begin{min-height:34px}
+ .native-prep-tabs button{min-height:30px}.native-prep-top h1{font-size:20px}
+}
+@media(prefers-reduced-motion:reduce){.native-lobby button,.native-modal button{transition:none}}

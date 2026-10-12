@@ -20,7 +20,7 @@ test('作战报告底部动作行同时给出「导出本次记录」与「回�
 
 test('血量清空的结束横幅除「查看伤害报告」外还留一个「回到大厅」',async()=>{
  const play=await read('native-play.js');
- assert.match(play,/<div class="native-round-end-actions"><button class="native-primary" data-act="\$\{info\.gameOver\?'result':'next'\}">\$\{info\.gameOver\?'查看伤害报告':'进入下一回合 →'\}<\/button>\$\{info\.gameOver\?'<button data-act="home">回到大厅<\/button>':''\}<\/div>/,
+ assert.match(play,/<div class="native-round-end-actions"><button class="native-primary" data-act="\$\{info\.gameOver\?'result':'next'\}">\$\{info\.gameOver\?'查看伤害报告':'进入下一回合'\}<\/button>\$\{info\.gameOver\?'<button data-act="home">回到大厅<\/button>':''\}<\/div>/,
   'game over 的横幅要并列两个按钮，普通回合结束仍然只有「进入下一回合」');
 });
 
