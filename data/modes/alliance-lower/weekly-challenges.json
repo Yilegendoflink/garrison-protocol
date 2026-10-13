@@ -36,6 +36,25 @@
           "params": { "kind": "海怪" }
         }
       ]
+    },
+    {
+      "id": "2026-10-14-bounty-takeover",
+      "challengeId": "bounty-takeover",
+      "title": "全域悬赏",
+      "description": "每回合固定选择一次悬赏，整轮敌人替换为所选目标；完美通关获得三倍赏金，非完美不获赏金。",
+      "startsAt": "2026-10-14T00:00:00+08:00",
+      "endsAt": "2026-10-21T00:00:00+08:00",
+      "allowedModeIds": [],
+      "mapId": null,
+      "finalBossId": null,
+      "rules": [
+        { "id": "round-bounty", "title": "每轮悬赏", "description": "从第一回合起，每回合备战前固定触发一次悬赏三选一。" },
+        { "id": "wave-takeover", "title": "全域替换", "description": "本轮全部波次敌人替换为所选悬赏目标，保留出场数量与节奏；最终回合保留 Boss 本体，只替换增援。" },
+        { "id": "perfect-bounty", "title": "完美三倍", "description": "零漏失通关时，按本轮击倒的悬赏目标累计三倍赏金；非完美通关不获任何赏金。" }
+      ],
+      "effects": [
+        { "hook": "bounty.rules", "type": "bounty-takeover", "params": {} }
+      ]
     }
   ]
 }

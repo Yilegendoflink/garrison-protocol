@@ -21,12 +21,13 @@ export function renderBountyChoice(data,offers,round){
  return choiceFrame({kind:'bounty',title:'追加悬赏',round,note:'四选一 · 目标加入下一场战斗，漏失目标不获奖金。',cards,footer:'<span>奖金取原表 0–6 档 · 至少包含 1 与 4 奖金档 · 源石虫为 0</span>'});
 }
 
-export function renderDecisionChoice(data,offers,round,{type='tactical'}={}){
+export function renderDecisionChoice(data,offers,round,{type='tactical',bountyRules=null}={}){
  const labels={bounty:'悬赏',equipment:'道具补给',tactical:'战术运营'},cards=offers.map((offer,i)=>{
   const value=typeof offer==='string'?{id:offer,kind:'tactical',effectId:offer}:offer;
   if(value.kind==='bounty'){
    const image=data.assets?.[value.enemyId]?`<img src="./${esc(data.assets[value.enemyId])}" alt="">`:'<span>◇</span>';
-   return `<button class="native-choice-card native-decision-card native-bounty-card" data-act="decision" data-id="${esc(value.id)}" style="--choice-order:${i}"><span class="native-choice-index">悬赏目标</span><div class="native-bounty-portrait">${image}</div><strong>${esc(value.name||data.enemies?.[value.enemyId]?.name||value.enemyId)}</strong><p>额外加入本轮 ${value.count} 名；击倒后下轮获得 ${value.coin} ◆。</p><span class="native-choice-card-footer">选择目标</span></button>`;
+   const desc=bountyRules?`本轮全部波次敌人替换为此目标；完美通关每只获得 ${value.coin*bountyRules.rewardMultiplier} ◆，非完美无赏金。`:`额外加入本轮 ${value.count} 名；击倒后下轮获得 ${value.coin} ◆。`;
+   return `<button class="native-choice-card native-decision-card native-bounty-card" data-act="decision" data-id="${esc(value.id)}" style="--choice-order:${i}"><span class="native-choice-index">悬赏目标</span><div class="native-bounty-portrait">${image}</div><strong>${esc(value.name||data.enemies?.[value.enemyId]?.name||value.enemyId)}</strong><p>${esc(desc)}</p><span class="native-choice-card-footer">选择目标</span></button>`;
   }
   if(value.kind==='equipment'){
    const item=data.items?.find(row=>row.id===value.itemId),name=item?.name||value.itemId,desc=richText(item?.effect?.effectDesc||'');
@@ -36,6 +37,6 @@ export function renderDecisionChoice(data,offers,round,{type='tactical'}={}){
   const e=data.season.effectInfoDataDict[value.effectId];
   return `<button class="native-choice-card native-decision-card" data-act="decision" data-id="${esc(value.id)}" style="--choice-order:${i}"><span class="native-choice-index">战术方案</span><span class="native-decision-mark" aria-hidden="true">${['Ⅰ','Ⅱ','Ⅲ'][i]||'◇'}</span><strong>${esc(e?.effectName||value.effectId)}</strong><p>${esc(richText(e?.effectDesc||''))}</p><span class="native-choice-card-footer">选择本项 <b>→</b></span></button>`;
  });
- const label=labels[type]||labels.tactical,note=type==='bounty'?'本次随机抽取悬赏类型，从目标中选一项加入下一场战斗。':type==='equipment'?'本次随机抽取道具补给，选择一件装备免费获得。':'本次随机抽取战术运营，选择一项增益继续整备。';
+ const label=labels[type]||labels.tactical,note=bountyRules?'每回合固定一次悬赏选择 · 最终 Boss 保留本体，只替换增援 · 零漏失通关获得三倍赏金。':type==='bounty'?'本次随机抽取悬赏类型，从目标中选一项加入下一场战斗。':type==='equipment'?'本次随机抽取道具补给，选择一件装备免费获得。':'本次随机抽取战术运营，选择一项增益继续整备。';
  return choiceFrame({kind:'decision',title:`${label}决策`,round,note,cards,footer:'<span>三选一 · 选择后立即生效</span>'});
 }

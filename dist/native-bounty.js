@@ -3,6 +3,17 @@ import {waveRng} from './native-wave-random.js';
 import {blackboard} from './protocol.js';
 
 export const BOUNTY_SLUG='enemy_1007_slime';
+// 整轮替换沿用每个出场槽的时间与红门；飞行/地面路径按目标类型选同门路线。
+export function replaceWaveWithBounty(data,queue,routes,bounty,doorForRoute){
+ if(!bounty)return queue;
+ const motion=data.enemies[bounty.enemyId]?.motion==='FLY'?'FLY':'WALK';
+ const matches=routes.map((route,index)=>({route,index})).filter(row=>(row.route.motionMode==='FLY'?'FLY':'WALK')===motion);
+ return queue.map(q=>{
+  const source=routes[q.route],door=q.door??doorForRoute(source,routes);
+  const route=matches.find(row=>doorForRoute(row.route,routes)===door)?.index??matches[0]?.index??q.route;
+  return {...q,id:bounty.enemyId,route,door,bountyReward:bounty.coin};
+ });
+}
 // 悬赏池的唯一来源是原表 `add_enemy_kill_gain_coin` 表（编译期由 scripts/build-wave-defaults.mjs
 // 烘成 ENEMY_KILL_COINS，币值直接用原表 coin 0–6）。原表按「词条组」登记，领袖是其中的
 // `enemyeffect_b_*` 组（23 名 levelType=BOSS ＋ 澪）；旧实现改成按波次表成本推导币值，

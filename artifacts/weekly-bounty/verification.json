@@ -1,0 +1,21 @@
+{
+  "relatedTests": {
+    "passed": 37,
+    "failed": 0
+  },
+  "newRuleTests": {
+    "passed": 6,
+    "failed": 0
+  },
+  "browserPassed": true,
+  "fullTests": {
+    "passed": 1461,
+    "failed": 33
+  },
+  "baselineTests": {
+    "passed": 1455,
+    "failed": 33
+  },
+  "newFailures": [],
+  "buildPassed": true
+}
