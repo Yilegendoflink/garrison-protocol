@@ -22,7 +22,7 @@ test('下一期在 10 月 14 日至 21 日生效，与本周快照互不影响',
  assert.equal(weeklyChallengeAt(data.weeklyChallenges,start-1).challengeId,'deep-sea-era');
  assert.equal(weeklyChallengeAt(data.weeklyChallenges,start).challengeId,'bounty-takeover');
  assert.equal(weeklyChallengeAt(data.weeklyChallenges,end-1).challengeId,'bounty-takeover');
- assert.equal(weeklyChallengeAt(data.weeklyChallenges,end),null);
+ assert.equal(weeklyChallengeAt(data.weeklyChallenges,end).challengeId,'tier-one-pair');
  assert.equal(weeklyBountyRules(weeklyChallenge).rewardMultiplier,3);
  assert.equal(weeklyBountyRules(data.weeklyChallenges.entries[0]),null);
  const normal=new NativeSession(data,{seed:42});assert.equal(normal.s.phase,'prep');

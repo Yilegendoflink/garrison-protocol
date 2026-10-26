@@ -55,6 +55,42 @@
       "effects": [
         { "hook": "bounty.rules", "type": "bounty-takeover", "params": {} }
       ]
+    },
+    {
+      "id": "2026-10-21-tier-one-pair",
+      "challengeId": "tier-one-pair",
+      "title": "成双成才",
+      "description": "Ⅰ阶干员仅需两名相同初始干员即可合成精锐，并额外获得1整备资金。",
+      "startsAt": "2026-10-21T00:00:00+08:00",
+      "endsAt": "2026-10-28T00:00:00+08:00",
+      "allowedModeIds": [],
+      "mapId": null,
+      "finalBossId": null,
+      "rules": [
+        { "id": "tier-one-pair-merge", "title": "双人成行", "description": "Ⅰ阶干员只需两名相同初始干员即可合成精锐，保留原有晋升奖励；其他阶级合成规则不变。" },
+        { "id": "pair-merge-coin", "title": "合成奖金", "description": "每次完成Ⅰ阶干员的同名合成，额外获得1整备资金。" }
+      ],
+      "effects": [
+        { "hook": "operator.merge", "type": "tier-one-pair-merge", "params": {} }
+      ]
+    },
+    {
+      "id": "2026-10-28-tier-one-pair",
+      "challengeId": "tier-one-pair",
+      "title": "成双成才",
+      "description": "Ⅰ阶干员仅需两名相同初始干员即可合成精锐，并额外获得1整备资金。",
+      "startsAt": "2026-10-28T00:00:00+08:00",
+      "endsAt": "2026-11-04T00:00:00+08:00",
+      "allowedModeIds": [],
+      "mapId": null,
+      "finalBossId": null,
+      "rules": [
+        { "id": "tier-one-pair-merge", "title": "双人成行", "description": "Ⅰ阶干员只需两名相同初始干员即可合成精锐，保留原有晋升奖励；其他阶级合成规则不变。" },
+        { "id": "pair-merge-coin", "title": "合成奖金", "description": "每次完成Ⅰ阶干员的同名合成，额外获得1整备资金。" }
+      ],
+      "effects": [
+        { "hook": "operator.merge", "type": "tier-one-pair-merge", "params": {} }
+      ]
     }
   ]
 }

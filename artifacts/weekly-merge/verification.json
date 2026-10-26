@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "relatedTests": {
+    "passed": 33,
+    "failed": 0
+  },
+  "browserPassed": true,
+  "buildPassed": true,
+  "isolatedBuild": true,
+  "workspaceBlocker": "已有 dist/targeting.js 修改缺少 containsTarget 导出；保留其他工作区改动，使用已提交代码加本次修改隔离验证。",
+  "weeks": [
+    "2026-10-21/2026-10-28",
+    "2026-10-28/2026-11-04"
+  ]
+}

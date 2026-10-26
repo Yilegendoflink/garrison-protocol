@@ -1,5 +1,5 @@
 export const WEEKLY_CHALLENGE_SCHEMA_VERSION=1;
-export const WEEKLY_CHALLENGE_HOOKS=Object.freeze({UNIT_STATS:'unit.stats',OPERATOR_BONDS:'operator.bonds',ENEMY_POOL:'enemy.pool',BOUNTY_RULES:'bounty.rules'});
+export const WEEKLY_CHALLENGE_HOOKS=Object.freeze({UNIT_STATS:'unit.stats',OPERATOR_BONDS:'operator.bonds',ENEMY_POOL:'enemy.pool',BOUNTY_RULES:'bounty.rules',OPERATOR_MERGE:'operator.merge'});
 
 const EFFECT_HANDLERS=new Map();
 const VALID_HOOKS=new Set(Object.values(WEEKLY_CHALLENGE_HOOKS));
@@ -24,6 +24,7 @@ registerWeeklyChallengeEffectHandler('filter-prts-kind',(enemyIds,params,{data}=
  return [...new Set(enemyIds.filter(id=>data?.enemies?.[id]?.prtsRace===kind))];
 });
 registerWeeklyChallengeEffectHandler('bounty-takeover',()=>({everyRound:true,replaceWave:true,perfectOnly:true,rewardMultiplier:3}));
+registerWeeklyChallengeEffectHandler('tier-one-pair-merge',(rules,params,{chess,shop}={})=>shop?.chessLevel===1&&chess?.upgradeChessId&&!chess.isGolden?{...rules,count:2,bonusFunds:1}:rules);
 
 export function validateWeeklyChallengeSchedule(schedule,{modeIds=null,mapIds=null,finalBossIds=null}={}){
  const errors=[];

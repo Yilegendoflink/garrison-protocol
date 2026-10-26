@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "reports": [
+    {
+      "id": "2026-10-21-tier-one-pair",
+      "passed": true,
+      "funds": 17
+    },
+    {
+      "id": "2026-10-28-tier-one-pair",
+      "passed": true,
+      "funds": 17
+    }
+  ],
+  "checks": [
+    "两期服务器校时入口与简报",
+    "第二张同名卡合成高亮",
+    "满手买入并两名合成",
+    "额外1资金与晋升奖励",
+    "两份库存记录"
+  ]
+}
