@@ -154,7 +154,7 @@ test('装备池门控：臂章只在 S.E.E.S. 局出现',()=>{
  const other=normalSession();other.s.level=6;
  const otherSeen=new Set();for(let i=0;i<2000;i++)otherSeen.add(other.drawFromPool({kind:'item'}));
  assert.ok(!otherSeen.has(ARMBAND),'普通局不该出现臂章');
- assert.ok(fs.readFileSync('dist/native-session.js','utf8').includes('itemAllowed(i,this)'),'装备池过滤走 itemAllowed');
+ assert.match(fs.readFileSync('dist/native-session.js','utf8'),/itemAllowed\(\w+,this\)/,'装备池过滤走 itemAllowed');
 });
 
 test('回合结算：资金换层数、每 25 层发一名、封顶 264',()=>{
@@ -189,6 +189,29 @@ test('回合结算：资金换层数、每 25 层发一名、封顶 264',()=>{
  assert.equal(other.perform('start'),true);
  assert.equal(tartarusLayers(other),0);
  assert.equal(other.s.units.length,0);
+});
+
+for(const funds of [0,1])test(`资金 ${funds} 开战补发 S.E.E.S. 干员触发三合一时保留奖励，领取后可继续开战`,()=>{
+ const run=seesSession();run.s.round=12;run.s.level=1;run.setFunds(funds);
+ addTartarusLayers(run,162-funds*layersPerFund(data,run),data);run.s.seesGrants=5;
+ run.gain('chess_collab_kormr');run.gain('chess_collab_kormr');
+ assert.equal(run.perform('start'),true,'补发触发晋升奖励不应回滚整次开战操作');
+ assert.equal(run.s.phase,'prep');assert.equal(run.battle,null);
+ assert.equal(run.s.seesGrants,6);assert.equal(tartarusLayers(run),162);assert.equal(run.s.funds,0);
+ assert.equal(run.s.units.length,1,'第三张卡已合成精锐');
+ assert.equal(run.s.rewardPending?.kind,'operator');
+ const reward=structuredClone(run.s.rewardPending);
+ assert.equal(run.perform('start'),false,'未领取奖励时仍禁止开战');
+ assert.deepEqual(run.s.rewardPending,reward,'重复点击不能丢失奖励');
+ const restored=NativeSession.restore(data,run.snapshot());
+ assert.deepEqual(restored.s.rewardPending,reward,'存档往返保留奖励');
+ assert.equal(restored.s.seesGrants,6);
+ assert.equal(run.perform('takePromotion',reward.offers[0]),true);
+ assert.equal(run.s.rewardPending,null);
+ assert.equal(run.perform('start'),true);
+ assert.equal(run.s.phase,'battle');assert.ok(run.battle);
+ assert.equal(run.s.seesGrants,6,'重试开战不能重复发卡');
+ assert.equal(tartarusLayers(run),162);
 });
 
 test('结算的层数额度：由加莉加成、发放档位账本、候选按阶级与「尽量不重复」',()=>{
