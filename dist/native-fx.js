@@ -415,7 +415,8 @@ export function drawZones(c,point,z,battle,{reduceFx=false}={}){
   // 「这个圈就是某名干员的攻击范围」（rangeUid）：直接画它当前的技能范围格，别用半径近似。
   const rangeOwner=fx.rangeUid?battle.range?.(getZoneRangeOwner(s,fx),true):null;
   const circle=fx.shape==='circle'||fx.values?.shape==='circle';
-  if(rangeOwner?.length){for(const cell of rangeOwner)cells.push({x:cell.x,y:cell.y});}
+  if(fx.values?.staticCells){for(const cell of fx.values.staticCells)cells.push({x:cell.x,y:cell.y});}
+  else if(rangeOwner?.length){for(const cell of rangeOwner)cells.push({x:cell.x,y:cell.y});}
   else if(visual.shape==='self'){
    for(const u of s.units||[])if(u.uid===fx.sourceUid&&u.deployed)cells.push({x:u.x,y:u.y});
   }else if(!circle){

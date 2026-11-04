@@ -10,6 +10,7 @@ const names = ['data.js', 'benchmark.js', 'combat.js', 'status.js', 'targeting.j
 names.push('native-shift.js','native-miner.js','native-bounty.js','native-choices.js','native-bond-ban.js','native-bond-keys.js','native-prep.js','native-collab.js','native-collab-kormr.js','native-collab-aigis.js','native-collab-yukari.js','native-collab-makoto.js','native-archive.js','native-passcode.js','native-sees.js','native-challenges.js','native-wave-original.js','native-enemy-overlap.js');
 const factories = [];
 names.push('native-custom-operators.js');
+names.push('native-weekly-bonds.js');
 names.push('native-custom-combat.js','native-custom-fx.js');
 async function writeRetry(file,content){
   let last;

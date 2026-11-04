@@ -1,3 +1,4 @@
+import {regionalBondDescription} from './native-weekly-bonds.js';
 import {drawCustomGround,drawCustomFx,renderCustomBattleControls} from './native-custom-fx.js';
 import {placeWangStone,canPlaceWangStone} from './native-custom-combat.js';
 import {renderBountyChoice,renderDecisionChoice} from './native-choices.js';
@@ -225,7 +226,7 @@ function bondCurrentPreview(id,layers){return bondCurrentPreviewHtml(data,id,lay
 function bondSidebarHtml(g,rows=g.bonds()){const s=g.s;return sortedBondRows(rows,s.bondLayers).map(([id,b])=>{const info=data.season.bondInfoDict[id],tartarus=id===TARTARUS_BOND_ID,panel=bondPanelCount(data,s,id,b.count);return `<button data-act="bond-info" data-id="${id}" class="${b.active?'active':''}"><b>${info.name}</b><span>${tartarus?`${panel} 层`:`${b.count} / ${info.activeCount}`}</span><small>${tartarus||id===SEES_BOND_ID||info.noStack?'':(s.bondLayers[id]||0)+' 层'}</small></button>`;}).join('')||'<p>部署干员以激活盟约</p>';}
 function bondModalHtml(id){
  const g=state.game,b=data.season.bondInfoDict[id],members=bondOperators(id),live=new Set((g?.s.units||[]).filter(u=>u.position).map(u=>u.charId)),layer=g?.s.bondLayers?.[id===SEES_BOND_ID?TARTARUS_BOND_ID:id]||0,active=g?.bonds?.()?.[id]?.active;
- return `<h2>${esc(b.name)}</h2><p>${esc(plain(b.desc))}</p>${bondCurrentPreview(id,layer)}<p class="muted small">${active?'当前盟约已激活，动态数值生效中。':'当前盟约尚未激活，动态数值仅作预览。'}</p><div class="native-bond-roster" aria-label="盟约干员">${members.map(m=>{const on=live.has(m.charId);return `<div class="native-bond-member${on?' active':''}">${avatar(m.charId)}<span><b>${esc(m.name)}</b><small>${m.rank} 阶${on?' · 场上':''}</small></span></div>`;}).join('')||'<small>暂无可用干员</small>'}</div>`;
+ return `<h2>${esc(b.name)}</h2><p>${esc(regionalBondDescription(g?.s.weeklyChallenge,id,layer)||plain(b.desc))}</p>${regionalBondDescription(g?.s.weeklyChallenge,id,layer)?'':bondCurrentPreview(id,layer)}<p class="muted small">${active?'当前盟约已激活，动态数值生效中。':'当前盟约尚未激活，动态数值仅作预览。'}</p><div class="native-bond-roster" aria-label="盟约干员">${members.map(m=>{const on=live.has(m.charId);return `<div class="native-bond-member${on?' active':''}">${avatar(m.charId)}<span><b>${esc(m.name)}</b><small>${m.rank} 阶${on?' · 场上':''}</small></span></div>`;}).join('')||'<small>暂无可用干员</small>'}</div>`;
 }
 // 侧栏按钮与打开着的盟约面板都按当前层数重算；只有内容真的变了才写 DOM（不打断悬停/焦点）。
 function updateBondLive(){

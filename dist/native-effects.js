@@ -15,7 +15,8 @@ import {addTartarusLayers,makotoKillLayers,isSeesOperator} from './native-sees.j
 import {FLIGHT_PRESETS,FLIGHT_MODES,stepFlight,faceTarget,setFlightVelocity,distanceBetween,ensureFlight,orbitStep,fanHeadings,randomPointInSquare} from './native-flight.js';
 import {TENTATIVE_PROJECTILE_SPEED} from './native-combat.js';
 import {customAttackConfig,customEvent,customTick,customDamageAmount} from './native-custom-combat.js';
-import {weeklyBountyRules} from './native-challenges.js';
+import {weeklyBountyRules,regionalBondRules} from './native-challenges.js';
+import {regionalSkillStart,tickRegionalBonds} from './native-weekly-bonds.js';
 
 export const BATTLE_SCHEMA_VERSION=1;
 export const EFFECT_KINDS=new Set(['dot','hot','regen','loss','delayed','zone','field','attached','aura','guard','barrier','lock','stat']);
@@ -594,6 +595,7 @@ function dropEffect(battle,fx,reason){
 }
 
 export function tickLogic(battle,dt){
+ tickRegionalBonds(battle,dealDamage);
  const now=battle.s.time;
  for(const u of [...battle.s.units,...(battle.s.summons||[])]){
   if(u.bondFragileUntil!=null&&now>=u.bondFragileUntil){u.bondFragileUntil=null;u.fragile=null;}
@@ -835,11 +837,12 @@ export function tickDoll(battle,u){
 }
 function bondDeploy(battle,u){
  if(!u||u.kind==='summon')return;
- if(battle.on?.('siracusaShip')&&battle.owns(u,'siracusaShip')){const b=bondParam(battle,'siracusaShip'),duration=bondLayerValue(b,'base_duration','duration_per_stack',battle.layers.siracusaShip,32,.4);if(battle.rows.siracusaShip.count>=bondValue(b,'power_bond_char_cnt',6)){u.siracusaInvisibleUntil=battle.s.time+duration;u.siracusaExposureUntil=u.siracusaInvisibleUntil+bondValue(b,'end_duration',10);applyStatus(u,'invisible',duration,{source:u.uid,resistible:false});}}
+ if(!regionalBondRules(battle.economy.s.weeklyChallenge)&&battle.on?.('siracusaShip')&&battle.owns(u,'siracusaShip')){const b=bondParam(battle,'siracusaShip'),duration=bondLayerValue(b,'base_duration','duration_per_stack',battle.layers.siracusaShip,32,.4);if(battle.rows.siracusaShip.count>=bondValue(b,'power_bond_char_cnt',6)){u.siracusaInvisibleUntil=battle.s.time+duration;u.siracusaExposureUntil=u.siracusaInvisibleUntil+bondValue(b,'end_duration',10);applyStatus(u,'invisible',duration,{source:u.uid,resistible:false});}}
  if(battle.on?.('kazimierzShip')){const b=bondParam(battle,'kazimierzShip'),cap=bondLayerValue(b,'base_max_atk_when_born','max_atk_when_born_per_stack',battle.layers.kazimierzShip,.5,.01),step=bondValue(b,'atk_when_born',.2);for(const v of battle.s.units)if(battle.owns(v,'kazimierzShip'))v.deploymentBuff=Math.min(cap,(v.deploymentBuff||0)+step);}
 }
 function bondSkillStart(battle,u){
- if(!u||u.kind==='summon'||!battle.on?.('sargonShip')||!battle.owns(u,'sargonShip'))return;const b=bondParam(battle,'sargonShip'),duration=bondLayerValue(b,'base_time','time_per_stack',battle.layers.sargonShip,5,.22);for(const target of bondUnits(battle,'sargonShip',{deployedOnly:true})){target.sargonBuffs??=[];target.sargonBuffs.push({endsAt:battle.s.time+duration});const max=bondValue(b,'max_buff_stack_cnt',25);if(target.sargonBuffs.length>max)target.sargonBuffs.splice(0,target.sargonBuffs.length-max);}{const band=String(b.valid_in_band||'band_narant'),share=bondLayerValue(b,'base_power_time','power_time_per_stack',battle.layers.sargonShip,60,0);if(battle.s.band===band&&share>0)for(const target of battle.s.units.filter(v=>v.deployed&&v.hp>0&&Math.max(Math.abs(v.x-u.x),Math.abs(v.y-u.y))<=1)){target.sargonEquipmentShares??=[];target.sargonEquipmentShares.push({ownerUid:u.uid,endsAt:battle.s.time+share});}}}
+ regionalSkillStart(battle,u,addEffect);
+ if(!u||u.kind==='summon'||!battle.on?.('sargonShip')||!battle.owns(u,'sargonShip'))return;const b=bondParam(battle,'sargonShip'),duration=bondLayerValue(b,'base_time','time_per_stack',battle.layers.sargonShip,5,.22);for(const target of bondUnits(battle,'sargonShip',{deployedOnly:true})){target.sargonBuffs??=[];target.sargonBuffs.push({endsAt:battle.s.time+duration});const max=bondValue(b,'max_buff_stack_cnt',25);if(target.sargonBuffs.length>max)target.sargonBuffs.splice(0,target.sargonBuffs.length-max);}{const band=String(b.valid_in_band||'band_narant'),share=bondLayerValue(b,'base_power_time','power_time_per_stack',battle.layers.sargonShip,60,0);if(!regionalBondRules(battle.economy.s.weeklyChallenge)&&battle.s.band===band&&share>0)for(const target of battle.s.units.filter(v=>v.deployed&&v.hp>0&&Math.max(Math.abs(v.x-u.x),Math.abs(v.y-u.y))<=1)){target.sargonEquipmentShares??=[];target.sargonEquipmentShares.push({ownerUid:u.uid,endsAt:battle.s.time+share});}}}
 function bondSkillEnd(battle,u){
  if(!u||u.kind==='summon'||u.bondSwiftLastEnd===u.skillCount)return;u.bondSwiftLastEnd=u.skillCount;if(battle.on?.('swiftShip')){const b=bondParam(battle,'swiftShip'),prob=Math.min(1,bondLayerValue(b,'base_prob','prob_per_stack',battle.layers.swiftShip,.2,.0035));if(battle.owns(u,'swiftShip')&&battle.economy.random()<prob)gainSp(u,battle.profile(u).skill,bondValue(b,'normal_sp',12),battle.spCost(u),{ignoreSpLock:true});if((battle.layers.swiftShip||0)>=bondValue(b,'power_bond_stack_cnt',40)&&battle.economy.random()<prob)gainSp(u,battle.profile(u).skill,bondValue(b,'power_sp',15),battle.spCost(u),{ignoreSpLock:true});}}
 function bondAmmo(battle,payload){if(!payload?.source||!battle.on?.('lateranoShip')||!battle.owns(payload.source,'lateranoShip'))return;const b=bondParam(battle,'lateranoShip');if(battle.rows?.lateranoShip?.count<bondValue(b,'power_bond_char_cnt',6))return;const used=Math.max(0,Number(payload.used)||0),cap=Math.ceil(bondValue(b,'max_atk_for_consume',2)/Math.max(.0001,bondValue(b,'atk_per_consume',.04)));battle.s.bondLateranoAmmoStacks=Math.min(cap,(battle.s.bondLateranoAmmoStacks||0)+used);}
@@ -859,6 +862,7 @@ function bondPeriodic(battle,u){
 //    默认切比雪夫＝「周围 N 格」的方格。见 docs/SKILL_RANGE_AUDIT_2026-09-22.md。
 export function zoneContains(battle,fx,a){
  if(!fx||!a)return false;
+ if(fx.values?.staticCells)return fx.values.staticCells.some(p=>Math.abs(p.x-a.x)<=.5&&Math.abs(p.y-a.y)<=.5);
  if(fx.rangeUid){const owner=getActor(battle.s,fx.rangeUid);if(owner&&owner.deployed&&owner.hp>0){if(typeof battle.inside==='function')return battle.inside(owner,a,true);const cells=battle.range?.(owner,true);if(cells?.length)return containsTarget(cells.map(c=>[c.x,c.y]),a);}}
  // 引星棘刺 S3「我的海疆」：判定区域由 3 个炼金单元的落点围成（点／宽 0.65 的直线／各边外扩 0.325 的多边形）。
  // PRTS 备注：处于区域中的**我方干员（不含装置）**阻挡敌人时，被阻挡的敌人视为处于区域内。

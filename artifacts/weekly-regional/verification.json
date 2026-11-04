@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "relatedTests": 36,
+  "newTests": 8,
+  "browserPassed": true,
+  "buildPassed": true,
+  "isolatedBuild": true,
+  "startsAt": "2026-11-04T00:00:00+08:00",
+  "endsAt": "2026-11-18T00:00:00+08:00"
+}

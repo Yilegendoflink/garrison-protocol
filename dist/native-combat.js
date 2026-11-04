@@ -460,7 +460,7 @@ function reachedCheckpoint(e,node){if(node.checkpointIndex!=null)e.lastCheckpoin
 export function advanceEnemy(e,dt,onEvent,stopForAttack=false){
  if(e.hp<=0||e.trainingDummy||!e.route)return false;
  if(!Number.isInteger(e.cmd))e.cmd=Math.min(e.route.length,(e.segment||0)+1);
- const slow=(e.statuses||[]).some(s=>s.kind==='sluggish')?0.2:1;
+ const slow=(e.statuses||[]).filter(s=>s.kind==='sluggish').reduce((scale,s)=>Math.min(scale,s.source==='weekly-sargon-sand'||String(s.source).startsWith('weekly-siracusa-')?1-Math.max(0,Math.min(1,Number(s.value)||0)):.2),1);
  while(e.cmd<e.route.length){
   const s=e.route[e.cmd];
   if(s.kind==='wait'){

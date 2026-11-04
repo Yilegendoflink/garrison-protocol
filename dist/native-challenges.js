@@ -1,5 +1,5 @@
 export const WEEKLY_CHALLENGE_SCHEMA_VERSION=1;
-export const WEEKLY_CHALLENGE_HOOKS=Object.freeze({UNIT_STATS:'unit.stats',OPERATOR_BONDS:'operator.bonds',ENEMY_POOL:'enemy.pool',BOUNTY_RULES:'bounty.rules',OPERATOR_MERGE:'operator.merge'});
+export const WEEKLY_CHALLENGE_HOOKS=Object.freeze({UNIT_STATS:'unit.stats',OPERATOR_BONDS:'operator.bonds',ENEMY_POOL:'enemy.pool',BOUNTY_RULES:'bounty.rules',OPERATOR_MERGE:'operator.merge',REGIONAL_BONDS:'regional.bonds'});
 
 const EFFECT_HANDLERS=new Map();
 const VALID_HOOKS=new Set(Object.values(WEEKLY_CHALLENGE_HOOKS));
@@ -7,6 +7,7 @@ const isoWithZone=value=>typeof value==='string'&&/T.*(?:Z|[+-]\d{2}:\d{2})$/i.t
 const textValue=value=>typeof value==='string'&&value.trim().length>0;
 
 export const weeklyBountyRules=challenge=>runWeeklyChallengeHook(challenge,WEEKLY_CHALLENGE_HOOKS.BOUNTY_RULES,null);
+export const regionalBondRules=challenge=>runWeeklyChallengeHook(challenge,WEEKLY_CHALLENGE_HOOKS.REGIONAL_BONDS,null);
 
 export function registerWeeklyChallengeEffectHandler(type,handler){
  if(!textValue(type)||typeof handler!=='function')throw new TypeError('每周挑战效果处理器必须有类型和函数');
@@ -25,6 +26,7 @@ registerWeeklyChallengeEffectHandler('filter-prts-kind',(enemyIds,params,{data}=
 });
 registerWeeklyChallengeEffectHandler('bounty-takeover',()=>({everyRound:true,replaceWave:true,perfectOnly:true,rewardMultiplier:3}));
 registerWeeklyChallengeEffectHandler('tier-one-pair-merge',(rules,params,{chess,shop}={})=>shop?.chessLevel===1&&chess?.upgradeChessId&&!chess.isGolden?{...rules,count:2,bonusFunds:1}:rules);
+registerWeeklyChallengeEffectHandler('regional-bond-rework',(rules,params)=>params);
 
 export function validateWeeklyChallengeSchedule(schedule,{modeIds=null,mapIds=null,finalBossIds=null}={}){
  const errors=[];

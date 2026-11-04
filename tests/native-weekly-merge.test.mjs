@@ -22,7 +22,7 @@ test('补齐本周与下周，两期在周三零点衔接，旧挑战快照不�
  assert.equal(at('2026-10-20T23:59:59+08:00').challengeId,'bounty-takeover');
  assert.equal(at('2026-10-26T12:00:00+08:00').id,entries[0].id);
  assert.equal(at(entries[0].endsAt).id,entries[1].id);
- assert.equal(at(entries[1].endsAt),null);
+ assert.equal(at(entries[1].endsAt).challengeId,'regional-rework');
  for(const entry of entries){const g=make(entry);assert.deepEqual(g.operatorMergeRules(base),{count:2,bonusFunds:1});assert.equal(g.s.phase,'prep');}
  const old=make(data.weeklyChallenges.entries[0]);assert.deepEqual(old.operatorMergeRules(base),{count:3,bonusFunds:0});
 });

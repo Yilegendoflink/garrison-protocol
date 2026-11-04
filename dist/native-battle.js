@@ -15,7 +15,8 @@ import {equipmentStatMods,equipGenericExcluded,equipMagicPenetration,equipWeakne
 // S.E.E.S. 策略的战斗期部分（用户 2026-09-27 口径）：核心盟约的弱点伤害触发、S.E.E.S. 臂章的追加伤害、
 // 虎狼丸的弱点转化。层数与比例都读 data.sees.numbers（native-sees 只做纯函数，不反向 import 本文件）。
 import {SEES_BOND_ID,TARTARUS_BOND_ID,seesRun,coreTrueDamagePercent,coreCooldown,isSeesOperator,weaknessSource} from './native-sees.js';
-import {WEEKLY_CHALLENGE_HOOKS} from './native-challenges.js';
+import {WEEKLY_CHALLENGE_HOOKS,regionalBondRules} from './native-challenges.js';
+import {regionalAttack} from './native-weekly-bonds.js';
 import {nativeWavePlan} from './native-waves.js';
 import {scheduleWaveQueue,buildFinalBossAddQueue} from './native-wave-random.js';
 import {finalBossMechanics,finalBossSpawnPoint} from './native-final-boss.js';
@@ -309,7 +310,7 @@ export class NativeBattle {
   if(this.on('raidShip')){const b=this.params('raidShip'),v=bondValue(b,'power_attack_speed',50);if((l.raidShip||0)>=bondValue(b,'power_bond_stack_cnt',50)){as+=v;note('attackSpeed','add',v,'盟约·突袭');}}
   if(has('siracusaShip')){const b=this.params('siracusaShip');if(this.s.time-u.deployAt<b.base_duration+b.duration_per_stack*(l.siracusaShip||0)){const v=b.base_attack_speed+b.attack_speed_per_stack*(l.siracusaShip||0);as+=v;note('attackSpeed','add',v,'盟约·叙拉古');}}
   if(this.on('skillfulShip')){const b=this.params('skillfulShip'),radius=(l.skillfulShip||0)>=bondValue(b,'power_bond_stack_cnt',40)?1.42:1.01;if(this.s.units.some(v=>v.deployed&&v.hp>0&&this.owns(v,'skillfulShip')&&Math.hypot(u.x-v.x,u.y-v.y)<radius)){const v=bondLayerValue(b,'base_attack_speed','attack_speed_per_stack',l.skillfulShip);as+=v;note('attackSpeed','add',v,'盟约·灵巧');}}
-  if(this.on('sargonShip')&&this.owns(u,'sargonShip')){u.sargonBuffs=(u.sargonBuffs||[]).filter(x=>x.endsAt>this.s.time);const b=this.params('sargonShip'),count=Math.min(bondValue(b,'max_buff_stack_cnt',25),u.sargonBuffs.length);as+=count*bondValue(b,'base_attack_speed',12);if(this.rows.sargonShip.count>=bondValue(b,'power_bond_char_cnt',6))ratio('atk',count*(Number(b.base_atk)||.12),'盟约·萨尔贡');}
+  if(this.on('sargonShip')&&this.owns(u,'sargonShip')){u.sargonBuffs=(u.sargonBuffs||[]).filter(x=>x.endsAt>this.s.time);const b=this.params('sargonShip'),count=Math.min(bondValue(b,'max_buff_stack_cnt',25),u.sargonBuffs.length);as+=count*bondValue(b,'base_attack_speed',12);if(!regionalBondRules(this.economy.s.weeklyChallenge)&&this.rows.sargonShip.count>=bondValue(b,'power_bond_char_cnt',6))ratio('atk',count*(Number(b.base_atk)||.12),'盟约·萨尔贡');}
   if(this.on('lateranoShip')&&this.owns(u,'lateranoShip')&&this.rows.lateranoShip.count>=bondValue(this.params('lateranoShip'),'power_bond_char_cnt',6)){const b=this.params('lateranoShip');ratio('atk',Math.min(bondValue(b,'max_atk_for_consume',2),(this.s.bondLateranoAmmoStacks||0)*bondValue(b,'atk_per_consume',.04)),'盟约·拉特兰');}
   // 吞噬攻击力在最终加算层结算，不参与技能/装备乘算。
 
@@ -878,7 +879,8 @@ u.skillRangeHold=sk.rangeId||null;u.skillRangeHoldAt=this.s.time;const skillAir=
   if(!opts.bondExtra&&this.on('kazimierzShip')&&this.rows.kazimierzShip.count>=bondValue(this.params('kazimierzShip'),'power_bond_char_cnt',6)&&this.owns(u,'kazimierzShip')&&!this.s.enemies.some(x=>x.hp>0&&x.block===u.uid))dealDamage(this,{source:null,target:e,amount:this.stats(u).atk*(Number(this.params('kazimierzShip').pure_atk_scale)||.3),type:'true',cause:'extra',skipHooks:true});
   // 叙拉古的真伤跟随普通攻击和技能直接伤害的命中结算；技能开启期间的攻击、以及 S1/S2 通过 hit 结算的浮游弹都应触发。
   // 荒芜拉普兰德 S3 特殊狼头/光环走 dealDamage，不经过此入口，符合 PRTS「不属于普通攻击/技能直接伤害」的说明。
-  if(!opts.bondExtra&&this.on('siracusaShip')&&this.owns(u,'siracusaShip')){const b=this.params('siracusaShip'),inWindow=this.s.time<(u.siracusaInvisibleUntil||-Infinity)||(u.siracusaExposureUntil||-Infinity)>this.s.time;if(inWindow){const pity=Math.max(0,Number(this.s.siracusaPity)||0),chance=bondPityChance(b.prob,pity),cap=bondPityStep(b.prob).cap;if(this.economy.random()<chance||pity>=cap){this.s.siracusaPity=0;dealDamage(this,{source:u,target:e,amount:Number(b.base_damage||5000)+Number(b.damage_per_stack||50)*(this.layers.siracusaShip||0),type:'true',cause:'extra',skipHooks:true});applyStatus(e,'fear',Number(b.fear)||3,{source:u.uid,resistible:false});}else this.s.siracusaPity=pity+1;}}
+  if(!opts.bondExtra)regionalAttack(this,u,e);
+  if(!regionalBondRules(this.economy.s.weeklyChallenge)&&!opts.bondExtra&&this.on('siracusaShip')&&this.owns(u,'siracusaShip')){const b=this.params('siracusaShip'),inWindow=this.s.time<(u.siracusaInvisibleUntil||-Infinity)||(u.siracusaExposureUntil||-Infinity)>this.s.time;if(inWindow){const pity=Math.max(0,Number(this.s.siracusaPity)||0),chance=bondPityChance(b.prob,pity),cap=bondPityStep(b.prob).cap;if(this.economy.random()<chance||pity>=cap){this.s.siracusaPity=0;dealDamage(this,{source:u,target:e,amount:Number(b.base_damage||5000)+Number(b.damage_per_stack||50)*(this.layers.siracusaShip||0),type:'true',cause:'extra',skipHooks:true});applyStatus(e,'fear',Number(b.fear)||3,{source:u.uid,resistible:false});}else this.s.siracusaPity=pity+1;}}
   if(e.hp<=0)this.resolveEnemyDeath(e,u);
   // S.E.E.S.：臂章的追加伤害（弱点伤害／盟约时的真实伤害）与核心盟约的弱点伤害触发。
   if(type==='physical'||type==='arts')this.seesArmbandStrike(u,e,value,physical>=arts?'physical':'arts');

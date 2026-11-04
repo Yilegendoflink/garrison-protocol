@@ -91,6 +91,58 @@
       "effects": [
         { "hook": "operator.merge", "type": "tier-one-pair-merge", "params": {} }
       ]
+    },
+    {
+      "id": "2026-11-04-regional-rework",
+      "challengeId": "regional-rework",
+      "title": "狼沙异变",
+      "description": "叙拉古以异常状态引发真实伤害，萨尔贡在开技时铺设流沙。两种盟约的六人强化效果替换为本期规则。",
+      "startsAt": "2026-11-04T00:00:00+08:00",
+      "endsAt": "2026-11-18T00:00:00+08:00",
+      "allowedModeIds": [],
+      "mapId": null,
+      "finalBossId": null,
+      "rules": [
+        {
+          "id": "siracusa-rework",
+          "title": "叙拉古·异常共鸣",
+          "description": "保留部署攻速；6人时每次攻击25%概率随机附加眩晕、束缚、沉默、寒冷、恐惧或迟钝，持续2+0.02×层数秒（最多6秒）。敌人有至少2种异常时，每秒向自身及半径1.2格敌人造成200+8×层数真实伤害。"
+        },
+        {
+          "id": "sargon-rework",
+          "title": "萨尔贡·流沙领域",
+          "description": "保留开技攻速与25层上限；6人开技按当时攻击范围铺设流沙，保留至本轮结束。地面敌人迟钝20%+0.2%×层数（最多40%）；每5秒受到200+8×层数法术伤害并束缚1秒。任一萨尔贡干员技能期间，其范围内流沙迟钝翻倍，额外每秒100+4×层数法术伤害。重叠流沙不重复结算。"
+        }
+      ],
+      "effects": [
+        {
+          "hook": "regional.bonds",
+          "type": "regional-bond-rework",
+          "params": {
+            "siracusa": {
+              "prob": 0.25,
+              "duration": 2,
+              "durationPerLayer": 0.02,
+              "durationCap": 6,
+              "slow": 0.2,
+              "damage": 200,
+              "damagePerLayer": 8,
+              "radius": 1.2
+            },
+            "sargon": {
+              "interval": 5,
+              "rootDuration": 1,
+              "slow": 0.2,
+              "slowPerLayer": 0.002,
+              "slowCap": 0.4,
+              "damage": 200,
+              "damagePerLayer": 8,
+              "enhancedDamage": 100,
+              "enhancedDamagePerLayer": 4
+            }
+          }
+        }
+      ]
     }
   ]
 }
