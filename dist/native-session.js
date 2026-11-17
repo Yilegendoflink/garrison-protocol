@@ -7,12 +7,12 @@ import {AVAILABLE_FINAL_BOSS_IDS,DEFAULT_FINAL_BOSS_HP_MULTIPLIER,finalBossConfi
 import {runStrategyEvent} from './strategy.js';
 import {buildFinalBossAddQueue,createWaveRoster,scheduleWaveQueue,waveRng} from './native-wave-random.js';
 import {nativeWavePlan} from './native-waves.js';
-import {bondBanIds,loadBondBan,normalizeBondBan} from './native-bond-ban.js';
+import {bondBanIds,loadBondBan,normalizeBondBan,singleCoreBondBan,validSingleCoreBondBan} from './native-bond-ban.js';
 // 干员默认技能（「战前准备」页保存的配置）：购买时按它决定新干员携带哪一档，读档时用来补齐/对齐副本。
 import {applyPrepSkills} from './native-prep.js';
 import {TOKEN_IDS} from './native-effects.js';
 import {itemAllowed,operatorAllowed,seesRun,freeDeploy,settleFundsToLayers,grantCountForLayers,seesGrantCandidates,tartarusLayers,tartarusCap,SEES_BOND_ID,TARTARUS_BOND_ID} from './native-sees.js';
-import {runWeeklyChallengeHook as dispatchWeeklyChallengeHook,validateWeeklyChallengeSnapshot,weeklyBountyRules} from './native-challenges.js';
+import {runWeeklyChallengeHook as dispatchWeeklyChallengeHook,validateWeeklyChallengeSnapshot,weeklyBountyRules,weeklySingleCore} from './native-challenges.js';
 import {customDataView,customAllowed,normalizeCustomOperators} from './native-custom-operators.js';
 import {validCustomBattle} from './native-custom-combat.js';
 
@@ -79,7 +79,8 @@ export class NativeSession extends NativeEconomy {
   // 简报／沙盒／测试可以显式传 bondBan 覆盖。v3 起配置里不再有逐盟约的「不禁用名单」。
   // 必须在 rollOffers() 之前设好——商店第一次抽卡就读 this.s.bondBan。
   this.s.finalBossId=finalBossId||rollFinalBoss(data,modeId,seed);this.s.finalBossHpMultiplier=normalizeFinalBossHpMultiplier(finalBossHpMultiplier);this.s.finalBossAddSeed=((Number(seed)^0x5eeda11)>>>0);
-  const banOption=bondBan;
+  const singleCore=weeklySingleCore(weeklyChallenge);
+  const banOption=singleCore?(validSingleCoreBondBan(this.data,bondBan)?{bonds:bondBan.bonds,always:[],never:[]}:singleCoreBondBan(this.data,seed)):bondBan;
   const normalized=normalizeBondBan(banOption||loadBondBan(this.data),this.data);
   this.s.bondBan=banOption
    ?{bonds:[...new Set((banOption.bonds||[]).filter(id=>this.data.season.bondInfoDict[id]))],always:normalized.always,never:normalized.never}
@@ -474,6 +475,7 @@ export class NativeSession extends NativeEconomy {
   if(s.finalBossHpMultiplier!==undefined&&(!n(s.finalBossHpMultiplier)||s.finalBossHpMultiplier<.01||s.finalBossHpMultiplier>10))return null;
   // 盟约禁用：必须是已知盟约、无重复、至多 23 个；缺省（旧存档）在下面按「本局不额外禁用」补齐。
   // `fixed`／`never`（禁用方案）只做类型校验，旧存档缺字段时读档时按当前方案补齐。
+  if(weeklySingleCore(s.weeklyChallenge)&&!validSingleCoreBondBan(data,s.bondBan))return null;
   if(s.bondBan!==undefined){const b=s.bondBan;if(typeof b!=='object'||b===null||!Array.isArray(b.bonds)||b.bonds.length>23||new Set(b.bonds).size!==b.bonds.length||b.bonds.some(id=>typeof id!=='string'||!data.season.bondInfoDict[id])||(b.always!==undefined&&!Array.isArray(b.always))||(b.never!==undefined&&!Array.isArray(b.never)))return null;}
   if(s.pendingBounties!==undefined&&(!Array.isArray(s.pendingBounties)||s.pendingBounties.some(b=>!data.enemies[b?.enemyId]||!integer(b.count,1,99)||!n(b.coin)||b.coin<0)))return null;
   if(s.roundBounty){const r=s.roundBounty;if(!integer(r.round,1,s.round)||!Array.isArray(r.offers)||r.offers.length!==4||new Set(r.offers).size!==4||r.offers.some(id=>typeof id!=='string'||!data.enemies[id]||!bountyOption(data,id))||r.selected!==null&&!r.offers.includes(r.selected))return null;const coins=r.offers.map(id=>bountyOption(data,id).coin);if(!coins.includes(1)||!coins.includes(4))return null;if(s.phase==='prep'&&r.round===s.round&&r.selected){const option=bountyOption(data,r.selected);s.pendingBounties??=[];s.pendingBounties.push({enemyId:option.enemyId,coin:option.coin,count:option.count});}delete s.roundBounty;}

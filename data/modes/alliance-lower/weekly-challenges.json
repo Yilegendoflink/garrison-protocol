@@ -143,6 +143,31 @@
           }
         }
       ]
+    },
+    {
+      "id": "2026-11-18-single-core",
+      "challengeId": "single-core",
+      "title": "一核多盟",
+      "description": "进入对局简报时，随机保留一个核心盟约和全部附加盟约。",
+      "startsAt": "2026-11-18T00:00:00+08:00",
+      "endsAt": "2026-12-02T00:00:00+08:00",
+      "allowedModeIds": [],
+      "mapId": null,
+      "finalBossId": null,
+      "rules": [
+        {
+          "id": "single-core",
+          "title": "一核多盟",
+          "description": "本局从常规核心盟约中随机保留一个，全部附加盟约保留。简报确定结果，整局沿用，覆盖自定义禁用方案。"
+        }
+      ],
+      "effects": [
+        {
+          "hook": "bond.availability",
+          "type": "single-core",
+          "params": {}
+        }
+      ]
     }
   ]
 }

@@ -27,7 +27,7 @@ test('11月4日至18日连续两周，前后边界及旧快照隔离',()=>{
  assert.equal(Date.parse(entry.endsAt)-Date.parse(entry.startsAt),14*86400000);
  assert.equal(weeklyChallengeAt(data.weeklyChallenges,Date.parse(entry.startsAt)-1).challengeId,'tier-one-pair');
  assert.equal(weeklyChallengeAt(data.weeklyChallenges,Date.parse(entry.startsAt)).challengeId,'regional-rework');
- assert.equal(weeklyChallengeAt(data.weeklyChallenges,Date.parse(entry.endsAt)),null);
+ assert.equal(weeklyChallengeAt(data.weeklyChallenges,Date.parse(entry.endsAt)).challengeId,'single-core');
  assert.equal(regionalBondRules(data.weeklyChallenges.entries[0]),null);
 });
 test('六名不同叙拉古触发随机状态，每攻击每目标一次，免疫有效，无旧隐匿',()=>{

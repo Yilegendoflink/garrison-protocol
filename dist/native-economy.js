@@ -5,7 +5,7 @@ import {runGarrison} from './garrison.js';
 import {bannedOperators,bondBanBlockers,bondBanSummary,bondMembers,isOperatorBanned} from './native-bond-ban.js';
 // S.E.E.S. 策略：`bonds()` 里把【塔尔塔罗斯】的计数换成层数（纯读，不改判定）。
 import {SEES_BOND_ID,seesRun,tartarusLayers} from './native-sees.js';
-import {WEEKLY_CHALLENGE_HOOKS} from './native-challenges.js';
+import {WEEKLY_CHALLENGE_HOOKS,weeklySingleCore} from './native-challenges.js';
 
 // Preparation controller for the historical mode. Random pools remain an explicit
 // controller input until their selection rules are verified; absent draws fail atomically.
@@ -44,6 +44,7 @@ export class NativeEconomy extends PreparationState {
   }
   // S.E.E.S. 策略局里【塔尔塔罗斯】没有「干员成员」概念：它的计数就是层数（面板、战报的盟约情况都读这一份）。
   if(seesRun(this)&&rows.tartarusShip){const layers=tartarusLayers(this);rows.tartarusShip.count=layers;rows.tartarusShip.rawCount=layers;}
+  if(weeklySingleCore(this.s.weeklyChallenge))for(const id of [...this.s.bondBan.bonds,SEES_BOND_ID])if(rows[id])rows[id]={count:0,rawCount:0,active:false};
   return rows;
  }
  // 盟约禁用（用户 2026-09-22 二次修订口径，v3）：干员所属盟约「全部」被禁时才禁用；
@@ -81,6 +82,7 @@ export class NativeEconomy extends PreparationState {
  ownBonds(u){const bonds=u?.bondIds||this.data.season.charChessDataDict[u?.chessId]?.bondIds||[];return this.applyWeeklyChallengeHook?.(WEEKLY_CHALLENGE_HOOKS.OPERATOR_BONDS,[...bonds],{unit:u,chessId:u?.chessId})||bonds;}
  addLayers(id,amount,requireActive=true){
   const info=this.data.season.bondInfoDict[id];if(!info)throw Error('Unknown bond '+id);if(!Number.isFinite(amount)||amount<0)throw Error('Invalid bond increment');
+  if(weeklySingleCore(this.s.weeklyChallenge)&&(id===SEES_BOND_ID||this.s.bondBan.bonds.includes(id)))return;
   if(requireActive&&!this.bonds()[id].active)return;
   this.s.bondLayers[id]=(this.s.bondLayers[id]||0)+amount;this.s.events.push({type:'bond-layer',id,amount,total:this.s.bondLayers[id]});this.settleBondRewards();
  }

@@ -48,6 +48,15 @@ export const BAN_MODES=Object.freeze(['fixed','random','never']);
 export const SEES_EXCLUSIVE_BONDS=Object.freeze(['seesShip','tartarusShip']);
 export function bondIds(data){return Object.keys(data?.season?.bondInfoDict||{}).filter(id=>!SEES_EXCLUSIVE_BONDS.includes(id));}
 export function bondIsCore(data,id){return data?.common?.bondInfoDict?.[id]?.isPower===true;}
+export function singleCoreBondBan(data,seed){
+ const ids=bondIds(data),core=ids.filter(id=>bondIsCore(data,id)),random=waveRng(((Number(seed)||0)^0x5bd1e995)>>>0);
+ const kept=core[Math.floor(random()*core.length)];
+ return {bonds:core.filter(id=>id!==kept),always:[],never:[]};
+}
+export function validSingleCoreBondBan(data,ban){
+ const core=bondIds(data).filter(id=>bondIsCore(data,id)),bonds=ban?.bonds;
+ return Array.isArray(bonds)&&bonds.length===core.length-1&&new Set(bonds).size===bonds.length&&bonds.every(id=>core.includes(id));
+}
 export function bondName(data,id){return data?.season?.bondInfoDict?.[id]?.name||id;}
 export function bondIsBanExcluded(id){return BOND_BAN_EXCLUDED.includes(id);}
 // 硬锁：任何配置都改不了它的状态（绝技）。
@@ -207,10 +216,10 @@ export function bondBanIds(data,seed,config){
 // 被禁干员放在单独弹窗里、按被禁盟约分组列出。
 // 这两段 HTML 放在这里（而不是 native-play 里）是为了能在 Node 里直接断言渲染结果：
 // UI 工具函数由调用方注入——`{esc, avatar}`，native-play 传自己的转义与头像函数。
-const bondCellHtml=(data,id,isBanned,row,esc)=>{
+const bondCellHtml=(data,id,isBanned,row,esc,singleCore)=>{
  const mode=row?.mode||'random',tag=bondIsCore(data,id)?'核心':'附加';
  const why=isBanned?(mode==='fixed'?'固定禁用':'随机禁用'):(mode==='never'?'固定不被禁':'随机候选');
- return `<article class="native-ban-bond${isBanned?' banned':' available'}${bondIsCore(data,id)?' core':' extra'}"><b>${esc(bondName(data,id))}</b><small>${tag} · ${why}</small><span>${isBanned?`该盟约下禁用 ${row?row.banned.length:0} / ${row?row.total:0} 人`:'可用'}</span></article>`;
+ return `<article class="native-ban-bond${isBanned?' banned':' available'}${bondIsCore(data,id)?' core':' extra'}"><b>${esc(bondName(data,id))}</b><small>${tag} · ${singleCore?(isBanned?'本局缺席':'本局保留'):why}</small><span>${isBanned?`该盟约下禁用 ${row?row.banned.length:0} / ${row?row.total:0} 人`:'可用'}</span></article>`;
 };
 
 export function bondBanBriefingHtml(data,ban,ui={}){
@@ -222,7 +231,7 @@ export function bondBanBriefingHtml(data,ban,ui={}){
  const rowOf=id=>summary.bonds.find(b=>b.id===id);
  const bannedExtra=extra.filter(id=>banned.has(id));
  
- return `<h2>盟约缺席情况</h2><button class="native-ban-open" data-act="ban-list">查看本局被禁用的 ${summary.operators.length} 名干员 →</button><h3 class="native-ban-heading">核心盟约 <small>${core.filter(id=>banned.has(id)).length} / ${core.length} 缺席</small></h3><div class="native-ban-bonds">${core.map(id=>bondCellHtml(data,id,banned.has(id),rowOf(id),esc)).join('')}</div><h3 class="native-ban-heading">被禁用的附加盟约 <small>${bannedExtra.length} 个</small></h3><div class="native-ban-bonds">${bannedExtra.map(id=>bondCellHtml(data,id,true,rowOf(id),esc)).join('')||'<p class="native-ban-none">本局没有被禁用的附加盟约。</p>'}</div>`;
+ return `<h2>盟约缺席情况</h2><button class="native-ban-open" data-act="ban-list">查看本局被禁用的 ${summary.operators.length} 名干员 →</button><h3 class="native-ban-heading">核心盟约 <small>${core.filter(id=>banned.has(id)).length} / ${core.length} 缺席</small></h3><div class="native-ban-bonds">${core.map(id=>bondCellHtml(data,id,banned.has(id),rowOf(id),esc,ui.singleCore)).join('')}</div>${ui.singleCore?`<h3 class="native-ban-heading">附加盟约 <small>全部保留</small></h3><div class="native-ban-bonds">${extra.map(id=>bondCellHtml(data,id,false,null,esc,true)).join('')}</div>`:`<h3 class="native-ban-heading">被禁用的附加盟约 <small>${bannedExtra.length} 个</small></h3><div class="native-ban-bonds">${bannedExtra.map(id=>bondCellHtml(data,id,true,rowOf(id),esc)).join('')||'<p class="native-ban-none">本局没有被禁用的附加盟约。</p>'}</div>`}`;
 }
 
 // 简报（按钮上的「N 名」）与弹窗必须用**同一份**禁用记录，否则会出现「按钮写 50 名、弹窗 0 名」。
@@ -246,12 +255,12 @@ export function bannedOperatorsHtml(data,ban,ui={}){
  const coreBanned=[...banned].filter(id=>bondIsCore(data,id)),extraBanned=[...banned].filter(id=>!bondIsCore(data,id));
  const fixedBanned=[...banned].filter(id=>fixedSet.has(id)),randomBanned=[...banned].filter(id=>!fixedSet.has(id));
  const list=ids=>ids.length?`（${esc(ids.map(id=>bondName(data,id)).join('／'))}）`:'';
- const covenantLine=banned.size
+ const covenantLine=ui.singleCore?`本局保留核心盟约：${esc(bondIds(data).filter(id=>bondIsCore(data,id)&&!banned.has(id)).map(id=>bondName(data,id)).join('／'))}；全部附加盟约保留。`:banned.size
   ?`${fixedBanned.length?`固定禁用 ${fixedBanned.length} 个${list(fixedBanned)} · `:''}随机禁用：核心 ${coreBanned.filter(id=>!fixedSet.has(id)).length} 个${list(randomBanned.filter(id=>bondIsCore(data,id)))} · 附加 ${extraBanned.filter(id=>!fixedSet.has(id)).length} 个${list(randomBanned.filter(id=>!bondIsCore(data,id)))}`
   :'本局没有被禁用的盟约。';
  // 分组顺序：核心在前、附加在后，组内按名字；被禁盟约即使没禁到人也列出来（说明该盟约下人人都有别的盟约兜底）。
  const groups=summary.bonds.slice().sort((a,b)=>Number(b.core)-Number(a.core)||String(a.name).localeCompare(String(b.name),'zh'));
  const card=op=>`<figure title="${esc(op.name)} · 所属盟约 ${esc(op.bonds.map(id=>bondName(data,id)).join('／'))}"><span class="native-ban-op-art">${avatar(op.charId)}</span><figcaption><b>${esc(op.name)}</b><small>${op.tier} 阶</small><em>${esc(op.bonds.map(id=>bondName(data,id)).join('／'))}</em></figcaption></figure>`;
- const group=b=>`<section class="native-ban-group" data-bond="${esc(b.id)}"><h3 class="native-ban-heading">${esc(b.name)} <small>${b.core?'核心':'附加'} · ${b.mode==='fixed'?'固定禁用':'随机禁用'} · 该盟约下禁用 ${b.members.length} / ${b.total} 人</small></h3>${b.members.length?`<div class="native-ban-operators">${b.members.map(card).join('')}</div>`:'<p class="native-ban-none">该盟约下没有被禁用的干员：成员都还挂着未缺席的盟约。</p>'}</section>`;
- return `<h2>本局禁用盟约与干员</h2><p class="native-ban-note">${covenantLine}</p><p class="native-ban-note">共 ${ops.length} 名干员无法使用：他们所属的盟约本局<b>全部缺席</b>（只要还有一个盟约没被禁就仍可使用）。同一名干员挂在多个缺席盟约下时，会在每组各列一次。</p>${groups.map(group).join('')||'<p class="native-ban-none">本局没有被禁用的盟约。</p>'}<p class="native-ban-foot">禁用方案可在协议自定义 →「禁用方案」页调整。</p><button data-act="close">关闭</button>`;
+ const group=b=>`<section class="native-ban-group" data-bond="${esc(b.id)}"><h3 class="native-ban-heading">${esc(b.name)} <small>${b.core?'核心':'附加'} · ${ui.singleCore?'本局缺席':b.mode==='fixed'?'固定禁用':'随机禁用'} · 该盟约下禁用 ${b.members.length} / ${b.total} 人</small></h3>${b.members.length?`<div class="native-ban-operators">${b.members.map(card).join('')}</div>`:'<p class="native-ban-none">该盟约下没有被禁用的干员：成员都还挂着未缺席的盟约。</p>'}</section>`;
+ return `<h2>本局禁用盟约与干员</h2><p class="native-ban-note">${covenantLine}</p><p class="native-ban-note">共 ${ops.length} 名干员无法使用：他们所属的盟约本局<b>全部缺席</b>（只要还有一个盟约没被禁就仍可使用）。同一名干员挂在多个缺席盟约下时，会在每组各列一次。</p>${groups.map(group).join('')||'<p class="native-ban-none">本局没有被禁用的盟约。</p>'}${ui.singleCore?'':'<p class="native-ban-foot">禁用方案可在协议自定义 →「禁用方案」页调整。</p>'}<button data-act="close">关闭</button>`;
 }

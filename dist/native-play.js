@@ -6,7 +6,7 @@ import {loadWaveTable,normalizeWaveTable,saveWaveTable,defaultWaveTable,waveTabl
 import {createWaveRoster,trainingType,waveRng} from './native-wave-random.js';
 import {DEFAULT_FINAL_BOSS_HP_MULTIPLIER,finalBossConfig,rollFinalBoss} from './native-final-boss.js';
 import {applyEditorAction,applyEditorField,editorState,renderWaveEditor} from './native-wave-editor.js';
-import {activeBondBan,banConfigIsDefault,bannedOperatorsHtml,bondBanBriefingHtml,bondBanIds,loadBondBan,resetBondBan,saveBondBan} from './native-bond-ban.js';
+import {activeBondBan,banConfigIsDefault,bannedOperatorsHtml,bondBanBriefingHtml,bondBanIds,loadBondBan,resetBondBan,saveBondBan,singleCoreBondBan} from './native-bond-ban.js';
 import {loadPrepSkills,prepOperatorRow,renderArchiveWindow,renderPreparePage,renderPrepSkillInfo,savePrepSkills} from './native-prep.js';
 // 本地战绩档案（最近 10 场）＋特殊标记：导出/导入存档时一起带走，见 docs/SAVE_ARCHIVE.md。
 import {appendRun,archiveFromRecord,alreadyRecorded,exportRecord,loadArchive,mergeArchives,normalizeArchive,runRecord,saveArchive} from './native-archive.js';
@@ -17,7 +17,7 @@ import {NativeSession} from './native-session.js';
 import {NativeBattle} from './native-battle.js';
 import {createEnemyOverlapHud} from './native-enemy-overlap.js';
 import {renderLobby,NATIVE_CHANGELOG,changelogHtml} from './native-lobby.js';
-import {fetchNetworkEpoch,weeklyChallengeAt,weeklyChallengeSnapshot,weeklyBountyRules,runWeeklyChallengeHook,WEEKLY_CHALLENGE_HOOKS} from './native-challenges.js';
+import {fetchNetworkEpoch,weeklyChallengeAt,weeklyChallengeSnapshot,weeklyBountyRules,weeklySingleCore,runWeeklyChallengeHook,WEEKLY_CHALLENGE_HOOKS} from './native-challenges.js';
 import {buildPhasePlan,ensureStock,STOCK_BY_TIER,garrisonText,richText,battleBoardVisible,bondCurrentPreviewHtml,isolatedPlatform,tileLiftAmount,ROUND_LEAK_CAP,HAND_LIMIT,enemySprite,battleTally,RANDOM_MAP_ID,resolveMapId,directionOf,mapThumbnailHtml} from './protocol.js';
 // 特殊地块/地图装置的绘制只读环境层：气流格由 blowerCells 统一算，别在绘制里另算一遍。
 import {blowerCells} from './native-environment.js';
@@ -240,7 +240,7 @@ function strategyInfo(id){const b=data.season.bandDataListDict[id],common=data.c
 function decorateStrategyCatalog(){for(const button of root.querySelectorAll('.native-strategy-catalog button')){const c=strategyCoverageById[button.dataset.id]||{status:'partial',statusLabel:'待核对',gapNote:'尚未建立效果覆盖记录'},span=button.querySelector('span');if(!span)continue;const status=document.createElement('small');status.className=`native-strategy-completeness ${c.status}`;status.textContent=c.statusLabel;status.title=c.gapNote||c.statusLabel;span.prepend(status);if(c.gapNote){const gap=document.createElement('em');gap.className='native-strategy-gap';gap.textContent='缺口：'+c.gapNote;span.append(gap);}}}
 // 作战前简报的「盟约缺席情况」与「被禁干员」弹窗。判定与 HTML 片段都在 `native-bond-ban.js`
 // 里（那边能在 Node 里直接断言渲染结果），这里只注入转义／头像并挂到动作上。
-function challengeBondUi(challenge){return challenge?{operatorBonds:chessId=>runWeeklyChallengeHook(challenge,WEEKLY_CHALLENGE_HOOKS.OPERATOR_BONDS,[...(data.season.charChessDataDict[chessId]?.bondIds||[])],{chessId})}:{};}
+function challengeBondUi(challenge){return challenge?{singleCore:weeklySingleCore(challenge),operatorBonds:chessId=>runWeeklyChallengeHook(challenge,WEEKLY_CHALLENGE_HOOKS.OPERATOR_BONDS,[...(data.season.charChessDataDict[chessId]?.bondIds||[])],{chessId})}:{};}
 function bondBanBriefing(d){return bondBanBriefingHtml(customDataView(data,d?.customOperators),d?.bondBan,{esc,...challengeBondUi(d?.weeklyChallenge)});}
 // 弹窗取的是「本局」的禁用记录（战前＝draft，局中＝会话），不能优先用 state.game：
 // 从大厅开新局时它可能还留着上一局／旧存档恢复出来的空记录，那样会显示成 0 名。
@@ -431,7 +431,7 @@ function showResult(){const g=state.game,r=g.s.runResult||g.s.history.at(-1);if(
 function resetUpgradeConfirm(){if(!upgradeConfirm)return;upgradeConfirm=false;const button=root.querySelector('[data-act="upgrade"]');if(button){button.textContent=`升级 ${catOn()?'ALL':(state.game?.terms?.().upgradeCost??'MAX')} ◆`;button.classList.remove('is-confirming');button.setAttribute('aria-pressed','false');}}
 function createNewDraft(weeklyChallenge=null,networkEpoch=null){
  const egg=state.mode===EGG_MODE_ID,cat=state.mode===CAT_MODE_ID,modeId=egg?EGG_BASE_MODE:cat?CAT_BASE_MODE:state.mode,seed=(Date.now()&0xffffffff)>>>0,banConfig=loadBondBan(data),mapChoice=weeklyChallenge?.mapId||state.map,mapId=resolveMapId(data,mapChoice,waveRng((seed^0x9e3779b9)>>>0),modeId);
- state.draft={customOperators:structuredClone(loadCustomOperators(data)),modeId,mapId,seed,finalBossId:weeklyChallenge?.finalBossId||rollFinalBoss(data,modeId,seed),roster:createWaveRoster({random:waveRng(seed),data,modeId,generation:state.waveTable.generation,weeklyChallenge}),bondBan:{bonds:bondBanIds(data,seed,banConfig),always:banConfig.always,never:banConfig.never},egg325:egg,cat,weeklyChallenge:weeklyChallenge?weeklyChallengeSnapshot(weeklyChallenge,networkEpoch):null};
+ state.draft={customOperators:structuredClone(loadCustomOperators(data)),modeId,mapId,seed,finalBossId:weeklyChallenge?.finalBossId||rollFinalBoss(data,modeId,seed),roster:createWaveRoster({random:waveRng(seed),data,modeId,generation:state.waveTable.generation,weeklyChallenge}),bondBan:weeklySingleCore(weeklyChallenge)?singleCoreBondBan(data,seed):{bonds:bondBanIds(data,seed,banConfig),always:banConfig.always,never:banConfig.never},egg325:egg,cat,weeklyChallenge:weeklyChallenge?weeklyChallengeSnapshot(weeklyChallenge,networkEpoch):null};
  state.bondBanBlocks=0;state.view='briefing';state.strategyDraft=null;state.modal=null;render();
 }
 async function openWeeklyChallenge(button){
